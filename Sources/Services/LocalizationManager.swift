@@ -56,32 +56,32 @@ class LocalizationManager: ObservableObject {
         // Try multiple paths to find the JSON file
         var path: String?
         
-        Logger.debug("Attempting to load translations for: \(currentLanguage)")
-        Logger.debug("Bundle.main.resourcePath: \(Bundle.main.resourcePath ?? "nil")")
+        print("[LocalizationManager] Attempting to load translations for: \(currentLanguage)")
+        print("[LocalizationManager] Bundle.main.resourcePath: \(Bundle.main.resourcePath ?? "nil")")
         
         // List all JSON files in bundle
         if let resourcePath = Bundle.main.resourcePath {
             let fm = FileManager.default
             if let files = try? fm.contentsOfDirectory(atPath: resourcePath) {
                 let jsonFiles = files.filter { $0.hasSuffix(".json") }
-                Logger.debug("JSON files in bundle root: \(jsonFiles)")
+                print("[LocalizationManager] JSON files in bundle root: \(jsonFiles)")
             }
         }
         
         // Try 1: In Resources/Localization subdirectory
         path = Bundle.main.path(forResource: currentLanguage, ofType: "json", inDirectory: "Resources/Localization")
-        if path != nil { Logger.debug("Found at: Resources/Localization/\(currentLanguage).json") }
+        if path != nil { print("[LocalizationManager] Found at: Resources/Localization/\(currentLanguage).json") }
         
         // Try 2: In Resources directory
         if path == nil {
             path = Bundle.main.path(forResource: currentLanguage, ofType: "json", inDirectory: "Resources")
-            if path != nil { Logger.debug("Found at: Resources/\(currentLanguage).json") }
+            if path != nil { print("[LocalizationManager] Found at: Resources/\(currentLanguage).json") }
         }
         
         // Try 3: In root of bundle
         if path == nil {
             path = Bundle.main.path(forResource: currentLanguage, ofType: "json")
-            if path != nil { Logger.debug("Found at: \(currentLanguage).json (root)") }
+            if path != nil { print("[LocalizationManager] Found at: \(currentLanguage).json (root)") }
         }
         
         // Try 4: Direct search with resource name pattern
@@ -90,7 +90,7 @@ class LocalizationManager: ObservableObject {
                 let possiblePath = "\(resourcePath)/\(currentLanguage).json"
                 if FileManager.default.fileExists(atPath: possiblePath) {
                     path = possiblePath
-                    Logger.debug("Found at: \(possiblePath)")
+                    print("[LocalizationManager] Found at: \(possiblePath)")
                 }
             }
         }
@@ -98,13 +98,13 @@ class LocalizationManager: ObservableObject {
         guard let validPath = path,
               let data = try? Data(contentsOf: URL(fileURLWithPath: validPath)),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: String] else {
-            Logger.error("Failed to load translations for \(currentLanguage) in any location")
-            Logger.debug("Searched paths:")
-            Logger.debug(" - Resources/Localization/\(currentLanguage).json")
-            Logger.debug(" - Resources/\(currentLanguage).json")
-            Logger.debug(" - \(currentLanguage).json")
+            print("[LocalizationManager] Failed to load translations for \(currentLanguage) in any location")
+            print("[LocalizationManager] Searched paths:")
+            print(" - Resources/Localization/\(currentLanguage).json")
+            print(" - Resources/\(currentLanguage).json")
+            print(" - \(currentLanguage).json")
             if let resourcePath = Bundle.main.resourcePath {
-                Logger.debug(" - \(resourcePath)/\(currentLanguage).json")
+                print(" - \(resourcePath)/\(currentLanguage).json")
             }
             
             // Load fallback if current language failed and it's not already fallback
@@ -115,7 +115,7 @@ class LocalizationManager: ObservableObject {
         }
         
         translations = json
-        Logger.info("Loaded \(translations.count) translations for \(currentLanguage) from: \(validPath)")
+        print("[LocalizationManager] Loaded \(translations.count) translations for \(currentLanguage) from: \(validPath)")
     }
     
     private func loadFallbackTranslations() {
@@ -135,12 +135,12 @@ class LocalizationManager: ObservableObject {
         guard let validFallbackPath = fallbackPath,
               let fallbackData = try? Data(contentsOf: URL(fileURLWithPath: validFallbackPath)),
               let fallbackJson = try? JSONSerialization.jsonObject(with: fallbackData) as? [String: String] else {
-            Logger.error("Failed to load fallback translations for \(fallbackLanguage)")
+            print("[LocalizationManager] Failed to load fallback translations for \(fallbackLanguage)")
             return
         }
         
         translations = fallbackJson
-        Logger.info("Loaded fallback translations (\(translations.count) keys) from: \(validFallbackPath)")
+        print("[LocalizationManager] Loaded fallback translations (\(translations.count) keys) from: \(validFallbackPath)")
     }
     
     func string(forKey key: String) -> String {
@@ -149,7 +149,7 @@ class LocalizationManager: ObservableObject {
         }
         
         // Log missing translation
-        Logger.debug("Missing translation: '\(key)' for language: \(currentLanguage)")
+        print("[LocalizationManager] Missing translation: '\(key)' for language: \(currentLanguage)")
         
         // Return key itself as fallback
         return key

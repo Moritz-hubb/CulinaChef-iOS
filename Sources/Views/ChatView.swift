@@ -305,7 +305,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             do { 
                 _ = try await app.backend.incrementAIUsage(accessToken: token) 
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-                Logger.info("Backend unreachable, continuing without usage tracking", category: .network)
+                print("[ChatView] Backend unreachable, continuing without usage tracking")
             } catch {
                 await MainActor.run { messages.append(.init(role: .assistant, text: error.localizedDescription)) }
                 return
@@ -349,7 +349,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             do { 
                 _ = try await app.backend.incrementAIUsage(accessToken: token) 
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-                Logger.info("Backend unreachable, continuing without usage tracking", category: .network)
+                print("[ChatView] Backend unreachable, continuing without usage tracking")
             } catch {
                 await MainActor.run { messages.append(.init(role: .assistant, text: error.localizedDescription)) }
                 return
@@ -783,7 +783,7 @@ private struct RecipeSuggestionsView: View {
         do { 
             _ = try await app.backend.incrementAIUsage(accessToken: token) 
         } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-            Logger.info("Backend unreachable, continuing without usage tracking", category: .network)
+            print("[ChatView] Backend unreachable, continuing without usage tracking")
         } catch {
             await MainActor.run { createError = error.localizedDescription }
             return

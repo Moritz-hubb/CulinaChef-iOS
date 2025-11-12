@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="24128" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="LaunchScreenVC">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="24063"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="launch-scene">
+            <objects>
+                <viewController id="LaunchScreenVC" sceneMemberID="viewController">
+                    <view key="view" userInteractionEnabled="NO" contentMode="scaleToFill" id="launch-view">
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="bgView">
+                                <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                                <subviews>
+                                    <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" image="penguin-chef" translatesAutoresizingMaskIntoConstraints="NO" id="penguinImage">
+                                        <rect key="frame" x="96" y="326" width="200" height="200"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="200" id="penguin-height"/>
+                                            <constraint firstAttribute="width" constant="200" id="penguin-width"/>
+                                        </constraints>
+                                    </imageView>
+                                </subviews>
+                                <color key="backgroundColor" red="0.93000000000000005" green="0.66000000000000003" blue="0.55000000000000004" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstItem="penguinImage" firstAttribute="centerX" secondItem="bgView" secondAttribute="centerX" id="penguin-centerX"/>
+                                    <constraint firstItem="penguinImage" firstAttribute="centerY" secondItem="bgView" secondAttribute="centerY" id="penguin-centerY"/>
+                                </constraints>
+                            </view>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="CulinaAI" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="appNameLabel">
+                                <rect key="frame" x="135.33333333333334" y="705.66666666666663" width="122.66666666666666" height="38.333333333333371"/>
+                                <fontDescription key="fontDescription" type="system" weight="bold" pointSize="36"/>
+                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            </label>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="safeArea"/>
+                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <constraints>
+                            <constraint firstItem="appNameLabel" firstAttribute="bottom" secondItem="safeArea" secondAttribute="bottom" constant="-60" id="app-bottom"/>
+                            <constraint firstItem="appNameLabel" firstAttribute="centerX" secondItem="launch-view" secondAttribute="centerX" id="app-centerX"/>
+                            <constraint firstItem="bgView" firstAttribute="bottom" secondItem="launch-view" secondAttribute="bottom" id="bg-bottom"/>
+                            <constraint firstItem="bgView" firstAttribute="leading" secondItem="launch-view" secondAttribute="leading" id="bg-leading"/>
+                            <constraint firstItem="bgView" firstAttribute="top" secondItem="launch-view" secondAttribute="top" id="bg-top"/>
+                            <constraint firstItem="bgView" firstAttribute="trailing" secondItem="launch-view" secondAttribute="trailing" id="bg-trailing"/>
+                        </constraints>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="firstResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-54" y="104"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="penguin-chef" width="1024" height="1024"/>
+    </resources>
+</document>

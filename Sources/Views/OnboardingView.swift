@@ -1,0 +1,625 @@
+import SwiftUI
+
+struct OnboardingView: View {
+@ObservedObject private var localizationManager = LocalizationManager.shared
+
+    @EnvironmentObject var app: AppState
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var currentStep = 0
+    @State private var allergies: [String] = []
+    @State private var newAllergyText = ""
+    @State private var selectedDiets: Set<String> = []
+    @State private var spicyLevel: Double = 2 // 0=mild, 1=normal, 2=scharf, 3=sehr scharf
+    @State private var tastePreferences: [String: Bool] = [
+        "süß": false,
+        "sauer": false,
+        "bitter": false,
+        "umami": false
+    ]
+    @State private var dislikes: [String] = []
+    @State private var newDislikeText = ""
+    @State private var isSaving = false
+    
+    private let dietOptions = [
+        "vegetarisch", "vegan", "pescetarisch", "low-carb", 
+        "high-protein", "glutenfrei", "laktosefrei", "halal", "koscher"
+    ]
+    
+    private let spicyLabels = ["Mild", "Normal", "Scharf", "Sehr Scharf"]
+    
+    var body: some View {
+        ZStack {
+            // Background gradient matching the app theme
+            LinearGradient(
+                colors: [
+                    Color(red: 0.98, green: 0.85, blue: 0.75), // Light peach
+                    Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Penguin illustration at top
+                if let uiImage = UIImage(named: "penguin-onboarding") {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+                        .padding(.top, 50)
+                        .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
+                } else {
+                    Image(systemName: "list.clipboard")
+                        .font(.system(size: 60))
+                        .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                        .padding(.top, 50)
+                }
+                
+                // Progress indicator
+                progressBar
+                
+                // Content
+                TabView(selection: $currentStep) {
+                    step1Allergies.tag(0)
+                    step2DietaryTypes.tag(1)
+                    step3Preferences.tag(2)
+                    step4Dislikes.tag(3)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut, value: currentStep)
+                
+                // Navigation buttons
+                navigationButtons
+            }
+        }
+        .interactiveDismissDisabled()
+    }
+    
+    // MARK: - Progress Bar
+    private var progressBar: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                ForEach(0..<4) { index in
+                    Capsule()
+                        .fill(index <= currentStep ? 
+                              LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
+                              LinearGradient(colors: [Color.white.opacity(0.3)], startPoint: .leading, endPoint: .trailing))
+                        .frame(height: 4)
+                        .shadow(color: index <= currentStep ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .clear, radius: 4)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 50)
+            
+            Text("Schritt \(currentStep + 1) von 4")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.black.opacity(0.6))
+        }
+    }
+    
+    // MARK: - Step 1: Allergies
+    private var step1Allergies: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.onboarding_allergien_unverträglichkeiten.localized)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.black)
+                    Text(L.onboarding_damit_wir_deine_rezepte.localized)
+                        .font(.system(size: 15))
+                        .foregroundColor(.black.opacity(0.6))
+                }
+                .padding(.top, 20)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        TextField("z.B. Nüsse, Erdbeeren...", text: $newAllergyText)
+                            .textFieldStyle(.plain)
+                            .padding(12)
+                            .background(.white)
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+                        
+                        Button {
+                            let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !trimmed.isEmpty {
+                                withAnimation(.spring(response: 0.3)) {
+                                    allergies.append(trimmed)
+                                    newAllergyText = ""
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(
+                                    LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                )
+                        }
+                    }
+                    
+                    if !allergies.isEmpty {
+                        FlowLayout(items: allergies) { item in
+                            allergyChip(item)
+                        }
+                        .transition(.scale.combined(with: .opacity))
+                    } else {
+                        Text(L.onboarding_keine_allergien_perfekt_weiter.localized)
+                            .font(.system(size: 14))
+                            .foregroundColor(.black.opacity(0.4))
+                            .italic()
+                            .padding(.top, 8)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 100)
+        }
+    }
+    
+    // MARK: - Step 2: Dietary Types
+    private var step2DietaryTypes: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.onboarding_ernährungsweise.localized)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.black)
+                    Text(L.onboarding_wähle_deine_ernährungspräferenzen_a.localized)
+                        .font(.system(size: 15))
+                        .foregroundColor(.black.opacity(0.6))
+                }
+                .padding(.top, 20)
+                
+                WrapDietChips(options: dietOptions, selection: $selectedDiets)
+                
+                if selectedDiets.isEmpty {
+                    Text(L.onboarding_keine_spezielle_ernährungsweise_kei.localized)
+                        .font(.system(size: 14))
+                        .foregroundColor(.black.opacity(0.4))
+                        .italic()
+                        .padding(.top, 8)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 100)
+        }
+    }
+    
+    // MARK: - Step 3: Taste Preferences
+    private var step3Preferences: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.onboarding_geschmackspräferenzen.localized)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.black)
+                    Text("Wie scharf magst du es?")
+                        .font(.system(size: 15))
+                        .foregroundColor(.black.opacity(0.6))
+                }
+                .padding(.top, 20)
+                
+                VStack(spacing: 20) {
+                    // Current selection display
+                    VStack(spacing: 8) {
+                        Text(String(repeating: "🌶️", count: Int(spicyLevel) + 1))
+                            .font(.system(size: 28))
+                        Text(spicyLabels[Int(spicyLevel)])
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(.white)
+                    .cornerRadius(16)
+                    .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
+                    
+                    // Slider
+                    VStack(spacing: 12) {
+                        Slider(value: $spicyLevel, in: 0...3, step: 1)
+                            .tint(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing))
+                        
+                        // Labels below slider
+                        HStack {
+                            ForEach(0..<4) { index in
+                                Text(spicyLabels[index])
+                                    .font(.system(size: 11, weight: Int(spicyLevel) == index ? .bold : .regular))
+                                    .foregroundColor(Int(spicyLevel) == index ? Color(red: 0.85, green: 0.4, blue: 0.2) : .black.opacity(0.5))
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    
+                    Divider().padding(.vertical, 8)
+                    
+                    Text("Weitere Vorlieben (optional)")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.black)
+                    
+                    VStack(spacing: 10) {
+                        ForEach(Array(tastePreferences.keys.sorted()), id: \.self) { key in
+                            tastePreferenceToggle(key: key)
+                        }
+                    }
+                }
+                .padding(20)
+                .background(.white)
+                .cornerRadius(16)
+                .shadow(color: .black.opacity(0.05), radius: 12, y: 4)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 100)
+        }
+    }
+    
+    // MARK: - Step 4: Dislikes
+    private var step4Dislikes: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.onboarding_was_möchtest_du_meiden.localized)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.black)
+                    Text(L.onboarding_zutaten_die_du_nicht.localized)
+                        .font(.system(size: 15))
+                        .foregroundColor(.black.opacity(0.6))
+                }
+                .padding(.top, 20)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        TextField("z.B. Koriander, Oliven...", text: $newDislikeText)
+                            .textFieldStyle(.plain)
+                            .padding(12)
+                            .background(.white)
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+                        
+                        Button {
+                            let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !trimmed.isEmpty {
+                                withAnimation(.spring(response: 0.3)) {
+                                    dislikes.append(trimmed)
+                                    newDislikeText = ""
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(
+                                    LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                )
+                        }
+                    }
+                    
+                    if !dislikes.isEmpty {
+                        FlowLayout(items: dislikes) { item in
+                            dislikeChip(item)
+                        }
+                        .transition(.scale.combined(with: .opacity))
+                    } else {
+                        Text(L.onboarding_keine_abneigungen_super_flexibel.localized)
+                            .font(.system(size: 14))
+                            .foregroundColor(.black.opacity(0.4))
+                            .italic()
+                            .padding(.top, 8)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 100)
+        }
+    }
+    
+    // MARK: - Navigation Buttons
+    private var navigationButtons: some View {
+        VStack(spacing: 12) {
+            if currentStep < 3 {
+                Button {
+                    withAnimation(.spring(response: 0.3)) {
+                        currentStep += 1
+                    }
+                } label: {
+                    Text("Weiter")
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing)
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(14)
+                        .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
+                }
+            } else {
+                Button {
+                    Task { await completeOnboarding() }
+                } label: {
+                    HStack {
+                        if isSaving {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text("Fertig!")
+                                .font(.system(size: 17, weight: .semibold))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .foregroundColor(.white)
+                    .cornerRadius(14)
+                    .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
+                }
+                .disabled(isSaving)
+            }
+            
+            if currentStep > 0 {
+                Button {
+                    withAnimation(.spring(response: 0.3)) {
+                        currentStep -= 1
+                    }
+                } label: {
+                    Text(L.onboarding_zurück.localized)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.black.opacity(0.6))
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 40)
+    }
+    
+    // MARK: - Helper Views
+    private func allergyChip(_ item: String) -> some View {
+        HStack(spacing: 6) {
+            Text(item)
+                .font(.system(size: 15, weight: .medium))
+            Button {
+                withAnimation(.spring(response: 0.3)) {
+                    allergies.removeAll { $0 == item }
+                }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.black.opacity(0.4))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.white)
+        .cornerRadius(20)
+        .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+    }
+    
+    private func dislikeChip(_ item: String) -> some View {
+        HStack(spacing: 6) {
+            Text(item)
+                .font(.system(size: 15, weight: .medium))
+            Button {
+                withAnimation(.spring(response: 0.3)) {
+                    dislikes.removeAll { $0 == item }
+                }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.black.opacity(0.4))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.white)
+        .cornerRadius(20)
+        .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+    }
+    
+    private func tastePreferenceToggle(key: String) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3)) {
+                tastePreferences[key]?.toggle()
+            }
+        } label: {
+            HStack {
+                Text(key.capitalized)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.black)
+                Spacer()
+                ZStack {
+                    RoundedRectangle(cornerRadius: 15)
+                        .fill(tastePreferences[key] == true ? 
+                              LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
+                              LinearGradient(colors: [Color.gray.opacity(0.2)], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: 50, height: 30)
+                    
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 26, height: 26)
+                        .offset(x: tastePreferences[key] == true ? 10 : -10)
+                        .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                }
+            }
+            .padding(12)
+            .background(Color(UIColor.systemGray6))
+            .cornerRadius(10)
+        }
+    }
+    
+    // MARK: - Actions
+    private func completeOnboarding() async {
+        isSaving = true
+        
+        // Save to AppState and UserDefaults
+        var dietary = app.dietary
+        dietary.allergies = allergies
+        dietary.diets = selectedDiets
+        dietary.dislikes = dislikes
+        app.dietary = dietary
+        
+        // Prepare taste preferences dictionary
+        var tastePrefsDict: [String: Any] = ["spicy_level": spicyLevel]
+        for (key, value) in tastePreferences {
+            tastePrefsDict[key] = value
+        }
+        
+        // Save to UserDefaults
+        if let data = try? JSONSerialization.data(withJSONObject: tastePrefsDict) {
+            UserDefaults.standard.set(data, forKey: "taste_preferences")
+        }
+        
+        // Mark onboarding as completed FOR THIS USER
+        if let userId = KeychainManager.get(key: "user_id") {
+            let key = "onboarding_completed_\(userId)"
+            UserDefaults.standard.set(true, forKey: key)
+        }
+        
+        // Save to Supabase
+        do {
+            try await app.savePreferencesToSupabase(
+                allergies: allergies,
+                dietaryTypes: selectedDiets,
+                tastePreferences: tastePrefsDict,
+                dislikes: dislikes,
+                notes: dietary.notes,
+                onboardingCompleted: true
+            )
+        } catch {
+            print("[Onboarding] Failed to save to Supabase: \(error.localizedDescription)")
+            // Continue anyway - data is saved locally
+        }
+        
+        isSaving = false
+        dismiss()
+    }
+}
+
+// MARK: - FlowLayout (reused from DietarySettingsView)
+private struct FlowLayout<T: Hashable, V: View>: View {
+    let items: [T]
+    let content: (T) -> V
+    @State private var totalHeight: CGFloat = .zero
+    
+    var body: some View {
+        VStack {
+            GeometryReader { geo in
+                generateContent(in: geo)
+            }
+            .frame(height: totalHeight)
+        }
+    }
+    
+    private func generateContent(in g: GeometryProxy) -> some View {
+        var width = CGFloat.zero
+        var height = CGFloat.zero
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(items.enumerated()), id: \.element) { index, item in
+                content(item)
+                    .padding([.horizontal, .vertical], 4)
+                    .alignmentGuide(.leading) { d in
+                        if (abs(width - d.width) > g.size.width) {
+                            width = 0
+                            height -= d.height
+                        }
+                        let result = width
+                        if index == items.count - 1 { width = 0 } else { width -= d.width }
+                        return result
+                    }
+                    .alignmentGuide(.top) { _ in
+                        let result = height
+                        if index == items.count - 1 { height = 0 }
+                        return result
+                    }
+            }
+        }
+        .background(viewHeightReader($totalHeight))
+    }
+    
+    private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
+        GeometryReader { geometry -> Color in
+            DispatchQueue.main.async { binding.wrappedValue = geometry.size.height }
+            return .clear
+        }
+    }
+}
+
+// MARK: - WrapDietChips
+private struct WrapDietChips: View {
+    let options: [String]
+    @Binding var selection: Set<String>
+    @State private var totalHeight: CGFloat = .zero
+    
+    var body: some View {
+        VStack {
+            GeometryReader { geo in
+                generateContent(in: geo)
+            }
+            .frame(height: totalHeight)
+        }
+    }
+    
+    private func chip(_ text: String) -> some View {
+        let isOn = selection.contains(text)
+        return Text(text)
+            .font(.system(size: 15, weight: .medium))
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            .background(
+                Group {
+                    if isOn {
+                        LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    } else {
+                        Color.white
+                    }
+                }
+            )
+            .foregroundStyle(isOn ? .white : .black)
+            .clipShape(Capsule())
+            .shadow(color: isOn ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .black.opacity(0.08), radius: isOn ? 8 : 4, y: 2)
+            .onTapGesture {
+                withAnimation(.spring(response: 0.3)) {
+                    if isOn { selection.remove(text) } else { selection.insert(text) }
+                }
+            }
+    }
+    
+    private func generateContent(in g: GeometryProxy) -> some View {
+        var width = CGFloat.zero
+        var height = CGFloat.zero
+        return ZStack(alignment: .topLeading) {
+            ForEach(options, id: \.self) { opt in
+                chip(opt)
+                    .padding([.horizontal, .vertical], 6)
+                    .alignmentGuide(.leading) { d in
+                        if (abs(width - d.width) > g.size.width) {
+                            width = 0
+                            height -= d.height
+                        }
+                        let result = width
+                        if opt == options.last! { width = 0 } else { width -= d.width }
+                        return result
+                    }
+                    .alignmentGuide(.top) { _ in
+                        let result = height
+                        if opt == options.last! { height = 0 }
+                        return result
+                    }
+            }
+        }
+        .background(viewHeightReader($totalHeight))
+    }
+    
+    private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
+        GeometryReader { geometry -> Color in
+            DispatchQueue.main.async { binding.wrappedValue = geometry.size.height }
+            return .clear
+        }
+    }
+}
+
+#Preview {
+    OnboardingView()
+        .environmentObject(AppState())
+}

@@ -1,0 +1,1372 @@
+import SwiftUI
+
+struct SettingsView: View {
+    @EnvironmentObject var app: AppState
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    @FocusState private var isFocused: Bool
+    @State private var showDietary = false
+    @State private var showProfile = false
+    @State private var showSubscription = false
+    @State private var showNotifications = false
+    @State private var showLanguage = false
+    @State private var showDeleteConfirm = false
+    @State private var showDeleteSuccess = false
+    @State private var showTerms = false
+    @State private var showPrivacy = false
+    @State private var showImprint = false
+    @State private var showFairUse = false
+    
+    private var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 0.96, green: 0.78, blue: 0.68),
+                Color(red: 0.95, green: 0.74, blue: 0.64),
+                Color(red: 0.93, green: 0.66, blue: 0.55)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
+    private var generalSettingsSection: some View {
+        SectionCard(title: L.settings.localized) {
+            VStack(spacing: 12) {
+                Button(action: { showNotifications = true }) {
+                    settingsRow(icon: "bell", text: L.notifications.localized)
+                }
+                Button(action: { showLanguage = true }) {
+                    settingsRow(icon: "globe", text: L.language.localized)
+                }
+            }
+        }
+    }
+    
+    private var dietarySection: some View {
+        SectionCard(title: L.dietary.localized) {
+            Button(action: { showDietary = true }) {
+                HStack {
+                    Image(systemName: "leaf").foregroundStyle(.green)
+                    Text(L.dietaryPreferences.localized).font(.subheadline).foregroundStyle(.white)
+                    Spacer()
+                    Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.6))
+                }
+                .padding(12)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            }
+        }
+    }
+    
+    private var legalSection: some View {
+        SectionCard(title: L.settings_legal.localized) {
+            VStack(spacing: 12) {
+                Button(action: { showTerms = true }) {
+                    settingsRow(icon: "doc.text", text: L.legalTerms.localized)
+                }
+                Button(action: { showPrivacy = true }) {
+                    settingsRow(icon: "hand.raised", text: L.legalPrivacy.localized)
+                }
+                Button(action: { showImprint = true }) {
+                    settingsRow(icon: "info.circle", text: L.legalImprint.localized)
+                }
+                Button(action: { showFairUse = true }) {
+                    settingsRow(icon: "shield.checkered", text: "Fair Use Policy")
+                }
+            }
+        }
+    }
+    
+    private var accountSection: some View {
+        SectionCard(title: L.profile.localized) {
+            VStack(alignment: .leading, spacing: 12) {
+                Button(action: { showProfile = true }) {
+                    settingsRow(icon: "person.crop.circle", text: L.nav_profileSettings.localized)
+                }
+                Button(action: { showSubscription = true }) {
+                    settingsRow(icon: "creditcard", text: L.nav_subscription.localized)
+                }
+                Button(action: { Task { await app.signOut() } }) {
+                    Text(L.signOut.localized)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(LinearGradient(colors: [.red, .pink], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                        .shadow(color: .pink.opacity(0.35), radius: 10, x: 0, y: 6)
+                }
+                Button(role: .destructive, action: { showDeleteConfirm = true }) {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text(L.deleteAccount.localized).font(.subheadline)
+                        Spacer()
+                    }
+                    .foregroundStyle(.white)
+                    .padding(12)
+                    .background(Color.red.opacity(0.15), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                }
+            }
+        }
+    }
+    
+    private func settingsRow(icon: String, text: String) -> some View {
+        HStack {
+            Image(systemName: icon)
+            Text(text).font(.subheadline)
+            Spacer()
+            Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.6))
+        }
+        .foregroundStyle(.white)
+        .padding(12)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
+    }
+
+    var body: some View {
+        ZStack {
+            backgroundGradient
+                .ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 16) {
+                    generalSettingsSection
+                    dietarySection
+                    legalSection
+                    accountSection
+
+
+                }
+                .padding(16)
+            }
+        }
+.sheet(isPresented: $showDietary) {
+            DietarySettingsSheet()
+                .presentationDetents([PresentationDetent.large])
+        }
+        .sheet(isPresented: $showProfile) {
+            ProfileSettingsSheet()
+                .presentationDetents([PresentationDetent.large])
+        }
+        .sheet(isPresented: $showSubscription) {
+            SubscriptionSettingsSheet()
+                .presentationDetents([PresentationDetent.large])
+        }
+        .sheet(isPresented: $showNotifications) {
+            NotificationsSettingsSheet()
+                .presentationDetents([PresentationDetent.large])
+        }
+        .sheet(isPresented: $showLanguage) {
+            LanguageSettingsSheet()
+                .presentationDetents([PresentationDetent.large])
+        }
+        .sheet(isPresented: $showTerms) {
+            TermsOfServiceView()
+        }
+        .sheet(isPresented: $showPrivacy) {
+            PrivacyPolicyView()
+        }
+        .sheet(isPresented: $showImprint) {
+            ImprintView()
+        }
+        .sheet(isPresented: $showFairUse) {
+            FairUseView()
+        }
+        .alert(L.deleteAccountConfirm.localized, isPresented: $showDeleteConfirm) {
+            Button(L.manageSubscription.localized, role: .none) {
+                Task { await app.openManageSubscriptions() }
+            }
+            Button(L.deleteNow.localized, role: .destructive) {
+                Task {
+                    await app.deleteAccountAndData()
+                    showDeleteSuccess = true
+                }
+            }
+            Button(L.cancel.localized, role: .cancel) { }
+        } message: {
+            Text(L.deleteAccountMessage.localized)
+        }
+        .alert(L.accountDeleted.localized, isPresented: $showDeleteSuccess) {
+            Button(L.ok.localized, role: .cancel) {
+                Task { await app.signOut() }
+            }
+        } message: {
+            Text(L.accountDeletedMessage.localized)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(L.done.localized) {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+            }
+        }
+    }
+}
+
+// MARK: - Legal Placeholder View
+private struct LegalPlaceholderView: View {
+    let title: String
+    let text: String
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text(text)
+                        .font(.body)
+                        .padding()
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L.done.localized) { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+private struct SectionCard<Content: View>: View {
+    let title: String
+    let content: Content
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.white.opacity(0.95))
+            content
+        }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+}
+
+// Sheet embedded here to avoid project file regeneration when adding new files
+private struct DietarySettingsSheet: View {
+    @EnvironmentObject var app: AppState
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+
+    @State private var diets: Set<String> = []
+    @State private var allergiesText: String = ""
+    @State private var dislikesText: String = ""
+    @State private var notesText: String = ""
+    @State private var spicyLevel: Double = 2
+    @State private var tastePreferences: [String: Bool] = [
+        "süß": false,
+        "sauer": false,
+        "bitter": false,
+        "umami": false
+    ]
+
+    private var dietOptions: [String] {
+        [
+            L.category_vegetarian.localized,
+            L.category_vegan.localized,
+            L.category_pescetarian.localized,
+            L.category_lowCarb.localized,
+            L.category_highProtein.localized,
+            L.category_glutenFree.localized,
+            L.category_lactoseFree.localized,
+            L.category_halal.localized,
+            L.category_kosher.localized
+        ]
+    }
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 16) {
+                    HStack {
+                        Text(L.settings_ernährung_01ac.localized).font(.title2.bold())
+                        Spacer()
+                        Button(L.settings_finished.localized) { dismiss() }
+                            .foregroundStyle(.white)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+.background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(L.settings_ernährungsweisen_003f.localized).font(.subheadline)
+                        WrapDietChipsInline(options: dietOptions, selection: $diets)
+                            .padding(.bottom, 6)
+                            .onChange(of: diets) { _, _ in saveBack() }
+
+                        Text(L.settings_allergienunverträglichkeiten_kommag.localized).font(.subheadline)
+TextField(L.placeholder_allergies.localized, text: $allergiesText)
+                            .textFieldStyle(.plain)
+                            .foregroundStyle(.white)
+                            .padding(10)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .onChange(of: allergiesText) { _, _ in saveBack() }
+
+                        Text(L.settings_dislikes.localized).font(.subheadline)
+TextField(L.placeholder_dislikes.localized, text: $dislikesText)
+                            .textFieldStyle(.plain)
+                            .foregroundStyle(.white)
+                            .padding(10)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .onChange(of: dislikesText) { _, _ in saveBack() }
+
+                        Text(L.settings_geschmackspräferenzen_2f71.localized).font(.subheadline)
+                        VStack(spacing: 10) {
+                            HStack {
+                                Text(L.settings_schärfelevel_b3e3.localized)
+                                    .font(.callout)
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                Text([L.spicy_mild.localized, L.spicy_normal.localized, L.spicy_hot.localized, L.spicy_veryHot.localized][Int(spicyLevel)])
+                                    .font(.callout.weight(.medium))
+                                    .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                            }
+                            Slider(value: $spicyLevel, in: 0...3, step: 1)
+                                .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                .onChange(of: spicyLevel) { _, _ in saveBack() }
+                            
+                            ForEach(["süß", "sauer", "bitter", "umami"], id: \.self) { key in
+                                Toggle(localizedTasteName(key), isOn: Binding(
+                                    get: { tastePreferences[key] ?? false },
+                                    set: { newValue in
+                                        tastePreferences[key] = newValue
+                                        saveBack()
+                                    }
+                                ))
+                                .font(.callout)
+                                .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
+                            }
+                        }
+                        .padding(12)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                        Text(L.settings_hints.localized).font(.subheadline)
+TextField(L.placeholder_notes.localized, text: $notesText)
+                            .textFieldStyle(.plain)
+                            .foregroundStyle(.white)
+                            .padding(10)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .onChange(of: notesText) { _, _ in saveBack() }
+                    }
+                    .padding(16)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+                }
+                .padding(16)
+            }
+        }
+        .onAppear {
+            loadFromApp()
+        }
+    }
+    
+    private func localizedTasteName(_ key: String) -> String {
+        switch key {
+        case "süß": return L.taste_sweet.localized
+        case "sauer": return L.taste_sour.localized
+        case "bitter": return L.taste_bitter.localized
+        case "umami": return L.taste_umami.localized
+        default: return key
+        }
+    }
+    
+    private func loadFromApp() {
+        let d = app.dietary
+        diets = d.diets
+        allergiesText = d.allergies.joined(separator: ", ")
+        dislikesText = d.dislikes.joined(separator: ", ")
+        notesText = d.notes ?? ""
+        
+        // Load taste preferences from UserDefaults
+        if let data = UserDefaults.standard.data(forKey: "taste_preferences"),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            spicyLevel = dict["spicy_level"] as? Double ?? 2
+            tastePreferences["süß"] = dict["sweet"] as? Bool ?? false
+            tastePreferences["sauer"] = dict["sour"] as? Bool ?? false
+            tastePreferences["bitter"] = dict["bitter"] as? Bool ?? false
+            tastePreferences["umami"] = dict["umami"] as? Bool ?? false
+        }
+    }
+
+    private func saveBack() {
+        var d = app.dietary
+        d.diets = diets
+        d.allergies = allergiesText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        d.dislikes = dislikesText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        d.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines)
+        app.dietary = d
+        
+        // Save taste preferences to UserDefaults
+        var tastePrefsDict: [String: Any] = ["spicy_level": spicyLevel]
+        for (key, value) in tastePreferences {
+            tastePrefsDict[key] = value
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: tastePrefsDict) {
+            UserDefaults.standard.set(data, forKey: "taste_preferences")
+        }
+        
+        // Sync to Supabase in background
+        Task {
+            do {
+                print("[DietarySettings] Saving to Supabase:")
+                print("  - diets: \(Array(diets))")
+                print("  - allergies: \(d.allergies)")
+                print("  - dislikes: \(d.dislikes)")
+                print("  - tastePrefs: \(tastePrefsDict)")
+                try await app.savePreferencesToSupabase(
+                    allergies: d.allergies,
+                    dietaryTypes: diets,
+                    tastePreferences: tastePrefsDict,
+                    dislikes: d.dislikes,
+                    notes: d.notes,
+                    onboardingCompleted: true
+                )
+                print("[DietarySettings] Successfully saved to Supabase")
+            } catch {
+                print("[DietarySettings] Error saving to Supabase: \(error)")
+            }
+        }
+    }
+}
+
+// MARK: - Account Settings Sheets
+private struct ProfileSettingsSheet: View {
+    @EnvironmentObject var app: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var fullName: String = ""
+    @State private var email: String = ""
+    @State private var username: String = ""
+    @State private var loading = false
+    @State private var error: String?
+    @State private var saved = false
+    @State private var recipesCount = 0
+    @State private var favoritesCount = 0
+    @State private var ratingsCount = 0
+    @State private var allergies: String = ""
+    @State private var dietTypes: String = ""
+    
+    @State private var showPasswordChange = false
+    @State private var currentPassword = ""
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    @State private var passwordError: String?
+    @State private var passwordSuccess = false
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                .ignoresSafeArea()
+            VStack(spacing: 16) {
+                HStack(spacing: 10) {
+                    Spacer()
+                    if loading { ProgressView().tint(.white) }
+                    Button(L.settings_finished.localized) { dismiss() }
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                }
+                if let error { Text(error).foregroundStyle(.red).font(.footnote) }
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Account Section
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                Image(systemName: "person.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                Text(L.settings_account.localized)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            }
+                            .padding(.bottom, 4)
+                            
+                            DataRow(label: L.settings_username.localized, value: username.isEmpty ? "–" : username)
+                            DataRow(label: L.email.localized, value: app.userEmail ?? "–")
+                            
+                            Divider().background(.white.opacity(0.2))
+                            
+                            Button {
+                                showPasswordChange.toggle()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "lock.rotation")
+                                        .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                    Text(L.settings_passwort_ändern.localized)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(.white)
+                                    Spacer()
+                                    Image(systemName: showPasswordChange ? "chevron.up" : "chevron.down")
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.5))
+                                }
+                            }
+                            
+                            if showPasswordChange {
+                                VStack(spacing: 12) {
+                                    if let passwordError {
+                                        Text(passwordError)
+                                            .font(.caption)
+                                            .foregroundStyle(.red)
+                                    }
+                                    if passwordSuccess {
+                                        Text(L.settings_passwort_erfolgreich_geändert.localized)
+                                            .font(.caption)
+                                            .foregroundStyle(.green)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(L.settings_currentPassword.localized)
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.7))
+                                        SecureField("", text: $currentPassword)
+                                            .textFieldStyle(.plain)
+                                            .foregroundStyle(.white)
+                                            .padding(10)
+                                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(L.settings_newPassword.localized)
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.7))
+                                        SecureField("", text: $newPassword)
+                                            .textFieldStyle(.plain)
+                                            .foregroundStyle(.white)
+                                            .padding(10)
+                                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(L.settings_passwort_bestätigen.localized)
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.7))
+                                        SecureField("", text: $confirmPassword)
+                                            .textFieldStyle(.plain)
+                                            .foregroundStyle(.white)
+                                            .padding(10)
+                                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    }
+                                    
+                                    Button {
+                                        Task { await changePassword() }
+                                    } label: {
+                                        Text(L.settings_passwort_ändern_aea8.localized)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 10)
+                                            .background(Color(red: 0.95, green: 0.5, blue: 0.3), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    }
+                                    .disabled(currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty)
+                                    .opacity(currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty ? 0.5 : 1)
+                                }
+                                .padding(.top, 8)
+                            }
+                        }
+                        .padding(18)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                        
+                        // Activity Section
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                Image(systemName: "chart.bar.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                Text(L.settings_aktivität.localized)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            }
+                            .padding(.bottom, 4)
+                            
+                            HStack(spacing: 20) {
+                                StatCard(icon: "book.fill", label: L.settings_recipesCount.localized, value: "\(recipesCount)")
+                                StatCard(icon: "heart.fill", label: L.settings_favoritesCount.localized, value: "\(favoritesCount)")
+                                StatCard(icon: "star.fill", label: L.settings_ratingsCount.localized, value: "\(ratingsCount)")
+                            }
+                        }
+                        .padding(18)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                        
+                        // Preferences Section
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                Image(systemName: "leaf.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                Text(L.settings_präferenzen.localized)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            }
+                            .padding(.bottom, 4)
+                            
+                            DataRow(label: L.settings_allergiesLabel.localized, value: allergies.isEmpty ? L.settings_none.localized : allergies)
+                            DataRow(label: L.settings_dietaryTypesLabel.localized, value: dietTypes.isEmpty ? L.settings_none.localized : dietTypes)
+                        }
+                        .padding(18)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                        
+                        // Export Info
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "arrow.down.doc")
+                                    .foregroundStyle(.blue)
+                                Text(L.settings_dataExport.localized)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            }
+                            
+                            Text(L.settings_möchtest_du_eine_vollständige.localized)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.8))
+                        }
+                        .padding(14)
+                        .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .task { await load() }
+    }
+
+    private func load() async {
+        loading = true; error = nil; saved = false
+        defer { loading = false }
+        do {
+            if let p = try await app.fetchProfile() {
+                fullName = p.full_name ?? ""
+                email = p.email ?? app.userEmail ?? ""
+                username = p.username
+            } else {
+                fullName = ""
+                email = app.userEmail ?? ""
+                username = ""
+            }
+            
+            // Load dietary preferences
+            let prefs = UserDefaults.standard
+            if let allergyData = prefs.string(forKey: "allergies") {
+                allergies = allergyData
+            }
+            if let dietsData = prefs.data(forKey: "dietary_types"),
+               let dietsSet = try? JSONDecoder().decode(Set<String>.self, from: dietsData) {
+                dietTypes = Array(dietsSet).sorted().joined(separator: ", ")
+            }
+            
+            // Load counts (would need backend endpoints for accurate counts)
+            // For now, show placeholder - backend needs to implement these endpoints
+            recipesCount = 0  // TODO: Implement backend endpoint
+            favoritesCount = 0  // TODO: Implement backend endpoint
+            ratingsCount = 0  // TODO: Implement backend endpoint
+            
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func save() async {
+        loading = true; error = nil; saved = false
+        defer { loading = false }
+        do {
+            try await app.saveProfile(fullName: fullName, email: email)
+            saved = true
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+    
+    private func changePassword() async {
+        passwordError = nil
+        passwordSuccess = false
+        
+        // Validate passwords match
+        guard newPassword == confirmPassword else {
+            passwordError = L.settings_passwordsDoNotMatch.localized
+            return
+        }
+        
+        // Validate password length (same as SignUp)
+        guard newPassword.count >= 6 else {
+            passwordError = L.settings_passwordTooShort.localized
+            return
+        }
+        
+        loading = true
+        defer { loading = false }
+        
+        do {
+            // First verify current password by attempting to sign in
+            guard let email = app.userEmail else {
+                passwordError = L.settings_emailNotFound.localized
+                return
+            }
+            
+            _ = try await app.auth.signIn(email: email, password: currentPassword)
+            
+            // If sign in successful, change password
+            guard let token = app.accessToken else {
+                passwordError = L.settings_notLoggedIn.localized
+                return
+            }
+            
+            try await app.auth.changePassword(accessToken: token, newPassword: newPassword)
+            
+            // Clear fields and show success
+            currentPassword = ""
+            newPassword = ""
+            confirmPassword = ""
+            passwordSuccess = true
+            
+            // Hide success message after 3 seconds
+            Task {
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                passwordSuccess = false
+            }
+            
+        } catch {
+            passwordError = L.settings_wrongPassword.localized
+        }
+    }
+}
+
+private struct SubscriptionSettingsSheet: View {
+    @EnvironmentObject var app: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var isPurchasing = false
+    @State private var isRestoring = false
+    @State private var showFairUsePolicy = false
+    @State private var showTerms = false
+    @State private var showPrivacy = false
+
+    private var dateFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Status Badge
+                        HStack {
+                            Spacer()
+                            HStack(spacing: 8) {
+                                Image(systemName: app.isSubscribed ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .foregroundStyle(app.isSubscribed ? .green : .orange)
+                                Text(app.isSubscribed ? L.subscriptionUnlimitedActive.localized : L.subscriptionFreeTier.localized)
+                                    .font(.headline)
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            Spacer()
+                        }
+                        
+                        // Plan header
+                        VStack(spacing: 12) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 50))
+                                .foregroundStyle(.white)
+                                .shadow(color: .white.opacity(0.3), radius: 10)
+                            
+                            Text(L.subscriptionUnlimited.localized)
+                                .font(.title.bold())
+                                .foregroundStyle(.white)
+                            
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text("5,99€")
+                                    .font(.system(size: 40, weight: .bold))
+                                    .foregroundStyle(.white)
+                                Text(L.subscriptionPerMonth.localized)
+                                    .font(.title3)
+                                    .foregroundStyle(.white.opacity(0.8))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(24)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.white.opacity(0.15), lineWidth: 1))
+
+                        // Perks
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(L.settings_deine_vorteile.localized).font(.headline).foregroundStyle(.white)
+                            PerkRow(icon: "sparkles", text: L.subscriptionAIChatUnlimited.localized)
+                            PerkRow(icon: "wand.and.stars", text: L.subscriptionAIRecipeGenerator.localized)
+                            PerkRow(icon: "chart.bar", text: L.subscriptionAINutritionAnalysis.localized)
+                            PerkRow(icon: "infinity", text: L.subscriptionNoLimits.localized)
+                            PerkRow(icon: "books.vertical", text: L.settings_perk_community.localized)
+                            
+                            Divider().background(.white.opacity(0.2)).padding(.vertical, 4)
+                            
+                            // Fair Use Policy Link
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Es gelten angemessene Nutzungsgrenzen")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.7))
+                                
+                                Button {
+                                    showFairUsePolicy = true
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "info.circle")
+                                            .font(.caption)
+                                        Text("Fair Use Policy ansehen")
+                                            .font(.caption)
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2)
+                                    }
+                                    .foregroundStyle(.white.opacity(0.8))
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
+
+                        // Status card
+                        VStack(alignment: .leading, spacing: 8) {
+                            let auto = app.getSubscriptionAutoRenew()
+                            let periodEnd = app.getSubscriptionPeriodEnd()
+                            let active = app.isSubscribed
+                            if active {
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                    Text(L.subscriptionUnlimitedActive.localized)
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+                                }
+                                if auto {
+                                    if let end = periodEnd { 
+                                        Text("\(L.subscriptionNextBilling.localized) \(dateFormatter.string(from: end))")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.white)
+                                    }
+                                    Text(L.subscriptionAutoRenewOn.localized)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.white.opacity(0.9))
+                                } else {
+                                    if let end = periodEnd { 
+                                        Text("\(L.subscriptionExpiresOn.localized) \(dateFormatter.string(from: end))")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.orange)
+                                    }
+                                    Text(L.subscriptionAutoRenewOff.localized)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.white.opacity(0.9))
+                                    Text(L.subscriptionKeepFeaturesUntilExpiry.localized)
+                                        .font(.footnote)
+                                        .foregroundStyle(.white.opacity(0.8))
+                                }
+                            } else {
+                                HStack {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.orange)
+                                    Text(L.subscriptionFreeTier.localized)
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+                                }
+                                Text(L.subscriptionAllFeaturesExceptAI.localized)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white.opacity(0.9))
+                                Text(L.subscriptionUpgradeForAI.localized)
+                                    .font(.footnote)
+                                    .foregroundStyle(.white.opacity(0.8))
+                            }
+                        }
+                        .padding(16)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
+
+                        // Actions
+                        VStack(spacing: 16) {
+                            if app.isSubscribed {
+                                // Apple Subscription Management
+                                Button {
+                                    Task { await app.openManageSubscriptions() }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "gearshape.fill")
+                                        Text(L.subscriptionManageInAppleSettings.localized)
+                                    }
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color(red: 0.2, green: 0.6, blue: 0.9), Color(red: 0.1, green: 0.4, blue: 0.7)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    )
+                                    .shadow(color: .blue.opacity(0.4), radius: 15, x: 0, y: 8)
+                                }
+                                
+                                Text(L.subscriptionManageCancelInfo.localized)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.8))
+                                    .multilineTextAlignment(.center)
+                            } else {
+                                // Purchase Button
+                                Button {
+                                    isPurchasing = true
+                                    Task {
+                                        await app.purchaseStoreKit()
+                                        isPurchasing = false
+                                    }
+                                } label: {
+                                    HStack {
+                                        if isPurchasing {
+                                            ProgressView()
+                                                .tint(.white)
+                                        } else {
+                                            Image(systemName: "sparkles")
+                                            Text(L.subscriptionUnlockUnlimited.localized)
+                                        }
+                                    }
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color(red: 0.2, green: 0.6, blue: 0.9), Color(red: 0.1, green: 0.4, blue: 0.7)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    )
+                                    .shadow(color: .blue.opacity(0.4), radius: 15, x: 0, y: 8)
+                                }
+                                .disabled(isPurchasing)
+                                
+                                // Restore Button
+                                Button {
+                                    isRestoring = true
+                                    Task {
+                                        await app.restorePurchases()
+                                        isRestoring = false
+                                    }
+                                } label: {
+                                    HStack {
+                                        if isRestoring {
+                                            ProgressView()
+                                                .tint(.white.opacity(0.7))
+                                                .scaleEffect(0.8)
+                                        } else {
+                                            Text(L.subscriptionRestorePurchases.localized)
+                                        }
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white.opacity(0.8))
+                                }
+                                .disabled(isRestoring)
+                                
+                                Text(L.subscriptionCancelAnytime.localized)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.8))
+                                    .multilineTextAlignment(.center)
+                            }
+                        }
+                        .padding(.top, 8)
+                        
+                        // Legal Footer
+                        VStack(spacing: 8) {
+                            Divider().background(.white.opacity(0.2))
+                            
+                            Text("Mit dem Kauf stimmst du den rechtlichen Bedingungen zu")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.6))
+                                .multilineTextAlignment(.center)
+                            
+                            HStack(spacing: 16) {
+                                Button("AGB") {
+                                    showTerms = true
+                                }
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.7))
+                                
+                                Text("•")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.4))
+                                
+                                Button("Datenschutz") {
+                                    showPrivacy = true
+                                }
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.7))
+                            }
+                        }
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L.settings_finished.localized) { dismiss() }
+                        .foregroundStyle(.white)
+                        .font(.headline)
+                }
+            }
+        }
+        .onAppear { 
+            Task {
+                await app.refreshSubscriptionStatusFromStoreKit()
+                await app.storeKit.loadProducts()
+            }
+        }
+        .sheet(isPresented: $showFairUsePolicy) {
+            FairUseView()
+        }
+        .sheet(isPresented: $showTerms) {
+            TermsOfServiceView()
+        }
+        .sheet(isPresented: $showPrivacy) {
+            PrivacyPolicyView()
+        }
+    }
+}
+
+private struct DataRow: View {
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(label + ":")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: 120, alignment: .leading)
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+            Spacer()
+        }
+    }
+}
+
+private struct StatCard: View {
+    let icon: String
+    let label: String
+    let value: String
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+            Text(value)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct PerkRow: View {
+    var icon: String
+    var text: String
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+            Spacer()
+        }
+    }
+}
+
+private struct LabeledField: View {
+    var label: String
+    var placeholder: String
+    @State private var value: String = ""
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label).font(.subheadline).foregroundStyle(.white)
+TextField(placeholder, text: $value)
+                .textFieldStyle(.plain)
+                .foregroundStyle(.white)
+                .padding(10)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+    }
+}
+
+private struct PlanPill: View {
+    var title: String
+    var highlight: Bool
+    var body: some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(
+                Group {
+                    if highlight {
+                        LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    } else {
+                        Color.white.opacity(0.08)
+                    }
+                }
+            )
+            .foregroundStyle(.white)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+    }
+}
+
+// MARK: - General Settings Sheets
+private struct AppearanceSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .ignoresSafeArea()
+            VStack(spacing: 16) {
+                HStack {
+                    Text(L.settings_erscheinungsbild.localized).font(.title2.bold()).foregroundStyle(.white)
+                    Spacer()
+                    Button(L.settings_finished.localized) { dismiss() }
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+.background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                }
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle("Dark Mode", isOn: $isDarkMode)
+.tint(Color(red: 0.95, green: 0.5, blue: 0.3))
+.foregroundStyle(.white)
+                        .onChange(of: isDarkMode) { _, _ in
+                            UIApplication.shared.windows.first?.overrideUserInterfaceStyle = isDarkMode ? .dark : .light
+                        }
+                }
+                .padding(16)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
+            }
+            .padding(16)
+        }
+    }
+}
+
+struct NotificationsSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("notif_general") private var notifGeneral: Bool = true
+    @AppStorage("notif_recipe") private var notifRecipe: Bool = true
+    @AppStorage("notif_offers") private var notifOffers: Bool = false
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .ignoresSafeArea()
+            VStack(spacing: 16) {
+                HStack {
+                    Text(L.notifications.localized).font(.title2.bold()).foregroundStyle(.white)
+                    Spacer()
+                    Button(L.done.localized) { dismiss() }
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+.background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                }
+                VStack(alignment: .leading, spacing: 12) {
+Toggle(L.notificationsGeneral.localized, isOn: $notifGeneral).tint(Color(red: 0.95, green: 0.5, blue: 0.3)).foregroundStyle(.white)
+Toggle(L.notificationsRecipe.localized, isOn: $notifRecipe).tint(Color(red: 0.95, green: 0.5, blue: 0.3)).foregroundStyle(.white)
+Toggle(L.notificationsOffers.localized, isOn: $notifOffers).tint(Color(red: 0.95, green: 0.5, blue: 0.3)).foregroundStyle(.white)
+                    Text(L.notificationsManage.localized).font(.footnote).foregroundStyle(.white.opacity(0.7))
+                }
+                .padding(16)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
+            }
+            .padding(16)
+        }
+    }
+}
+
+private struct LanguageSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .ignoresSafeArea()
+            VStack(spacing: 16) {
+                HStack {
+                    Text(L.language.localized).font(.title2.bold()).foregroundStyle(.white)
+                    Spacer()
+                    Button(L.done.localized) { dismiss() }
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                }
+                
+                VStack(spacing: 12) {
+                    ForEach(Array(localizationManager.availableLanguages.keys.sorted()), id: \.self) { code in
+                        Button {
+                            localizationManager.currentLanguage = code
+                        } label: {
+                            HStack {
+                                Text(languageFlag(code))
+                                    .font(.title2)
+                                Text(localizationManager.availableLanguages[code] ?? code)
+                                    .font(.body)
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                if localizationManager.currentLanguage == code {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                }
+                            }
+                            .padding(16)
+                            .background(
+                                localizationManager.currentLanguage == code 
+                                    ? Color.white.opacity(0.15) 
+                                    : Color.white.opacity(0.06),
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                            )
+                        }
+                    }
+                }
+                .padding(16)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                
+                Spacer()
+            }
+            .padding(16)
+        }
+    }
+    
+    private func languageFlag(_ code: String) -> String {
+        switch code {
+        case "de": return "🇩🇪"
+        case "en": return "🇬🇧"
+        case "fr": return "🇫🇷"
+        case "it": return "🇮🇹"
+        case "es": return "🇪🇸"
+        default: return "🌐"
+        }
+    }
+}
+
+private struct WrapDietChipsInline: View {
+    let options: [String]
+    @Binding var selection: Set<String>
+    @State private var totalHeight: CGFloat = .zero
+
+    var body: some View {
+        VStack {
+            GeometryReader { geo in
+                generateContent(in: geo)
+            }
+            .frame(height: totalHeight)
+        }
+    }
+
+    private func chip(_ text: String) -> some View {
+        let isOn = selection.contains(text)
+        return Text(text)
+            .font(.callout.weight(.medium))
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(
+                Group {
+                    if isOn {
+                        LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    } else {
+                        Color.white.opacity(0.08)
+                    }
+                }
+            )
+            .foregroundStyle(.white)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+            .onTapGesture { if isOn { selection.remove(text) } else { selection.insert(text) } }
+    }
+
+    private func generateContent(in g: GeometryProxy) -> some View {
+        var width = CGFloat.zero
+        var height = CGFloat.zero
+        return ZStack(alignment: .topLeading) {
+            ForEach(options, id: \.self) { opt in
+                chip(opt)
+                    .padding([.horizontal, .vertical], 6)
+                    .alignmentGuide(.leading) { d in
+                        if (abs(width - d.width) > g.size.width) {
+                            width = 0
+                            height -= d.height
+                        }
+                        let result = width
+                        if opt == options.last! { width = 0 } else { width -= d.width }
+                        return result
+                    }
+                    .alignmentGuide(.top) { _ in
+                        let result = height
+                        if opt == options.last! { height = 0 }
+                        return result
+                    }
+            }
+        }
+        .background(viewHeightReader($totalHeight))
+    }
+
+    private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
+        GeometryReader { geometry -> Color in
+            DispatchQueue.main.async { binding.wrappedValue = geometry.size.height }
+            return .clear
+        }
+    }
+}

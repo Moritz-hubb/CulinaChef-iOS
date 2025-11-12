@@ -1,6 +1,14 @@
 import SwiftUI
 import PhotosUI
 
+fileprivate enum AIConsent {
+    private static let key = "openai_consent_granted"
+    static var hasConsent: Bool {
+        get { UserDefaults.standard.bool(forKey: key) }
+        set { UserDefaults.standard.set(newValue, forKey: key) }
+    }
+}
+
 struct ChatView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
 

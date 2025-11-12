@@ -117,10 +117,20 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             }
         }
         .sheet(isPresented: $showConsentDialog) {
-            OpenAIConsentDialog(
-                onAccept: { OpenAIConsentManager.hasConsent = true },
-                onDecline: { }
-            )
+            VStack(spacing: 16) {
+                Text("KI-Funktionen nutzen")
+                    .font(.title2.bold())
+                Text("Einwilligung zur Datenverarbeitung (OpenAI, USA). Ohne Zustimmung können KI-Funktionen nicht genutzt werden.")
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                HStack {
+                    Button(role: .cancel) { showConsentDialog = false } label: { Text("Ablehnen") }
+                    Spacer()
+                    Button { OpenAIConsentManager.hasConsent = true; showConsentDialog = false } label: { Text("Zustimmen").bold() }
+                }
+            }
+            .padding()
         }
     }
     

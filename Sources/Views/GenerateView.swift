@@ -65,13 +65,26 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                     .environmentObject(app)
             }
             .sheet(isPresented: $showConsentDialog) {
-                OpenAIConsentDialog(
-                    onAccept: {
-                        OpenAIConsentManager.hasConsent = true
-                        Task { await generate() }
-                    },
-                    onDecline: { }
-                )
+                VStack(spacing: 16) {
+                    Text("KI-Funktionen nutzen")
+                        .font(.title2.bold())
+                    Text("Einwilligung zur Datenverarbeitung (OpenAI, USA). Ohne Zustimmung können KI-Funktionen nicht genutzt werden.")
+                        .font(.footnote)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Button(role: .cancel) {
+                            showConsentDialog = false
+                        } label: { Text("Ablehnen") }
+                        Spacer()
+                        Button {
+                            OpenAIConsentManager.hasConsent = true
+                            showConsentDialog = false
+                            Task { await generate() }
+                        } label: { Text("Zustimmen und fortfahren").bold() }
+                    }
+                }
+                .padding()
             }
         }
     }

@@ -48,9 +48,7 @@ enum Config {
             
         case .production:
             // Production environment (live App Store version)
-            // TODO: Update with your actual production API domain
-            // Format: https://api.YOUR-DOMAIN.com
-            return URL(string: "https://api.culinaai.com")!
+            return URL(string: "https://culinachef-backend-production.up.railway.app")!
         }
     }
     

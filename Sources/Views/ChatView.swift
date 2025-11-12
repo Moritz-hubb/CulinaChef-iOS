@@ -127,7 +127,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 HStack {
                     Button(role: .cancel) { showConsentDialog = false } label: { Text("Ablehnen") }
                     Spacer()
-                    Button { OpenAIConsentManager.hasConsent = true; showConsentDialog = false } label: { Text("Zustimmen").bold() }
+                    Button { AIConsent.hasConsent = true; showConsentDialog = false } label: { Text("Zustimmen").bold() }
                 }
             }
             .padding()
@@ -293,7 +293,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
     private func sendText() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        guard OpenAIConsentManager.hasConsent else {
+        guard AIConsent.hasConsent else {
             await MainActor.run { showConsentDialog = true }
             return
         }
@@ -336,7 +336,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         guard let data = pickedImageData else { return }
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        guard OpenAIConsentManager.hasConsent else {
+        guard AIConsent.hasConsent else {
             await MainActor.run { showConsentDialog = true }
             return
         }

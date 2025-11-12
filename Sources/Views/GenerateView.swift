@@ -1,5 +1,13 @@
 import SwiftUI
 
+fileprivate enum AIConsent {
+    private static let key = "openai_consent_granted"
+    static var hasConsent: Bool {
+        get { UserDefaults.standard.bool(forKey: key) }
+        set { UserDefaults.standard.set(newValue, forKey: key) }
+    }
+}
+
 struct GenerateView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
 
@@ -78,7 +86,7 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                         } label: { Text("Ablehnen") }
                         Spacer()
                         Button {
-                            OpenAIConsentManager.hasConsent = true
+                            AIConsent.hasConsent = true
                             showConsentDialog = false
                             Task { await generate() }
                         } label: { Text("Zustimmen und fortfahren").bold() }
@@ -99,7 +107,7 @@ TextField("z.B. Tomaten", text: $newIngredientText)
         }
         
         guard let token = app.accessToken else { return }
-        guard OpenAIConsentManager.hasConsent else {
+        guard AIConsent.hasConsent else {
             await MainActor.run { showConsentDialog = true }
             return
         }

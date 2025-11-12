@@ -850,7 +850,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     func loadPreferencesFromSupabase() async throws {
             print("[AppState] loadPreferencesFromSupabase called")
             print("[AppState] accessToken available: \(accessToken != nil)")
-            print("[AppState] userId available: \(KeychainManager.get(key: \"user_id\") != nil)")
+            print("[AppState] userId available: \(KeychainManager.get(key: "user_id") != nil)" )
             
             guard let userId = KeychainManager.get(key: "user_id"),
                   let token = accessToken else {

@@ -49,17 +49,10 @@ final class SupabaseAuthClient {
             throw URLError(.badServerResponse)
         }
         
-        // Debug: Print response
-        if let responseString = String(data: data, encoding: .utf8) {
-            print("[Supabase Sign Up] Status: \(http.statusCode)")
-            print("[Supabase Sign Up] Response: \(responseString)")
-        }
-        
         if http.statusCode == 200 {
             do {
                 return try JSONDecoder().decode(AuthResponse.self, from: data)
             } catch {
-                print("[Supabase Sign Up] Decode Error: \(error)")
                 throw NSError(domain: "SupabaseAuth", code: -1,
                              userInfo: [NSLocalizedDescriptionKey: "Response konnte nicht verarbeitet werden: \(error.localizedDescription)"])
             }

@@ -51,7 +51,9 @@ struct CulinaChefApp: App {
     }
     
     private func handleDeepLink(_ url: URL) {
+        #if DEBUG
         print("[DeepLink] Received URL: \(url)")
+        #endif
         
         // Handle culinachef:// scheme
         if url.scheme == "culinachef" {
@@ -69,7 +71,9 @@ struct CulinaChefApp: App {
         // Check for /recipe/{id} pattern
         if pathComponents.count == 2 && pathComponents[0] == "recipe" {
             let recipeId = pathComponents[1]
+            #if DEBUG
             print("[DeepLink] Opening recipe: \(recipeId)")
+            #endif
             openRecipe(recipeId: recipeId)
         }
     }
@@ -79,7 +83,6 @@ struct CulinaChefApp: App {
         Task {
             do {
                 guard let token = appState.accessToken else {
-                    print("[DeepLink] No access token available")
                     return
                 }
                 
@@ -90,7 +93,7 @@ struct CulinaChefApp: App {
                     appState.deepLinkRecipe = recipe
                 }
             } catch {
-                print("[DeepLink] Error fetching recipe: \(error)")
+                // Error logged to Sentry automatically
             }
         }
     }

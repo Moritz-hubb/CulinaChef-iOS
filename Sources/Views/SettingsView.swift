@@ -450,6 +450,7 @@ TextField(L.placeholder_notes.localized, text: $notesText)
 private struct ProfileSettingsSheet: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizationManager = LocalizationManager.shared
 
     @State private var fullName: String = ""
     @State private var email: String = ""
@@ -469,6 +470,10 @@ private struct ProfileSettingsSheet: View {
     @State private var confirmPassword = ""
     @State private var passwordError: String?
     @State private var passwordSuccess = false
+    
+    private var isGerman: Bool {
+        localizationManager.currentLanguage == "de"
+    }
 
     var body: some View {
         ZStack {
@@ -628,22 +633,66 @@ private struct ProfileSettingsSheet: View {
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
                         
-                        // Export Info
-                        VStack(alignment: .leading, spacing: 8) {
+                        // Export Section
+                        VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Image(systemName: "arrow.down.doc")
-                                    .foregroundStyle(.blue)
-                                Text(L.settings_dataExport.localized)
-                                    .font(.subheadline.weight(.semibold))
+                                Image(systemName: "arrow.down.doc.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                Text(isGerman ? "Datenexport" : "Data Export")
+                                    .font(.title3.weight(.semibold))
                                     .foregroundStyle(.white)
                             }
+                            .padding(.bottom, 4)
                             
-                            Text(L.settings_möchtest_du_eine_vollständige.localized)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.8))
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(isGerman ? 
+                                    "Du kannst deine Rezepte jederzeit als JSON-Datei exportieren." :
+                                    "You can export your recipes as a JSON file at any time.")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.8))
+                                
+                                Button {
+                                    Task { await exportRecipes() }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "arrow.down.circle.fill")
+                                        Text(isGerman ? "Rezepte exportieren" : "Export Recipes")
+                                            .font(.subheadline.weight(.semibold))
+                                        Spacer()
+                                    }
+                                    .foregroundStyle(.white)
+                                    .padding()
+                                    .background(Color.blue, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                }
+                                
+                                Divider().background(.white.opacity(0.2)).padding(.vertical, 4)
+                                
+                                Text(isGerman ?
+                                    "Für vollständigen Datenexport (inkl. personenbezogener Daten) kontaktiere:" :
+                                    "For complete data export (incl. personal data) contact:")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.7))
+                                
+                                Link(destination: URL(string: "mailto:datenschutz@culinaai.com?subject=Datenexport%20Anfrage")!) {
+                                    HStack {
+                                        Image(systemName: "envelope.fill")
+                                        Text("datenschutz@culinaai.com")
+                                            .font(.caption.weight(.medium))
+                                        Spacer()
+                                        Image(systemName: "arrow.up.right")
+                                            .font(.caption2)
+                                    }
+                                    .foregroundStyle(.blue)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                }
+                            }
                         }
-                        .padding(14)
-                        .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(18)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
                     }
                 }
             }
@@ -748,6 +797,89 @@ private struct ProfileSettingsSheet: View {
             
         } catch {
             passwordError = L.settings_wrongPassword.localized
+        }
+    }
+    
+    private func exportRecipes() async {
+        loading = true
+        defer { loading = false }
+        
+        do {
+            // Fetch all recipes from backend
+            guard let token = app.accessToken else {
+                error = isGerman ? "Nicht angemeldet" : "Not logged in"
+                return
+            }
+            
+            var url = Config.supabaseURL
+            url.append(path: "/rest/v1/recipes")
+            url.append(queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "order", value: "created_at.desc")
+            ])
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                error = isGerman ? "Export fehlgeschlagen" : "Export failed"
+                return
+            }
+            
+            let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+            
+            // Create export data structure
+            let exportData: [String: Any] = [
+                "export_date": ISO8601DateFormatter().string(from: Date()),
+                "user_email": app.userEmail ?? "unknown",
+                "recipe_count": recipes.count,
+                "recipes": recipes.map { recipe in
+                    [
+                        "id": recipe.id,
+                        "title": recipe.title,
+                        "ingredients": recipe.ingredients,
+                        "instructions": recipe.instructions,
+                        "nutrition": recipe.nutrition,
+                        "created_at": recipe.created_at ?? "unknown"
+                    ]
+                }
+            ]
+            
+            // Convert to JSON
+            let jsonData = try JSONSerialization.data(withJSONObject: exportData, options: [.prettyPrinted, .sortedKeys])
+            
+            // Save to temporary file
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileName = "CulinaChef_Export_\(ISO8601DateFormatter().string(from: Date())).json"
+            let fileURL = tempDir.appendingPathComponent(fileName)
+            
+            try jsonData.write(to: fileURL)
+            
+            // Share via ShareSheet
+            await MainActor.run {
+                let activityVC = UIActivityViewController(
+                    activityItems: [fileURL],
+                    applicationActivities: nil
+                )
+                
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first,
+                   let rootVC = window.rootViewController {
+                    activityVC.popoverPresentationController?.sourceView = window
+                    activityVC.popoverPresentationController?.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 0, height: 0)
+                    activityVC.popoverPresentationController?.permittedArrowDirections = []
+                    rootVC.present(activityVC, animated: true)
+                }
+            }
+            
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 }

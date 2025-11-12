@@ -897,4 +897,10 @@ enum L {
     static let report_reported = "report.reported"
     static let report_reportRecipe = "report.reportRecipe"
     static let report_reportButton = "report.reportButton"
+
+    // MARK: - Consent
+    static let consent_title = "consent.title"
+    static let consent_subtitle = "consent.subtitle"
+    static let consent_decline = "consent.decline"
+    static let consent_accept = "consent.accept"
 }

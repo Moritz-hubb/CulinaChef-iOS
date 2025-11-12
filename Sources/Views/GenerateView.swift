@@ -73,26 +73,54 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                     .environmentObject(app)
             }
             .sheet(isPresented: $showConsentDialog) {
-                VStack(spacing: 16) {
-                    Text("KI-Funktionen nutzen")
-                        .font(.title2.bold())
-                    Text("Einwilligung zur Datenverarbeitung (OpenAI, USA). Ohne Zustimmung können KI-Funktionen nicht genutzt werden.")
-                        .font(.footnote)
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.secondary)
-                    HStack {
-                        Button(role: .cancel) {
-                            showConsentDialog = false
-                        } label: { Text("Ablehnen") }
-                        Spacer()
-                        Button {
-                            AIConsent.hasConsent = true
-                            showConsentDialog = false
-                            Task { await generate() }
-                        } label: { Text("Zustimmen und fortfahren").bold() }
+                ZStack {
+                    LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        .ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        VStack(spacing: 12) {
+                            Image(systemName: "brain.head.profile")
+                                .font(.system(size: 44, weight: .semibold))
+                                .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                            Text(L.consent_title.localized)
+                                .font(.title2.bold())
+                                .foregroundStyle(.white)
+                            Text(L.consent_subtitle.localized)
+                                .font(.footnote)
+                                .foregroundStyle(.white.opacity(0.85))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        .padding(20)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.15), lineWidth: 1))
+                        
+                        HStack(spacing: 12) {
+                            Button(role: .cancel) { showConsentDialog = false } label: {
+                                Text(L.consent_decline.localized)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white.opacity(0.9))
+                            }
+                            Spacer()
+                            Button {
+                                AIConsent.hasConsent = true
+                                showConsentDialog = false
+                                Task { await generate() }
+                            } label: {
+                                Text(L.consent_accept.localized)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 14)
+                                    .background(
+                                        LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule()
+                                    )
+                                    .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                            }
+                        }
+                        .padding(.horizontal)
                     }
+                    .padding()
                 }
-                .padding()
             }
         }
     }

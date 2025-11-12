@@ -42,12 +42,15 @@ enum Config {
             #endif
             
         case .staging:
-            // TODO: Replace with your staging backend URL
-            return URL(string: "https://staging-api.culinachef.com")!
+            // Staging environment (optional - for testing before production)
+            // TODO: Set up staging backend and update this URL
+            return URL(string: "https://staging-api.culinaai.com")!
             
         case .production:
-            // TODO: Replace with your production backend URL
-            return URL(string: "https://api.culinachef.com")!
+            // Production environment (live App Store version)
+            // TODO: Update with your actual production API domain
+            // Format: https://api.YOUR-DOMAIN.com
+            return URL(string: "https://api.culinaai.com")!
         }
     }
     

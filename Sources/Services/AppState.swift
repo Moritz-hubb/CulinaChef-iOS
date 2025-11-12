@@ -158,7 +158,7 @@ final class AppState: ObservableObject {
                 try await self.loadPreferencesFromSupabase()
             } catch {
                 // Fallback to UserDefaults if Supabase load fails (e.g., offline)
-                print("[AppState] Failed to load preferences from Supabase: \(error.localizedDescription). Using local cache.")
+                Logger.error("Failed to load preferences from Supabase: \(error.localizedDescription). Using local cache.", category: .data)
                 await MainActor.run {
                     self.dietary = DietaryPreferences.load()
                 }
@@ -200,13 +200,13 @@ final class AppState: ObservableObject {
     // MARK: - Token Refresh
     func refreshSessionIfNeeded() async {
         guard let refreshToken = KeychainManager.get(key: "refresh_token") else {
-            print("[AppState] No refresh token found, logging out")
+            Logger.info("No refresh token found, logging out", category: .auth)
             await signOut()
             return
         }
         
         do {
-            print("[AppState] Refreshing session with refresh token")
+            Logger.debug("Refreshing session with refresh token", category: .auth)
             let response = try await auth.refreshSession(refreshToken: refreshToken)
             
             // Update stored tokens
@@ -219,10 +219,10 @@ final class AppState: ObservableObject {
                 self.accessToken = response.access_token
                 self.userEmail = response.user.email
                 self.isAuthenticated = true
-                print("[AppState] Session refreshed successfully")
+                Logger.info("Session refreshed successfully", category: .auth)
             }
         } catch {
-            print("[AppState] Token refresh failed: \(error.localizedDescription)")
+            Logger.error("Token refresh failed: \(error.localizedDescription)", category: .auth)
             // Token refresh failed - user needs to log in again
             await signOut()
         }
@@ -615,7 +615,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             req.httpBody = try JSONEncoder().encode([log])
             _ = try? await URLSession.shared.data(for: req)
         } catch {
-            print("[AccountDeletion] Audit log failed: \(error)")
+            Logger.error("Account deletion audit log failed: \(error.localizedDescription)", category: .data)
         }
 
         // Call backend to delete all data + auth user
@@ -631,7 +631,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                 throw URLError(.badServerResponse)
             }
         } catch {
-            print("[AccountDeletion] Backend deletion failed: \(error)")
+            Logger.error("Backend deletion failed: \(error.localizedDescription)", category: .network)
             // Note: signOut will be called by UI after user dismisses alert
         }
     }
@@ -848,14 +848,14 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     #endif
     
     func loadPreferencesFromSupabase() async throws {
-        print("[AppState] loadPreferencesFromSupabase called")
-        print("[AppState] accessToken available: \(accessToken != nil)")
-        print("[AppState] userId available: \(KeychainManager.get(key: "user_id") != nil)")
+            Logger.debug("loadPreferencesFromSupabase called", category: .data)
+            Logger.debug("accessToken available: \(accessToken != nil)", category: .auth)
+            Logger.debug("userId available: \(KeychainManager.get(key: \"user_id\") != nil)", category: .auth)
         
         guard let userId = KeychainManager.get(key: "user_id"),
               let token = accessToken else {
             // Not logged in - try loading from UserDefaults as fallback
-            print("[AppState] No userId or accessToken - loading from UserDefaults")
+            Logger.info("No userId or accessToken - loading from UserDefaults", category: .data)
             await MainActor.run {
                 self.dietary = DietaryPreferences.load()
             }
@@ -864,9 +864,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         
         if let prefs = try await preferencesClient.fetchPreferences(userId: userId, accessToken: token) {
             // Successfully loaded from Supabase - use these preferences
-            print("[AppState] Successfully loaded preferences from Supabase")
-            print("[AppState] Dietary types: \(prefs.dietaryTypes)")
-            print("[AppState] Allergies: \(prefs.allergies)")
+            Logger.info("Successfully loaded preferences from Supabase", category: .data)
+            Logger.debug("Dietary types: \(prefs.dietaryTypes)", category: .data)
+            Logger.debug("Allergies: \(prefs.allergies)", category: .data)
             await MainActor.run {
                 var dietary = self.dietary
                 dietary.allergies = prefs.allergies
@@ -893,10 +893,10 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             }
         } else {
             // No preferences in Supabase yet - try UserDefaults as fallback
-            print("[AppState] No preferences in Supabase, loading from UserDefaults")
+            Logger.info("No preferences in Supabase, loading from UserDefaults", category: .data)
             await MainActor.run {
                 let loaded = DietaryPreferences.load()
-                print("[AppState] Loaded from UserDefaults - diets: \(loaded.diets)")
+                Logger.debug("Loaded from UserDefaults - diets: \(loaded.diets)", category: .data)
                 self.dietary = loaded
             }
         }
@@ -1057,7 +1057,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                     setMenuSuggestionProgress(menuId: menu.id, name: s.name, progress: nil)
                 }
             } catch {
-                print("[AutoGen] Failed for \(s.name): \(error)")
+                Logger.error("Auto-generation failed for \(s.name): \(error.localizedDescription)", category: .data)
                 setMenuSuggestionStatus(menuId: menu.id, name: s.name, status: "failed")
                 setMenuSuggestionProgress(menuId: menu.id, name: s.name, progress: nil)
                 continue
@@ -1079,10 +1079,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     private func saveRecipePlan(_ plan: RecipePlan, token: String, userId: String) async throws -> Recipe? {
         // Build typed payload to keep the compiler fast and payload clean
         // DEBUG: Log what we got from AI
-        print("[saveRecipePlan] Received \(plan.ingredients.count) ingredients from AI:")
-        for (idx, ing) in plan.ingredients.enumerated() {
-            print("  [\(idx)] name='\(ing.name)' amount=\(ing.amount as Any) unit=\(ing.unit as Any)")
-        }
+        Logger.debug("Received \(plan.ingredients.count) ingredients from AI", category: .data)
         
         let ingredientNames: [String] = plan.ingredients.map { item in
             var parts: [String] = []

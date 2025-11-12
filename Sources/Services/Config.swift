@@ -43,7 +43,7 @@ enum Config {
             
         case .staging:
             // Staging environment (optional - for testing before production)
-            // TODO: Set up staging backend and update this URL
+            // Set the staging backend URL here when available
             return URL(string: "https://staging-api.culinaai.com")!
             
         case .production:

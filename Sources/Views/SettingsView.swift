@@ -725,11 +725,11 @@ private struct ProfileSettingsSheet: View {
                 dietTypes = Array(dietsSet).sorted().joined(separator: ", ")
             }
             
-            // Load counts (would need backend endpoints for accurate counts)
-            // For now, show placeholder - backend needs to implement these endpoints
-            recipesCount = 0  // TODO: Implement backend endpoint
-            favoritesCount = 0  // TODO: Implement backend endpoint
-            ratingsCount = 0  // TODO: Implement backend endpoint
+            // Load counts (backend endpoints pending)
+            // Placeholder values until backend provides endpoints
+            recipesCount = 0
+            favoritesCount = 0
+            ratingsCount = 0
             
         } catch {
             self.error = error.localizedDescription

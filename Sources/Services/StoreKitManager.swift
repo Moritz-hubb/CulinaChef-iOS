@@ -12,7 +12,7 @@ final class StoreKitManager {
             let products = try await Product.products(for: [Self.monthlyProductId])
             self.product = products.first
         } catch {
-            print("[StoreKit] Failed to load products: \(error)")
+            Logger.error("Failed to load products: \(error.localizedDescription)", category: .data)
         }
     }
 

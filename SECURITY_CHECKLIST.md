@@ -14,21 +14,8 @@ Diese Checkliste enthält alle sicherheitsrelevanten Aufgaben, die vor dem App-L
 
 ## ⚠️ Phase 1 - DRINGEND (SOFORT MACHEN!)
 
-- [ ] **OpenAI API-Key ROTIEREN**
-  - Gehe zu https://platform.openai.com/api-keys
-  - Lösche den alten Key: `sk-proj-LEpU4_...` 
-  - Erstelle einen neuen Key
-  - Trage den neuen Key in `Configs/Secrets.xcconfig` ein
-
-- [ ] **Secrets.xcconfig aktualisieren**
-  ```bash
-  # Bearbeite die Datei mit deinen echten Keys
-  nano Configs/Secrets.xcconfig
-  
-  # Stelle sicher, dass diese Keys gesetzt sind:
-  # OPENAI_API_KEY = sk-proj-NEUER_KEY_HIER
-  # SENTRY_DSN = https://dein-sentry-dsn
-  ```
+- [x] OpenAI API-Key rotiert und konfiguriert
+- [x] Secrets.xcconfig aktualisiert und verifiziert
 
 - [ ] **Git Repository initialisieren**
   ```bash

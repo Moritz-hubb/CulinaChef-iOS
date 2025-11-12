@@ -14,6 +14,7 @@ struct ChatView: View {
     @State private var showImageSourcePicker = false
     @State private var pickedImageData: Data?
     @State private var imageSourceType: UIImagePickerController.SourceType = .camera
+    @State private var showConsentDialog = false
 
     var body: some View {
         Group {
@@ -114,6 +115,12 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             ImagePicker(isPresented: $showPhotoPicker, sourceType: imageSourceType) { data in
                 pickedImageData = data
             }
+        }
+        .sheet(isPresented: $showConsentDialog) {
+            OpenAIConsentDialog(
+                onAccept: { OpenAIConsentManager.hasConsent = true },
+                onDecline: { }
+            )
         }
     }
     
@@ -276,6 +283,10 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
     private func sendText() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        guard OpenAIConsentManager.hasConsent else {
+            await MainActor.run { showConsentDialog = true }
+            return
+        }
         inputText = ""
         
         let userMsg = ChatMessage(role: .user, text: text)
@@ -294,7 +305,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             do { 
                 _ = try await app.backend.incrementAIUsage(accessToken: token) 
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-                print("[ChatView] Backend unreachable, continuing without usage tracking")
+                Logger.info("Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
                 await MainActor.run { messages.append(.init(role: .assistant, text: error.localizedDescription)) }
                 return
@@ -315,6 +326,10 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         guard let data = pickedImageData else { return }
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        guard OpenAIConsentManager.hasConsent else {
+            await MainActor.run { showConsentDialog = true }
+            return
+        }
         inputText = ""
         
         // Show the user message that includes an image and their prompt
@@ -334,7 +349,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             do { 
                 _ = try await app.backend.incrementAIUsage(accessToken: token) 
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-                print("[ChatView] Backend unreachable, continuing without usage tracking")
+                Logger.info("Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
                 await MainActor.run { messages.append(.init(role: .assistant, text: error.localizedDescription)) }
                 return
@@ -768,7 +783,7 @@ private struct RecipeSuggestionsView: View {
         do { 
             _ = try await app.backend.incrementAIUsage(accessToken: token) 
         } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-            print("[ChatView] Backend unreachable, continuing without usage tracking")
+            Logger.info("Backend unreachable, continuing without usage tracking", category: .network)
         } catch {
             await MainActor.run { createError = error.localizedDescription }
             return

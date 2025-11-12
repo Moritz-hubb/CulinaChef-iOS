@@ -10,6 +10,7 @@ struct GenerateView: View {
     @State private var generated: Recipe?
     @State private var error: String?
     @State private var showPaywall = false
+    @State private var showConsentDialog = false
 
     var body: some View {
         NavigationView {
@@ -63,6 +64,15 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                 PaywallView()
                     .environmentObject(app)
             }
+            .sheet(isPresented: $showConsentDialog) {
+                OpenAIConsentDialog(
+                    onAccept: {
+                        OpenAIConsentManager.hasConsent = true
+                        Task { await generate() }
+                    },
+                    onDecline: { }
+                )
+            }
         }
     }
 
@@ -76,6 +86,10 @@ TextField("z.B. Tomaten", text: $newIngredientText)
         }
         
         guard let token = app.accessToken else { return }
+        guard OpenAIConsentManager.hasConsent else {
+            await MainActor.run { showConsentDialog = true }
+            return
+        }
         error = nil
         generating = true
         defer { generating = false }

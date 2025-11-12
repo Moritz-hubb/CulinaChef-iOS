@@ -6,6 +6,8 @@ struct OpenAIConsentDialog: View {
     let onAccept: () -> Void
     let onDecline: () -> Void
     
+    @State private var showPrivacy = false
+    
     private var isGerman: Bool {
         localizationManager.currentLanguage == "de"
     }
@@ -84,7 +86,7 @@ struct OpenAIConsentDialog: View {
                         
                         // Privacy link
                         Button {
-                            // TODO: Show full privacy policy
+                            showPrivacy = true
                         } label: {
                             HStack {
                                 Image(systemName: "doc.text")
@@ -140,6 +142,9 @@ struct OpenAIConsentDialog: View {
             .shadow(radius: 20)
             .frame(maxWidth: 500, maxHeight: 700)
             .padding(.horizontal, 40)
+        }
+        .sheet(isPresented: $showPrivacy) {
+            PrivacyPolicyView()
         }
     }
 }

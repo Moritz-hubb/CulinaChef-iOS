@@ -16,7 +16,7 @@ settings:
   base:
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     SWIFT_VERSION: 5.9
-    DEVELOPMENT_TEAM: ""  # Add your Team ID here after setup
+    DEVELOPMENT_TEAM: "L5TAQK22UY"
     ALWAYS_SEARCH_USER_PATHS: NO
 targets:
   CulinaChef:

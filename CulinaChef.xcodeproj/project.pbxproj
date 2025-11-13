@@ -351,11 +351,11 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					04E5CB28410783D7A485F9BF = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = L5TAQK22UY;
 						ProvisioningStyle = Automatic;
 					};
 					FFADC5FD5D5C094834C6F95E = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = L5TAQK22UY;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -526,7 +526,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = L5TAQK22UY;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
@@ -537,7 +537,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = L5TAQK22UY;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;

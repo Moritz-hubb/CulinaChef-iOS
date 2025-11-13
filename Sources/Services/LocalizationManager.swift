@@ -376,6 +376,7 @@ enum L {
     static let shareRecipe = "detail.shareRecipe"
     static let timerHide = "recipe.timerHide"
     static let timerActive = "recipe.timerActive"
+    static let recipe_regenerateHint = "recipe.regenerateHint"
     
     // MARK: - Time Units
     static let minutes = "time.minutes"

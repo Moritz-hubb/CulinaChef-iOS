@@ -28,7 +28,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                     if plan.steps.isEmpty {
                         VStack(spacing: 12) {
                             Text(L.recipe_keine_schritte_gefunden_2c3f.localized).foregroundStyle(.white)
-                            Text("Bitte erneut generieren.").font(.footnote).foregroundStyle(.white.opacity(0.8))
+                            Text(L.recipe_regenerateHint.localized).font(.footnote).foregroundStyle(.white.opacity(0.8))
                         }
                         .padding(24)
                         .tag(1)
@@ -117,7 +117,7 @@ ToolbarItem(placement: .navigationBarTrailing) {
                             HStack(spacing: 8) {
                                 Image(systemName: timersExpanded ? "chevron.down" : "chevron.up")
                                     .font(.caption.bold())
-                                Text(timersExpanded ? "Timer verstecken" : "\(timerCenter.timers.count) Timer aktiv")
+                                Text(timersExpanded ? L.timerHide.localized : "\(timerCenter.timers.count) \(L.timerActive.localized)")
                                     .font(.caption.bold())
                             }
                             .foregroundStyle(.white.opacity(0.8))
@@ -347,7 +347,7 @@ Text(ing.name).font(.body).foregroundStyle(.white)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(16)
         }
-        .navigationTitle("Schritt \(index)")
+        .navigationTitle("\(L.label_step.localized) \(index)")
     }
 
     private func formatAmount(_ ing: IngredientItem, baseServings: Int?, currentServings: Int) -> String {

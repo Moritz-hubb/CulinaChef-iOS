@@ -11,7 +11,7 @@ options:
 packages:
   Sentry:
     url: https://github.com/getsentry/sentry-cocoa.git
-    from: 8.36.0
+    from: 8.57.0
 settings:
   base:
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"

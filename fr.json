@@ -605,5 +605,9 @@
   "chat.messagePlaceholder": "Message…",
   "chat.culinaName": "Culina",
   "chat.welcomeMessage": "Salut ! Je t'aide avec cette recette. Que veux-tu savoir ?",
-  "chat.inRecipeAI": "IA de recette"
+  "chat.inRecipeAI": "IA de recette",
+  "consent.title": "Utiliser les fonctions d'IA",
+  "consent.subtitle": "Votre requête peut être envoyée à OpenAI (États‑Unis). Sans consentement, les fonctions d'IA ne peuvent pas être utilisées.",
+  "consent.decline": "Refuser",
+  "consent.accept": "Accepter et continuer"
 }

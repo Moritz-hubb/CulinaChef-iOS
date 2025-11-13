@@ -280,7 +280,6 @@ struct FairUseView: View {
                     .foregroundStyle(.white)
                 }
             }
-            }
         }
     }
 }

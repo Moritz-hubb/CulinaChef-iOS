@@ -142,6 +142,9 @@ final class AppState: ObservableObject {
         let queue = DispatchQueue(label: "net.monitor")
         monitor.start(queue: queue)
         
+        // Migrate old UserDefaults subscription data to Keychain (one-time)
+        migrateSubscriptionDataToKeychain()
+        
         // Check for existing session
         checkSession()
         // Load subscription status for current user (if any)
@@ -200,13 +203,13 @@ final class AppState: ObservableObject {
     // MARK: - Token Refresh
     func refreshSessionIfNeeded() async {
         guard let refreshToken = KeychainManager.get(key: "refresh_token") else {
-            print("[AppState] No refresh token found, logging out")
+            Logger.info("No refresh token found, logging out", category: .auth)
             await signOut()
             return
         }
         
         do {
-            print("[AppState] Refreshing session with refresh token")
+            Logger.info("Refreshing session with refresh token", category: .auth)
             let response = try await auth.refreshSession(refreshToken: refreshToken)
             
             // Update stored tokens
@@ -219,10 +222,10 @@ final class AppState: ObservableObject {
                 self.accessToken = response.access_token
                 self.userEmail = response.user.email
                 self.isAuthenticated = true
-                print("[AppState] Session refreshed successfully")
+                Logger.info("Session refreshed successfully", category: .auth)
             }
         } catch {
-            print("[AppState] Token refresh failed: \(error.localizedDescription)")
+            Logger.error("Token refresh failed", error: error, category: .auth)
             // Token refresh failed - user needs to log in again
             await signOut()
         }
@@ -457,6 +460,71 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         }
     }
     
+    // MARK: - Subscription Data Migration (UserDefaults → Keychain)
+    private func migrateSubscriptionDataToKeychain() {
+        // Check if migration already happened
+        let migrationKey = "subscription_migrated_to_keychain_v1"
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else {
+            Logger.debug("Subscription migration already completed", category: .data)
+            return
+        }
+        
+        // Only migrate if we have a user ID
+        guard let userId = KeychainManager.get(key: "user_id") else {
+            Logger.debug("No user ID found, skipping migration", category: .data)
+            return
+        }
+        
+        Logger.info("Starting subscription data migration to Keychain", category: .data)
+        
+        let d = UserDefaults.standard
+        var migrated = false
+        
+        // Migrate last payment date
+        if let lastPayment = d.object(forKey: key(Self.subscriptionLastPaymentKeyPrefix, for: userId)) as? Date {
+            do {
+                try KeychainManager.save(key: "subscription_last_payment", date: lastPayment)
+                Logger.debug("Migrated last payment date", category: .data)
+                migrated = true
+            } catch {
+                Logger.error("Failed to migrate last payment date", error: error, category: .data)
+            }
+        }
+        
+        // Migrate period end date
+        if let periodEnd = d.object(forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId)) as? Date {
+            do {
+                try KeychainManager.save(key: "subscription_period_end", date: periodEnd)
+                Logger.debug("Migrated period end date", category: .data)
+                migrated = true
+            } catch {
+                Logger.error("Failed to migrate period end date", error: error, category: .data)
+            }
+        }
+        
+        // Migrate auto-renew flag
+        let autoRenew = d.bool(forKey: key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
+        do {
+            try KeychainManager.save(key: "subscription_autorenew", bool: autoRenew)
+            Logger.debug("Migrated auto-renew flag: \(autoRenew)", category: .data)
+            migrated = true
+        } catch {
+            Logger.error("Failed to migrate auto-renew flag", error: error, category: .data)
+        }
+        
+        // Mark migration as complete
+        if migrated {
+            d.set(true, forKey: migrationKey)
+            Logger.info("Subscription data migration completed successfully", category: .data)
+            
+            // Optional: Clean up old UserDefaults keys (uncomment when confident)
+            // d.removeObject(forKey: key(Self.subscriptionLastPaymentKeyPrefix, for: userId))
+            // d.removeObject(forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId))
+            // d.removeObject(forKey: key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
+            // d.removeObject(forKey: key(Self.subscriptionKeyPrefix, for: userId))
+        }
+    }
+    
     func signOut() async {
         if let token = accessToken {
             try? await auth.signOut(accessToken: token)
@@ -510,12 +578,12 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         guard let userId = KeychainManager.get(key: "user_id") else { return }
         let now = Date()
         let periodEnd = addOneMonth(to: now)
-        let d = UserDefaults.standard
-        d.set(now, forKey: key(Self.subscriptionLastPaymentKeyPrefix, for: userId))
-        d.set(periodEnd, forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId))
-        d.set(true, forKey: key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
-        // Legacy boolean for backward compatibility
-        d.set(true, forKey: key(Self.subscriptionKeyPrefix, for: userId))
+        
+        // Store in Keychain (secure)
+        try? KeychainManager.save(key: "subscription_last_payment", date: now)
+        try? KeychainManager.save(key: "subscription_period_end", date: periodEnd)
+        try? KeychainManager.save(key: "subscription_autorenew", bool: true)
+        
         self.isSubscribed = true
         // Push to Supabase
         if let token = self.accessToken {
@@ -543,12 +611,14 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     
     func cancelAutoRenew() {
         guard let userId = KeychainManager.get(key: "user_id") else { return }
-        let d = UserDefaults.standard
-        d.set(false, forKey: key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
+        
+        // Store in Keychain (secure)
+        try? KeychainManager.save(key: "subscription_autorenew", bool: false)
+        
         // Do not change period end; features remain until end of cycle
         loadSubscriptionStatus()
         if let token = self.accessToken {
-            let periodEnd = d.object(forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId)) as? Date
+            let periodEnd = getSubscriptionPeriodEnd()
             let now = Date()
             let status = (periodEnd != nil && now < periodEnd!) ? "in_grace" : "expired"
             Task {
@@ -637,30 +707,30 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     }
     
     func getSubscriptionPeriodEnd() -> Date? {
-        guard let userId = KeychainManager.get(key: "user_id") else { return nil }
-        return UserDefaults.standard.object(forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId)) as? Date
+        guard KeychainManager.get(key: "user_id") != nil else { return nil }
+        return KeychainManager.getDate(key: "subscription_period_end")
     }
     
     func getSubscriptionLastPayment() -> Date? {
-        guard let userId = KeychainManager.get(key: "user_id") else { return nil }
-        return UserDefaults.standard.object(forKey: key(Self.subscriptionLastPaymentKeyPrefix, for: userId)) as? Date
+        guard KeychainManager.get(key: "user_id") != nil else { return nil }
+        return KeychainManager.getDate(key: "subscription_last_payment")
     }
     
     func getSubscriptionAutoRenew() -> Bool {
-        guard let userId = KeychainManager.get(key: "user_id") else { return false }
-        return UserDefaults.standard.bool(forKey: key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
+        guard KeychainManager.get(key: "user_id") != nil else { return false }
+        return KeychainManager.getBool(key: "subscription_autorenew") ?? false
     }
     
     func refreshSubscriptionStatusFromStoreKit() async {
-        guard let userId = KeychainManager.get(key: "user_id") else { return }
+        guard KeychainManager.get(key: "user_id") != nil else { return }
         
         // Get detailed subscription info from StoreKit
         if let info = await storeKit.getSubscriptionInfo() {
             await MainActor.run {
-                let d = UserDefaults.standard
-                d.set(info.willRenew, forKey: key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
+                // Store in Keychain (secure)
+                try? KeychainManager.save(key: "subscription_autorenew", bool: info.willRenew)
                 if let expiresAt = info.expiresAt {
-                    d.set(expiresAt, forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId))
+                    try? KeychainManager.save(key: "subscription_period_end", date: expiresAt)
                 }
                 self.isSubscribed = info.isActive
             }
@@ -673,18 +743,17 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     }
     
     private func extendIfAutoRenewNeeded() {
-        guard let userId = KeychainManager.get(key: "user_id") else { return }
-        let d = UserDefaults.standard
-        var periodEnd = d.object(forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId)) as? Date
-        let auto = d.bool(forKey: key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
+        guard KeychainManager.get(key: "user_id") != nil else { return }
+        var periodEnd = getSubscriptionPeriodEnd()
+        let auto = getSubscriptionAutoRenew()
         guard auto, var end = periodEnd else { return }
         let now = Date()
         // Extend in month steps until next period end is in the future
         while now >= end {
             let newLastPayment = end
             let newEnd = addOneMonth(to: end)
-            d.set(newLastPayment, forKey: key(Self.subscriptionLastPaymentKeyPrefix, for: userId))
-            d.set(newEnd, forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId))
+            try? KeychainManager.save(key: "subscription_last_payment", date: newLastPayment)
+            try? KeychainManager.save(key: "subscription_period_end", date: newEnd)
             end = newEnd
         }
     }
@@ -703,10 +772,10 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                     let lastPayment = dto.last_payment_at.flatMap { iso.date(from: $0) }
                     let periodEnd = dto.current_period_end.flatMap { iso.date(from: $0) }
                     await MainActor.run {
-                        let d = UserDefaults.standard
-                        if let lp = lastPayment { d.set(lp, forKey: self.key(Self.subscriptionLastPaymentKeyPrefix, for: userId)) }
-                        if let pe = periodEnd { d.set(pe, forKey: self.key(Self.subscriptionPeriodEndKeyPrefix, for: userId)) }
-                        d.set(dto.auto_renew, forKey: self.key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
+                        // Store in Keychain (secure)
+                        if let lp = lastPayment { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
+                        if let pe = periodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
+                        try? KeychainManager.save(key: "subscription_autorenew", bool: dto.auto_renew)
                         self.isSubscribed = dto.is_active
                     }
                     return
@@ -714,10 +783,10 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                 // Fallback: direct Supabase (legacy)
                 if let remote = try? await self.subscriptionsClient.fetchSubscription(userId: userId, accessToken: token) {
                     await MainActor.run {
-                        let d = UserDefaults.standard
-                        if let lp = remote.lastPaymentAt { d.set(lp, forKey: self.key(Self.subscriptionLastPaymentKeyPrefix, for: userId)) }
-                        if let pe = remote.currentPeriodEnd { d.set(pe, forKey: self.key(Self.subscriptionPeriodEndKeyPrefix, for: userId)) }
-                        d.set(remote.autoRenew, forKey: self.key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
+                        // Store in Keychain (secure)
+                        if let lp = remote.lastPaymentAt { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
+                        if let pe = remote.currentPeriodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
+                        try? KeychainManager.save(key: "subscription_autorenew", bool: remote.autoRenew)
                         self.isSubscribed = (remote.currentPeriodEnd.map { Date() < $0 } ?? false)
                     }
                     return
@@ -732,17 +801,15 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     }
     
     private func loadSubscriptionStatusLocal() {
-        guard let userId = KeychainManager.get(key: "user_id") else {
+        guard KeychainManager.get(key: "user_id") != nil else {
             self.isSubscribed = false
             return
         }
         extendIfAutoRenewNeeded()
-        let d = UserDefaults.standard
-        if let periodEnd = d.object(forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId)) as? Date {
+        if let periodEnd = getSubscriptionPeriodEnd() {
             self.isSubscribed = Date() < periodEnd
         } else {
-            let active = d.bool(forKey: key(Self.subscriptionKeyPrefix, for: userId))
-            self.isSubscribed = active
+            self.isSubscribed = false
         }
     }
     
@@ -759,10 +826,12 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             if txn != nil {
                 // Update local + backend
                 let now = Date(); let periodEnd = addOneMonth(to: now)
-                let d = UserDefaults.standard
-                d.set(now, forKey: key(Self.subscriptionLastPaymentKeyPrefix, for: userId))
-                d.set(periodEnd, forKey: key(Self.subscriptionPeriodEndKeyPrefix, for: userId))
-                d.set(true, forKey: key(Self.subscriptionAutoRenewKeyPrefix, for: userId))
+                
+                // Store in Keychain (secure)
+                try? KeychainManager.save(key: "subscription_last_payment", date: now)
+                try? KeychainManager.save(key: "subscription_period_end", date: periodEnd)
+                try? KeychainManager.save(key: "subscription_autorenew", bool: true)
+                
                 self.isSubscribed = true
                 if let token = self.accessToken {
                     Task {

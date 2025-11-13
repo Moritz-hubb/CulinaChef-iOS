@@ -259,5 +259,35 @@ enum KeychainManager {
         delete(key: "refresh_token")
         delete(key: "user_id")
         delete(key: "user_email")
+        // Subscription keys
+        delete(key: "subscription_last_payment")
+        delete(key: "subscription_period_end")
+        delete(key: "subscription_autorenew")
+    }
+    
+    // MARK: - Date Storage
+    static func save(key: String, date: Date) throws {
+        let timestamp = date.timeIntervalSince1970
+        try save(key: key, value: String(timestamp))
+    }
+    
+    static func getDate(key: String) -> Date? {
+        guard let value = get(key: key),
+              let timestamp = Double(value) else {
+            return nil
+        }
+        return Date(timeIntervalSince1970: timestamp)
+    }
+    
+    // MARK: - Bool Storage
+    static func save(key: String, bool: Bool) throws {
+        try save(key: key, value: bool ? "true" : "false")
+    }
+    
+    static func getBool(key: String) -> Bool? {
+        guard let value = get(key: key) else {
+            return nil
+        }
+        return value == "true"
     }
 }

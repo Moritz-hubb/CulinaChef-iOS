@@ -92,6 +92,19 @@ struct PaywallView: View {
                         }
                         .padding(.top, 8)
                         
+                        // Debug Badge
+                        #if DEBUG
+                        Text("🧪 Debug-Modus: Simulierter Kauf")
+                            .font(.caption.bold())
+                            .foregroundStyle(.yellow)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color.black.opacity(0.3))
+                            )
+                        #endif
+                        
                         // CTA Button
                         VStack(spacing: 12) {
                             Button(action: purchaseUnlimited) {
@@ -189,6 +202,16 @@ struct PaywallView: View {
         errorMessage = nil
         
         Task {
+            #if DEBUG
+            // In Debug: Use simulated purchase (no Apple Developer Account needed)
+            app.subscribeSimulated()
+            
+            await MainActor.run {
+                isPurchasing = false
+                dismiss()
+            }
+            #else
+            // In Production: Use real StoreKit
             await app.purchaseStoreKit()
             
             await MainActor.run {
@@ -202,6 +225,7 @@ struct PaywallView: View {
                     showError = true
                 }
             }
+            #endif
         }
     }
     

@@ -203,7 +203,7 @@ final class SupabaseAuthClient {
 
 // MARK: - Keychain Storage
 enum KeychainManager {
-    private static let service = "com.example.culinachef"
+    private static let service = "com.moritzserrin.culinachef"
     
     static func save(key: String, value: String) throws {
         let data = value.data(using: .utf8)!

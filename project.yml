@@ -16,7 +16,7 @@ settings:
   base:
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     SWIFT_VERSION: 5.9
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: ""  # Add your Team ID here after setup
     ALWAYS_SEARCH_USER_PATHS: NO
 targets:
   CulinaChef:
@@ -45,7 +45,7 @@ targets:
     info:
       path: Sources/Info.plist
       properties:
-        CFBundleIdentifier: com.example.culinachef
+        CFBundleIdentifier: com.moritzserrin.culinachef
         UIUserInterfaceStyle: Automatic
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIRequiresFullScreen: true
@@ -60,7 +60,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: CulinaChef
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.culinachef
+        PRODUCT_BUNDLE_IDENTIFIER: com.moritzserrin.culinachef
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     scheme:
@@ -78,5 +78,5 @@ targets:
       - target: CulinaChef
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.culinachef.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.moritzserrin.culinachef.tests
         CODE_SIGN_STYLE: Automatic

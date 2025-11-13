@@ -227,9 +227,26 @@ struct SignInView: View {
         errorMessage = nil
         focusedField = nil
         
+        // Validate input before sending to backend
+        let trimmedEmail = email.trimmed
+        
+        guard !trimmedEmail.isEmpty else {
+            errorMessage = String.validationError(for: .required)
+            return
+        }
+        
+        guard trimmedEmail.isValidEmail else {
+            errorMessage = String.validationError(for: .email)
+            return
+        }
+        
+        guard password.isValidPassword else {
+            errorMessage = String.validationError(for: .password)
+            return
+        }
+        
         do {
-            try await app.signIn(email: email.trimmingCharacters(in: .whitespacesAndNewlines), 
-                                password: password)
+            try await app.signIn(email: trimmedEmail, password: password)
         } catch {
             errorMessage = error.localizedDescription
         }

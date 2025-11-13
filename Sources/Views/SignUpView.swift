@@ -397,26 +397,60 @@ struct SignUpView: View {
     }
     
     private var isFormValid: Bool {
-        let uname = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !uname.isEmpty && isValidUsername(uname) &&
-        !email.isEmpty && email.contains("@") &&
-        password.count >= 6 && passwordsMatch &&
+        let uname = username.trimmed
+        let trimmedEmail = email.trimmed
+        return !uname.isEmpty && uname.isValidUsername &&
+        !trimmedEmail.isEmpty && trimmedEmail.isValidEmail &&
+        password.isValidPassword && passwordsMatch &&
         acceptedTerms && confirmedAge
     }
     
     private func signUp() async {
-        guard isFormValid else {
-            errorMessage = "Bitte fülle alle Felder korrekt aus"
-            return
-        }
-        
         errorMessage = nil
         focusedField = nil
         
+        // Validate input before sending to backend
+        let uname = username.trimmed
+        let trimmedEmail = email.trimmed
+        
+        guard !uname.isEmpty else {
+            errorMessage = String.validationError(for: .required)
+            return
+        }
+        
+        guard uname.isValidUsername else {
+            errorMessage = String.validationError(for: .username)
+            return
+        }
+        
+        guard !trimmedEmail.isEmpty else {
+            errorMessage = String.validationError(for: .required)
+            return
+        }
+        
+        guard trimmedEmail.isValidEmail else {
+            errorMessage = String.validationError(for: .email)
+            return
+        }
+        
+        guard password.isValidPassword else {
+            errorMessage = String.validationError(for: .password)
+            return
+        }
+        
+        guard passwordsMatch else {
+            errorMessage = NSLocalizedString("validation.password.mismatch", value: "Passwörter stimmen nicht überein", comment: "Password mismatch error")
+            return
+        }
+        
+        guard acceptedTerms && confirmedAge else {
+            errorMessage = NSLocalizedString("validation.terms.required", value: "Bitte akzeptieren Sie die Nutzungsbedingungen", comment: "Terms required error")
+            return
+        }
+        
         do {
-            let uname = username.trimmingCharacters(in: .whitespacesAndNewlines)
             try await app.signUp(
-                email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+                email: trimmedEmail,
                 password: password,
                 username: uname
             )
@@ -458,16 +492,11 @@ struct SignUpView: View {
         return hashed.compactMap { String(format: "%02x", $0) }.joined()
     }
     private var usernameWarning: String {
-        let uname = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        let uname = username.trimmed
         if uname.isEmpty { return "" }
         if uname.count < 3 { return "Mindestens 3 Zeichen" }
-        if !isValidUsername(uname) { return "Nur Buchstaben, Zahlen und _ erlaubt" }
+        if !uname.isValidUsername { return "Nur Buchstaben, Zahlen und _ erlaubt" }
         return ""
-    }
-    
-    private func isValidUsername(_ u: String) -> Bool {
-        let pattern = "^[A-Za-z0-9_]{3,32}$"
-        return u.range(of: pattern, options: .regularExpression) != nil
     }
 }
 

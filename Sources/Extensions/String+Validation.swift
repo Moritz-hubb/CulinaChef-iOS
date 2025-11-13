@@ -1,0 +1,67 @@
+import Foundation
+
+extension String {
+    /// Validate if string is a valid email address
+    var isValidEmail: Bool {
+        let emailRegex = #"^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
+        let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
+        return emailPredicate.evaluate(with: self)
+    }
+    
+    /// Validate if string is a valid password (min 6 chars)
+    var isValidPassword: Bool {
+        return self.count >= 6
+    }
+    
+    /// Validate if string is a valid password with strong requirements
+    var isStrongPassword: Bool {
+        // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
+        let passwordRegex = #"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"#
+        let passwordPredicate = NSPredicate(format: "SELF MATCHES %@", passwordRegex)
+        return passwordPredicate.evaluate(with: self)
+    }
+    
+    /// Validate if string is a valid username (3-32 chars, alphanumeric + underscore)
+    var isValidUsername: Bool {
+        guard self.count >= 3 && self.count <= 32 else { return false }
+        let usernameRegex = #"^[a-zA-Z0-9_]+$"#
+        let usernamePredicate = NSPredicate(format: "SELF MATCHES %@", usernameRegex)
+        return usernamePredicate.evaluate(with: self)
+    }
+    
+    /// Remove leading and trailing whitespace
+    var trimmed: String {
+        return self.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    /// Check if string is empty after trimming
+    var isBlank: Bool {
+        return self.trimmed.isEmpty
+    }
+}
+
+// MARK: - Localized Error Messages
+extension String {
+    static func validationError(for field: ValidationField) -> String {
+        switch field {
+        case .email:
+            return NSLocalizedString("validation.email.invalid", value: "Bitte geben Sie eine gültige E-Mail-Adresse ein", comment: "Invalid email error")
+        case .password:
+            return NSLocalizedString("validation.password.too_short", value: "Passwort muss mindestens 6 Zeichen lang sein", comment: "Password too short error")
+        case .passwordStrong:
+            return NSLocalizedString("validation.password.weak", value: "Passwort muss mind. 8 Zeichen, 1 Großbuchstaben, 1 Kleinbuchstaben und 1 Zahl enthalten", comment: "Weak password error")
+        case .username:
+            return NSLocalizedString("validation.username.invalid", value: "Benutzername muss 3-32 Zeichen lang sein und darf nur Buchstaben, Zahlen und _ enthalten", comment: "Invalid username error")
+        case .required:
+            return NSLocalizedString("validation.field.required", value: "Dieses Feld ist erforderlich", comment: "Required field error")
+        }
+    }
+    
+    enum ValidationField {
+        case email
+        case password
+        case passwordStrong
+        case username
+        case required
+    }
+}

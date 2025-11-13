@@ -64,5 +64,19 @@ targets:
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     scheme:
-      testTargets: []
-      gatherCoverageData: false
+      testTargets:
+        - CulinaChefTests
+      gatherCoverageData: true
+
+  CulinaChefTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests
+    dependencies:
+      - target: CulinaChef
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.culinachef.tests
+        CODE_SIGN_STYLE: Automatic

@@ -35,10 +35,16 @@ enum Config {
         switch currentEnvironment {
         case .development:
             // Development: Localhost for simulator, LAN IP for device
-            #if targetEnvironment(simulator)
-            return URL(string: "http://127.0.0.1:8000")!
+            // HTTP is only allowed in DEBUG builds
+            #if DEBUG
+                #if targetEnvironment(simulator)
+                return URL(string: "http://127.0.0.1:8000")!
+                #else
+                return URL(string: "http://192.168.178.170:8000")!
+                #endif
             #else
-            return URL(string: "http://192.168.178.170:8000")!
+                // Fallback to HTTPS in Release builds even for development environment
+                return URL(string: "https://culinachef-backend-production.up.railway.app")!
             #endif
             
         case .staging:

@@ -58,6 +58,43 @@ struct SettingsView: View {
         }
     }
     
+    private var privacySection: some View {
+        SectionCard(title: NSLocalizedString("settings.privacy", value: "Datenschutz & KI", comment: "Privacy section title")) {
+            VStack(spacing: 12) {
+                // OpenAI Consent Status
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Image(systemName: "brain.head.profile")
+                            Text(NSLocalizedString("settings.openai_consent", value: "OpenAI Einwilligung", comment: "OpenAI consent setting"))
+                                .font(.subheadline)
+                        }
+                        Text(OpenAIConsentManager.hasConsent 
+                            ? NSLocalizedString("settings.consent_granted", value: "Erteilt", comment: "Consent granted") 
+                            : NSLocalizedString("settings.consent_not_granted", value: "Nicht erteilt", comment: "Consent not granted"))
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    Spacer()
+                    if OpenAIConsentManager.hasConsent {
+                        Button(NSLocalizedString("settings.revoke_consent", value: "Widerrufen", comment: "Revoke consent button")) {
+                            OpenAIConsentManager.resetConsent()
+                        }
+                        .font(.caption.bold())
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.red.opacity(0.15), in: Capsule())
+                    }
+                }
+                .foregroundStyle(.white)
+                .padding(12)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            }
+        }
+    }
+    
     private var legalSection: some View {
         SectionCard(title: L.settings_legal.localized) {
             VStack(spacing: 12) {
@@ -131,10 +168,9 @@ struct SettingsView: View {
                 VStack(spacing: 16) {
                     generalSettingsSection
                     dietarySection
+                    privacySection
                     legalSection
                     accountSection
-
-
                 }
                 .padding(16)
             }

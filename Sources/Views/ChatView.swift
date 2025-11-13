@@ -1,14 +1,6 @@
 import SwiftUI
 import PhotosUI
 
-fileprivate enum AIConsent {
-    private static let key = "openai_consent_granted"
-    static var hasConsent: Bool {
-        get { UserDefaults.standard.bool(forKey: key) }
-        set { UserDefaults.standard.set(newValue, forKey: key) }
-    }
-}
-
 struct ChatView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
 
@@ -125,50 +117,16 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             }
         }
         .sheet(isPresented: $showConsentDialog) {
-            ZStack {
-                LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.95, green: 0.74, blue: 0.64), Color(red: 0.93, green: 0.66, blue: 0.55)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    .ignoresSafeArea()
-                VStack(spacing: 16) {
-                    VStack(spacing: 12) {
-                        Image(systemName: "brain.head.profile")
-                            .font(.system(size: 44, weight: .semibold))
-                            .foregroundStyle(.white)
-                        Text(L.consent_title.localized)
-                            .font(.title2.bold())
-                            .foregroundStyle(.white)
-                        Text(L.consent_subtitle.localized)
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.9))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    .padding(20)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.15), lineWidth: 1))
-                    
-                    HStack(spacing: 12) {
-                        Button(role: .cancel) { showConsentDialog = false } label: {
-                            Text(L.consent_decline.localized)
-                                .font(.subheadline)
-                                .foregroundStyle(.white)
-                        }
-                        Spacer()
-                        Button { AIConsent.hasConsent = true; showConsentDialog = false } label: {
-                            Text(L.consent_accept.localized)
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.white)
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 14)
-                                .background(
-                                    LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule()
-                                )
-                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                        }
-                    }
-                    .padding(.horizontal)
+            OpenAIConsentDialog(
+                onAccept: {
+                    OpenAIConsentManager.hasConsent = true
+                    // Continue with the last action
+                },
+                onDecline: {
+                    // User declined, show message
+                    messages.append(.init(role: .assistant, text: NSLocalizedString("consent.required", value: "KI-Funktionen benötigen Ihre Einwilligung", comment: "Consent required error")))
                 }
-                .padding()
-            }
+            )
         }
     }
     
@@ -331,7 +289,9 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
     private func sendText() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        guard AIConsent.hasConsent else {
+        
+        // Check DSGVO consent before using OpenAI
+        guard OpenAIConsentManager.hasConsent else {
             await MainActor.run { showConsentDialog = true }
             return
         }
@@ -374,7 +334,9 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         guard let data = pickedImageData else { return }
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        guard AIConsent.hasConsent else {
+        
+        // Check DSGVO consent before using OpenAI
+        guard OpenAIConsentManager.hasConsent else {
             await MainActor.run { showConsentDialog = true }
             return
         }

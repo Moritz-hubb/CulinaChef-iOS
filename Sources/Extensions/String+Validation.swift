@@ -38,6 +38,30 @@ extension String {
     var isBlank: Bool {
         return self.trimmed.isEmpty
     }
+    
+    /// Validate if input is safe (no SQL injection/XSS patterns)
+    var isSafeInput: Bool {
+        let dangerousPatterns = [
+            "<script", "</script", "javascript:",
+            "DROP TABLE", "DELETE FROM", "INSERT INTO",
+            "--", "/*", "*/", "xp_", "sp_",
+            "<iframe", "onerror=", "onclick="
+        ]
+        let lowercased = self.lowercased()
+        return !dangerousPatterns.contains { lowercased.contains($0.lowercased()) }
+    }
+    
+    /// Validate if string is a valid recipe title (3-100 chars)
+    var isValidRecipeTitle: Bool {
+        let trimmed = self.trimmed
+        return trimmed.count >= 3 && trimmed.count <= 100
+    }
+    
+    /// Validate if string is a valid ingredient (1-200 chars)
+    var isValidIngredient: Bool {
+        let trimmed = self.trimmed
+        return !trimmed.isEmpty && trimmed.count <= 200
+    }
 }
 
 // MARK: - Localized Error Messages

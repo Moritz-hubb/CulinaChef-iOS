@@ -867,40 +867,60 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
 
     // MARK: - StoreKit purchase/restore
     func purchaseStoreKit() async {
+        // Clear any previous error
+        await MainActor.run { self.error = nil }
+        
         do {
-            guard let userId = KeychainManager.get(key: "user_id") else { return }
+            guard let userId = KeychainManager.get(key: "user_id") else { 
+                await MainActor.run { self.error = "Nicht angemeldet" }
+                return 
+            }
+            
             let txn = try await storeKit.purchaseMonthly()
-            if txn != nil {
-                // Update local + backend
-                let now = Date(); let periodEnd = addOneMonth(to: now)
-                
-                // Store in Keychain (secure)
-                try? KeychainManager.save(key: "subscription_last_payment", date: now)
-                try? KeychainManager.save(key: "subscription_period_end", date: periodEnd)
-                try? KeychainManager.save(key: "subscription_autorenew", bool: true)
-                
-                self.isSubscribed = true
-                if let token = self.accessToken {
-                    Task {
-                        try? await self.subscriptionsClient.upsertSubscription(
-                            userId: userId,
-                            plan: "unlimited",
-                            status: "active",
-                            autoRenew: true,
-                            cancelAtPeriodEnd: false,
-                            lastPaymentAt: now,
-                            currentPeriodEnd: periodEnd,
-                            priceCents: 599,
-                            currency: "EUR",
-                            accessToken: token
-                        )
-                    }
+            
+            // IMPORTANT: Only proceed if transaction exists (user completed purchase)
+            // If txn is nil, user cancelled or pending - don't set subscription active
+            guard let transaction = txn else {
+                // User cancelled or pending - not an error, just no action
+                print("[StoreKit] Purchase cancelled or pending")
+                return
+            }
+            
+            // SUCCESS: User completed purchase
+            print("[StoreKit] Purchase successful: \(transaction.id)")
+            
+            // Update local + backend
+            let now = Date()
+            let periodEnd = addOneMonth(to: now)
+            
+            // Store in Keychain (secure)
+            try? KeychainManager.save(key: "subscription_last_payment", date: now)
+            try? KeychainManager.save(key: "subscription_period_end", date: periodEnd)
+            try? KeychainManager.save(key: "subscription_autorenew", bool: true)
+            
+            await MainActor.run { self.isSubscribed = true }
+            
+            if let token = self.accessToken {
+                Task {
+                    try? await self.subscriptionsClient.upsertSubscription(
+                        userId: userId,
+                        plan: "unlimited",
+                        status: "active",
+                        autoRenew: true,
+                        cancelAtPeriodEnd: false,
+                        lastPaymentAt: now,
+                        currentPeriodEnd: periodEnd,
+                        priceCents: 599,
+                        currency: "EUR",
+                        accessToken: token
+                    )
                 }
-                // Aggressive refresh
-                await MainActor.run {
-                    self.loadSubscriptionStatus()
-                    self.startAggressiveSubscriptionPolling(durationSeconds: 5 * 60, intervalSeconds: 30)
-                }
+            }
+            
+            // Aggressive refresh
+            await MainActor.run {
+                self.loadSubscriptionStatus()
+                self.startAggressiveSubscriptionPolling(durationSeconds: 5 * 60, intervalSeconds: 30)
             }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }

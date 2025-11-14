@@ -203,16 +203,7 @@ struct PaywallView: View {
         errorMessage = nil
         
         Task {
-            #if DEBUG
-            // In Debug: Use simulated purchase (no Apple Developer Account needed)
-            app.subscribeSimulated()
-            
-            await MainActor.run {
-                isPurchasing = false
-                dismiss()
-            }
-            #else
-            // In Production: Use real StoreKit
+            // Use real StoreKit purchase flow (works with StoreKit Configuration file in Debug)
             await app.purchaseStoreKit()
             
             await MainActor.run {
@@ -224,9 +215,11 @@ struct PaywallView: View {
                 } else if let error = app.error {
                     errorMessage = error
                     showError = true
+                } else {
+                    // User cancelled - no error, just don't dismiss
+                    // This prevents false "success" state
                 }
             }
-            #endif
         }
     }
     

@@ -130,6 +130,8 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         }
     }
     
+    @State private var showPaywallSheet = false
+    
     private var paywallContent: some View {
         ZStack {
             LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.95, green: 0.74, blue: 0.64), Color(red: 0.93, green: 0.66, blue: 0.55)], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -153,7 +155,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                         .padding(.horizontal, 40)
                 }
                 
-                Button(action: { Task { await app.purchaseStoreKit() } }) {
+                Button(action: { showPaywallSheet = true }) {
                     Text(L.subscriptionUnlockUnlimited.localized)
                         .font(.headline)
                         .foregroundStyle(.white)
@@ -172,6 +174,10 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 .padding(.top, 16)
             }
             .padding()
+        }
+        .sheet(isPresented: $showPaywallSheet) {
+            PaywallView()
+                .environmentObject(app)
         }
     }
     

@@ -39,6 +39,10 @@ final class AppState: ObservableObject {
 
     // Subscription state (simulated, prepared for StoreKit)
     @Published var isSubscribed: Bool = false
+    /// Becomes true once we have loaded the initial subscription status
+    /// (from StoreKit, backend, Supabase, or local cache).
+    /// Used to avoid briefly showing the paywall before we know the real state.
+    @Published var subscriptionStatusInitialized: Bool = false
     private static let subscriptionKeyPrefix = "subscription_active_" // legacy
     private static let subscriptionLastPaymentKeyPrefix = "subscription_last_payment_"
     private static let subscriptionPeriodEndKeyPrefix = "subscription_period_end_"
@@ -786,11 +790,13 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                     try? KeychainManager.save(key: "subscription_period_end", date: expiresAt)
                 }
                 self.isSubscribed = info.isActive
+                self.subscriptionStatusInitialized = true
             }
         } else {
             // No active entitlement found
             await MainActor.run {
                 self.isSubscribed = false
+                self.subscriptionStatusInitialized = true
             }
         }
     }
@@ -814,6 +820,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     func loadSubscriptionStatus() {
         guard let userId = KeychainManager.get(key: "user_id") else {
             self.isSubscribed = false
+            self.subscriptionStatusInitialized = true
             return
         }
         // Try backend first if authenticated
@@ -830,6 +837,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                         if let pe = periodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
                         try? KeychainManager.save(key: "subscription_autorenew", bool: dto.auto_renew)
                         self.isSubscribed = dto.is_active
+                        self.subscriptionStatusInitialized = true
                     }
                     return
                 }
@@ -841,6 +849,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                         if let pe = remote.currentPeriodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
                         try? KeychainManager.save(key: "subscription_autorenew", bool: remote.autoRenew)
                         self.isSubscribed = (remote.currentPeriodEnd.map { Date() < $0 } ?? false)
+                        self.subscriptionStatusInitialized = true
                     }
                     return
                 }
@@ -856,6 +865,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     private func loadSubscriptionStatusLocal() {
         guard KeychainManager.get(key: "user_id") != nil else {
             self.isSubscribed = false
+            self.subscriptionStatusInitialized = true
             return
         }
         extendIfAutoRenewNeeded()
@@ -864,6 +874,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         } else {
             self.isSubscribed = false
         }
+        self.subscriptionStatusInitialized = true
     }
     
     // Backward compatibility: keep existing API
@@ -946,6 +957,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         let active = await storeKit.hasActiveEntitlement()
         await MainActor.run {
             self.isSubscribed = active
+            self.subscriptionStatusInitialized = true
             if active { self.loadSubscriptionStatus() }
         }
     }

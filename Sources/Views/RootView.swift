@@ -94,7 +94,13 @@ struct RootView: View {
         // Only enforce paywall after onboarding is completed
         guard app.isAuthenticated else { return }
         guard onboardingCompletedForCurrentUser() else { return }
+        
+        // Always trigger a refresh in the background
         app.loadSubscriptionStatus()
+        
+        // Avoid flashing the paywall before we have any subscription info
+        guard app.subscriptionStatusInitialized else { return }
+        
         if !app.isSubscribed && !paywallDismissedForCurrentUser() {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 showSubscriptionPaywall = true

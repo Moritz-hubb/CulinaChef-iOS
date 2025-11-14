@@ -408,7 +408,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         req.addValue("resolution=merge-duplicates,return=representation", forHTTPHeaderField: "Prefer")
         req.httpBody = try JSONEncoder().encode([Row(user_id: userId, username: username, full_name: fullName, email: email)])
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw NSError(domain: "Profiles", code: (resp as? HTTPURLResponse)?.statusCode ?? -1, userInfo: [NSLocalizedDescriptionKey: "Profil konnte nicht gespeichert werden"])
         }
@@ -431,7 +431,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         req.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else { return nil }
         let rows = try JSONDecoder().decode([ProfileRow].self, from: data)
         return rows.first
@@ -713,7 +713,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             req.addValue("return=minimal", forHTTPHeaderField: "Prefer")
             let log = AuditLog(user_id: userId, email: email, deleted_by: "user_request", reason: "user_initiated")
             req.httpBody = try JSONEncoder().encode([log])
-            _ = try? await URLSession.shared.data(for: req)
+            _ = try? await SecureURLSession.shared.data(for: req)
         } catch {
             print("[AccountDeletion] Audit log failed: \(error)")
         }
@@ -1015,7 +1015,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         req.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else { throw URLError(.badServerResponse) }
         return try JSONDecoder().decode([Menu].self, from: data)
     }
@@ -1031,7 +1031,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         req.addValue("return=representation", forHTTPHeaderField: "Prefer")
         req.httpBody = try JSONEncoder().encode([Row(user_id: userId, title: title)])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else { throw URLError(.badServerResponse) }
         return try JSONDecoder().decode([Menu].self, from: data).first!
     }
@@ -1047,7 +1047,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         req.addValue("resolution=merge-duplicates,return=representation", forHTTPHeaderField: "Prefer")
         req.httpBody = try JSONEncoder().encode([Row(menu_id: menuId, recipe_id: recipeId)])
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else { throw URLError(.badServerResponse) }
     }
     
@@ -1080,7 +1080,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         req.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else { throw URLError(.badServerResponse) }
         let rows = try JSONDecoder().decode([Row].self, from: data)
         return rows.map { $0.recipe_id }
@@ -1097,7 +1097,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         req.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         req.addValue("return=minimal", forHTTPHeaderField: "Prefer")
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else { throw URLError(.badServerResponse) }
         // cleanup local placeholders
         removeAllMenuSuggestions(menuId: menuId)
@@ -1106,6 +1106,13 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     // MARK: - Auto-generate recipes for a menu
     func autoGenerateRecipesForMenu(menu: Menu, suggestions: [MenuSuggestion]) async {
         guard let token = self.accessToken, let userId = KeychainManager.get(key: "user_id") else { return }
+        
+        // Enforce OpenAI DSGVO consent for any automatic generation
+        guard OpenAIConsentManager.hasConsent else {
+            print("[AutoGen] OpenAI consent not granted; skipping auto-generation")
+            return
+        }
+        
         var ai = (self.recipeAI ?? self.openAI)
         if ai == nil { refreshRecipeAI(); ai = (self.recipeAI ?? self.openAI) }
         guard let model = ai else { return }
@@ -1224,7 +1231,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         request.addValue("return=representation", forHTTPHeaderField: "Prefer")
         let enc = JSONEncoder()
         request.httpBody = try enc.encode(row)
-        let (respData, response) = try await URLSession.shared.data(for: request)
+        let (respData, response) = try await SecureURLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw URLError(.badServerResponse)
         }
@@ -1248,7 +1255,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                 req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 req.addValue("return=minimal", forHTTPHeaderField: "Prefer")
                 req.timeoutInterval = 15
-                let (_, resp) = try await URLSession.shared.data(for: req)
+                let (_, resp) = try await SecureURLSession.shared.data(for: req)
                 guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
                     throw URLError(.badServerResponse)
                 }
@@ -1295,7 +1302,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                 req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 req.addValue("return=minimal", forHTTPHeaderField: "Prefer")
                 req.timeoutInterval = 15
-                let (_, resp) = try await URLSession.shared.data(for: req)
+                let (_, resp) = try await SecureURLSession.shared.data(for: req)
                 guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
                     kept.append(id)
                     continue

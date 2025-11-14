@@ -776,6 +776,12 @@ private struct RecipeSuggestionsView: View {
     
     // Generate recipe automatically with essential preferences only
     private func generateAutomatic(recipeName: String, recipeDescription: String) async {
+        // Check DSGVO consent before using OpenAI
+        guard OpenAIConsentManager.hasConsent else {
+            await MainActor.run { showConsentDialog = true }
+            return
+        }
+        
         await MainActor.run {
             generatingAuto = true
             scrollTarget = "autoGenerating"

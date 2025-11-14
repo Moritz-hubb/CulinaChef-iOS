@@ -52,6 +52,7 @@ struct RecipeCreatorView: View {
     @State private var showNotRecipeAlert = false
     @State private var showImpossibleRecipeAlert = false
     @State private var impossibleRecipeMessage = ""
+    @State private var showConsentDialog = false
 
     var body: some View {
         Group {
@@ -197,6 +198,17 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         .sheet(isPresented: $showResult) {
             if let plan { RecipeResultView(plan: plan) }
         }
+        .sheet(isPresented: $showConsentDialog) {
+            OpenAIConsentDialog(
+                onAccept: {
+                    OpenAIConsentManager.hasConsent = true
+                    Task { await generate() }
+                },
+                onDecline: {
+                    error = NSLocalizedString("consent.required", value: "KI-Funktionen benötigen Ihre Einwilligung", comment: "Consent required error")
+                }
+            )
+        }
         .alert(L.alert_noRecipeRequest.localized, isPresented: $showNotRecipeAlert) {
             Button(L.button_ok.localized, role: .cancel) { }
         } message: {
@@ -317,6 +329,12 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
     func generate() async {
         // Check feature access first
         guard app.hasAccess(to: .aiRecipeGenerator) else {
+            return
+        }
+        
+        // Check DSGVO consent before using OpenAI
+        guard OpenAIConsentManager.hasConsent else {
+            await MainActor.run { showConsentDialog = true }
             return
         }
         

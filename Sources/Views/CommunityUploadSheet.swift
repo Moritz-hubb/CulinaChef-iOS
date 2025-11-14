@@ -323,7 +323,7 @@ struct CommunityUploadSheet: View {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await SecureURLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 print("[CommunityUpload] Response is not HTTPURLResponse")

@@ -22,15 +22,19 @@ struct CulinaChefApp: App {
             options.debug = true // Verbose logging in debug
             options.tracesSampleRate = 1.0 // 100% sampling in debug
             options.environment = "debug"
+            // In Debug-Builds Screenshots/View-Hierarchy erlauben
+            options.attachScreenshot = true
+            options.attachViewHierarchy = true
             #else
             options.debug = false
             options.tracesSampleRate = 0.2 // 20% sampling in production (saves quota)
             options.environment = "production"
+            // In Production-Builds aus Datenschutzgründen deaktivieren
+            options.attachScreenshot = false
+            options.attachViewHierarchy = false
             #endif
             
             options.enableAutoSessionTracking = true
-            options.attachScreenshot = true // Attach screenshots on crashes
-            options.attachViewHierarchy = true // Attach view hierarchy
             
             // Enable breadcrumbs for better debugging
             options.enableAutoBreadcrumbTracking = true
@@ -112,7 +116,7 @@ struct CulinaChefApp: App {
         request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await SecureURLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {

@@ -46,7 +46,7 @@ final class SubscriptionsClient {
         req.addValue(apiKey, forHTTPHeaderField: "apikey")
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         if http.statusCode == 200 {
             let dec = JSONDecoder()
@@ -95,7 +95,7 @@ final class SubscriptionsClient {
         ]]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         if !(200...299).contains(http.statusCode) {
             let msg = String(data: data, encoding: .utf8) ?? "Unknown"

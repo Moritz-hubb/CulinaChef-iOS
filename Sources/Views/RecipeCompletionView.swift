@@ -558,7 +558,7 @@ struct RecipeCompletionView: View {
             
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             
-            let (respData, response) = try await URLSession.shared.data(for: request)
+            let (respData, response) = try await SecureURLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw URLError(.badServerResponse)
@@ -643,7 +643,7 @@ struct RecipeCompletionView: View {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (respData, response) = try await URLSession.shared.data(for: request)
+        let (respData, response) = try await SecureURLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
@@ -697,7 +697,7 @@ struct RecipeCompletionView: View {
         uploadRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         uploadRequest.httpBody = compressedData
         
-        let (responseData, uploadResponse) = try await URLSession.shared.data(for: uploadRequest)
+        let (responseData, uploadResponse) = try await SecureURLSession.shared.data(for: uploadRequest)
         
         guard let httpResponse = uploadResponse as? HTTPURLResponse else {
             print("[RecipeCompletion] Photo upload failed - no response")

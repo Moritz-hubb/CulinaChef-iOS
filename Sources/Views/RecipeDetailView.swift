@@ -741,7 +741,7 @@ struct RecipeDetailView: View {
         uploadRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         uploadRequest.httpBody = compressedData
         
-        let (_, uploadResponse) = try await URLSession.shared.data(for: uploadRequest)
+        let (_, uploadResponse) = try await SecureURLSession.shared.data(for: uploadRequest)
         
         guard let httpResponse = uploadResponse as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
@@ -766,7 +766,7 @@ struct RecipeDetailView: View {
         let body: [String: Any] = ["image_url": imageUrl]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await SecureURLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
@@ -800,7 +800,7 @@ struct RecipeDetailView: View {
             deleteRequest.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             deleteRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
-            let (_, deleteResponse) = try await URLSession.shared.data(for: deleteRequest)
+            let (_, deleteResponse) = try await SecureURLSession.shared.data(for: deleteRequest)
             
             if let httpResponse = deleteResponse as? HTTPURLResponse,
                !(200...299).contains(httpResponse.statusCode) {

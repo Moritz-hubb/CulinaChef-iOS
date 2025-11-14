@@ -469,7 +469,7 @@ struct ManualRecipeBuilderView: View {
             
             request.httpBody = try JSONSerialization.data(withJSONObject: recipeData)
             
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await SecureURLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
@@ -514,7 +514,7 @@ struct ManualRecipeBuilderView: View {
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.httpBody = compressedData
         
-        let (responseData, response) = try await URLSession.shared.data(for: request)
+        let (responseData, response) = try await SecureURLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)

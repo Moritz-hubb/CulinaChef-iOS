@@ -14,7 +14,7 @@ final class BackendClient {
             req.httpBody = body
             req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         if !(200...299).contains(http.statusCode) {
             struct ServerError: Decodable { let detail: String? }

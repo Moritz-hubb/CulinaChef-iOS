@@ -67,7 +67,7 @@ final class UserPreferencesClient {
         req.addValue(apiKey, forHTTPHeaderField: "apikey")
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
@@ -130,7 +130,7 @@ final class UserPreferencesClient {
         
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
@@ -182,7 +182,7 @@ final class UserPreferencesClient {
         
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)

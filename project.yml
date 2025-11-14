@@ -72,3 +72,4 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.moritzserrin.culinachef.tests
         CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES

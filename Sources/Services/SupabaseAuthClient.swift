@@ -43,7 +43,7 @@ final class SupabaseAuthClient {
         ]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
@@ -78,7 +78,7 @@ final class SupabaseAuthClient {
         let body = ["email": email, "password": password]
         req.httpBody = try JSONEncoder().encode(body)
         
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
@@ -111,7 +111,7 @@ final class SupabaseAuthClient {
         if let nonce { body["nonce"] = nonce }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         if http.statusCode == 200 {
             return try JSONDecoder().decode(AuthResponse.self, from: data)
@@ -139,7 +139,7 @@ final class SupabaseAuthClient {
         let body = ["refresh_token": refreshToken]
         req.httpBody = try JSONEncoder().encode(body)
         
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
@@ -164,7 +164,7 @@ final class SupabaseAuthClient {
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         req.addValue(apiKey, forHTTPHeaderField: "apikey")
         
-        let (_, response) = try await URLSession.shared.data(for: req)
+        let (_, response) = try await SecureURLSession.shared.data(for: req)
         
         guard let http = response as? HTTPURLResponse, http.statusCode == 204 else {
             throw URLError(.badServerResponse)
@@ -185,7 +185,7 @@ final class SupabaseAuthClient {
         let body = ["password": newPassword]
         req.httpBody = try JSONEncoder().encode(body)
         
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)

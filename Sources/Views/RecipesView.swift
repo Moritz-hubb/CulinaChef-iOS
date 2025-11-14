@@ -948,7 +948,7 @@ struct PersonalRecipesView: View {
             request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await SecureURLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
@@ -981,7 +981,7 @@ struct PersonalRecipesView: View {
                     communityRequest.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
                     communityRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                     
-                    if let (communityData, _) = try? await URLSession.shared.data(for: communityRequest),
+                    if let (communityData, _) = try? await SecureURLSession.shared.data(for: communityRequest),
                        let communityRecipes = try? JSONDecoder().decode([Recipe].self, from: communityData) {
                         list.append(contentsOf: communityRecipes)
                     }
@@ -1186,7 +1186,7 @@ struct MyContributionsView: View {
             request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await SecureURLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
@@ -1220,7 +1220,7 @@ struct MyContributionsView: View {
             let body = ["is_public": true]
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await SecureURLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
                 throw URLError(.badServerResponse)
@@ -1261,7 +1261,7 @@ struct MyContributionsView: View {
             let body = ["is_public": false]
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await SecureURLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
                 throw URLError(.badServerResponse)
@@ -1303,7 +1303,7 @@ struct MyContributionsView: View {
             request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await SecureURLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {

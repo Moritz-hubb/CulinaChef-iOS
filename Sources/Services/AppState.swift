@@ -481,6 +481,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             self.userEmail = response.user.email
             self.isAuthenticated = true
             self.loadSubscriptionStatus()
+            
+            // CRITICAL: Reload shopping list for new user to prevent cache bleeding
+            self.shoppingListManager.loadShoppingList()
         }
     }
     
@@ -584,6 +587,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             self.userEmail = nil
             self.isAuthenticated = false
             self.isSubscribed = false
+            
+            // CRITICAL: Clear shopping list to prevent cache bleeding
+            self.shoppingListManager.clearShoppingList()
         }
         stopSubscriptionPolling()
     }

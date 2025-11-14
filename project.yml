@@ -26,16 +26,8 @@ targets:
     sources:
       - path: Sources
     resources:
-      - path: Resources/Localization/de.json
-        name: de.json
-      - path: Resources/Localization/en.json
-        name: en.json
-      - path: Resources/Localization/es.json
-        name: es.json
-      - path: Resources/Localization/fr.json
-        name: fr.json
-      - path: Resources/Localization/it.json
-        name: it.json
+      - path: Resources
+        type: folder
     dependencies:
       - package: Sentry
         product: Sentry

@@ -357,6 +357,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         try KeychainManager.save(key: "user_id", value: response.user.id)
         try KeychainManager.save(key: "user_email", value: response.user.email)
         
+        // Load onboarding status from backend
+        await loadOnboardingStatusFromBackend(userId: response.user.id, accessToken: response.access_token)
+        
         await MainActor.run {
             self.accessToken = response.access_token
             self.userEmail = response.user.email
@@ -452,11 +455,38 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
         try KeychainManager.save(key: "user_id", value: response.user.id)
         try KeychainManager.save(key: "user_email", value: response.user.email)
+        
+        // Load onboarding status from backend
+        await loadOnboardingStatusFromBackend(userId: response.user.id, accessToken: response.access_token)
+        
         await MainActor.run {
             self.accessToken = response.access_token
             self.userEmail = response.user.email
             self.isAuthenticated = true
             self.loadSubscriptionStatus()
+        }
+    }
+    
+    // MARK: - Onboarding Status
+    private func loadOnboardingStatusFromBackend(userId: String, accessToken: String) async {
+        do {
+            // Fetch user preferences from backend
+            if let preferences = try await preferencesClient.fetchPreferences(userId: userId, accessToken: accessToken) {
+                // User has preferences in backend - set local flag based on backend value
+                let key = "onboarding_completed_\(userId)"
+                UserDefaults.standard.set(preferences.onboardingCompleted, forKey: key)
+                Logger.debug("Loaded onboarding status from backend: \(preferences.onboardingCompleted)", category: .auth)
+            } else {
+                // No preferences in backend - user hasn't completed onboarding
+                let key = "onboarding_completed_\(userId)"
+                UserDefaults.standard.set(false, forKey: key)
+                Logger.debug("No preferences found in backend - onboarding not completed", category: .auth)
+            }
+        } catch {
+            // If fetch fails, default to false (show onboarding)
+            let key = "onboarding_completed_\(userId)"
+            UserDefaults.standard.set(false, forKey: key)
+            Logger.error("Failed to load onboarding status from backend, defaulting to false", error: error, category: .auth)
         }
     }
     

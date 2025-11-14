@@ -36,14 +36,15 @@ struct PaywallView: View {
                                 .foregroundStyle(.white)
                                 .shadow(color: .white.opacity(0.3), radius: 20)
                             
-                            Text("Unlimited")
+                            Text(L.paywallUnlimited.localized)
                                 .font(.system(size: 40, weight: .bold))
                                 .foregroundStyle(.white)
                             
-                            Text("Schalte alle AI-Features frei")
+                            Text(L.paywallSubtitle.localized)
                                 .font(.title3)
                                 .foregroundStyle(.white.opacity(0.9))
                                 .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
                         }
                         .padding(.top, 40)
                         
@@ -51,26 +52,26 @@ struct PaywallView: View {
                         VStack(spacing: 20) {
                             FeatureRow(
                                 icon: "bubble.left.and.bubble.right.fill",
-                                title: "AI Recipe Chat",
-                                description: "Lass dir Rezepte von der AI empfehlen"
+                                title: L.subscriptionAIChatUnlimited.localized,
+                                description: L.subscriptionAINutritionAnalysis.localized
                             )
                             
                             FeatureRow(
                                 icon: "wand.and.stars",
-                                title: "AI Rezept-Generator",
-                                description: "Erstelle kreative Rezepte mit AI"
+                                title: L.subscriptionAIRecipeGenerator.localized,
+                                description: L.subscriptionNoLimits.localized
                             )
                             
                             FeatureRow(
                                 icon: "chart.bar.fill",
-                                title: "AI Rezept-Analyse",
-                                description: "Intelligente Nährwert-Analysen"
+                                title: L.subscriptionAINutritionAnalysis.localized,
+                                description: L.paywallFeatureSecure.localized
                             )
                             
                             FeatureRow(
                                 icon: "infinity",
-                                title: "Unbegrenzte Nutzung",
-                                description: "Keine Limits, nur Kreativität"
+                                title: L.subscriptionNoLimits.localized,
+                                description: L.subscriptionNoLimits.localized
                             )
                         }
                         .padding(.horizontal, 24)
@@ -78,15 +79,15 @@ struct PaywallView: View {
                         // Pricing
                         VStack(spacing: 16) {
                             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                Text("5,99€")
+                                Text(L.paywallPrice.localized)
                                     .font(.system(size: 48, weight: .bold))
                                     .foregroundStyle(.white)
-                                Text("/ Monat")
+                                Text(L.paywallPerMonth.localized)
                                     .font(.title3)
                                     .foregroundStyle(.white.opacity(0.8))
                             }
                             
-                            Text("Jederzeit kündbar")
+                            Text(L.subscriptionCancelAnytime.localized)
                                 .font(.footnote)
                                 .foregroundStyle(.white.opacity(0.7))
                         }
@@ -94,7 +95,7 @@ struct PaywallView: View {
                         
                         // Debug Badge
                         #if DEBUG
-                        Text("🧪 Debug-Modus: Simulierter Kauf")
+                        Text("🧪 Debug: Simulated purchase")
                             .font(.caption.bold())
                             .foregroundStyle(.yellow)
                             .padding(.horizontal, 12)
@@ -113,7 +114,7 @@ struct PaywallView: View {
                                         ProgressView()
                                             .tint(.white)
                                     } else {
-                                        Text("Unlimited freischalten")
+                                        Text(L.paywallSubscribeButton.localized)
                                             .font(.headline)
                                     }
                                 }
@@ -139,7 +140,7 @@ struct PaywallView: View {
                                             .tint(.white.opacity(0.7))
                                             .scaleEffect(0.8)
                                     } else {
-                                        Text("Käufe wiederherstellen")
+                                        Text(L.paywallRestorePurchase.localized)
                                             .font(.subheadline)
                                     }
                                 }
@@ -151,18 +152,18 @@ struct PaywallView: View {
                         
                         // Free features info
                         VStack(spacing: 16) {
-                            Text("Kostenlos bleiben?")
+                            Text(L.paywallContinueFree.localized)
                                 .font(.headline)
                                 .foregroundStyle(.white)
                             
-                            Text("Alle anderen Features wie Rezeptverwaltung, Einkaufsliste und Community Library bleiben kostenlos verfügbar.")
+                            Text(L.subscriptionAllFeaturesExceptAI.localized)
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.7))
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 32)
                             
                             Button(action: { dismiss() }) {
-                                Text("Kostenlos fortfahren")
+                                Text(L.paywallContinueFree.localized)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.white.opacity(0.9))
                                     .frame(maxWidth: .infinity)
@@ -189,10 +190,10 @@ struct PaywallView: View {
                     }
                 }
             }
-            .alert("Fehler", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
+.alert(L.alert_error.localized, isPresented: $showError) {
+                Button(L.button_ok.localized, role: .cancel) { }
             } message: {
-                Text(errorMessage ?? "Ein unbekannter Fehler ist aufgetreten")
+                Text(errorMessage ?? L.errorGeneric.localized)
             }
         }
     }
@@ -246,7 +247,7 @@ struct PaywallView: View {
                     if hasAccess {
                         dismiss()
                     } else {
-                        errorMessage = "Keine aktiven Käufe gefunden"
+                        errorMessage = L.settings_keine_aktiven_käufe_gefunden.localized
                         showError = true
                     }
                 }

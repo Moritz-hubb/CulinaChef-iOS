@@ -8,16 +8,19 @@ import Security
 final class SecureURLSession: NSObject, URLSessionDelegate {
     static let shared = SecureURLSession()
 
-    private let session: URLSession
     private let pinnedCertificates: [String: [Data]] // host -> [certData]
 
-    override private init() {
-        // Configure base session
+    /// Lazily created URLSession so that we can safely use `self` as delegate
+    /// without rekursiv die Singleton-Instanz erneut zu initialisieren.
+    private lazy var session: URLSession = {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = Config.apiTimeout
         config.timeoutIntervalForResource = Config.imageUploadTimeout
         config.waitsForConnectivity = true
+        return URLSession(configuration: config, delegate: self, delegateQueue: nil)
+    }()
 
+    private override init() {
         // Prepare pinned certs (if present in bundle)
         var pins: [String: [Data]] = [:]
 
@@ -32,8 +35,6 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
         }
 
         self.pinnedCertificates = pins
-        self.session = URLSession(configuration: config, delegate: Self.shared, delegateQueue: nil)
-
         super.init()
     }
 

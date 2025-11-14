@@ -16,6 +16,7 @@ struct Recipe: Identifiable, Codable, Equatable {
     var difficulty: String? // "Einfach", "Mittel", "Schwer"
     var tags: [String]? // ["Vegan", "Schnell", etc.]
     var rating: Int? // 1-5 stars
+    var language: String? // Recipe language ("de", "en", "es", "fr", "it")
 }
 
 struct Nutrition: Codable, Equatable {

@@ -288,13 +288,30 @@ final class AppState: ObservableObject {
     }
 
     func languageSystemPrompt() -> String {
-        let code = UserDefaults.standard.string(forKey: "app_language") ?? "de"
-        switch code.lowercased() {
+        let code = currentLanguageCode()
+        switch code {
         case "en": return "Respond exclusively in English."
         case "es": return "Responde exclusivamente en español."
         case "fr": return "Réponds exclusivement en français."
         case "it": return "Rispondi esclusivamente in italiano."
         default: return "Antworte ausschließlich auf Deutsch."
+        }
+    }
+
+    /// Returns the current app language code used for AI responses (e.g. "de", "en").
+    func currentLanguageCode() -> String {
+        (UserDefaults.standard.string(forKey: "app_language") ?? "de").lowercased()
+    }
+
+    /// Returns a short tag that encodes the recipe language, to be attached to recipe tags.
+    /// Example outputs: "DE", "EN", "ES", "FR", "IT".
+    func recipeLanguageTag() -> String {
+        switch currentLanguageCode() {
+        case "en": return "EN"
+        case "es": return "ES"
+        case "fr": return "FR"
+        case "it": return "IT"
+        default: return "DE"
         }
     }
 
@@ -1204,7 +1221,18 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         }
         let instructionTexts: [String] = plan.steps.map { "⟦label:\($0.title)⟧ " + $0.description }
         let cookingTime: String? = plan.total_time_minutes.map { "\($0) Min" }
-        let tags: [String]? = (plan.categories?.isEmpty == false) ? plan.categories : nil
+
+        // Build tags from AI categories and ALWAYS include a language tag for the recipe.
+        var tagsArray: [String] = []
+        if let categories = plan.categories, !categories.isEmpty {
+            tagsArray.append(contentsOf: categories)
+        }
+        let langTag = recipeLanguageTag()
+        if !tagsArray.contains(langTag) {
+            tagsArray.append(langTag)
+        }
+        let tags: [String]? = tagsArray.isEmpty ? nil : tagsArray
+
         let nut = Nutrition(
             calories: plan.nutrition?.calories ?? 0,
             protein_g: plan.nutrition?.protein_g ?? 0,

@@ -825,17 +825,22 @@ private struct MenuPickerSheet: View {
                 }
                 
                 HStack(spacing: 8) {
-                    TextField("Neues Menü", text: $newTitle)
+                    TextField(L.recipe_neues_menü.localized, text: $newTitle)
                         .textFieldStyle(.plain)
                         .padding(10)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    Button("Erstellen") { if !newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { onCreateMenu(newTitle); newTitle = "" } }
-                        .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button(L.save.localized) {
+                        if !newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            onCreateMenu(newTitle)
+                            newTitle = ""
+                        }
+                    }
+                    .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 
                 HStack(spacing: 12) {
                     Button(action: onCancel) {
-                        Text("Abbrechen")
+                        Text(L.cancel.localized)
                             .font(.headline)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -844,7 +849,7 @@ private struct MenuPickerSheet: View {
                     }
                     .buttonStyle(.plain)
                     Button(action: onConfirm) {
-                        Text("Speichern")
+                        Text(L.save.localized)
                             .font(.headline)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)

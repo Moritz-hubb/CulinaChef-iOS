@@ -998,7 +998,7 @@ private struct SubscriptionSettingsSheet: View {
                             
                             // Fair Use Policy Link
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Es gelten angemessene Nutzungsgrenzen")
+                                Text(L.subscriptionFairUseInfo.localized)
                                     .font(.caption)
                                     .foregroundStyle(.white.opacity(0.7))
                                 
@@ -1008,7 +1008,7 @@ private struct SubscriptionSettingsSheet: View {
                                     HStack(spacing: 6) {
                                         Image(systemName: "info.circle")
                                             .font(.caption)
-                                        Text("Fair Use Policy ansehen")
+                                        Text(L.legalFairUseLink.localized)
                                             .font(.caption)
                                         Image(systemName: "chevron.right")
                                             .font(.caption2)
@@ -1174,13 +1174,13 @@ private struct SubscriptionSettingsSheet: View {
                         VStack(spacing: 8) {
                             Divider().background(.white.opacity(0.2))
                             
-                            Text("Mit dem Kauf stimmst du den rechtlichen Bedingungen zu")
+                            Text(L.legalPurchaseConsentText.localized)
                                 .font(.caption2)
                                 .foregroundStyle(.white.opacity(0.6))
                                 .multilineTextAlignment(.center)
                             
                             HStack(spacing: 16) {
-                                Button("AGB") {
+                                Button(L.legalTermsNavTitle.localized) {
                                     showTerms = true
                                 }
                                 .font(.caption2)
@@ -1190,7 +1190,7 @@ private struct SubscriptionSettingsSheet: View {
                                     .font(.caption2)
                                     .foregroundStyle(.white.opacity(0.4))
                                 
-                                Button("Datenschutz") {
+                                Button(L.legalPrivacyNavTitle.localized) {
                                     showPrivacy = true
                                 }
                                 .font(.caption2)

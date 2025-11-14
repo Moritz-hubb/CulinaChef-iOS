@@ -18,13 +18,13 @@ struct ReportReasonSheet: View {
     @State private var reportSuccess = false
     
     enum ReportReason: String, CaseIterable, Identifiable {
-        case nsfw = "NSFW/Unangemessen"
-        case hate = "Hassrede/Diskriminierung"
-        case spam = "Spam/Werbung"
-        case irrelevant = "Nicht rezeptbezogen"
-        case other = "Sonstiges"
+        case nsfw
+        case hate
+        case spam
+        case irrelevant
+        case other
         
-        var id: String { rawValue }
+        var id: String { apiValue }
         
         var apiValue: String {
             switch self {
@@ -43,6 +43,16 @@ struct ReportReasonSheet: View {
             case .spam: return "envelope.badge"
             case .irrelevant: return "questionmark.circle"
             case .other: return "ellipsis.circle"
+            }
+        }
+        
+        var localizedTitle: String {
+            switch self {
+            case .nsfw: return L.reportReasonInappropriate.localized
+            case .hate: return L.reportReasonMisleading.localized
+            case .spam: return L.reportReasonSpam.localized
+            case .irrelevant: return L.reportReason.localized
+            case .other: return L.reportReasonOther.localized
             }
         }
     }
@@ -98,7 +108,7 @@ struct ReportReasonSheet: View {
                                                 .foregroundColor(selectedReason == reason ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
                                                 .frame(width: 40)
                                             
-                                            Text(reason.rawValue)
+                                            Text(reason.localizedTitle)
                                                 .font(.body)
                                                 .foregroundColor(selectedReason == reason ? .white : .primary)
                                             

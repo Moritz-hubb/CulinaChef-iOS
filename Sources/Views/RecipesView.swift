@@ -1352,7 +1352,19 @@ struct CommunityRecipesView: View {
     @State private var error: String?
     @State private var query: String = ""
     @State private var selectedFilters: Set<String> = []
+    @State private var selectedLanguages: Set<String> = []  // Separate language selection
+    @State private var showLanguageDropdown = false  // Language dropdown state
     @State private var showMyContributions = false
+    
+    private var availableLanguages: [(code: String, name: String)] {
+        [
+            ("de", L.tag_german.localized),
+            ("en", L.tag_english.localized),
+            ("es", L.tag_spanish.localized),
+            ("fr", L.tag_french.localized),
+            ("it", L.tag_italian.localized)
+        ]
+    }
     
     private var availableFilters: [String] {
         [
@@ -1378,6 +1390,38 @@ struct CommunityRecipesView: View {
             guard let s = s, let range = s.range(of: "\\d+", options: .regularExpression) else { return nil }
             return Int(s[range])
         }
+        // Helper to check if recipe matches a language filter
+        func matchesLanguage(_ recipe: Recipe, _ languageFilter: String) -> Bool {
+            let filterNorm = norm(languageFilter)
+            // Check language field
+            if let lang = recipe.language {
+                let langNorm = norm(lang)
+                // Match language codes (de, en, es, fr, it) or full names
+                if langNorm == filterNorm || 
+                   (filterNorm == "deutsch" && (langNorm == "de" || langNorm == "german" || langNorm == "deutsch")) ||
+                   (filterNorm == "englisch" && (langNorm == "en" || langNorm == "english" || langNorm == "englisch")) ||
+                   (filterNorm == "spanisch" && (langNorm == "es" || langNorm == "spanish" || langNorm == "spanisch" || langNorm == "espanol")) ||
+                   (filterNorm == "franzosisch" && (langNorm == "fr" || langNorm == "french" || langNorm == "franzosisch" || langNorm == "francais")) ||
+                   (filterNorm == "italienisch" && (langNorm == "it" || langNorm == "italian" || langNorm == "italienisch" || langNorm == "italiano")) {
+                    return true
+                }
+            }
+            // Also check tags for language tags
+            if let tags = recipe.tags {
+                for tag in tags {
+                    let tagNorm = norm(tag)
+                    if tagNorm == filterNorm ||
+                       (filterNorm == "deutsch" && (tagNorm == "de" || tagNorm == "german" || tagNorm == "deutsch")) ||
+                       (filterNorm == "englisch" && (tagNorm == "en" || tagNorm == "english" || tagNorm == "englisch")) ||
+                       (filterNorm == "spanisch" && (tagNorm == "es" || tagNorm == "spanish" || tagNorm == "spanisch" || tagNorm == "espanol")) ||
+                       (filterNorm == "franzosisch" && (tagNorm == "fr" || tagNorm == "french" || tagNorm == "franzosisch" || tagNorm == "francais")) ||
+                       (filterNorm == "italienisch" && (tagNorm == "it" || tagNorm == "italian" || tagNorm == "italienisch" || tagNorm == "italiano")) {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = recipes.filter { r in
             if q.isEmpty { return true }
@@ -1397,9 +1441,30 @@ struct CommunityRecipesView: View {
             }
             return false
         }
-        if selectedFilters.isEmpty { return base }
+        // First apply language filter
+        var languageFiltered = base
+        if !selectedLanguages.isEmpty {
+            print("[Language Filter] Selected languages: \(selectedLanguages)")
+            print("[Language Filter] Total recipes before filter: \(base.count)")
+            languageFiltered = base.filter { recipe in
+                // Check if recipe matches any selected language
+                for langName in selectedLanguages {
+                    let matches = matchesLanguage(recipe, langName)
+                    if matches {
+                        print("[Language Filter] Recipe '\(recipe.title)' matches '\(langName)' - language field: \(recipe.language ?? "nil"), tags: \(recipe.tags ?? [])")
+                        return true
+                    }
+                }
+                print("[Language Filter] Recipe '\(recipe.title)' does NOT match - language field: \(recipe.language ?? "nil"), tags: \(recipe.tags ?? [])")
+                return false
+            }
+            print("[Language Filter] Filtered recipes count: \(languageFiltered.count)")
+        }
+        
+        // Then apply other filters
+        if selectedFilters.isEmpty { return languageFiltered }
         let wanted = selectedFilters.map { norm($0) }
-        return base.filter { r in
+        return languageFiltered.filter { r in
             let tagsNorm = Set((r.tags ?? []).map { norm($0) })
             var matched = false
             for f in wanted {
@@ -1472,7 +1537,15 @@ struct CommunityRecipesView: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        FilterChipsBar(options: availableFilters, selection: $selectedFilters)
+                        
+                        // Filter Chips with Language Dropdown
+                        FilterChipsBarWithLanguage(
+                            availableLanguages: availableLanguages,
+                            selectedLanguages: $selectedLanguages,
+                            filterOptions: availableFilters,
+                            selectedFilters: $selectedFilters,
+                            showLanguageDropdown: $showLanguageDropdown
+                        )
                         
                         LazyVStack(spacing: 12) {
                             ForEach(filteredRecipes) { recipe in
@@ -1497,6 +1570,46 @@ struct CommunityRecipesView: View {
                     }
                     .padding(16)
                 }
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            // Language Dropdown Overlay (at top level)
+            if showLanguageDropdown {
+                VStack(spacing: 6) {
+                    ForEach(availableLanguages, id: \.code) { language in
+                        let isSelected = selectedLanguages.contains(language.name)
+                        Button(action: {
+                            print("[Language Selection] Tapped: \(language.name), currently selected: \(isSelected)")
+                            withAnimation {
+                                if isSelected {
+                                    selectedLanguages.remove(language.name)
+                                } else {
+                                    selectedLanguages.insert(language.name)
+                                }
+                            }
+                            print("[Language Selection] Updated selectedLanguages: \(selectedLanguages)")
+                        }) {
+                            Text(language.name)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
+                                .foregroundColor(isSelected ? .white : .black.opacity(0.7))
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(Color.black.opacity(0.07), lineWidth: 0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(.systemBackground))
+                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                )
+                .offset(x: 16, y: 110)  // Position below filter bar
+                .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
+                .zIndex(999)
             }
         }
         .navigationBarHidden(true)
@@ -1568,6 +1681,89 @@ struct CommunityRecipesView: View {
                 }
                 self.loading = false
             }
+        }
+    }
+}
+
+// MARK: - Filter Chips Bar with Language Dropdown
+private struct FilterChipsBarWithLanguage: View {
+    let availableLanguages: [(code: String, name: String)]
+    @Binding var selectedLanguages: Set<String>
+    let filterOptions: [String]
+    @Binding var selectedFilters: Set<String>
+    @Binding var showLanguageDropdown: Bool
+    
+    private var languageChipText: String {
+        if selectedLanguages.isEmpty {
+            return L.recipe_sprache.localized
+        } else if selectedLanguages.count == 1 {
+            return selectedLanguages.first ?? L.recipe_sprache.localized
+        } else {
+            return "\(selectedLanguages.count) " + L.recipe_sprachen.localized
+        }
+    }
+    
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                // Language Dropdown Chip (always first)
+                Button(action: { 
+                    print("[Language Dropdown] Toggling: \(showLanguageDropdown) -> \(!showLanguageDropdown)")
+                    withAnimation { 
+                        showLanguageDropdown.toggle() 
+                    } 
+                }) {
+                    HStack(spacing: 4) {
+                        Text(languageChipText)
+                        Image(systemName: showLanguageDropdown ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(!selectedLanguages.isEmpty ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
+                    .foregroundColor(!selectedLanguages.isEmpty ? .white : .black.opacity(0.7))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.black.opacity(0.07), lineWidth: 0.5))
+                }
+                .buttonStyle(.plain)
+                
+                // Regular Filter Chips
+                ForEach(filterOptions, id: \.self) { opt in
+                    let isOn = selectedFilters.contains(opt)
+                    Text(opt)
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(isOn ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
+                        .foregroundColor(isOn ? .white : .black.opacity(0.7))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(Color.black.opacity(0.07), lineWidth: 0.5))
+                        .onTapGesture {
+                            if isOn { selectedFilters.remove(opt) } else { selectedFilters.insert(opt) }
+                        }
+                }
+                
+                // Clear All Button
+                if !selectedFilters.isEmpty || !selectedLanguages.isEmpty {
+                    Button(action: {
+                        selectedFilters.removeAll()
+                        selectedLanguages.removeAll()
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "xmark.circle.fill")
+                            Text(L.recipe_filter_löschen.localized)
+                        }
+                        .font(.caption)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color(UIColor.systemGray5))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 2)
         }
     }
 }
@@ -1658,7 +1854,7 @@ private struct ShareRecipeSheet: View {
                     }
                 }
             }
-            .navigationTitle("Rezept teilen")
+.navigationTitle(L.shareRecipeTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)

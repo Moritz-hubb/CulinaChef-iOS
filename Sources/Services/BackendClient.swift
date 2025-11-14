@@ -14,6 +14,9 @@ final class BackendClient {
             req.httpBody = body
             req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         }
+        // Add Accept-Language header for backend language detection
+        let preferredLanguages = Locale.preferredLanguages.prefix(3).joined(separator: ", ")
+        req.addValue(preferredLanguages, forHTTPHeaderField: "Accept-Language")
         let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         if !(200...299).contains(http.statusCode) {
@@ -39,8 +42,27 @@ final class BackendClient {
     }
 
     func generateRecipe(ingredients: [String], accessToken: String) async throws -> Recipe {
-        struct Body: Encodable { let ingredients: [String] }
-        let data = try JSONEncoder().encode(Body(ingredients: ingredients))
+        struct Body: Encodable { 
+            let ingredients: [String]
+            let language: String?
+        }
+        
+        // Detect device language
+        let deviceLanguage: String? = {
+            let langCode = Locale.current.language.languageCode?.identifier ?? "de"
+            // Map to supported languages (de, en, es, fr, it)
+            switch langCode {
+            case "de": return "de"
+            case "en": return "en"
+            case "es": return "es"
+            case "fr": return "fr"
+            case "it": return "it"
+            default: return "de"  // Default to German
+            }
+        }()
+        
+        let body = Body(ingredients: ingredients, language: deviceLanguage)
+        let data = try JSONEncoder().encode(body)
         let (respData, _) = try await request(path: "/ai/generate_recipe", method: "POST", token: accessToken, jsonBody: data)
         return try JSONDecoder().decode(Recipe.self, from: respData)
     }

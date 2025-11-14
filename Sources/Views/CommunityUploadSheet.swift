@@ -59,7 +59,7 @@ struct CommunityUploadSheet: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Recipe Preview
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Original Rezept")
+                            Text(L.shareRecipeOriginal.localized)
                                 .font(.caption.bold())
                                 .foregroundStyle(.white.opacity(0.7))
                             Text(recipe.title)
@@ -76,7 +76,7 @@ struct CommunityUploadSheet: View {
                         // Images Section
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text("Bild")
+                                Text(L.shareRecipeImage.localized)
                                     .font(.subheadline.bold())
                                     .foregroundStyle(.white)
                                 Spacer()
@@ -139,7 +139,7 @@ struct CommunityUploadSheet: View {
                                             VStack {
                                                 Image(systemName: "plus")
                                                     .font(.title2)
-                                                Text("Foto")
+                                                Text(L.shareRecipePhoto.localized)
                                                     .font(.caption)
                                             }
                                             .foregroundStyle(.white)
@@ -238,8 +238,9 @@ struct CommunityUploadSheet: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Abbrechen") {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
                     }
                     .foregroundStyle(.white)
                 }

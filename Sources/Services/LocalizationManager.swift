@@ -214,6 +214,13 @@ enum L {
     static let copy = "common.copy"
     static let copied = "common.copied"
     
+    // MARK: - Recipe Sharing
+    static let shareRecipeTitle = "share.recipeTitle"
+    static let shareRecipeOriginal = "share.originalRecipe"
+    static let shareRecipeImage = "share.image"
+    static let shareRecipePhoto = "share.photo"
+    static let shareRecipeCancel = "share.cancel"
+    
     // MARK: - Authentication
     static let signIn = "auth.signIn"
     static let signUp = "auth.signUp"
@@ -274,6 +281,7 @@ enum L {
     static let legalFooterDate = "legal.footer.date"
     static let legalFairUseLink = "legal.fairUseLink"
     static let legalLanguageNotice = "legal.languageNotice"
+    static let legalPurchaseConsentText = "legal.purchaseConsentText"
     
     // MARK: - Dietary
     static let diets = "dietary.diets"
@@ -302,6 +310,7 @@ enum L {
     static let community = "recipes.community"
     static let favorites = "recipes.favorites"
     static let createRecipe = "recipes.create"
+    static let recipesCreateOwn = "recipes.createOwn"
     static let ingredients = "recipes.ingredients"
     static let instructions = "recipes.instructions"
     static let cookingTime = "recipes.cookingTime"
@@ -421,6 +430,7 @@ enum L {
     static let errorNotLoggedIn = "error.notLoggedIn"
     static let errorUploadFailed = "error.uploadFailed"
     static let errorSaveFailed = "error.saveFailed"
+    static let errorInvalidRecipeRequest = "error.invalidRecipeRequest"
     
     // MARK: - Empty States
     static let emptyRecipes = "empty.recipes"
@@ -522,6 +532,7 @@ enum L {
     static let subscriptionAIRecipeGenerator = "subscription.aiRecipeGenerator"
     static let subscriptionAINutritionAnalysis = "subscription.aiNutritionAnalysis"
     static let subscriptionNoLimits = "subscription.noLimits"
+    static let subscriptionFairUseInfo = "subscription.fairUseInfo"
 
     // MARK: - Auto-generated Keys
     static let chat_bild_angehängt = "chat.bild_angehängt"
@@ -589,6 +600,8 @@ enum L {
     static let recipe_zutaten = "recipe.zutaten"
     static let recipe_zutaten_zur_einkaufsliste_hinzufüge = "recipe.zutaten_zur_einkaufsliste_hinzufüge"
     static let recipe_nährwerte = "recipe.nährwerte"
+    static let recipe_nährwerte_pro_portion = "recipe.nährwerte_pro_portion"
+    static let recipe_nährwerte_insgesamt = "recipe.nährwerte_insgesamt"
     static let recipe_keine_fotos_ce07 = "recipe.keine_fotos_ce07"
     static let recipe_in_der_zwischenzeit_führe = "recipe.in_der_zwischenzeit_führe"
     static let recipe_stell_mir_fragen_zu = "recipe.stell_mir_fragen_zu"
@@ -605,6 +618,8 @@ enum L {
     static let recipe_stell_mir_fragen_zu_facc = "recipe.stell_mir_fragen_zu_facc"
     static let recipe_zb_garzeiten_anpassen_ersatzzutaten_b588 = "recipe.zb_garzeiten_anpassen_ersatzzutaten_b588"
     static let recipe_filter_löschen = "recipe.filter_löschen"
+    static let recipe_sprache = "recipe.sprache"
+    static let recipe_sprachen = "recipe.sprachen"
     static let recipe_menü_539e = "recipe.menü_539e"
     static let recipe_neues_menü = "recipe.neues_menü"
     static let recipe_menüname = "recipe.menüname"
@@ -829,6 +844,13 @@ enum L {
     static let tag_budget = "tag.budget"
     static let tag_spicy = "tag.spicy"
     
+    // MARK: - Language Tags
+    static let tag_german = "tag.german"
+    static let tag_english = "tag.english"
+    static let tag_spanish = "tag.spanish"
+    static let tag_french = "tag.french"
+    static let tag_italian = "tag.italian"
+    
     // MARK: - Settings Navigation
     static let nav_dietarySettings = "nav.dietarySettings"
     static let nav_profileSettings = "nav.profileSettings"
@@ -862,6 +884,7 @@ enum L {
     static let settings_emailNotFound = "settings.emailNotFound"
     static let settings_notLoggedIn = "settings.notLoggedIn"
     static let settings_wrongPassword = "settings.wrongPassword"
+    static let settings_keine_aktiven_käufe_gefunden = "settings.keine_aktiven_käufe_gefunden"
     static let settings_perk_unlimited = "settings.perk_unlimited"
     static let settings_perk_community = "settings.perk_community"
     static let settings_perk_tracking = "settings.perk_tracking"

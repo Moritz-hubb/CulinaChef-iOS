@@ -142,11 +142,11 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                     .shadow(color: .white.opacity(0.3), radius: 20)
                 
                 VStack(spacing: 12) {
-                    Text("AI Chat")
+                    Text(L.subscriptionAIChatUnlimited.localized)
                         .font(.system(size: 32, weight: .bold))
                         .foregroundStyle(.white)
                     
-                    Text("Diese Funktion ist nur für Unlimited-Mitglieder verfügbar")
+                    Text(L.subscriptionAllFeaturesExceptAI.localized)
                         .font(.title3)
                         .foregroundStyle(.white.opacity(0.9))
                         .multilineTextAlignment(.center)
@@ -154,7 +154,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 }
                 
                 Button(action: { Task { await app.purchaseStoreKit() } }) {
-                    Text("Unlimited freischalten")
+                    Text(L.subscriptionUnlockUnlimited.localized)
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: 300)
@@ -231,7 +231,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                     // Input field
                     ZStack(alignment: .leading) {
                         if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Text(pickedImageData == nil ? L.placeholder_askMe.localized : "Beschreibe, was du mit dem Bild machen möchtest…")
+                            Text(pickedImageData == nil ? L.placeholder_askMe.localized : L.chat_frage_mich_alles_übers.localized)
                                 .foregroundStyle(.white.opacity(0.5))
                                 .font(.system(size: 14))
                         }
@@ -578,8 +578,8 @@ private struct RecipeSuggestionsView: View {
                 }
             }
         }
-        .alert("Rezept erstellen", isPresented: $showGenerationOptions) {
-            Button("Benutzerdefiniert") {
+        .alert(L.nav_createRecipe.localized, isPresented: $showGenerationOptions) {
+            Button(L.recipesCreateOwn.localized) {
                 if let recipe = selectedRecipe {
                     app.pendingRecipeGoal = recipe.name
                     app.pendingRecipeDescription = recipe.description
@@ -590,7 +590,7 @@ private struct RecipeSuggestionsView: View {
                     app.selectedTab = 1
                 }
             }
-            Button("Automatisch") {
+            Button(L.generateRecipe.localized) {
                 if let recipe = selectedRecipe {
                     Task { await generateAutomatic(recipeName: recipe.name, recipeDescription: recipe.description) }
                 }
@@ -778,7 +778,13 @@ private struct RecipeSuggestionsView: View {
     private func generateAutomatic(recipeName: String, recipeDescription: String) async {
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
-            await MainActor.run { showConsentDialog = true }
+            await MainActor.run {
+                createError = NSLocalizedString(
+                    "consent.required",
+                    value: "KI-Funktionen benötigen Ihre Einwilligung",
+                    comment: "Consent required error"
+                )
+            }
             return
         }
         

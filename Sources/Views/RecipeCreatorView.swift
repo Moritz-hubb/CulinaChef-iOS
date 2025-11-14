@@ -219,6 +219,11 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         } message: {
             Text(impossibleRecipeMessage)
         }
+        .alert(L.alert_error.localized, isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+            Button(L.button_ok.localized) { error = nil }
+        } message: {
+            Text(error ?? "")
+        }
     }
     
     private var paywallContent: some View {
@@ -375,12 +380,24 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                 servings: 4,
                 dietaryContext: fullContext
             )
+            
+            // Validate that the AI returned a usable recipe
+            let titleTrimmed = plan.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let hasTitle = !titleTrimmed.isEmpty
+            let hasIngredients = !plan.ingredients.isEmpty
+            let hasSteps = !plan.steps.isEmpty
+            let isValid = hasTitle && (hasIngredients || hasSteps)
+            
             await MainActor.run {
-                self.plan = plan
-                self.showResult = true
-                // Reset categories to user's permanent dietary settings
-                // This prevents temporary selections from persisting across multiple recipe generations
-                self.selectedCategories = app.dietary.diets
+                if isValid {
+                    self.plan = plan
+                    self.showResult = true
+                    // Reset categories to user's permanent dietary settings
+                    // This prevents temporary selections from persisting across multiple recipe generations
+                    self.selectedCategories = app.dietary.diets
+                } else {
+                    self.error = L.errorInvalidRecipeRequest.localized
+                }
             }
         } catch {
             await MainActor.run {

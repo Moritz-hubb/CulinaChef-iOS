@@ -339,19 +339,18 @@ struct AddItemSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { dismiss() }) {
-                        Text(L.button_cancel.localized)
-                            .font(.subheadline.bold())
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Capsule().fill(Color(red: 0.95, green: 0.5, blue: 0.3)))
+                            .frame(width: 30, height: 30)
+                            .background(.ultraThinMaterial, in: Circle())
+                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
                     }
                 }
             }
         }
     }
     
-    @ViewBuilder
     private var categoryPicker: some View {
         Picker(L.label_category.localized, selection: $selectedCategory) {
             ForEach(ItemCategory.allCases, id: \.self) { category in
@@ -362,7 +361,8 @@ struct AddItemSheet: View {
             hasManuallyChangedCategory = true
         }
         .pickerStyle(.menu)
-        .foregroundStyle(.white)
+        .accentColor(.white)
+        .colorScheme(.dark)
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)

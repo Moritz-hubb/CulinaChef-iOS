@@ -1138,6 +1138,7 @@ private struct RecipeAISheetForSavedRecipe: View {
     @State private var inputText: String = ""
     @State private var sending = false
     @State private var error: String?
+    @State private var showConsentDialog = false
 
     var body: some View {
         Group {
@@ -1146,6 +1147,14 @@ private struct RecipeAISheetForSavedRecipe: View {
             } else {
                 paywallContent
             }
+        }
+        .sheet(isPresented: $showConsentDialog) {
+            OpenAIConsentDialog(
+                onAccept: {
+                    OpenAIConsentManager.hasConsent = true
+                },
+                onDecline: {}
+            )
         }
     }
     
@@ -1263,6 +1272,13 @@ private struct RecipeAISheetForSavedRecipe: View {
     private func sendText() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        
+        // Check DSGVO consent before using OpenAI
+        guard OpenAIConsentManager.hasConsent else {
+            await MainActor.run { showConsentDialog = true }
+            return
+        }
+        
         inputText = ""
         let userMsg = ChatMessage(role: .user, text: text)
         messages.append(userMsg)

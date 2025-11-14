@@ -1,0 +1,107 @@
+# SwiftLint Configuration für CulinaChef
+# Dokumentation: https://realm.github.io/SwiftLint/
+
+# Deaktivierte Rules (zu streng für bestehenden Code)
+disabled_rules:
+  - line_length                # Zu viele Verstöße im bestehenden Code
+  - trailing_whitespace         # Automatisch durch Editor behebbar
+  - type_body_length           # AppState ist bewusst groß
+  - file_length                # AppState ist bewusst groß
+  - function_body_length       # Einige komplexe Views
+  - cyclomatic_complexity      # Einige komplexe Business-Logic
+
+# Aktivierte Opt-In Rules (Best Practices)
+opt_in_rules:
+  - force_unwrapping           # Vermeiden von !, außer wo sicher
+  - implicitly_unwrapped_optional  # ! nur wo absolut nötig
+  - empty_count                # .isEmpty statt .count == 0
+  - redundant_nil_coalescing   # Unnötige ?? nil entfernen
+  - sorted_first_last          # .first statt .sorted().first
+  - explicit_init              # String() statt String.init()
+  - contains_over_first_not_nil  # .contains statt .first != nil
+  - empty_string               # .isEmpty statt == ""
+  - toggle_bool                # .toggle() statt = !bool
+  - unneeded_parentheses_in_closure_argument
+
+# Ausschlüsse (nicht linten)
+excluded:
+  - Tests                      # Test-Code
+  - build                      # Build-Artefakte
+  - DerivedData                # Xcode Cache
+  - .build                     # Swift Package Manager
+  - Pods                       # CocoaPods (falls vorhanden)
+  - Carthage                   # Carthage (falls vorhanden)
+  - Resources                  # Asset-Ordner
+  - Legal_Texts                # Markdown-Dateien
+  - Localization               # JSON-Dateien
+
+# Angepasste Grenzwerte
+identifier_name:
+  min_length: 
+    warning: 2                 # Erlaubt kurze Namen wie "id", "ok"
+  max_length:
+    warning: 50
+    error: 60
+  excluded:
+    - id                       # Häufig verwendete kurze Namen
+    - ok
+    - db
+    - url
+    - jwt
+    - api
+    - key
+
+# Typ-Namen (Klassen, Structs, Enums)
+type_name:
+  min_length: 3
+  max_length:
+    warning: 40
+    error: 50
+
+# Nesting-Tiefe
+nesting:
+  type_level:
+    warning: 2                 # Max 2 Ebenen Verschachtelung
+  statement_level:
+    warning: 5                 # Max 5 Ebenen if/guard/for
+
+# Force Cast nur in Tests erlaubt
+force_cast: warning            # as! nur mit Vorsicht
+force_try: warning             # try! nur mit Vorsicht
+
+# Reporting
+reporter: "xcode"              # Xcode-kompatible Ausgabe
+
+# Warnung bei zu vielen Parametern
+function_parameter_count:
+  warning: 6
+  error: 8
+
+# Anzahl der Argumente in Closures
+large_tuple:
+  warning: 3
+  error: 4
+
+# Leerzeichen-Regeln
+vertical_whitespace:
+  max_empty_lines: 2
+
+# Custom Rules (optional)
+custom_rules:
+  # Keine print() Statements ohne #if DEBUG
+  no_print_in_production:
+    name: "No print() in production code"
+    regex: '^\s*print\('
+    match_kinds:
+      - identifier
+    message: "Verwende Logger statt print() für production-safe logging"
+    severity: warning
+
+  # Keine force unwrapping ohne Kommentar
+  force_unwrap_with_comment:
+    name: "Force unwrap requires comment"
+    regex: '!\s*$'
+    match_kinds:
+      - identifier
+    message: "Force unwrapping (!) sollte mit Kommentar begründet werden"
+    severity: warning

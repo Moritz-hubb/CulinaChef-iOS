@@ -28,6 +28,8 @@ targets:
     resources:
       - path: Resources
         type: folder
+      - path: Configs/StoreKit.storekit
+        optional: false
     dependencies:
       - package: Sentry
         product: Sentry

@@ -57,6 +57,7 @@
 		BFED293C2EC730C400FFF7FB /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BFED29352EC730C400FFF7FB /* de.json */; };
 		BFED293D2EC730C400FFF7FB /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BFED29392EC730C400FFF7FB /* it.json */; };
 		BFED293E2EC730C400FFF7FB /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BFED29362EC730C400FFF7FB /* en.json */; };
+		BFED29402EC73C6D00FFF7FB /* StoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = BFED293F2EC73C6D00FFF7FB /* StoreKit.storekit */; };
 		C03A9DCD41BA6156094F3F11 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF6FA0F10E39BFDD46C6CF5 /* AnalyticsManager.swift */; };
 		C894F8BE2A01318D4694C497 /* RatingsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5AB35019F11A4B305D520B8 /* RatingsClient.swift */; };
 		CB709F7443BF09398A478807 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40267FFC7AC70239FE17E29F /* StoreKitManager.swift */; };
@@ -136,6 +137,7 @@
 		BFED29372EC730C400FFF7FB /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
 		BFED29382EC730C400FFF7FB /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
 		BFED29392EC730C400FFF7FB /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
+		BFED293F2EC73C6D00FFF7FB /* StoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = StoreKit.storekit; sourceTree = "<group>"; };
 		C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		D4F8960B0FF5281ECE12C22E /* String+Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Validation.swift"; sourceTree = "<group>"; };
 		D540B6196483AB6491AA0A4A /* OpenAIConsentDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIConsentDialog.swift; sourceTree = "<group>"; };
@@ -310,6 +312,7 @@
 		ED62F7E2D93415139BD2695B /* Configs */ = {
 			isa = PBXGroup;
 			children = (
+				BFED293F2EC73C6D00FFF7FB /* StoreKit.storekit */,
 				4F800ACD7DA8C23D84AF197D /* Secrets.xcconfig */,
 			);
 			path = Configs;
@@ -403,6 +406,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7B8C4F644351423A14A74554 /* Assets.xcassets in Resources */,
+				BFED29402EC73C6D00FFF7FB /* StoreKit.storekit in Resources */,
 				ABF9438D01967639E9300DA0 /* LaunchScreen.storyboard in Resources */,
 				BFED293A2EC730C400FFF7FB /* fr.json in Resources */,
 				BFED293B2EC730C400FFF7FB /* es.json in Resources */,

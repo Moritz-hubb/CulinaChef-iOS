@@ -3,7 +3,7 @@ import StoreKit
 
 @MainActor
 final class StoreKitManager {
-    static let monthlyProductId = "com.culina.unlimited.monthly"
+    static let monthlyProductId = "com.moritzserrin.culinachef.unlimited.monthly"
 
     private(set) var product: Product?
 

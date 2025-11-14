@@ -62,9 +62,9 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.culina.unlimited.monthly",
+          "productID" : "com.moritzserrin.culinachef.unlimited.monthly",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Unlimited Monthly",
+          "referenceName" : "CulinaChef Unlimited Monthly",
           "subscriptionGroupID" : "8E3784C0",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

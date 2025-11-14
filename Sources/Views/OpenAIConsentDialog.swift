@@ -174,15 +174,39 @@ private struct InfoSection: View {
 
 // MARK: - Storage for consent status
 enum OpenAIConsentManager {
-    private static let consentKey = "openai_consent_granted"
+    private static let consentKeyPrefix = "openai_consent_granted_"
+    
+    // Generate user-specific key to prevent cache bleeding
+    private static func consentKey(for userId: String) -> String {
+        return "\(consentKeyPrefix)\(userId)"
+    }
     
     static var hasConsent: Bool {
-        get { UserDefaults.standard.bool(forKey: consentKey) }
-        set { UserDefaults.standard.set(newValue, forKey: consentKey) }
+        get {
+            // Get consent for current user only
+            guard let userId = KeychainManager.get(key: "user_id") else {
+                return false // No user logged in = no consent
+            }
+            return UserDefaults.standard.bool(forKey: consentKey(for: userId))
+        }
+        set {
+            // Set consent for current user only
+            guard let userId = KeychainManager.get(key: "user_id") else {
+                print("[OpenAIConsent] Cannot save consent: no user_id")
+                return
+            }
+            UserDefaults.standard.set(newValue, forKey: consentKey(for: userId))
+            print("[OpenAIConsent] Consent set to \(newValue) for user \(userId)")
+        }
     }
     
     static func resetConsent() {
-        UserDefaults.standard.removeObject(forKey: consentKey)
+        guard let userId = KeychainManager.get(key: "user_id") else {
+            print("[OpenAIConsent] Cannot reset consent: no user_id")
+            return
+        }
+        UserDefaults.standard.removeObject(forKey: consentKey(for: userId))
+        print("[OpenAIConsent] Reset consent for user \(userId)")
     }
 }
 

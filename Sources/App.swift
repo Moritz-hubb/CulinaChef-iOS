@@ -39,6 +39,31 @@ struct CulinaChefApp: App {
             // Enable breadcrumbs for better debugging
             options.enableAutoBreadcrumbTracking = true
             options.enableNetworkBreadcrumbs = true
+            
+            // GDPR: Scrub PII (Personally Identifiable Information) before sending to Sentry
+            options.beforeSend = { event in
+                // Remove user identifiers to comply with GDPR
+                event.user = nil
+                
+                // Remove sensitive breadcrumbs (tokens, user_ids, emails)
+                if let breadcrumbs = event.breadcrumbs {
+                    event.breadcrumbs = breadcrumbs.filter { crumb in
+                        let message = (crumb.message ?? "").lowercased()
+                        let dataStr = crumb.data?.description.lowercased() ?? ""
+                        let combined = message + " " + dataStr
+                        let sensitive = ["user_id", "token", "email", "password", "consent", "auth", "apikey", "key"]
+                        return !sensitive.contains { combined.contains($0) }
+                    }
+                }
+                
+                // Remove sensitive context/extra data
+                if var extra = event.extra {
+                    ["user_id", "email", "token", "authorization", "auth", "apikey"].forEach { extra.removeValue(forKey: $0) }
+                    event.extra = extra
+                }
+                
+                return event
+            }
         }
     }
 

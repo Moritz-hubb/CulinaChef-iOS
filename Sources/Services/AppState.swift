@@ -645,7 +645,16 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             try? await auth.signOut(accessToken: token)
         }
         
+        // Preserve user id for consent cleanup before wiping Keychain
+        let userIdForConsent = KeychainManager.get(key: "user_id")
+        
         KeychainManager.deleteAll()
+        
+        // Remove only the OpenAI consent for the previous user to prevent cache bleeding
+        if let uid = userIdForConsent {
+            let key = "openai_consent_granted_\(uid)"
+            UserDefaults.standard.removeObject(forKey: key)
+        }
         
         await MainActor.run {
             self.accessToken = nil

@@ -54,6 +54,8 @@
 		B7F7142CE863BED29C2914A7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C4F8F3DE07184AAFB7382E /* AppState.swift */; };
 		BCCE65B26AF0840BE3CACBEE /* StringValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EF4F84771B3193FD68A9F08 /* StringValidationTests.swift */; };
 		BFBFB5302EC90AB300300125 /* JailbreakDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFBFB52F2EC90AB300300125 /* JailbreakDetector.swift */; };
+		BFBFB5332EC9186B00300125 /* supabase 2.cer in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5322EC9186B00300125 /* supabase 2.cer */; };
+		BFBFB5342EC9186B00300125 /* backend.cer in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5312EC9186B00300125 /* backend.cer */; };
 		BFED29AC2EC7A54100FFF7FB /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BFED29A92EC7A54100FFF7FB /* es.json */; };
 		BFED29AD2EC7A54100FFF7FB /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BFED29AB2EC7A54100FFF7FB /* it.json */; };
 		BFED29AE2EC7A54100FFF7FB /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BFED29A82EC7A54100FFF7FB /* en.json */; };
@@ -142,6 +144,8 @@
 		B5AB35019F11A4B305D520B8 /* RatingsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsClient.swift; sourceTree = "<group>"; };
 		BE0F947BFCEA08029A50CFC7 /* FairUseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairUseView.swift; sourceTree = "<group>"; };
 		BFBFB52F2EC90AB300300125 /* JailbreakDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JailbreakDetector.swift; sourceTree = "<group>"; };
+		BFBFB5312EC9186B00300125 /* backend.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = backend.cer; sourceTree = "<group>"; };
+		BFBFB5322EC9186B00300125 /* supabase 2.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = "supabase 2.cer"; sourceTree = "<group>"; };
 		BFED29A62EC7A43700FFF7FB /* StoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = StoreKit.storekit; path = Configs/StoreKit.storekit; sourceTree = "<group>"; };
 		BFED29A72EC7A54100FFF7FB /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
 		BFED29A82EC7A54100FFF7FB /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
@@ -218,6 +222,8 @@
 		40728F1A522F5676DA8C2A7A = {
 			isa = PBXGroup;
 			children = (
+				BFBFB5312EC9186B00300125 /* backend.cer */,
+				BFBFB5322EC9186B00300125 /* supabase 2.cer */,
 				BFED29A72EC7A54100FFF7FB /* de.json */,
 				BFED29A82EC7A54100FFF7FB /* en.json */,
 				BFED29A92EC7A54100FFF7FB /* es.json */,
@@ -446,6 +452,8 @@
 				BFED29AE2EC7A54100FFF7FB /* en.json in Resources */,
 				BFED29AF2EC7A54100FFF7FB /* fr.json in Resources */,
 				BFED29B02EC7A54100FFF7FB /* de.json in Resources */,
+				BFBFB5332EC9186B00300125 /* supabase 2.cer in Resources */,
+				BFBFB5342EC9186B00300125 /* backend.cer in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

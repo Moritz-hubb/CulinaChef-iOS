@@ -40,7 +40,7 @@ struct TermsContent_EN {
     
     // MARK: - Section 5: Subscription
     static let section5_title = "5. Subscription, Prices, and Payment Terms"
-    static let section5_p1 = "(1) The basic download of the app is free. Access to extended features requires a monthly subscription ('Unlimited') at a price of €6.99 (incl. VAT)."
+    static let section5_p1 = "(1) The basic download of the app is free. Access to extended features requires a monthly subscription ('Unlimited') at a price of €5.99 (incl. VAT)."
     static let section5_p2 = "(2) The subscription is concluded, billed, and managed via Apple In-App Purchase. The provider does not receive payment data; these remain with Apple."
     static let section5_p3 = "(3) The subscription automatically renews for one month each time unless canceled at least 24 hours before the end of the current period in the user's Apple account."
     static let section5_p4 = "(4) A pro-rata refund of fees already paid is excluded unless there is a statutory right of withdrawal."

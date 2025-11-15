@@ -21,8 +21,15 @@ final class StoreKitManager {
     /// UI den Fehlerfluss kontrollieren kann.
     func loadProducts() async {
         do {
+            Logger.debug("[StoreKit] Loading product: \(Self.monthlyProductId)", category: .data)
             let products = try await Product.products(for: [Self.monthlyProductId])
+            Logger.debug("[StoreKit] Found \(products.count) products", category: .data)
             self.product = products.first
+            if let product = self.product {
+                Logger.debug("[StoreKit] Loaded product: \(product.displayName) - \(product.displayPrice)", category: .data)
+            } else {
+                Logger.error("[StoreKit] Product not found in App Store Connect!", category: .data)
+            }
         } catch {
             Logger.error("[StoreKit] Failed to load products", error: error, category: .data)
         }
@@ -61,8 +68,8 @@ final class StoreKitManager {
     /// - Returns: `true`, wenn die Subscription nicht widerrufen und nicht abgelaufen ist.
     func hasActiveEntitlement() async -> Bool {
         for await ent in Transaction.currentEntitlements {
-            if case .verified(let t) = ent, t.productID == Self.monthlyProductId {
-                if t.revocationDate == nil, (t.expirationDate ?? .distantFuture) > Date() {
+            if case .verified(let transaction) = ent, transaction.productID == Self.monthlyProductId {
+                if transaction.revocationDate == nil, (transaction.expirationDate ?? .distantFuture) > Date() {
                     return true
                 }
             }
@@ -76,10 +83,10 @@ final class StoreKitManager {
     ///   wenn keine passende Entitlement-Transaktion gefunden wurde.
     func getSubscriptionInfo() async -> (isActive: Bool, willRenew: Bool, expiresAt: Date?)? {
         for await ent in Transaction.currentEntitlements {
-            if case .verified(let t) = ent, t.productID == Self.monthlyProductId {
+            if case .verified(let transaction) = ent, transaction.productID == Self.monthlyProductId {
                 let now = Date()
-                let expiresAt = t.expirationDate
-                let isActive = t.revocationDate == nil && (expiresAt ?? .distantFuture) > now
+                let expiresAt = transaction.expirationDate
+                let isActive = transaction.revocationDate == nil && (expiresAt ?? .distantFuture) > now
                 
                 // Check if subscription will auto-renew
                 // In StoreKit 2, if there's no explicit cancellation, it will renew
@@ -111,8 +118,8 @@ final class StoreKitManager {
         switch result {
         case .unverified:
             throw NSError(domain: "StoreKit", code: -2, userInfo: [NSLocalizedDescriptionKey: "Kauf konnte nicht verifiziert werden"])
-        case .verified(let t):
-            return t
+        case .verified(let transaction):
+            return transaction
         }
     }
 }

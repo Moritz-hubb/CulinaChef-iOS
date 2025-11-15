@@ -126,7 +126,7 @@ struct TermsOfServiceView: View {
                     }
                     
                     TermsSection(isGerman ? "5. Abonnement, Preise und Zahlungsbedingungen" : "5. Subscription, Prices, and Payment Terms", icon: "creditcard") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Der Basis-Download der App ist kostenlos. Der Zugang zu erweiterten Funktionen erfordert ein monatliches Abonnement ('Unlimited') zum Preis von 6,99 € (inkl. MwSt.)." : "Downloading the app is free of charge. Access to extended features requires a monthly subscription ('Unlimited') at a price of €6.99 (incl. VAT).")
+                        TermsParagraph(number: "(1)", text: isGerman ? "Der Basis-Download der App ist kostenlos. Der Zugang zu erweiterten Funktionen erfordert ein monatliches Abonnement ('Unlimited') zum Preis von 5,99 € (inkl. MwSt.)." : "Downloading the app is free of charge. Access to extended features requires a monthly subscription ('Unlimited') at a price of €5.99 (incl. VAT).")
                         
                         TermsParagraph(number: "(2)", text: isGerman ? "Das Abonnement wird über Apple In-App-Purchase abgeschlossen, abgerechnet und verwaltet. Der Anbieter erhält keine Zahlungsdaten; diese verbleiben bei Apple." : "The subscription is concluded, billed, and managed through Apple In-App Purchase. The provider does not receive or store any payment data; such data remains with Apple.")
                         
@@ -276,7 +276,7 @@ struct TermsOfServiceView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             SummaryRow(label: isGerman ? "App-Name" : "App Name", value: "CulinaChef (CulinaAI)")
                             SummaryRow(label: isGerman ? "Anbieter" : "Provider", value: "CulinaAI – Moritz Serrin")
-                            SummaryRow(label: isGerman ? "Preis" : "Price", value: isGerman ? "6,99 €/Monat (Apple In-App-Purchase)" : "€6.99/month (Apple In-App Purchase)")
+                            SummaryRow(label: isGerman ? "Preis" : "Price", value: isGerman ? "5,99 €/Monat (Apple In-App-Purchase)" : "€5.99/month (Apple In-App Purchase)")
                             SummaryRow(label: isGerman ? "Kündigung" : "Cancellation", value: isGerman ? "Jederzeit über Apple-Einstellungen" : "Anytime via Apple settings")
                             SummaryRow(label: isGerman ? "Datenschutz" : "Privacy", value: isGerman ? "Keine Werbung, kein Tracking" : "No ads, no tracking")
                             SummaryRow(label: isGerman ? "Mindestalter" : "Minimum Age", value: isGerman ? "16 Jahre" : "16 years")

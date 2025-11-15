@@ -151,7 +151,7 @@ struct PrivacyPolicyView: View {
                         }
                         
                         SubSection("3.5 Zahlungsabwicklung (Apple)") {
-                            Text("Abonnement: 6,99 €/Monat via Apple In-App-Purchase")
+                            Text("Abonnement: 5,99 €/Monat via Apple In-App-Purchase")
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.white)
                             

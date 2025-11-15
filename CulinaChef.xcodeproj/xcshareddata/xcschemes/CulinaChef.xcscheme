@@ -44,7 +44,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "04E5CB28410783D7A485F9BF"
-               BuildableName = "CulinaChefTests.xctest"
+               BuildableName = ".xctest"
                BlueprintName = "CulinaChefTests"
                ReferencedContainer = "container:CulinaChef.xcodeproj">
             </BuildableReference>
@@ -52,7 +52,7 @@
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -71,9 +71,6 @@
             ReferencedContainer = "container:CulinaChef.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <StoreKitConfigurationFileReference
-         identifier = "../../Configs/StoreKit.storekit">
-      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

@@ -129,7 +129,10 @@ final class AppState: ObservableObject {
             // Listen for transaction updates
             for await result in Transaction.updates {
                 if case .verified(let transaction) = result, transaction.productID == StoreKitManager.monthlyProductId {
+                    // Always refresh local and backend subscription status when a new
+                    // verified transaction for our product appears, then finish it
                     await self.refreshSubscriptionFromEntitlements()
+                    await transaction.finish()
                 }
             }
         }
@@ -742,7 +745,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             req.httpBody = try JSONEncoder().encode([log])
             _ = try? await SecureURLSession.shared.data(for: req)
         } catch {
-            print("[AccountDeletion] Audit log failed: \(error)")
+            Logger.error("[AccountDeletion] Audit log failed", error: error, category: .data)
         }
 
         // Call backend to delete all data + auth user
@@ -758,7 +761,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                 throw URLError(.badServerResponse)
             }
         } catch {
-            print("[AccountDeletion] Backend deletion failed: \(error)")
+            Logger.error("[AccountDeletion] Backend deletion failed", error: error, category: .data)
             // Note: signOut will be called by UI after user dismisses alert
         }
     }
@@ -904,18 +907,19 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             }
             
             // SUCCESS: User completed purchase
-            print("[StoreKit] Purchase successful: \(transaction.id)")
+            print("[StoreKit] Purchase successful: \\(transaction.id)")
             
-            // Update local + backend
-            let now = Date()
-            let periodEnd = addOneMonth(to: now)
+            // After a successful purchase, always refresh subscription status from
+            // StoreKit entitlements so that we rely on Apple's source of truth
+            await refreshSubscriptionStatusFromStoreKit()
             
-            // Store in Keychain (secure)
-            try? KeychainManager.save(key: "subscription_last_payment", date: now)
-            try? KeychainManager.save(key: "subscription_period_end", date: periodEnd)
-            try? KeychainManager.save(key: "subscription_autorenew", bool: true)
+            // Read the normalized values from our local helpers / Keychain
+            let now = getSubscriptionLastPayment() ?? Date()
+            let periodEnd = getSubscriptionPeriodEnd() ?? addOneMonth(to: now)
+            let autoRenew = getSubscriptionAutoRenew()
             
-            await MainActor.run { self.isSubscribed = true }
+            // Ensure in-memory flag is consistent
+            await MainActor.run { self.isSubscribed = Date() < periodEnd }
             
             if let token = self.accessToken {
                 Task {
@@ -923,8 +927,8 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                         userId: userId,
                         plan: "unlimited",
                         status: "active",
-                        autoRenew: true,
-                        cancelAtPeriodEnd: false,
+                        autoRenew: autoRenew,
+                        cancelAtPeriodEnd: !autoRenew,
                         lastPaymentAt: now,
                         currentPeriodEnd: periodEnd,
                         priceCents: 599,
@@ -960,6 +964,19 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             self.subscriptionStatusInitialized = true
             if active { self.loadSubscriptionStatus() }
         }
+    }
+    
+    /// Returns the original transaction ID of the current subscription (if any).
+    /// This is used for transaction-based rate limiting to prevent multi-account abuse.
+    /// - Returns: originalTransactionId as String, or nil if no active subscription
+    func getOriginalTransactionId() async -> String? {
+        for await entitlement in Transaction.currentEntitlements {
+            if case .verified(let transaction) = entitlement,
+               transaction.productID == StoreKitManager.monthlyProductId {
+                return String(transaction.originalID)
+            }
+        }
+        return nil
     }
 
     // MARK: - Subscription polling helpers
@@ -1002,14 +1019,14 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     #endif
     
     func loadPreferencesFromSupabase() async throws {
-            print("[AppState] loadPreferencesFromSupabase called")
-            print("[AppState] accessToken available: \(accessToken != nil)")
-            print("[AppState] userId available: \(KeychainManager.get(key: "user_id") != nil)" )
+            Logger.debug("[AppState] loadPreferencesFromSupabase called", category: .data)
+            Logger.debug("[AppState] accessToken available: \(accessToken != nil)", category: .auth)
+            Logger.debug("[AppState] userId available: \(KeychainManager.get(key: "user_id") != nil)", category: .auth)
             
             guard let userId = KeychainManager.get(key: "user_id"),
                   let token = accessToken else {
             // Not logged in - try loading from UserDefaults as fallback
-            print("[AppState] No userId or accessToken - loading from UserDefaults")
+            Logger.debug("[AppState] No userId or accessToken - loading from UserDefaults", category: .data)
             await MainActor.run {
                 self.dietary = DietaryPreferences.load()
             }
@@ -1018,9 +1035,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         
         if let prefs = try await preferencesClient.fetchPreferences(userId: userId, accessToken: token) {
             // Successfully loaded from Supabase - use these preferences
-            print("[AppState] Successfully loaded preferences from Supabase")
-            print("[AppState] Dietary types: \(prefs.dietaryTypes)")
-            print("[AppState] Allergies: \(prefs.allergies)")
+            Logger.sensitive("[AppState] Successfully loaded preferences from Supabase", category: .data)
+            Logger.sensitive("[AppState] Dietary types: \(prefs.dietaryTypes)", category: .data)
+            Logger.sensitive("[AppState] Allergies: \(prefs.allergies)", category: .data)
             await MainActor.run {
                 var dietary = self.dietary
                 dietary.allergies = prefs.allergies
@@ -1047,10 +1064,10 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             }
         } else {
             // No preferences in Supabase yet - try UserDefaults as fallback
-            print("[AppState] No preferences in Supabase, loading from UserDefaults")
+            Logger.sensitive("[AppState] No preferences in Supabase, loading from UserDefaults", category: .data)
             await MainActor.run {
                 let loaded = DietaryPreferences.load()
-                print("[AppState] Loaded from UserDefaults - diets: \(loaded.diets)")
+                Logger.sensitive("[AppState] Loaded from UserDefaults - diets: \(loaded.diets)", category: .data)
                 self.dietary = loaded
             }
         }
@@ -1164,7 +1181,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         
         // Enforce OpenAI DSGVO consent for any automatic generation
         guard OpenAIConsentManager.hasConsent else {
-            print("[AutoGen] OpenAI consent not granted; skipping auto-generation")
+            Logger.info("[AutoGen] OpenAI consent not granted; skipping auto-generation", category: .data)
             return
         }
         
@@ -1218,7 +1235,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                     setMenuSuggestionProgress(menuId: menu.id, name: s.name, progress: nil)
                 }
             } catch {
-                print("[AutoGen] Failed for \(s.name): \(error)")
+                Logger.error("[AutoGen] Failed for \(s.name)", error: error, category: .data)
                 setMenuSuggestionStatus(menuId: menu.id, name: s.name, status: "failed")
                 setMenuSuggestionProgress(menuId: menu.id, name: s.name, progress: nil)
                 continue
@@ -1240,7 +1257,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     private func saveRecipePlan(_ plan: RecipePlan, token: String, userId: String) async throws -> Recipe? {
         // Build typed payload to keep the compiler fast and payload clean
         // DEBUG: Log what we got from AI
-        print("[saveRecipePlan] Received \(plan.ingredients.count) ingredients from AI:")
+        Logger.debug("[saveRecipePlan] Received \(plan.ingredients.count) ingredients from AI", category: .data)
         
         let ingredientNames: [String] = plan.ingredients.map { item in
             var parts: [String] = []
@@ -1488,13 +1505,13 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         if amuse.contains(where: { text.contains($0) }) { return "Amuse-Bouche" }
         if starters.contains(where: { text.contains($0) }) { return "Vorspeise" }
         if intermediate.contains(where: { text.contains($0) }) { return "Zwischengang" }
+        if mains.contains(where: { text.contains($0) }) { return "Hauptspeise" }
         if cheese.contains(where: { text.contains($0) }) { return "Käsegang" }
         if desserts.contains(where: { text.contains($0) }) { return "Nachspeise" }
         if aperitif.contains(where: { text.contains($0) }) { return "Aperitif" }
         if digestif.contains(where: { text.contains($0) }) { return "Digestif" }
         if drinks.contains(where: { text.contains($0) }) { return "Getränk" }
         if sides.contains(where: { text.contains($0) }) { return "Beilage" }
-        if mains.contains(where: { text.contains($0) }) { return "Hauptspeise" }
         return "Hauptspeise"
     }
     

@@ -349,8 +349,9 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         // Enforce rate limit via backend before any OpenAI call
         guard let token = app.accessToken else { error = "Nicht angemeldet"; return }
         // Try to increment AI usage, but don't fail if backend is unreachable
-        do { 
-            _ = try await app.backend.incrementAIUsage(accessToken: token) 
+        do {
+            let txnID = await app.getOriginalTransactionId()
+            _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: txnID)
         } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
             print("[RecipeCreator] Backend unreachable, continuing without usage tracking")
         } catch {

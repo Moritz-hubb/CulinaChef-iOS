@@ -1289,8 +1289,9 @@ private struct RecipeAISheetForSavedRecipe: View {
                 throw NSError(domain: "rate_limit", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
             }
             // Try to increment AI usage, but don't fail if backend is unreachable
-            do { 
-                _ = try await app.backend.incrementAIUsage(accessToken: token) 
+            do {
+                let txnID = await app.getOriginalTransactionId()
+                _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: txnID)
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
                 print("[RecipeAI] Backend unreachable, continuing without usage tracking")
             } catch {

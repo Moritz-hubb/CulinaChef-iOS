@@ -75,8 +75,14 @@ final class BackendClient {
     }
 
     // Rate limiting: increment and check server-side counters
-    func incrementAIUsage(accessToken: String) async throws -> (daily: Int, monthly: Int) {
-        let (data, _) = try await request(path: "/ai/usage/increment", method: "POST", token: accessToken)
+    // If originalTransactionId is provided, uses transaction-based limiting (prevents multi-account abuse)
+    // If nil, uses user-based limiting (free tier)
+    func incrementAIUsage(accessToken: String, originalTransactionId: String? = nil) async throws -> (daily: Int, monthly: Int) {
+        struct Body: Encodable { let original_transaction_id: String? }
+        let body = Body(original_transaction_id: originalTransactionId)
+        let jsonBody = try JSONEncoder().encode(body)
+        
+        let (data, _) = try await request(path: "/ai/usage/increment", method: "POST", token: accessToken, jsonBody: jsonBody)
         struct Counts: Decodable { let daily_count: Int; let monthly_count: Int }
         let c = try JSONDecoder().decode(Counts.self, from: data)
         return (c.daily_count, c.monthly_count)

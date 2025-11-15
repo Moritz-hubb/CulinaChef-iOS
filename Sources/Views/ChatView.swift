@@ -315,11 +315,15 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             guard let token = app.accessToken else {
                 throw NSError(domain: "rate_limit", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
             }
+            
+            // Get original transaction ID for transaction-based rate limiting (if user has subscription)
+            let transactionId = await app.getOriginalTransactionId()
+            
             // Try to increment AI usage, but don't fail if backend is unreachable
             do { 
-                _ = try await app.backend.incrementAIUsage(accessToken: token) 
+                _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: transactionId) 
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-                print("[ChatView] Backend unreachable, continuing without usage tracking")
+                Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
                 await MainActor.run { messages.append(.init(role: .assistant, text: error.localizedDescription)) }
                 return
@@ -361,11 +365,15 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             guard let token = app.accessToken else {
                 throw NSError(domain: "rate_limit", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
             }
+            
+            // Get original transaction ID for transaction-based rate limiting (if user has subscription)
+            let transactionId = await app.getOriginalTransactionId()
+            
             // Try to increment AI usage, but don't fail if backend is unreachable
             do { 
-                _ = try await app.backend.incrementAIUsage(accessToken: token) 
+                _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: transactionId) 
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-                print("[ChatView] Backend unreachable, continuing without usage tracking")
+                Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
                 await MainActor.run { messages.append(.init(role: .assistant, text: error.localizedDescription)) }
                 return
@@ -807,11 +815,15 @@ private struct RecipeSuggestionsView: View {
         
         // Enforce rate limit
         guard let token = app.accessToken else { return }
+        
+        // Get original transaction ID for transaction-based rate limiting
+        let transactionId = await app.getOriginalTransactionId()
+        
         // Try to increment AI usage, but don't fail if backend is unreachable
         do { 
-            _ = try await app.backend.incrementAIUsage(accessToken: token) 
+            _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: transactionId) 
         } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-            print("[ChatView] Backend unreachable, continuing without usage tracking")
+            Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
         } catch {
             await MainActor.run { createError = error.localizedDescription }
             return

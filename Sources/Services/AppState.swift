@@ -84,8 +84,8 @@ final class AppState: ObservableObject {
     @Published var deepLinkRecipe: Recipe? = nil
 
     private(set) var backend: BackendClient!
-    private(set) var openAI: OpenAIClient?
-    private(set) var recipeAI: OpenAIClient?
+    private(set) var openAI: BackendOpenAIClient?
+    private(set) var recipeAI: BackendOpenAIClient?
     private(set) var auth: SupabaseAuthClient!
     private(set) var preferencesClient: UserPreferencesClient!
     private(set) var subscriptionsClient: SubscriptionsClient!
@@ -112,8 +112,9 @@ final class AppState: ObservableObject {
 
     init() {
         backend = BackendClient(baseURL: Config.backendBaseURL)
-        openAI = OpenAIClient(apiKey: Secrets.openAIAPIKey())
-        recipeAI = OpenAIClient(apiKey: Secrets.openAIAPIKey())
+        // OpenAI now proxied through backend for security
+        openAI = BackendOpenAIClient(backend: backend, accessTokenProvider: { [weak self] in self?.accessToken })
+        recipeAI = BackendOpenAIClient(backend: backend, accessTokenProvider: { [weak self] in self?.accessToken })
         auth = SupabaseAuthClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey)
         preferencesClient = UserPreferencesClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey)
         subscriptionsClient = SubscriptionsClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey)

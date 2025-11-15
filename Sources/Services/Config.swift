@@ -21,13 +21,29 @@ enum Config {
     
     // MARK: - Supabase Configuration
     
-    static let supabaseURL = URL(string: "https://ywduddopwudltshxiqyp.supabase.co")!
+    /// Supabase URL loaded from Info.plist (configured via Build Settings or xcconfig)
+    static let supabaseURL: URL = {
+        guard let urlString = Bundle.main.object(forInfoDictionaryKey: "SupabaseURL") as? String,
+              let url = URL(string: urlString) else {
+            fatalError("SupabaseURL not configured in Info.plist")
+        }
+        return url
+    }()
     
-    // ⚠️ SECURITY NOTE: This is the public "anon" key from Supabase.
-    // It's designed to be public and is safe to expose in client apps.
-    // Row Level Security (RLS) policies protect your data on the server.
-    // DO NOT expose the "service_role" key!
-    static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3ZHVkZG9wd3VkbHRzaHhpcXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2Nzk5MTEsImV4cCI6MjA3NzI1NTkxMX0.DvGlgWnMp42dBO7mF43nQTNT4AvmAqBc9ElBmOO5U6c"
+    /// Supabase Anon Key loaded from Info.plist (configured via Build Settings or xcconfig)
+    /// 
+    /// ⚠️ SECURITY NOTE: This is the public "anon" key from Supabase.
+    /// It's designed to be public and is safe to expose in client apps.
+    /// Row Level Security (RLS) policies protect your data on the server.
+    /// DO NOT expose the "service_role" key!
+    static let supabaseAnonKey: String = {
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "SupabaseAnonKey") as? String,
+              !key.isEmpty,
+              !key.hasPrefix("$") else {
+            fatalError("SupabaseAnonKey not configured in Info.plist")
+        }
+        return key
+    }()
     
     // MARK: - Backend URL (Environment-based)
     

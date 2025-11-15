@@ -52,6 +52,8 @@ targets:
         NSCameraUsageDescription: "Zum Fotografieren deiner Zutaten für Rezeptvorschläge."
         NSPhotoLibraryAddUsageDescription: "Zum Speichern/Verarbeiten von Fotos deiner Zutaten."
         NSPhotoLibraryUsageDescription: "Zum Auswählen von Bildern aus deiner Galerie für Rezeptvorschläge."
+        SupabaseURL: $(SUPABASE_URL)
+        SupabaseAnonKey: $(SUPABASE_ANON_KEY)
         OpenAIAPIKey: $(OPENAI_API_KEY)
         SentryDSN: $(SENTRY_DSN)
         UIApplicationSceneManifest:

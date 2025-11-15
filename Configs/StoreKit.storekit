@@ -50,10 +50,9 @@
           "groupNumber" : 1,
           "internalID" : "AD05AC5C",
           "introductoryOffer" : {
-            "displayPrice" : "0.99",
             "internalID" : "CC40CAC8",
             "paymentMode" : "free",
-            "subscriptionPeriod" : "P1M"
+            "subscriptionPeriod" : "P3D"
           },
           "localizations" : [
             {

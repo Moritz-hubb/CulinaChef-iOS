@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -68,6 +68,14 @@
 		B74612E22263F9B53F9A7E78 /* SupabaseAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9C8E97CEA997977B04DFDC /* SupabaseAuthClient.swift */; };
 		B7F7142CE863BED29C2914A7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C4F8F3DE07184AAFB7382E /* AppState.swift */; };
 		BCCE65B26AF0840BE3CACBEE /* StringValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EF4F84771B3193FD68A9F08 /* StringValidationTests.swift */; };
+		BFBFB53A2EC9323E00300125 /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5372EC9323E00300125 /* es.json */; };
+		BFBFB53B2EC9323E00300125 /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5382EC9323E00300125 /* fr.json */; };
+		BFBFB53C2EC9323E00300125 /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5362EC9323E00300125 /* en.json */; };
+		BFBFB53D2EC9323E00300125 /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5352EC9323E00300125 /* de.json */; };
+		BFBFB53E2EC9323E00300125 /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5392EC9323E00300125 /* it.json */; };
+		BFBFB5452EC9327A00300125 /* backend.cer in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5432EC9327A00300125 /* backend.cer */; };
+		BFBFB5462EC9327A00300125 /* supabase.cer in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5442EC9327A00300125 /* supabase.cer */; };
+		BFBFB5482EC93D4F00300125 /* StoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5472EC93D4F00300125 /* StoreKit.storekit */; };
 		C03A9DCD41BA6156094F3F11 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF6FA0F10E39BFDD46C6CF5 /* AnalyticsManager.swift */; };
 		C5DA197679F432B7B8AE0B08 /* OpenAIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E3211EFE8C499247FFEE1F8 /* OpenAIClientTests.swift */; };
 		C894F8BE2A01318D4694C497 /* RatingsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5AB35019F11A4B305D520B8 /* RatingsClient.swift */; };
@@ -112,7 +120,7 @@
 		174E397B5850F0459C63D384 /* KeychainManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManagerTests.swift; sourceTree = "<group>"; };
 		188555D9BE64E850BEE67F00 /* AnalyticsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManagerTests.swift; sourceTree = "<group>"; };
 		1AE18E2F63067CE6BA3CB289 /* RecipeCreatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeCreatorView.swift; sourceTree = "<group>"; };
-		21B76FF23B7C59DF68BE67EA /* CulinaChef.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CulinaChef.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		21B76FF23B7C59DF68BE67EA /* CulinaChef.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CulinaChef.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		21C38F108F9C7302B0520E12 /* LikedRecipesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikedRecipesManager.swift; sourceTree = "<group>"; };
 		24E831A7B1026BCAE595DEB3 /* UIAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAppearance.swift; sourceTree = "<group>"; };
 		26317223248F15F1944A9F46 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -122,7 +130,7 @@
 		35087D174F4743853D95CE96 /* RatingsClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsClientTests.swift; sourceTree = "<group>"; };
 		38FC9C621974BD22ECB3E30C /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		3C5E4EE6A762DDA8E67A951C /* DietaryPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietaryPreferences.swift; sourceTree = "<group>"; };
-		3F0982C606E537CF58C2E853 /* CulinaChefTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CulinaChefTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F0982C606E537CF58C2E853 /* CulinaChefTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = CulinaChefTests.xctest; path = .xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F507943A1CBD339AE23C041 /* TimerCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCenter.swift; sourceTree = "<group>"; };
 		40267FFC7AC70239FE17E29F /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
 		41612AD3F4BBB5C3EEDE0A28 /* SupabaseAuthClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthClientTests.swift; sourceTree = "<group>"; };
@@ -169,6 +177,14 @@
 		AEFC116B45F42B7AC65DE574 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		B5AB35019F11A4B305D520B8 /* RatingsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsClient.swift; sourceTree = "<group>"; };
 		BE0F947BFCEA08029A50CFC7 /* FairUseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairUseView.swift; sourceTree = "<group>"; };
+		BFBFB5352EC9323E00300125 /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
+		BFBFB5362EC9323E00300125 /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
+		BFBFB5372EC9323E00300125 /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
+		BFBFB5382EC9323E00300125 /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
+		BFBFB5392EC9323E00300125 /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
+		BFBFB5432EC9327A00300125 /* backend.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = backend.cer; sourceTree = "<group>"; };
+		BFBFB5442EC9327A00300125 /* supabase.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = supabase.cer; sourceTree = "<group>"; };
+		BFBFB5472EC93D4F00300125 /* StoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = StoreKit.storekit; sourceTree = "<group>"; };
 		C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		C6374362E3A330D0BA9829E2 /* SecureURLSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureURLSession.swift; sourceTree = "<group>"; };
 		D4F8960B0FF5281ECE12C22E /* String+Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Validation.swift"; sourceTree = "<group>"; };
@@ -236,6 +252,14 @@
 		40728F1A522F5676DA8C2A7A = {
 			isa = PBXGroup;
 			children = (
+				BFBFB5472EC93D4F00300125 /* StoreKit.storekit */,
+				BFBFB5432EC9327A00300125 /* backend.cer */,
+				BFBFB5442EC9327A00300125 /* supabase.cer */,
+				BFBFB5352EC9323E00300125 /* de.json */,
+				BFBFB5362EC9323E00300125 /* en.json */,
+				BFBFB5372EC9323E00300125 /* es.json */,
+				BFBFB5382EC9323E00300125 /* fr.json */,
+				BFBFB5392EC9323E00300125 /* it.json */,
 				ED62F7E2D93415139BD2695B /* Configs */,
 				9A787DBC0B50C38AFCD7641B /* Sources */,
 				0B4517B2259DC6F3B5AA8263 /* Tests */,
@@ -455,7 +479,6 @@
 			packageReferences = (
 				F2FAE0E0B17E85EA26B7E1C2 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -471,6 +494,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				7B8C4F644351423A14A74554 /* Assets.xcassets in Resources */,
+				BFBFB53A2EC9323E00300125 /* es.json in Resources */,
+				BFBFB53B2EC9323E00300125 /* fr.json in Resources */,
+				BFBFB5452EC9327A00300125 /* backend.cer in Resources */,
+				BFBFB5462EC9327A00300125 /* supabase.cer in Resources */,
+				BFBFB5482EC93D4F00300125 /* StoreKit.storekit in Resources */,
+				BFBFB53C2EC9323E00300125 /* en.json in Resources */,
+				BFBFB53D2EC9323E00300125 /* de.json in Resources */,
+				BFBFB53E2EC9323E00300125 /* it.json in Resources */,
 				ABF9438D01967639E9300DA0 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -601,6 +632,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				INFOPLIST_FILE = Sources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef;
 				PRODUCT_NAME = CulinaChef;
 			};
@@ -614,6 +646,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = Sources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef;
 				PRODUCT_NAME = CulinaChef;
 			};

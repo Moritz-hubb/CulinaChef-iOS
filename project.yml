@@ -30,6 +30,11 @@ targets:
         type: folder
       - path: Configs/StoreKit.storekit
         optional: false
+      - de.json
+      - en.json
+      - es.json
+      - fr.json
+      - it.json
     dependencies:
       - package: Sentry
         product: Sentry

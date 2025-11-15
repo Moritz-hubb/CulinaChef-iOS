@@ -25,9 +25,9 @@ class AnalyticsManager {
                         event.rawValue,
                         coarseValue: .high
                     )
-                    print("[Analytics] Tracked conversion: \(event)")
+                    Logger.info("[Analytics] Tracked conversion: \(event)", category: .data)
                 } catch {
-                    print("[Analytics] Failed to track conversion: \(error)")
+                    Logger.error("[Analytics] Failed to track conversion", error: error, category: .data)
                 }
             }
         } else {

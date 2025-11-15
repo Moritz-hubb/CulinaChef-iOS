@@ -53,7 +53,7 @@ final class UserPreferencesClient {
     
     // MARK: - Fetch User Preferences
     func fetchPreferences(userId: String, accessToken: String) async throws -> UserPreferences? {
-        print("[UserPreferencesClient] Fetching preferences for user: \(userId)")
+        Logger.sensitive("[UserPreferencesClient] Fetching preferences for user: \(userId)", category: .data)
         var url = baseURL
         url.append(path: "/rest/v1/user_preferences")
         url.append(queryItems: [
@@ -85,7 +85,7 @@ final class UserPreferencesClient {
         } else {
             // Log the error for debugging
             if let errorString = String(data: data, encoding: .utf8) {
-                print("[UserPreferencesClient] Fetch error (\(http.statusCode)): \(errorString)")
+                Logger.error("[UserPreferencesClient] Fetch error (\(http.statusCode)): \(errorString)", category: .data)
             }
             throw NSError(domain: "UserPreferencesClient", code: http.statusCode,
                          userInfo: [NSLocalizedDescriptionKey: "Preferences konnten nicht geladen werden"])
@@ -124,9 +124,9 @@ final class UserPreferencesClient {
         ]
         
         // Debug logging
-        print("[UserPreferencesClient] Upserting preferences for user: \(userId)")
-        print("[UserPreferencesClient] Dietary types: \(dietaryTypes)")
-        print("[UserPreferencesClient] Allergies: \(allergies)")
+        Logger.sensitive("[UserPreferencesClient] Upserting preferences for user: \(userId)", category: .data)
+        Logger.sensitive("[UserPreferencesClient] Dietary types: \(dietaryTypes)", category: .data)
+        Logger.sensitive("[UserPreferencesClient] Allergies: \(allergies)", category: .data)
         
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         
@@ -138,8 +138,8 @@ final class UserPreferencesClient {
         
         // Debug logging
         if let responseString = String(data: data, encoding: .utf8) {
-            print("[UserPreferences] Status: \(http.statusCode)")
-            print("[UserPreferences] Response: \(responseString)")
+            Logger.debug("[UserPreferences] Status: \(http.statusCode)", category: .data)
+            Logger.debug("[UserPreferences] Response: \(responseString)", category: .data)
         }
         
         if http.statusCode != 200 && http.statusCode != 201 {

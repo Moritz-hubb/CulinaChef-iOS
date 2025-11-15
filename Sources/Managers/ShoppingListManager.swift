@@ -27,7 +27,7 @@ class ShoppingListManager: ObservableObject {
     // Load shopping list for current user
     func loadShoppingList() {
         guard let userId = KeychainManager.get(key: "user_id") else {
-            print("[ShoppingListManager] No user_id found, using empty list")
+            Logger.debug("[ShoppingListManager] No user_id found, using empty list", category: .data)
             shoppingList = ShoppingList()
             return
         }
@@ -35,7 +35,7 @@ class ShoppingListManager: ObservableObject {
         let key = storageKey(for: userId)
         
         guard let data = userDefaults.data(forKey: key) else {
-            print("[ShoppingListManager] No saved shopping list for user \(userId)")
+            Logger.sensitive("[ShoppingListManager] No saved shopping list for user \(userId)", category: .data)
             shoppingList = ShoppingList()
             return
         }
@@ -43,9 +43,9 @@ class ShoppingListManager: ObservableObject {
         do {
             let decoded = try JSONDecoder().decode(ShoppingList.self, from: data)
             shoppingList = decoded
-            print("[ShoppingListManager] Loaded shopping list with \(decoded.items.count) items for user \(userId)")
+            Logger.sensitive("[ShoppingListManager] Loaded shopping list with \(decoded.items.count) items for user \(userId)", category: .data)
         } catch {
-            print("[ShoppingListManager] Error decoding shopping list: \(error)")
+            Logger.error("[ShoppingListManager] Error decoding shopping list", error: error, category: .data)
             shoppingList = ShoppingList()
         }
     }
@@ -53,7 +53,7 @@ class ShoppingListManager: ObservableObject {
     // Save shopping list for current user
     func saveShoppingList() {
         guard let userId = KeychainManager.get(key: "user_id") else {
-            print("[ShoppingListManager] Cannot save: no user_id")
+            Logger.debug("[ShoppingListManager] Cannot save: no user_id", category: .data)
             return
         }
         
@@ -63,9 +63,9 @@ class ShoppingListManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(shoppingList)
             userDefaults.set(data, forKey: key)
-            print("[ShoppingListManager] Saved shopping list with \(shoppingList.items.count) items for user \(userId)")
+            Logger.sensitive("[ShoppingListManager] Saved shopping list with \(shoppingList.items.count) items for user \(userId)", category: .data)
         } catch {
-            print("[ShoppingListManager] Error encoding shopping list: \(error)")
+            Logger.error("[ShoppingListManager] Error encoding shopping list", error: error, category: .data)
         }
     }
     
@@ -75,7 +75,7 @@ class ShoppingListManager: ObservableObject {
         let key = storageKey(for: userId)
         userDefaults.removeObject(forKey: key)
         shoppingList = ShoppingList()
-        print("[ShoppingListManager] Cleared shopping list for user \(userId)")
+        Logger.sensitive("[ShoppingListManager] Cleared shopping list for user \(userId)", category: .data)
     }
     
     // MARK: - Item Management

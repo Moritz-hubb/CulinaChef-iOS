@@ -72,6 +72,11 @@
 		FEC6CC21CDE44482D442F073 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BCF3CADE470585536DC39E5 /* PaywallView.swift */; };
 		FEFFEAEA8B96327DDA8F7462 /* View+RoundedCorners.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845FFFA8D16431609BA3F692 /* View+RoundedCorners.swift */; };
 		FFF8F29956D8F6369821BC24 /* KeychainManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 174E397B5850F0459C63D384 /* KeychainManagerTests.swift */; };
+		C9STOREKIT00000000002 /* StoreKitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9STOREKIT00000000001 /* StoreKitManagerTests.swift */; };
+		C9RATINGS000000000002 /* RatingsClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9RATINGS000000000001 /* RatingsClientTests.swift */; };
+		C9TIMERCENTER00000002 /* TimerCenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9TIMERCENTER00000001 /* TimerCenterTests.swift */; };
+		C9ANALYTICS0000000002 /* AnalyticsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9ANALYTICS0000000001 /* AnalyticsManagerTests.swift */; };
+		C9LOCALIZATION000002 /* LocalizationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9LOCALIZATION000001 /* LocalizationManagerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,6 +97,11 @@
 		13C7C61B04ADFA92C3C27DA5 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		1497DA3E83CCF53D37AD7624 /* RecipeCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeCompletionView.swift; sourceTree = "<group>"; };
 		174E397B5850F0459C63D384 /* KeychainManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManagerTests.swift; sourceTree = "<group>"; };
+		C9STOREKIT00000000001 /* StoreKitManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitManagerTests.swift; sourceTree = "<group>"; };
+		C9RATINGS000000000001 /* RatingsClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsClientTests.swift; sourceTree = "<group>"; };
+		C9TIMERCENTER00000001 /* TimerCenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCenterTests.swift; sourceTree = "<group>"; };
+		C9ANALYTICS0000000001 /* AnalyticsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManagerTests.swift; sourceTree = "<group>"; };
+		C9LOCALIZATION000001 /* LocalizationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManagerTests.swift; sourceTree = "<group>"; };
 		1AE18E2F63067CE6BA3CB289 /* RecipeCreatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeCreatorView.swift; sourceTree = "<group>"; };
 		21B76FF23B7C59DF68BE67EA /* CulinaChef.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CulinaChef.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		21C38F108F9C7302B0520E12 /* LikedRecipesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikedRecipesManager.swift; sourceTree = "<group>"; };
@@ -165,15 +175,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		ABCD1234567890ABCD123456 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0B4517B2259DC6F3B5AA8263 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				C9ANALYTICS0000000001 /* AnalyticsManagerTests.swift */,
 				174E397B5850F0459C63D384 /* KeychainManagerTests.swift */,
+				C9LOCALIZATION000001 /* LocalizationManagerTests.swift */,
+				C9RATINGS000000000001 /* RatingsClientTests.swift */,
+				C9STOREKIT00000000001 /* StoreKitManagerTests.swift */,
 				2EF4F84771B3193FD68A9F08 /* StringValidationTests.swift */,
 				2985EDED3592461554F441CD /* SubscriptionTests.swift */,
+				C9TIMERCENTER00000001 /* TimerCenterTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -331,6 +353,7 @@
 			buildConfigurationList = 75E5D6E17E48C95D73C9C07B /* Build configuration list for PBXNativeTarget "CulinaChefTests" */;
 			buildPhases = (
 				9FDBEB8F7DEF8F733E6E2D30 /* Sources */,
+				ABCD1234567890ABCD123456 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -488,9 +511,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C9ANALYTICS0000000002 /* AnalyticsManagerTests.swift in Sources */,
 				FFF8F29956D8F6369821BC24 /* KeychainManagerTests.swift in Sources */,
+				C9LOCALIZATION000002 /* LocalizationManagerTests.swift in Sources */,
+				C9RATINGS000000000002 /* RatingsClientTests.swift in Sources */,
+				C9STOREKIT00000000002 /* StoreKitManagerTests.swift in Sources */,
 				BCCE65B26AF0840BE3CACBEE /* StringValidationTests.swift in Sources */,
 				85D6C5963BE88397721555E0 /* SubscriptionTests.swift in Sources */,
+				C9TIMERCENTER00000002 /* TimerCenterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -508,10 +536,17 @@
 		003C60998A35EB970217882B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CulinaChef.app/CulinaChef";
 			};
 			name = Debug;
@@ -535,6 +570,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
+				ENABLE_TESTABILITY = YES;
 				INFOPLIST_FILE = Sources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef;
@@ -545,10 +581,17 @@
 		995671E83993798E2682E4B0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CulinaChef.app/CulinaChef";
 			};
 			name = Release;

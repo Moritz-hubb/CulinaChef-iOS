@@ -56,6 +56,7 @@ class LocalizationManager: ObservableObject {
         // Try multiple paths to find the JSON file
         var path: String?
         
+        #if DEBUG
         print("[LocalizationManager] Attempting to load translations for: \(currentLanguage)")
         print("[LocalizationManager] Bundle.main.resourcePath: \(Bundle.main.resourcePath ?? "nil")")
         
@@ -67,21 +68,28 @@ class LocalizationManager: ObservableObject {
                 print("[LocalizationManager] JSON files in bundle root: \(jsonFiles)")
             }
         }
+        #endif
         
         // Try 1: In Resources/Localization subdirectory
         path = Bundle.main.path(forResource: currentLanguage, ofType: "json", inDirectory: "Resources/Localization")
+        #if DEBUG
         if path != nil { print("[LocalizationManager] Found at: Resources/Localization/\(currentLanguage).json") }
+        #endif
         
         // Try 2: In Resources directory
         if path == nil {
             path = Bundle.main.path(forResource: currentLanguage, ofType: "json", inDirectory: "Resources")
+            #if DEBUG
             if path != nil { print("[LocalizationManager] Found at: Resources/\(currentLanguage).json") }
+            #endif
         }
         
         // Try 3: In root of bundle
         if path == nil {
             path = Bundle.main.path(forResource: currentLanguage, ofType: "json")
+            #if DEBUG
             if path != nil { print("[LocalizationManager] Found at: \(currentLanguage).json (root)") }
+            #endif
         }
         
         // Try 4: Direct search with resource name pattern
@@ -90,7 +98,9 @@ class LocalizationManager: ObservableObject {
                 let possiblePath = "\(resourcePath)/\(currentLanguage).json"
                 if FileManager.default.fileExists(atPath: possiblePath) {
                     path = possiblePath
+                    #if DEBUG
                     print("[LocalizationManager] Found at: \(possiblePath)")
+                    #endif
                 }
             }
         }
@@ -98,6 +108,7 @@ class LocalizationManager: ObservableObject {
         guard let validPath = path,
               let data = try? Data(contentsOf: URL(fileURLWithPath: validPath)),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: String] else {
+            #if DEBUG
             print("[LocalizationManager] Failed to load translations for \(currentLanguage) in any location")
             print("[LocalizationManager] Searched paths:")
             print(" - Resources/Localization/\(currentLanguage).json")
@@ -106,6 +117,7 @@ class LocalizationManager: ObservableObject {
             if let resourcePath = Bundle.main.resourcePath {
                 print(" - \(resourcePath)/\(currentLanguage).json")
             }
+            #endif
             
             // Load fallback if current language failed and it's not already fallback
             if currentLanguage != fallbackLanguage {
@@ -135,12 +147,16 @@ class LocalizationManager: ObservableObject {
         guard let validFallbackPath = fallbackPath,
               let fallbackData = try? Data(contentsOf: URL(fileURLWithPath: validFallbackPath)),
               let fallbackJson = try? JSONSerialization.jsonObject(with: fallbackData) as? [String: String] else {
+            #if DEBUG
             print("[LocalizationManager] Failed to load fallback translations for \(fallbackLanguage)")
+            #endif
             return
         }
         
         translations = fallbackJson
+        #if DEBUG
         print("[LocalizationManager] Loaded fallback translations (\(translations.count) keys) from: \(validFallbackPath)")
+        #endif
     }
     
     func string(forKey key: String) -> String {
@@ -149,7 +165,7 @@ class LocalizationManager: ObservableObject {
         }
         
         // Log missing translation
-        print("[LocalizationManager] Missing translation: '\(key)' for language: \(currentLanguage)")
+        Logger.debug("[LocalizationManager] Missing translation: '\(key)' for language: \(currentLanguage)", category: .data)
         
         // Return key itself as fallback
         return key

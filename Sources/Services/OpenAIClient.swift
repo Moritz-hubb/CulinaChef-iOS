@@ -20,10 +20,10 @@ final class OpenAIClient {
     private let session: URLSession
     private let baseURL = URL(string: "https://api.openai.com/v1")!
 
-    init?(apiKey: String?) {
+    init?(apiKey: String?, session: URLSession = URLSession(configuration: .default)) {
         guard let key = apiKey, !key.isEmpty else { return nil }
         self.apiKey = key
-        self.session = URLSession(configuration: .default)
+        self.session = session
     }
 
     // MARK: - Public

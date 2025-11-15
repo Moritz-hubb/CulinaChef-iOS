@@ -461,11 +461,7 @@ TextField(L.placeholder_notes.localized, text: $notesText)
         // Sync to Supabase in background
         Task {
             do {
-                print("[DietarySettings] Saving to Supabase:")
-                print("  - diets: \(Array(diets))")
-                print("  - allergies: \(d.allergies)")
-                print("  - dislikes: \(d.dislikes)")
-                print("  - tastePrefs: \(tastePrefsDict)")
+                Logger.sensitive("[DietarySettings] Saving to Supabase - diets: \(Array(diets)), allergies: \(d.allergies), dislikes: \(d.dislikes), tastePrefs: \(tastePrefsDict)", category: .data)
                 try await app.savePreferencesToSupabase(
                     allergies: d.allergies,
                     dietaryTypes: diets,
@@ -474,9 +470,9 @@ TextField(L.placeholder_notes.localized, text: $notesText)
                     notes: d.notes,
                     onboardingCompleted: true
                 )
-                print("[DietarySettings] Successfully saved to Supabase")
+                Logger.sensitive("[DietarySettings] Successfully saved to Supabase", category: .data)
             } catch {
-                print("[DietarySettings] Error saving to Supabase: \(error)")
+                Logger.error("[DietarySettings] Error saving to Supabase", error: error, category: .data)
             }
         }
     }

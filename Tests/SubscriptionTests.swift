@@ -1,6 +1,7 @@
 import XCTest
 @testable import CulinaChef
 
+@MainActor
 final class SubscriptionTests: XCTestCase {
     
     var appState: AppState!

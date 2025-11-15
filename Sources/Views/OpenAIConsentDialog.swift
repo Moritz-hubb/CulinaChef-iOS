@@ -192,27 +192,27 @@ enum OpenAIConsentManager {
         set {
             // Set consent for current user only
             guard let userId = KeychainManager.get(key: "user_id") else {
-                print("[OpenAIConsent] Cannot save consent: no user_id")
+                Logger.debug("[OpenAIConsent] Cannot save consent: no user_id", category: .auth)
                 return
             }
             UserDefaults.standard.set(newValue, forKey: consentKey(for: userId))
-            print("[OpenAIConsent] Consent set to \(newValue) for user \(userId)")
+            Logger.sensitive("[OpenAIConsent] Consent set to \(newValue) for user \(userId)", category: .auth)
         }
     }
     
     static func resetConsent() {
         guard let userId = KeychainManager.get(key: "user_id") else {
-            print("[OpenAIConsent] Cannot reset consent: no user_id")
+            Logger.debug("[OpenAIConsent] Cannot reset consent: no user_id", category: .auth)
             return
         }
         UserDefaults.standard.removeObject(forKey: consentKey(for: userId))
-        print("[OpenAIConsent] Reset consent for user \(userId)")
+        Logger.sensitive("[OpenAIConsent] Reset consent for user \(userId)", category: .auth)
     }
 }
 
 #Preview {
     OpenAIConsentDialog(
-        onAccept: { print("Accepted") },
-        onDecline: { print("Declined") }
+        onAccept: { Logger.debug("[OpenAIConsentDialog] Accepted", category: .ui) },
+        onDecline: { Logger.debug("[OpenAIConsentDialog] Declined", category: .ui) }
     )
 }

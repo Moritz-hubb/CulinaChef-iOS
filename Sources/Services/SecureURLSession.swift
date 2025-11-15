@@ -7,17 +7,29 @@ import Security
 /// - If no pin is configured for a host, falls back to default system trust evaluation.
 final class SecureURLSession: NSObject, URLSessionDelegate {
     static let shared = SecureURLSession()
+    
+    // For testing: allow injecting a custom configuration
+    static var testConfiguration: URLSessionConfiguration?
 
     private let pinnedCertificates: [String: [Data]] // host -> [certData]
 
     /// Lazily created URLSession so that we can safely use `self` as delegate
-    /// without rekursiv die Singleton-Instanz erneut zu initialisieren.
+    /// ohne rekursiv die Singleton-Instanz erneut zu initialisieren.
     private lazy var session: URLSession = {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = Config.apiTimeout
-        config.timeoutIntervalForResource = Config.imageUploadTimeout
-        config.waitsForConnectivity = true
-        return URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        let config: URLSessionConfiguration
+        let delegate: URLSessionDelegate?
+        
+        if let testConfig = SecureURLSession.testConfiguration {
+            config = testConfig
+            delegate = nil  // Disable SSL pinning in tests
+        } else {
+            config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = Config.apiTimeout
+            config.timeoutIntervalForResource = Config.imageUploadTimeout
+            config.waitsForConnectivity = true
+            delegate = self
+        }
+        return URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
     }()
 
     private override init() {

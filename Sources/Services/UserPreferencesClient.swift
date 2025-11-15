@@ -1,5 +1,6 @@
 import Foundation
 
+/// Vollständiger Preferences-Datensatz eines Nutzers aus der Tabelle `user_preferences`.
 struct UserPreferences: Codable {
     let userId: String
     let allergies: [String]
@@ -23,6 +24,7 @@ struct UserPreferences: Codable {
         case updatedAt = "updated_at"
     }
     
+    /// Sub-Datensatz für Geschmackspräferenzen des Nutzers.
     struct TastePreferences: Codable {
         let spicyLevel: Double
         let sweet: Bool?
@@ -42,6 +44,7 @@ struct UserPreferences: Codable {
 
 // UserPreferencesRequest removed - we use direct dictionary encoding instead
 
+/// Client für CRUD-Operationen auf der Supabase-Tabelle `user_preferences`.
 final class UserPreferencesClient {
     private let baseURL: URL
     private let apiKey: String
@@ -52,6 +55,13 @@ final class UserPreferencesClient {
     }
     
     // MARK: - Fetch User Preferences
+    /// Lädt die gespeicherten Preferences eines Nutzers aus Supabase.
+    ///
+    /// - Parameters:
+    ///   - userId: Supabase-User-ID.
+    ///   - accessToken: Access-Token für den REST-Call.
+    /// - Returns: Preferences-Datensatz oder `nil`, wenn noch keine Zeile existiert.
+    /// - Throws: `NSError` bei HTTP-Fehlern oder `URLError` bei Transportfehlern.
     func fetchPreferences(userId: String, accessToken: String) async throws -> UserPreferences? {
         Logger.sensitive("[UserPreferencesClient] Fetching preferences for user: \(userId)", category: .data)
         var url = baseURL
@@ -93,6 +103,18 @@ final class UserPreferencesClient {
     }
     
     // MARK: - Upsert User Preferences
+    /// Legt einen Preferences-Datensatz an oder aktualisiert ihn per Upsert.
+    ///
+    /// - Parameters:
+    ///   - userId: Supabase-User-ID.
+    ///   - allergies: Liste von Allergenen.
+    ///   - dietaryTypes: Ernährungsformen (vegan, vegetarisch, ...).
+    ///   - tastePreferences: Wörterbuch für Geschmackspräferenzen (wird als JSON gespeichert).
+    ///   - dislikes: Liste von Zutaten, die vermieden werden sollen.
+    ///   - notes: Freitext-Notizen.
+    ///   - onboardingCompleted: Flag, ob der Onboarding-Flow abgeschlossen ist.
+    ///   - accessToken: Access-Token für den REST-Call.
+    /// - Throws: `NSError` mit Fehlermessage der REST-API oder `URLError` bei Transportfehlern.
     func upsertPreferences(
         userId: String,
         allergies: [String],
@@ -150,6 +172,17 @@ final class UserPreferencesClient {
     }
     
     // MARK: - Update Preferences
+    /// Aktualisiert bestehende Preferences via `PATCH`, ohne Zeilen anzulegen.
+    ///
+    /// - Parameters:
+    ///   - userId: Supabase-User-ID.
+    ///   - allergies: Aktualisierte Liste der Allergene.
+    ///   - dietaryTypes: Aktualisierte Ernährungsformen.
+    ///   - tastePreferences: Aktualisierte Geschmackspräferenzen.
+    ///   - dislikes: Aktualisierte Dislikes-Liste.
+    ///   - notes: Aktualisierte Notizen.
+    ///   - accessToken: Access-Token für den REST-Call.
+    /// - Throws: `NSError` bei HTTP-Fehlern oder `URLError` bei Transportfehlern.
     func updatePreferences(
         userId: String,
         allergies: [String],

@@ -41,17 +41,18 @@ Diese Checkliste enthält alle sicherheitsrelevanten Aufgaben, die vor dem App-L
   - In `Info.plist`: Bundle Identifier anpassen
   - Projekt neu generieren: `./gen.sh`
 
-- [ ] **SSL Certificate Pinning implementieren** (optional, aber empfohlen)
-  - Für kritische API-Calls (Auth, Payments)
+- [x] **SSL Certificate Pinning implementieren** (optional, aber empfohlen)
+  - Für kritische API-Calls (Auth, Payments) via `SecureURLSession` und `.cer`-Pins
   - Verhindert Man-in-the-Middle Attacks
 
-- [ ] **Keychain Migration prüfen**
+- [x] **Keychain Migration prüfen (Subscription Status)**
   - Subscription Status von UserDefaults nach Keychain
-  - Taste Preferences verschlüsselt speichern
+- [ ] **Taste Preferences verschlüsselt speichern**
+  - Lokale Taste-Preferences nicht mehr im Klartext in UserDefaults speichern
 
 - [ ] **Jailbreak Detection** (optional)
-  - Prüfe ob Gerät gejailbreaked ist
-  - Warne User oder schränke Features ein
+  - Prüfe ob Gerät gejailbreaked ist (JailbreakDetector.isJailbroken)
+  - Warne User oder schränke Features ein (z.B. Hinweisbanner in Settings oder AI-Features sperren)
 
 ## 🧪 Phase 3 - Testing (1 Woche)
 

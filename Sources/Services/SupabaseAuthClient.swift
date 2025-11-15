@@ -1,6 +1,10 @@
 import Foundation
 import Security
 
+/// Antwortobjekt für erfolgreiche Supabase-Auth-Operationen.
+///
+/// Dieses Modell entspricht der Supabase-Response und wird direkt aus dem
+/// JSON der Auth-Endpunkte decodiert.
 struct AuthResponse: Codable {
     let access_token: String
     let refresh_token: String
@@ -12,20 +16,40 @@ struct AuthResponse: Codable {
     }
 }
 
+/// Fehlerobjekt, das Supabase bei fehlgeschlagenen Auth-Operationen zurückliefert.
 struct AuthError: Codable {
     let message: String
 }
 
+/// Client für alle Authentifizierungs-Flows gegen Supabase (E-Mail, Passwort, Apple, Refresh).
+///
+/// Verantwortlichkeiten:
+/// - Kapselt HTTP-Aufrufe an `/auth/v1/*`.
+/// - Mappt HTTP-Statuscodes auf typisierte Fehler (`NSError` mit lokalisierten Messages).
+/// - Enthält keine UI-Logik, sondern nur Transport- und Fehlermapping.
 final class SupabaseAuthClient {
     private let baseURL: URL
     private let apiKey: String
     
+    /// Erstellt einen neuen Auth-Client für die angegebene Supabase-Instanz.
+    ///
+    /// - Parameters:
+    ///   - baseURL: Basis-URL der Supabase-Instanz (z.B. `https://xyz.supabase.co`).
+    ///   - apiKey: Service- oder anonymisierter API-Key für Auth-Endpunkte.
     init(baseURL: URL, apiKey: String) {
         self.baseURL = baseURL
         self.apiKey = apiKey
     }
     
     // MARK: - Sign Up
+    /// Registriert einen neuen Nutzer bei Supabase.
+    ///
+    /// - Parameters:
+    ///   - email: E-Mail-Adresse des Nutzers.
+    ///   - password: Passwort für das Konto.
+    ///   - username: Anzeigename, der zusätzlich in den User-Metadaten gespeichert wird.
+    /// - Returns: `AuthResponse` mit Access- und Refresh-Token sowie User-Daten.
+    /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
     func signUp(email: String, password: String, username: String) async throws -> AuthResponse {
         var url = baseURL
         url.append(path: "/auth/v1/signup")
@@ -65,6 +89,13 @@ final class SupabaseAuthClient {
     }
     
     // MARK: - Sign In
+    /// Meldet einen bestehenden Nutzer mit E-Mail und Passwort an.
+    ///
+    /// - Parameters:
+    ///   - email: Registrierte E-Mail-Adresse.
+    ///   - password: Passwort.
+    /// - Returns: `AuthResponse` mit Access- und Refresh-Token.
+    /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
     func signIn(email: String, password: String) async throws -> AuthResponse {
         var url = baseURL
         url.append(path: "/auth/v1/token")
@@ -94,6 +125,13 @@ final class SupabaseAuthClient {
     }
     
     // MARK: - Sign in with Apple (Id Token Exchange)
+    /// Führt den Supabase-Login mit einem Apple ID-Token durch.
+    ///
+    /// - Parameters:
+    ///   - idToken: Vom Apple-SDK geliefertes ID-Token.
+    ///   - nonce: Optionaler, vom Client gesetzter Nonce-Wert zur Replay-Protection.
+    /// - Returns: `AuthResponse` mit Access- und Refresh-Token.
+    /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
     func signInWithApple(idToken: String, nonce: String?) async throws -> AuthResponse {
         var url = baseURL
         url.append(path: "/auth/v1/token")
@@ -126,6 +164,11 @@ final class SupabaseAuthClient {
     }
     
     // MARK: - Token Refresh
+    /// Erneuert eine bestehende Supabase-Session über das Refresh-Token.
+    ///
+    /// - Parameter refreshToken: Gültiges Refresh-Token.
+    /// - Returns: Neue `AuthResponse` mit aktualisierten Tokens.
+    /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
     func refreshSession(refreshToken: String) async throws -> AuthResponse {
         var url = baseURL
         url.append(path: "/auth/v1/token")
@@ -155,6 +198,10 @@ final class SupabaseAuthClient {
     }
     
     // MARK: - Sign Out
+    /// Meldet den Nutzer bei Supabase ab und invalidiert das Access-Token.
+    ///
+    /// - Parameter accessToken: Aktuelles Access-Token des Nutzers.
+    /// - Throws: `URLError` bei Transportfehlern oder wenn Supabase keinen 204-Status zurückgibt.
     func signOut(accessToken: String) async throws {
         var url = baseURL
         url.append(path: "/auth/v1/logout")
@@ -172,6 +219,12 @@ final class SupabaseAuthClient {
     }
     
     // MARK: - Change Password
+    /// Ändert das Passwort des aktuell angemeldeten Nutzers.
+    ///
+    /// - Parameters:
+    ///   - accessToken: Gültiges Access-Token des Nutzers.
+    ///   - newPassword: Neues Passwort.
+    /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
     func changePassword(accessToken: String, newPassword: String) async throws {
         var url = baseURL
         url.append(path: "/auth/v1/user")
@@ -202,9 +255,20 @@ final class SupabaseAuthClient {
 }
 
 // MARK: - Keychain Storage
+
+/// Kleiner Helper für die gesicherte Ablage von Tokens & Metadaten im iOS-Keychain.
+///
+/// Achtung: Die API ist bewusst minimal: Strings werden unverändert gespeichert,
+/// höherwertige Typen (Date/Bool) werden manuell auf Strings abgebildet.
 enum KeychainManager {
     private static let service = "com.moritzserrin.culinachef"
     
+    /// Speichert einen String-Wert im Keychain (überschreibt ggf. bestehende Einträge).
+    ///
+    /// - Parameters:
+    ///   - key: Logischer Schlüssel (z.B. "access_token").
+    ///   - value: Zu speichernder Wert.
+    /// - Throws: `NSError` mit `NSOSStatusErrorDomain`, falls die Operation fehlschlägt.
     static func save(key: String, value: String) throws {
         let data = value.data(using: .utf8)!
         
@@ -223,6 +287,10 @@ enum KeychainManager {
         }
     }
     
+    /// Liest einen String-Wert aus dem Keychain.
+    ///
+    /// - Parameter key: Logischer Schlüssel.
+    /// - Returns: Gefundener Wert oder `nil`, falls kein Eintrag existiert.
     static func get(key: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -244,6 +312,9 @@ enum KeychainManager {
         return value
     }
     
+    /// Entfernt einen Eintrag aus dem Keychain (idempotent).
+    ///
+    /// - Parameter key: Logischer Schlüssel des zu löschenden Eintrags.
     static func delete(key: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -254,6 +325,7 @@ enum KeychainManager {
         SecItemDelete(query as CFDictionary)
     }
     
+    /// Löscht alle von der App gespeicherten Auth-bezogenen Keychain-Einträge.
     static func deleteAll() {
         delete(key: "access_token")
         delete(key: "refresh_token")
@@ -266,11 +338,13 @@ enum KeychainManager {
     }
     
     // MARK: - Date Storage
+    /// Speichert ein Datum als Unix-Timestamp im Keychain.
     static func save(key: String, date: Date) throws {
         let timestamp = date.timeIntervalSince1970
         try save(key: key, value: String(timestamp))
     }
     
+    /// Liest ein Datum aus einem zuvor gespeicherten Unix-Timestamp.
     static func getDate(key: String) -> Date? {
         guard let value = get(key: key),
               let timestamp = Double(value) else {
@@ -280,10 +354,12 @@ enum KeychainManager {
     }
     
     // MARK: - Bool Storage
+    /// Speichert einen Bool als "true"/"false" im Keychain.
     static func save(key: String, bool: Bool) throws {
         try save(key: key, value: bool ? "true" : "false")
     }
     
+    /// Liest einen Bool aus dem Keychain, der als "true"/"false" gespeichert wurde.
     static func getBool(key: String) -> Bool? {
         guard let value = get(key: key) else {
             return nil

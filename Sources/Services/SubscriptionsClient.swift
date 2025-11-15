@@ -1,5 +1,6 @@
 import Foundation
 
+/// Datenmodell einer Subscription-Zeile aus der Supabase-Tabelle `subscriptions`.
 struct SubscriptionRow: Codable {
     let userId: String
     let plan: String
@@ -24,15 +25,41 @@ struct SubscriptionRow: Codable {
     }
 }
 
+/// Parameter für Subscription-Upsert.
+struct SubscriptionUpsertParams {
+    let userId: String
+    let plan: String
+    let status: String
+    let autoRenew: Bool
+    let cancelAtPeriodEnd: Bool
+    let lastPaymentAt: Date
+    let currentPeriodEnd: Date
+    let priceCents: Int
+    let currency: String
+}
+
+/// Client für lesende und schreibende Zugriffe auf die `subscriptions`-Tabelle via Supabase REST.
 final class SubscriptionsClient {
     private let baseURL: URL
     private let apiKey: String
 
+    /// Initialisiert einen neuen Client für Subscription-Zugriffe.
+    ///
+    /// - Parameters:
+    ///   - baseURL: Supabase-Basis-URL.
+    ///   - apiKey: API-Key für den REST-Zugriff.
     init(baseURL: URL, apiKey: String) {
         self.baseURL = baseURL
         self.apiKey = apiKey
     }
 
+    /// Lädt die Subscription-Zeile für einen bestimmten Nutzer.
+    ///
+    /// - Parameters:
+    ///   - userId: Supabase-User-ID.
+    ///   - accessToken: Access-Token des Nutzers.
+    /// - Returns: Gefundene Subscription oder `nil`, falls keine vorhanden ist.
+    /// - Throws: `NSError` bei HTTP-Fehlern ungleich 200/404 oder `URLError` bei Transportfehlern.
     func fetchSubscription(userId: String, accessToken: String) async throws -> SubscriptionRow? {
         var url = baseURL
         url.append(path: "/rest/v1/subscriptions")
@@ -60,18 +87,13 @@ final class SubscriptionsClient {
         }
     }
 
-    func upsertSubscription(
-        userId: String,
-        plan: String,
-        status: String,
-        autoRenew: Bool,
-        cancelAtPeriodEnd: Bool,
-        lastPaymentAt: Date,
-        currentPeriodEnd: Date,
-        priceCents: Int,
-        currency: String,
-        accessToken: String
-    ) async throws {
+    /// Legt eine Subscription an oder aktualisiert eine bestehende Zeile per Upsert.
+    ///
+    /// - Parameters:
+    ///   - params: Parameter für den Upsert.
+    ///   - accessToken: Access-Token des Nutzers.
+    /// - Throws: `NSError` mit Fehlermessage aus der REST-API oder `URLError` bei Transportfehlern.
+    func upsertSubscription(params: SubscriptionUpsertParams, accessToken: String) async throws {
         var url = baseURL
         url.append(path: "/rest/v1/subscriptions")
         var req = URLRequest(url: url)
@@ -83,15 +105,15 @@ final class SubscriptionsClient {
 
         let enc = ISO8601DateFormatter()
         let body: [[String: Any]] = [[
-            "user_id": userId,
-            "plan": plan,
-            "status": status,
-            "auto_renew": autoRenew,
-            "cancel_at_period_end": cancelAtPeriodEnd,
-            "last_payment_at": enc.string(from: lastPaymentAt),
-            "current_period_end": enc.string(from: currentPeriodEnd),
-            "price_cents": priceCents,
-            "currency": currency
+            "user_id": params.userId,
+            "plan": params.plan,
+            "status": params.status,
+            "auto_renew": params.autoRenew,
+            "cancel_at_period_end": params.cancelAtPeriodEnd,
+            "last_payment_at": enc.string(from: params.lastPaymentAt),
+            "current_period_end": enc.string(from: params.currentPeriodEnd),
+            "price_cents": params.priceCents,
+            "currency": params.currency
         ]]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 

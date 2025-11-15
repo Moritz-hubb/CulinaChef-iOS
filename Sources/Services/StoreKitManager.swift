@@ -2,11 +2,23 @@ import Foundation
 import StoreKit
 
 @MainActor
+/// Verwaltet alle StoreKit-2-Operationen rund um das Monatsabo.
+///
+/// Verantwortlichkeiten:
+/// - Laden der Produkt-Metadaten aus dem App Store.
+/// - Kauf-Flow inkl. Verifikationsschritt.
+/// - Wiederherstellung von Käufen und Prüfung der aktiven Entitlements.
 final class StoreKitManager {
+    /// Produkt-ID des monatlichen Abos im App Store.
     static let monthlyProductId = "com.moritzserrin.culinachef.unlimited.monthly"
 
+    /// Zuletzt aus dem App Store geladene Produktbeschreibung.
     private(set) var product: Product?
 
+    /// Lädt die Produktinformationen für das Monatsabo aus dem App Store.
+    ///
+    /// Fehler werden geloggt, aber bewusst nicht nach außen propagiert, damit die
+    /// UI den Fehlerfluss kontrollieren kann.
     func loadProducts() async {
         do {
             let products = try await Product.products(for: [Self.monthlyProductId])
@@ -16,6 +28,11 @@ final class StoreKitManager {
         }
     }
 
+    /// Startet den Kauf-Flow für das Monatsabo.
+    ///
+    /// - Returns: Verifizierte `Transaction` oder `nil`, wenn der Nutzer abbricht
+    ///   oder der Kauf im Status `pending` bleibt.
+    /// - Throws: `NSError`, falls die Transaktion nicht verifiziert werden konnte.
     func purchaseMonthly() async throws -> Transaction? {
         if product == nil { await loadProducts() }
         guard let product else { throw NSError(domain: "StoreKit", code: -1, userInfo: [NSLocalizedDescriptionKey: "Produkt nicht gefunden"]) }
@@ -34,10 +51,14 @@ final class StoreKitManager {
         }
     }
 
+    /// Stößt eine Wiederherstellung von Käufen im App Store an.
     func restore() async throws {
         try await AppStore.sync()
     }
 
+    /// Prüft, ob aktuell ein aktives Entitlement für das Monatsabo besteht.
+    ///
+    /// - Returns: `true`, wenn die Subscription nicht widerrufen und nicht abgelaufen ist.
     func hasActiveEntitlement() async -> Bool {
         for await ent in Transaction.currentEntitlements {
             if case .verified(let t) = ent, t.productID == Self.monthlyProductId {
@@ -49,6 +70,10 @@ final class StoreKitManager {
         return false
     }
     
+    /// Liefert detaillierte Informationen zur aktuellen Subscription, falls vorhanden.
+    ///
+    /// - Returns: Tuple mit Aktivitätsstatus, Auto-Renew-Flag und Ablaufdatum oder `nil`,
+    ///   wenn keine passende Entitlement-Transaktion gefunden wurde.
     func getSubscriptionInfo() async -> (isActive: Bool, willRenew: Bool, expiresAt: Date?)? {
         for await ent in Transaction.currentEntitlements {
             if case .verified(let t) = ent, t.productID == Self.monthlyProductId {
@@ -77,6 +102,11 @@ final class StoreKitManager {
         return nil
     }
 
+    /// Hilfsfunktion zur Sicherstellung, dass eine StoreKit-Transaktion verifiziert ist.
+    ///
+    /// - Parameter result: Von StoreKit geliefertes `VerificationResult`.
+    /// - Returns: Verifizierte Payload.
+    /// - Throws: `NSError`, wenn die Verifikation fehlschlägt.
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
         case .unverified:

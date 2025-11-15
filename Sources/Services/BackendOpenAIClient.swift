@@ -1,11 +1,21 @@
 import Foundation
 
-/// Backend-proxied OpenAI client
-/// All OpenAI API calls go through the backend to keep API keys secure.
+/// Backend-proxied OpenAI client.
+///
+/// Alle OpenAI-Aufrufe werden über das Backend geleitet, damit API-Keys niemals
+/// direkt auf dem Gerät liegen. Der Client kennt nur das Supabase-Access-Token
+/// und delegiert das eigentliche Prompting an den Server.
 final class BackendOpenAIClient {
+    /// HTTP-Client für generische Backend-Endpunkte.
     let backend: BackendClient
+    /// Liefert das aktuelle Access-Token des Nutzers (z.B. aus AppState).
     let accessTokenProvider: () -> String?
     
+    /// Erstellt einen neuen BackendOpenAIClient.
+    ///
+    /// - Parameters:
+    ///   - backend: Bereits konfigurierter BackendClient.
+    ///   - accessTokenProvider: Closure, die das aktuelle Access-Token liefert.
     init(backend: BackendClient, accessTokenProvider: @escaping () -> String?) {
         self.backend = backend
         self.accessTokenProvider = accessTokenProvider
@@ -13,7 +23,14 @@ final class BackendOpenAIClient {
     
     // MARK: - Chat Completion
     
-    /// Chat completion with optional vision support
+    /// Chat completion with optional vision support.
+    ///
+    /// - Parameters:
+    ///   - messages: Voller Nachrichtenverlauf (wird intern auf `maxHistory` gekürzt).
+    ///   - maxHistory: Maximale Anzahl an Nachrichten, die an das Backend geschickt werden.
+    ///   - model: OpenAI-Modellkennung, die das Backend erwartet.
+    /// - Returns: Textuelle Antwort der AI.
+    /// - Throws: `NSError` bei Backend-Fehlern oder `URLError` bei Transportfehlern.
     func chatReply(
         messages: [ChatMessage],
         maxHistory: Int = 8,
@@ -86,7 +103,14 @@ final class BackendOpenAIClient {
     
     // MARK: - Image Analysis
     
-    /// Analyze image with OpenAI Vision
+    /// Analyze image with OpenAI Vision.
+    ///
+    /// - Parameters:
+    ///   - imageData: Binärdaten eines Bildes (JPEG/PNG), die Base64-kodiert werden.
+    ///   - userPrompt: Zusätzlicher Prompt-Kontext vom Nutzer.
+    ///   - model: Modellkennung für Vision.
+    /// - Returns: Textuelles Analyse-Ergebnis.
+    /// - Throws: `NSError` bei Backend-Fehlern oder `URLError` bei Transportfehlern.
     func analyzeImage(
         _ imageData: Data,
         userPrompt: String,
@@ -138,9 +162,44 @@ final class BackendOpenAIClient {
         return response.analysis
     }
     
+    // MARK: - Menu Naming Helper
+    
+    /// Generate a short, catchy menu name for a set of course titles.
+    /// Uses the same backend `/ai/chat` proxy as normal chat.
+    func generateMenuName(occasion: String?, courseTitles: [String]) async throws -> String {
+        // Build a very small conversation using the existing chat endpoint
+        var descriptionParts: [String] = []
+        if let occ = occasion, !occ.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            descriptionParts.append("Anlass: \(occ)")
+        }
+        if !courseTitles.isEmpty {
+            descriptionParts.append("Gänge: " + courseTitles.joined(separator: ", "))
+        }
+        let userText = descriptionParts.isEmpty ? "Erfinde einen kreativen Namen für ein Menü." : descriptionParts.joined(separator: " | ")
+        
+        let system = ChatMessage(
+            role: .system,
+            text: "Du bist ein kreativer Menü-Namensgenerator. Erfinde einen kurzen, schönen Titel (max. 6 Worte) für ein Menü. Gib NUR den Titel ohne Anführungszeichen zurück."
+        )
+        let user = ChatMessage(role: .user, text: userText)
+        let reply = try await chatReply(messages: [system, user], maxHistory: 4)
+        return reply.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
     // MARK: - Recipe Plan Generation
     
-    /// Generate structured recipe plan
+    /// Generate structured recipe plan.
+    ///
+    /// - Parameters:
+    ///   - goal: Zielbeschreibung (z.B. „Abnehmen“, „Muskelaufbau“).
+    ///   - timeMinutesMin: Minimale Zubereitungszeit.
+    ///   - timeMinutesMax: Maximale Zubereitungszeit.
+    ///   - nutrition: Nährwertgrenzen für den Plan.
+    ///   - categories: Rezeptkategorien (z.B. Frühstück, Snack).
+    ///   - servings: Anzahl Portionen.
+    ///   - dietaryContext: Optionaler Freitext-Kontext zu Ernährungspräferenzen.
+    /// - Returns: Strukturiertes `RecipePlan`-Objekt.
+    /// - Throws: `NSError` bei Backend-Fehlern oder `URLError` bei Transportfehlern.
     func generateRecipePlan(
         goal: String,
         timeMinutesMin: Int?,

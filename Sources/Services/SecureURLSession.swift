@@ -1,16 +1,23 @@
 import Foundation
 import Security
 
-/// Shared URLSession with optional SSL pinning for critical hosts (Supabase, Backend)
+/// Shared URLSession with optional SSL pinning for critical hosts (Supabase, Backend).
 ///
-/// - Pins certificates by comparing the server leaf certificate data with .cer files in the app bundle.
+/// - Pins certificates by comparing the server leaf certificate data with `.cer` files
+///   in the app bundle.
 /// - If no pin is configured for a host, falls back to default system trust evaluation.
 final class SecureURLSession: NSObject, URLSessionDelegate {
+    /// Global Singleton-Instanz, die in der gesamten App für Netzwerkzugriffe verwendet wird.
     static let shared = SecureURLSession()
     
-    // For testing: allow injecting a custom configuration
+    /// Für Tests: Erlaubt das Injizieren einer benutzerdefinierten `URLSessionConfiguration`.
+    ///
+    /// Wenn dieser Wert gesetzt ist, wird keine SSL-Pinning-Validierung durchgeführt,
+    /// damit Integrationstests einfach gegen Mock-Server laufen können.
     static var testConfiguration: URLSessionConfiguration?
 
+    /// Pinned Zertifikate, gruppiert nach Hostname.
+    /// Der Key ist der Host (z.B. `xyz.supabase.co`), der Wert eine Liste der erlaubten Zertifikatdaten.
     private let pinnedCertificates: [String: [Data]] // host -> [certData]
 
     /// Lazily created URLSession so that we can safely use `self` as delegate
@@ -51,12 +58,19 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
     }
 
     /// Convenience wrapper so call sites don't need to access the underlying URLSession.
+    ///
+    /// - Parameter request: Vollständig vorbereiteter `URLRequest`.
+    /// - Returns: Antwortdaten und `URLResponse` des Servers.
+    /// - Throws: Fehler aus `URLSession.data(for:)`, z.B. `URLError`.
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         try await session.data(for: request)
     }
 
     // MARK: - URLSessionDelegate (SSL pinning)
 
+    /// Validiert TLS-Verbindungen und führt optional SSL-Pinning durch.
+    ///
+    /// Wenn für den Host kein Pin konfiguriert ist, wird die Standard-Systemvalidierung verwendet.
     func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
@@ -101,6 +115,10 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
 
     // MARK: - Helpers
 
+    /// Lädt eine `.cer`-Datei aus dem Bundle und gibt deren Daten zurück.
+    ///
+    /// - Parameter name: Dateiname ohne Erweiterung.
+    /// - Returns: Binärdaten des Zertifikats oder `nil`, falls nicht gefunden.
     private static func loadCertificate(named name: String) -> Data? {
         guard let url = Bundle.main.url(forResource: name, withExtension: "cer") else {
             return nil

@@ -278,6 +278,15 @@ struct CommunityUploadSheet: View {
     }
     
     private func performPublish() async {
+        // Block uploads on jailbroken devices
+        if app.isJailbroken {
+            await MainActor.run {
+                errorMessage = "Community-Uploads sind auf modifizierten Geräten nicht verfügbar"
+                showError = true
+            }
+            return
+        }
+        
         guard let token = app.accessToken else {
             await MainActor.run {
                 errorMessage = "Nicht angemeldet"

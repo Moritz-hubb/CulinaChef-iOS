@@ -296,6 +296,12 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         
+        // Block AI features on jailbroken devices
+        if app.isJailbroken {
+            messages.append(.init(role: .assistant, text: "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"))
+            return
+        }
+        
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run { showConsentDialog = true }
@@ -344,6 +350,13 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         guard let data = pickedImageData else { return }
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        
+        // Block AI features on jailbroken devices
+        if app.isJailbroken {
+            messages.append(.init(role: .assistant, text: "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"))
+            pickedImageData = nil
+            return
+        }
         
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
@@ -721,6 +734,13 @@ private struct RecipeSuggestionsView: View {
 
     private func createMenu(from suggestions: [RecipeSuggestion]) async {
         guard !suggestions.isEmpty else { return }
+        
+        // Block AI features on jailbroken devices
+        if app.isJailbroken {
+            createError = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
+            return
+        }
+        
         creatingMenu = true
         createError = nil
         defer { creatingMenu = false }
@@ -790,6 +810,14 @@ private struct RecipeSuggestionsView: View {
     
     // Generate recipe automatically with essential preferences only
     private func generateAutomatic(recipeName: String, recipeDescription: String) async {
+        // Block AI features on jailbroken devices
+        if app.isJailbroken {
+            await MainActor.run {
+                createError = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
+            }
+            return
+        }
+        
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run {

@@ -79,6 +79,14 @@ TextField("z.B. Tomaten", text: $newIngredientText)
     }
 
     func generate() async {
+        // Block AI features on jailbroken devices
+        if app.isJailbroken {
+            await MainActor.run {
+                error = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
+            }
+            return
+        }
+        
         // Check feature access first
         guard app.hasAccess(to: .aiRecipeGenerator) else {
             await MainActor.run {

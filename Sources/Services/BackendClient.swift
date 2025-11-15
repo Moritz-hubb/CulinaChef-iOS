@@ -1,9 +1,29 @@
 import Foundation
 
+/// Client für alle HTTP-Aufrufe an das CulinaChef-Backend.
+///
+/// - Hinweis: Diese Klasse ist bewusst schlank gehalten und enthält keine
+///   Business-Logik oder Caching. Sie kapselt nur Transport, Fehlerbehandlung
+///   und grundlegende Header (z.B. Sprache).
 final class BackendClient {
+    /// Basis-URL des Backends (z.B. `https://api.culinachef.app`).
     let baseURL: URL
+
+    /// Initialisiert einen neuen Backend-Client.
+    ///
+    /// - Parameter baseURL: Root-URL des Backends ohne abschließenden Slash.
     init(baseURL: URL) { self.baseURL = baseURL }
 
+    /// Führt einen HTTP-Request gegen das Backend aus.
+    ///
+    /// - Parameters:
+    ///   - path: Relativer Pfad beginnend mit `/` (z.B. `/recipes`).
+    ///   - method: HTTP-Methode, standardmäßig `GET`.
+    ///   - token: Optionales Bearer-Token für authentifizierte Requests.
+    ///   - jsonBody: Optionaler JSON-codierter Request-Body.
+    /// - Returns: Antwortdaten und zugehörige `HTTPURLResponse`.
+    /// - Throws: `URLError` bei Transport-/Statusfehlern oder `NSError` mit
+    ///   Backend-Fehlermeldung im `NSLocalizedDescriptionKey`.
     private func request(path: String, method: String = "GET", token: String?, jsonBody: Data? = nil) async throws -> (Data, HTTPURLResponse) {
         var url = baseURL
         url.append(path: path)
@@ -32,21 +52,34 @@ final class BackendClient {
         return (data, http)
     }
 
+    /// Health-Check-Endpunkt des Backends.
+    ///
+    /// - Throws: Fehler aus dem zugrunde liegenden `request`-Aufruf.
     func health() async throws {
         _ = try await request(path: "/health", token: nil)
     }
 
+    /// Liefert alle Rezepte des aktuellen Nutzers.
+    ///
+    /// - Parameter accessToken: Supabase-Access-Token.
+    /// - Returns: Liste der Rezepte.
     func listRecipes(accessToken: String) async throws -> [Recipe] {
         let (data, _) = try await request(path: "/recipes", token: accessToken)
         return try JSONDecoder().decode([Recipe].self, from: data)
     }
 
+    /// Lässt das Backend per AI ein Rezept aus den angegebenen Zutaten generieren.
+    ///
+    /// - Parameters:
+    ///   - ingredients: Zutatenliste, die an die AI übergeben wird.
+    ///   - accessToken: Supabase-Access-Token.
+    /// - Returns: Das generierte `Recipe` vom Backend.
     func generateRecipe(ingredients: [String], accessToken: String) async throws -> Recipe {
-        struct Body: Encodable { 
+        struct Body: Encodable {
             let ingredients: [String]
             let language: String?
         }
-        
+
         // Detect device language
         let deviceLanguage: String? = {
             let langCode = Locale.current.language.languageCode?.identifier ?? "de"
@@ -60,13 +93,19 @@ final class BackendClient {
             default: return "de"  // Default to German
             }
         }()
-        
+
         let body = Body(ingredients: ingredients, language: deviceLanguage)
         let data = try JSONEncoder().encode(body)
         let (respData, _) = try await request(path: "/ai/generate_recipe", method: "POST", token: accessToken, jsonBody: data)
         return try JSONDecoder().decode(Recipe.self, from: respData)
     }
 
+    /// Markiert ein Rezept als Favorit bzw. hebt die Markierung auf.
+    ///
+    /// - Parameters:
+    ///   - recipeId: ID des Rezepts.
+    ///   - accessToken: Supabase-Access-Token.
+    /// - Returns: Serverantwort mit dem neuen Favoritenstatus.
     func toggleFavorite(recipeId: String, accessToken: String) async throws -> FavoriteResponse {
         struct Body: Encodable { let recipe_id: String }
         let data = try JSONEncoder().encode(Body(recipe_id: recipeId))
@@ -77,18 +116,25 @@ final class BackendClient {
     // Rate limiting: increment and check server-side counters
     // If originalTransactionId is provided, uses transaction-based limiting (prevents multi-account abuse)
     // If nil, uses user-based limiting (free tier)
+    /// Erhöht die AI-Nutzung für den aktuellen Nutzer und liefert die Zählerstände zurück.
+    ///
+    /// - Parameters:
+    ///   - accessToken: Supabase-Access-Token.
+    ///   - originalTransactionId: Optionaler StoreKit-Original-Transaction-Identifier
+    ///     zur besseren Betrugserkennung.
+    /// - Returns: Aktuelle tägliche und monatliche AI-Usage-Zähler.
     func incrementAIUsage(accessToken: String, originalTransactionId: String? = nil) async throws -> (daily: Int, monthly: Int) {
         struct Body: Encodable { let original_transaction_id: String? }
         let body = Body(original_transaction_id: originalTransactionId)
         let jsonBody = try JSONEncoder().encode(body)
-        
+
         let (data, _) = try await request(path: "/ai/usage/increment", method: "POST", token: accessToken, jsonBody: jsonBody)
         struct Counts: Decodable { let daily_count: Int; let monthly_count: Int }
         let c = try JSONDecoder().decode(Counts.self, from: data)
         return (c.daily_count, c.monthly_count)
     }
 
-    // Subscription status from backend
+    /// DTO für den vom Backend gemeldeten Abo-Status.
     struct SubscriptionStatusDTO: Decodable {
         let user_id: String
         let plan: String
@@ -102,13 +148,18 @@ final class BackendClient {
         let is_active: Bool
     }
 
+    /// Liefert den Subscription-Status des Nutzers aus dem Backend.
+    ///
+    /// - Parameter accessToken: Supabase-Access-Token.
+    /// - Returns: Aktueller Abo-Status laut Backend.
     func subscriptionStatus(accessToken: String) async throws -> SubscriptionStatusDTO {
         let (data, _) = try await request(path: "/subscription/status", token: accessToken)
         return try JSONDecoder().decode(SubscriptionStatusDTO.self, from: data)
     }
-    
+
     // MARK: - Ratings
-    
+
+    /// DTO für eine einzelne Bewertung.
     struct RatingResponse: Decodable {
         let id: String
         let recipe_id: String
@@ -116,7 +167,8 @@ final class BackendClient {
         let rating: Int
         let created_at: String
     }
-    
+
+    /// DTO für die aggregierten Bewertungen eines Rezepts.
     struct RecipeRatingsResponse: Decodable {
         let recipe_id: String
         let average_rating: Double
@@ -124,19 +176,37 @@ final class BackendClient {
         let user_rating: Int?
         let ratings: [RatingResponse]
     }
-    
+
+    /// Sendet eine Bewertung für ein Rezept an das Backend.
+    ///
+    /// - Parameters:
+    ///   - recipeId: ID des bewerteten Rezepts.
+    ///   - rating: Bewertungswert (z.B. 1–5).
+    ///   - accessToken: Supabase-Access-Token.
+    /// - Returns: Persistierte Bewertung vom Backend.
     func rateRecipe(recipeId: String, rating: Int, accessToken: String) async throws -> RatingResponse {
         struct Body: Encodable { let recipe_id: String; let rating: Int }
         let data = try JSONEncoder().encode(Body(recipe_id: recipeId, rating: rating))
         let (respData, _) = try await request(path: "/recipes/\(recipeId)/rate", method: "POST", token: accessToken, jsonBody: data)
         return try JSONDecoder().decode(RatingResponse.self, from: respData)
     }
-    
+
+    /// Lädt alle Ratings für ein bestimmtes Rezept.
+    ///
+    /// - Parameters:
+    ///   - recipeId: ID des Rezepts.
+    ///   - accessToken: Supabase-Access-Token.
+    /// - Returns: Aggregierte Bewertungsinformationen.
     func getRecipeRatings(recipeId: String, accessToken: String) async throws -> RecipeRatingsResponse {
         let (data, _) = try await request(path: "/recipes/\(recipeId)/ratings", token: accessToken)
         return try JSONDecoder().decode(RecipeRatingsResponse.self, from: data)
     }
-    
+
+    /// Löscht die Bewertung des aktuellen Nutzers für ein Rezept.
+    ///
+    /// - Parameters:
+    ///   - recipeId: ID des Rezepts.
+    ///   - accessToken: Supabase-Access-Token.
     func deleteRating(recipeId: String, accessToken: String) async throws {
         _ = try await request(path: "/recipes/\(recipeId)/rating", method: "DELETE", token: accessToken)
     }

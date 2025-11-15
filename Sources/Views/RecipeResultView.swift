@@ -503,6 +503,12 @@ private struct RecipeAISheet: View {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         
+        // Block AI features on jailbroken devices
+        if app.isJailbroken {
+            messages.append(.init(role: .assistant, text: "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"))
+            return
+        }
+        
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run { showConsentDialog = true }

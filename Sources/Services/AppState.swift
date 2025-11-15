@@ -5,6 +5,10 @@ import StoreKit
 import UIKit
 #endif
 
+/// Lokale Darstellung der Ernährungspräferenzen eines Nutzers.
+///
+/// Dieses Modell ist bewusst schlank und wird sowohl für das In-Memory-State-Management
+/// als auch für die Persistenz in `UserDefaults` verwendet.
 struct DietaryPreferences: Codable {
     var diets: Set<String> = []
     var allergies: [String] = []
@@ -14,6 +18,7 @@ struct DietaryPreferences: Codable {
 
 extension DietaryPreferences {
     static let storageKey = "dietary_preferences"
+    
     static func load() -> DietaryPreferences {
         let d = UserDefaults.standard
         if let data = d.data(forKey: storageKey),
@@ -22,6 +27,8 @@ extension DietaryPreferences {
         }
         return DietaryPreferences()
     }
+
+    /// Persistiert die aktuellen Präferenzen in `UserDefaults`.
     func save() {
         if let data = try? JSONEncoder().encode(self) {
             UserDefaults.standard.set(data, forKey: Self.storageKey)
@@ -30,14 +37,29 @@ extension DietaryPreferences {
 }
 
 @MainActor
+/// Zentrale App-weite Statusverwaltung für Auth, Subscriptions, AI-Kontext, Menüs und Präferenzen.
+///
+/// - Diese Klasse ist `@MainActor`, d.h. alle veröffentlichten Properties und die
+///   meisten Methoden sind hauptthread-isoliert und somit sicher für den Einsatz
+///   mit SwiftUI-Views.
+/// - Externe Services (Backend, Supabase, StoreKit) werden über klar getrennte
+///   Clients gekapselt, um Netzwerklogik vom View-Layer fernzuhalten.
 final class AppState: ObservableObject {
+    /// Gibt an, ob aktuell ein Nutzer angemeldet ist (basierend auf Tokens im Keychain).
     @Published var isAuthenticated: Bool = false
+    /// Globaler Loading-Flag für Auth-/Subscription-Aktionen.
     @Published var loading: Bool = false
+    /// Heuristischer Jailbreak-Status des aktuellen Geräts.
+    @Published var isJailbroken: Bool = JailbreakDetector.isJailbroken
+    /// Letzte global angezeigte Fehlermeldung (z.B. aus StoreKit oder Backend).
     @Published var error: String?
+    /// Aktuelles Supabase-Access-Token (gespiegelt aus dem Keychain).
     @Published var accessToken: String?
+    /// E-Mail-Adresse des angemeldeten Nutzers.
     @Published var userEmail: String?
 
     // Subscription state (simulated, prepared for StoreKit)
+    /// Ob die App aktuell davon ausgeht, dass der Nutzer ein aktives Abo hat.
     @Published var isSubscribed: Bool = false
     /// Becomes true once we have loaded the initial subscription status
     /// (from StoreKit, backend, Supabase, or local cache).
@@ -110,6 +132,13 @@ final class AppState: ObservableObject {
     private var aggressiveTimer: Timer?
     private var aggressiveUntil: Date?
 
+    /// Initialisiert den globalen App-Status und startet notwendige Hintergrund-Tasks.
+    ///
+    /// - Richtet alle Service-Clients ein (Backend, Supabase, StoreKit).
+    /// - Lädt StoreKit-Produkte und initialen Subscription-Status.
+    /// - Startet Netzwerk-Monitoring für Offline-Löschwarteschlange.
+    /// - Führt einmalige Migration von Abo-Daten aus `UserDefaults` in den Keychain durch.
+    /// - Prüft bestehende Sessions und lädt ggf. Nutzerpräferenzen aus Supabase.
     init() {
         backend = BackendClient(baseURL: Config.backendBaseURL)
         // OpenAI now proxied through backend for security
@@ -209,6 +238,9 @@ final class AppState: ObservableObject {
     }
     
     // MARK: - Token Refresh
+    /// Versucht, eine bestehende Supabase-Session mit dem gespeicherten Refresh-Token zu erneuern.
+    ///
+    /// - Wenn kein Refresh-Token vorhanden ist oder die Erneuerung scheitert, wird der Nutzer ausgeloggt.
     func refreshSessionIfNeeded() async {
         guard let refreshToken = KeychainManager.get(key: "refresh_token") else {
             Logger.info("No refresh token found, logging out", category: .auth)
@@ -240,11 +272,13 @@ final class AppState: ObservableObject {
     }
 
     func refreshOpenAI() {
-        openAI = OpenAIClient(apiKey: Secrets.openAIAPIKey())
+        // Recreate backend-proxied OpenAI client (uses current access token via provider)
+        openAI = BackendOpenAIClient(backend: backend, accessTokenProvider: { [weak self] in self?.accessToken })
     }
-
+    
     func refreshRecipeAI() {
-        recipeAI = OpenAIClient(apiKey: Secrets.openAIAPIKey())
+        // Separate instance so we can tune settings independently later if needed
+        recipeAI = BackendOpenAIClient(backend: backend, accessTokenProvider: { [weak self] in self?.accessToken })
     }
 
     func dietarySystemPrompt() -> String {
@@ -371,6 +405,12 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         return [base, chatPrompt].filter { !$0.isEmpty }.joined(separator: "\n\n")
     }
 
+    /// Führt den E-Mail/Passwort-Login über Supabase aus und aktualisiert Tokens & State.
+    ///
+    /// - Parameters:
+    ///   - email: E-Mail-Adresse.
+    ///   - password: Passwort.
+    /// - Throws: Fehler aus `SupabaseAuthClient` oder Keychain-Speicherung.
     func signIn(email: String, password: String) async throws {
         loading = true
         defer { loading = false }
@@ -393,6 +433,13 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         }
     }
     
+    /// Registriert einen neuen Nutzer und legt ein Profil mit eindeutigem Benutzernamen an.
+    ///
+    /// - Parameters:
+    ///   - email: E-Mail-Adresse.
+    ///   - password: Passwort.
+    ///   - username: Gewünschter Benutzername (muss nicht leer sein).
+    /// - Throws: Validierungsfehler oder Fehler aus `SupabaseAuthClient`/Profil-Upsert.
     func signUp(email: String, password: String, username: String) async throws {
         loading = true
         defer { loading = false }
@@ -472,6 +519,12 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         try await upsertProfile(userId: userId, username: uname, accessToken: token, fullName: fullName?.nilIfBlank(), email: email?.nilIfBlank())
     }
     
+    /// Führt den Login via „Sign in with Apple“ durch und aktualisiert Tokens & State.
+    ///
+    /// - Parameters:
+    ///   - idToken: Vom Apple-SDK geliefertes Token.
+    ///   - nonce: Optionaler Nonce zur Absicherung gegen Replay-Angriffe.
+    /// - Throws: Fehler aus `SupabaseAuthClient` oder Keychain-Speicherung.
     func signInWithApple(idToken: String, nonce: String?) async throws {
         loading = true
         defer { loading = false }
@@ -583,6 +636,10 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         }
     }
     
+    /// Meldet den Nutzer ab, löscht Tokens und leert sicherheitskritische Caches.
+    ///
+    /// - Hinweis: Shopping- und Subscription-Daten werden lokal zurückgesetzt;
+    ///   Server-seitige Session-Invalidierung erfolgt über Supabase.
     func signOut() async {
         if let token = accessToken {
             try? await auth.signOut(accessToken: token)
@@ -603,6 +660,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     }
     
     // MARK: - User Preferences
+    /// Speichert die vom Nutzer konfigurierten Präferenzen in der Supabase-Tabelle `user_preferences`.
+    ///
+    /// - Throws: Fehler aus `UserPreferencesClient` oder `NSError` bei fehlender Authentifizierung.
     func savePreferencesToSupabase(
         allergies: [String],
         dietaryTypes: Set<String>,
@@ -649,7 +709,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         // Push to Supabase
         if let token = self.accessToken {
             Task {
-                try? await self.subscriptionsClient.upsertSubscription(
+                let params = SubscriptionUpsertParams(
                     userId: userId,
                     plan: "unlimited",
                     status: "active",
@@ -658,9 +718,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                     lastPaymentAt: now,
                     currentPeriodEnd: periodEnd,
                     priceCents: 599,
-                    currency: "EUR",
-                    accessToken: token
+                    currency: "EUR"
                 )
+                try? await self.subscriptionsClient.upsertSubscription(params: params, accessToken: token)
                 // Immediately refresh from backend and start aggressive polling for 5 min
                 await MainActor.run {
                     self.loadSubscriptionStatus()
@@ -683,7 +743,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             let now = Date()
             let status = (periodEnd != nil && now < periodEnd!) ? "in_grace" : "expired"
             Task {
-                try? await self.subscriptionsClient.upsertSubscription(
+                let params = SubscriptionUpsertParams(
                     userId: userId,
                     plan: "unlimited",
                     status: status,
@@ -692,9 +752,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                     lastPaymentAt: self.getSubscriptionLastPayment() ?? now,
                     currentPeriodEnd: periodEnd ?? now,
                     priceCents: 599,
-                    currency: "EUR",
-                    accessToken: token
+                    currency: "EUR"
                 )
+                try? await self.subscriptionsClient.upsertSubscription(params: params, accessToken: token)
             }
         }
     }
@@ -757,7 +817,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             req.httpMethod = "DELETE"
             req.addValue("application/json", forHTTPHeaderField: "Content-Type")
             req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (_, resp) = try await URLSession.shared.data(for: req)
+            let (_, resp) = try await SecureURLSession.shared.data(for: req)
             guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
                 throw URLError(.badServerResponse)
             }
@@ -887,6 +947,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     }
 
     // MARK: - StoreKit purchase/restore
+    /// Startet den StoreKit-Kauf-Flow für das Monatsabo und synchronisiert Status mit Supabase.
+    ///
+    /// - Hinweis: Bei Abbruch oder pending-Status wird kein Fehler gesetzt.
     func purchaseStoreKit() async {
         // Clear any previous error
         await MainActor.run { self.error = nil }
@@ -924,7 +987,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             
             if let token = self.accessToken {
                 Task {
-                    try? await self.subscriptionsClient.upsertSubscription(
+                    let params = SubscriptionUpsertParams(
                         userId: userId,
                         plan: "unlimited",
                         status: "active",
@@ -933,9 +996,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                         lastPaymentAt: now,
                         currentPeriodEnd: periodEnd,
                         priceCents: 599,
-                        currency: "EUR",
-                        accessToken: token
+                        currency: "EUR"
                     )
+                    try? await self.subscriptionsClient.upsertSubscription(params: params, accessToken: token)
                 }
             }
             
@@ -949,6 +1012,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         }
     }
 
+    /// Stellt Käufe über StoreKit wieder her und aktualisiert Subscription-Entitlements.
     func restorePurchases() async {
         do {
             try await storeKit.restore()
@@ -1019,6 +1083,9 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     }
     #endif
     
+    /// Lädt Ernährungspräferenzen aus Supabase (falls eingeloggt) oder fällt auf UserDefaults zurück.
+    ///
+    /// - Throws: Fehler aus `UserPreferencesClient`, wenn der Request selbst fehlschlägt.
     func loadPreferencesFromSupabase() async throws {
             Logger.debug("[AppState] loadPreferencesFromSupabase called", category: .data)
             Logger.debug("[AppState] accessToken available: \(accessToken != nil)", category: .auth)
@@ -1136,7 +1203,7 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         req.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        let (_, resp) = try await URLSession.shared.data(for: req)
+        let (_, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else { throw URLError(.badServerResponse) }
     }
     
@@ -1177,6 +1244,10 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     }
 
     // MARK: - Auto-generate recipes for a menu
+    /// Nutzt das AI-Backend, um aus einem Menü und Vorschlags-Platzhaltern konkrete Rezepte zu generieren.
+    ///
+    /// - Hinweis: Berücksichtigt DSGVO-Consent (OpenAIConsentManager) und aktualisiert Menü-Suggestions
+    ///   inkl. Fortschritt/Status in UserDefaults, ohne den UI-Flow zu verändern.
     func autoGenerateRecipesForMenu(menu: Menu, suggestions: [MenuSuggestion]) async {
         guard let token = self.accessToken, let userId = KeychainManager.get(key: "user_id") else { return }
         

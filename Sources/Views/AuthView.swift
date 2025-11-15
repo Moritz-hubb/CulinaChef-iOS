@@ -142,7 +142,7 @@ struct AuthView: View {
                 PrivacyPolicyView()
             }
             .sheet(isPresented: $showImprint) {
-                LegalPlaceholderView(title: "Impressum", text: "Impressum\n\nPlatzhalter - Text hier einfügen")
+                ImprintView()
             }
             .navigationBarHidden(true)
         }

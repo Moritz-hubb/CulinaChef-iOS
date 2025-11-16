@@ -1,4 +1,6 @@
 import SwiftUI
+import AuthenticationServices
+import CryptoKit
 
 struct SignInView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -8,6 +10,7 @@ struct SignInView: View {
     @State private var password = ""
     @State private var showPassword = false
     @State private var errorMessage: String?
+    @State private var appleNonce: String?
     @FocusState private var focusedField: Field?
     
     enum Field: Hashable {
@@ -194,22 +197,30 @@ struct SignInView: View {
                         }
                         .padding(.vertical, 4)
                         
-                        // Apple Sign In
-                        Button {
-                            // TODO: Implement Apple Sign In
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "apple.logo")
-                                    .font(.system(size: 16, weight: .medium))
-                                Text(L.loginWithApple.localized)
-                                    .font(.system(size: 15, weight: .semibold))
+                        // Apple Sign In (official button)
+                        SignInWithAppleButton(.signIn, onRequest: { request in
+                            // Prepare nonce for replay protection
+                            let nonce = randomNonceString()
+                            self.appleNonce = nonce
+                            request.requestedScopes = [.fullName, .email]
+                            request.nonce = sha256(nonce)
+                        }, onCompletion: { result in
+                            switch result {
+                            case .success(let authResult):
+                                if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
+                                   let tokenData = credential.identityToken,
+                                   let idToken = String(data: tokenData, encoding: .utf8) {
+                                    Task { await handleAppleSignIn(idToken: idToken) }
+                                } else {
+                                    self.errorMessage = "Apple Anmelde-Token ungültig"
+                                }
+                            case .failure(let error):
+                                self.errorMessage = error.localizedDescription
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.black)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                        }
+                        })
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 44)
+                        .cornerRadius(8)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
@@ -250,6 +261,39 @@ struct SignInView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+    
+    private func handleAppleSignIn(idToken: String) async {
+        do {
+            try await app.signInWithApple(idToken: idToken, nonce: appleNonce)
+        } catch {
+            await MainActor.run { self.errorMessage = error.localizedDescription }
+        }
+    }
+    
+    // MARK: - Nonce utilities
+    private func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+        while remainingLength > 0 {
+            var randoms = [UInt8](repeating: 0, count: 16)
+            let status = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
+            if status != errSecSuccess { fatalError("Unable to generate nonce. SecRandomCopyBytes failed") }
+            for random in randoms {
+                if remainingLength == 0 { break }
+                result.append(charset[Int(random % UInt8(charset.count))])
+                remainingLength -= 1
+            }
+        }
+        return result
+    }
+    
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        return hashed.compactMap { String(format: "%02x", $0) }.joined()
     }
 }
 

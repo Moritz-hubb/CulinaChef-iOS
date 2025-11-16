@@ -523,7 +523,7 @@ struct ManualRecipeBuilderView: View {
         if !(200...299).contains(httpResponse.statusCode) {
             // Log error for debugging
             if let errorString = String(data: responseData, encoding: .utf8) {
-                print("[Upload Error] Status: \(httpResponse.statusCode), Response: \(errorString)")
+                Logger.error("Photo upload failed with status \(httpResponse.statusCode): \(errorString)", category: .network)
             }
             throw URLError(.badServerResponse)
         }

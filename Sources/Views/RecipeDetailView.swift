@@ -721,7 +721,7 @@ struct RecipeDetailView: View {
             }
             
         } catch {
-            print("[RecipeDetailView] Error uploading photo: \(error)")
+            Logger.error("Photo upload failed in recipe detail", error: error, category: .network)
             await MainActor.run {
                 uploadError = "\(L.errorUploadFailed.localized). Bitte versuche es erneut."
             }
@@ -811,7 +811,7 @@ struct RecipeDetailView: View {
             
             if let httpResponse = deleteResponse as? HTTPURLResponse,
                !(200...299).contains(httpResponse.statusCode) {
-                print("[RecipeDetailView] Failed to delete photo from storage (status: \(httpResponse.statusCode))")
+                Logger.error("Failed to delete photo from storage (status: \(httpResponse.statusCode))", category: .network)
                 // Continue anyway to clear the database reference
             }
             
@@ -824,7 +824,7 @@ struct RecipeDetailView: View {
             }
             
         } catch {
-            print("[RecipeDetailView] Error deleting photo: \(error)")
+            Logger.error("Photo deletion failed in recipe detail", error: error, category: .network)
             await MainActor.run {
                 uploadError = L.error_deletePhotoFailed.localized
             }
@@ -972,13 +972,13 @@ struct RecipeDetailView: View {
                let range = Range(match.range(at: 1), in: trimmed) {
                 let qty = String(trimmed[range]).trimmingCharacters(in: .whitespaces)
                 if !qty.isEmpty {
-                    print("[parseIngredientQuantity] Matched pattern, ingredient: '\(ingredient)' -> quantity: '\(qty)'")
+                    Logger.debug("Parsed ingredient quantity: \(qty)", category: .data)
                     return qty
                 }
             }
         }
         
-        print("[parseIngredientQuantity] No match for: '\(ingredient)'")
+        Logger.debug("No quantity match for ingredient: \(ingredient)", category: .data)
         return nil
     }
     
@@ -1111,18 +1111,15 @@ struct RecipeDetailView: View {
             if let qty = parseIngredientQuantity(ingredient) {
                 let scaled = scaleQuantity(qty, servings: servings)
                 quantity = scaled
-                print("[RecipeDetail] Ingredient: \(ingredient) -> Name: \(name), Qty: \(scaled)")
             } else {
                 quantity = nil
-                print("[RecipeDetail] Ingredient: \(ingredient) -> Name: \(name), No quantity")
             }
             
             let category = ItemCategory.categorize(ingredient: ingredient)
-            print("[RecipeDetail] Category for '\(ingredient)': \(category.rawValue)")
             return ShoppingListItem(name: name, quantity: quantity, category: category)
         }
         
-        print("[RecipeDetail] Adding \(items.count) items to shopping list")
+        Logger.info("Adding \(items.count) items to shopping list", category: .data)
         app.shoppingListManager.addItems(items)
         
         // Navigate to shopping list tab (only for saved recipes, not new ones)
@@ -1306,7 +1303,7 @@ private struct RecipeAISheetForSavedRecipe: View {
                 let txnID = await app.getOriginalTransactionId()
                 _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: txnID)
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-                print("[RecipeAI] Backend unreachable, continuing without usage tracking")
+                Logger.info("Backend unreachable for recipe AI, continuing without usage tracking", category: .network)
             } catch {
                 await MainActor.run { self.error = error.localizedDescription }
                 return

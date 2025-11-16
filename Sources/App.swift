@@ -80,9 +80,7 @@ struct CulinaChefApp: App {
     }
     
     private func handleDeepLink(_ url: URL) {
-        #if DEBUG
-        print("[DeepLink] Received URL: \\(url)")
-        #endif
+        Logger.debug("Received deep link: \(url)", category: .ui)
         
         // Handle culinachef:// scheme
         if url.scheme == "culinachef" {
@@ -100,9 +98,7 @@ struct CulinaChefApp: App {
         // Check for /recipe/{id} pattern
         if pathComponents.count == 2 && pathComponents[0] == "recipe" {
             let recipeId = pathComponents[1]
-            #if DEBUG
-            print("[DeepLink] Opening recipe: \\(recipeId)")
-            #endif
+            Logger.debug("Opening recipe from deep link: \(recipeId)", category: .ui)
             openRecipe(recipeId: recipeId)
         }
     }

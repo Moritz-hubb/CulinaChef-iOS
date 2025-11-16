@@ -60,7 +60,44 @@ extension String {
     /// Validate if string is a valid ingredient (1-200 chars)
     var isValidIngredient: Bool {
         let trimmed = self.trimmed
-        return !trimmed.isEmpty && trimmed.count <= 200
+        return !trimmed.isEmpty && trimmed.count <= 200 && trimmed.isSafeInput
+    }
+    
+    /// Validate if string is a valid instruction (5-2000 chars)
+    var isValidInstruction: Bool {
+        let trimmed = self.trimmed
+        return trimmed.count >= 5 && trimmed.count <= 2000 && trimmed.isSafeInput
+    }
+    
+    /// Validate if string is a valid menu title (2-100 chars)
+    var isValidMenuTitle: Bool {
+        let trimmed = self.trimmed
+        return trimmed.count >= 2 && trimmed.count <= 100 && trimmed.isSafeInput
+    }
+    
+    /// Validate if string is a valid tag (2-50 chars, alphanumeric + spaces + hyphens)
+    var isValidTag: Bool {
+        let trimmed = self.trimmed
+        guard trimmed.count >= 2 && trimmed.count <= 50 else { return false }
+        let tagRegex = #"^[a-zA-Z0-9äöüÄÖÜß\s-]+$"#
+        let tagPredicate = NSPredicate(format: "SELF MATCHES %@", tagRegex)
+        return tagPredicate.evaluate(with: trimmed)
+    }
+    
+    /// Validate if string is a valid note/comment (0-1000 chars)
+    var isValidNote: Bool {
+        return self.trimmed.count <= 1000
+    }
+    
+    /// Validate if string contains only numbers (for portions, cooking time, etc.)
+    var isNumeric: Bool {
+        return !self.isEmpty && self.allSatisfy { $0.isNumber }
+    }
+    
+    /// Validate if string is a valid difficulty level
+    var isValidDifficulty: Bool {
+        let validDifficulties = ["Einfach", "Mittel", "Schwer", "Easy", "Medium", "Hard"]
+        return validDifficulties.contains(self)
     }
 }
 

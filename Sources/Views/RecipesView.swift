@@ -1005,8 +1005,8 @@ struct PersonalRecipesView: View {
                 }
             }
         } catch {
-            print("[PersonalRecipes] Error: \(error)")
-            await MainActor.run { 
+            Logger.error("Failed to load personal recipes", error: error, category: .data)
+            await MainActor.run {
                 if let urlError = error as? URLError {
                     switch urlError.code {
                     case .notConnectedToInternet:
@@ -1199,7 +1199,7 @@ struct MyContributionsView: View {
                 self.privateRecipes = list
             }
         } catch {
-            print("[MyContributions] Load private recipes error: \(error)")
+            Logger.error("Failed to load private recipes", error: error, category: .data)
         }
     }
     
@@ -1229,7 +1229,7 @@ struct MyContributionsView: View {
             // Reload contributions to show the newly shared recipe
             await loadMyContributions()
         } catch {
-            print("[MyContributions] Share error: \(error)")
+            Logger.error("Failed to share recipe", error: error, category: .network)
         }
     }
     
@@ -1267,7 +1267,7 @@ struct MyContributionsView: View {
                 throw URLError(.badServerResponse)
             }
         } catch {
-            print("[MyContributions] Remove error: \(error)")
+            Logger.error("Failed to remove recipe from community", error: error, category: .network)
             // Re-load in case of error
             await loadMyContributions()
         }
@@ -1317,7 +1317,7 @@ struct MyContributionsView: View {
                 self.error = nil
             }
         } catch {
-            print("[MyContributions] Error: \(error)")
+            Logger.error("Failed to load my contributions", error: error, category: .data)
             await MainActor.run {
                 if let urlError = error as? URLError {
                     switch urlError.code {
@@ -1444,21 +1444,17 @@ struct CommunityRecipesView: View {
         // First apply language filter
         var languageFiltered = base
         if !selectedLanguages.isEmpty {
-            print("[Language Filter] Selected languages: \(selectedLanguages)")
-            print("[Language Filter] Total recipes before filter: \(base.count)")
+            Logger.debug("Applying language filter: \(selectedLanguages.count) selected", category: .ui)
             languageFiltered = base.filter { recipe in
                 // Check if recipe matches any selected language
                 for langName in selectedLanguages {
-                    let matches = matchesLanguage(recipe, langName)
-                    if matches {
-                        print("[Language Filter] Recipe '\(recipe.title)' matches '\(langName)' - language field: \(recipe.language ?? "nil"), tags: \(recipe.tags ?? [])")
+                    if matchesLanguage(recipe, langName) {
                         return true
                     }
                 }
-                print("[Language Filter] Recipe '\(recipe.title)' does NOT match - language field: \(recipe.language ?? "nil"), tags: \(recipe.tags ?? [])")
                 return false
             }
-            print("[Language Filter] Filtered recipes count: \(languageFiltered.count)")
+            Logger.debug("Language filter resulted in \(languageFiltered.count) recipes", category: .ui)
         }
         
         // Then apply other filters
@@ -1579,7 +1575,7 @@ struct CommunityRecipesView: View {
                     ForEach(availableLanguages, id: \.code) { language in
                         let isSelected = selectedLanguages.contains(language.name)
                         Button(action: {
-                            print("[Language Selection] Tapped: \(language.name), currently selected: \(isSelected)")
+                            Logger.debug("Language selection toggled: \(language.name)", category: .ui)
                             withAnimation {
                                 if isSelected {
                                     selectedLanguages.remove(language.name)
@@ -1587,7 +1583,6 @@ struct CommunityRecipesView: View {
                                     selectedLanguages.insert(language.name)
                                 }
                             }
-                            print("[Language Selection] Updated selectedLanguages: \(selectedLanguages)")
                         }) {
                             Text(language.name)
                                 .font(.caption.weight(.semibold))
@@ -1659,8 +1654,8 @@ struct CommunityRecipesView: View {
                 self.loading = false
             }
         } catch {
-            print("[CommunityRecipes] Error: \(error)")
-            await MainActor.run { 
+            Logger.error("Failed to load community recipes", error: error, category: .data)
+            await MainActor.run {
                 // Don't clear existing recipes on error - keep showing what we have
                 if let urlError = error as? URLError {
                     switch urlError.code {
@@ -1708,8 +1703,8 @@ private struct FilterChipsBarWithLanguage: View {
             HStack(spacing: 8) {
                 // Language Dropdown Chip (always first)
                 Button(action: { 
-                    print("[Language Dropdown] Toggling: \(showLanguageDropdown) -> \(!showLanguageDropdown)")
-                    withAnimation { 
+                    Logger.debug("Language dropdown toggled", category: .ui)
+                    withAnimation {
                         showLanguageDropdown.toggle() 
                     } 
                 }) {

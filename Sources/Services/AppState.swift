@@ -198,7 +198,7 @@ final class AppState: ObservableObject {
                 try await self.loadPreferencesFromSupabase()
             } catch {
                 // Fallback to UserDefaults if Supabase load fails (e.g., offline)
-                print("[AppState] Failed to load preferences from Supabase: \(error.localizedDescription). Using local cache.")
+                Logger.info("Failed to load preferences from Supabase, using local cache", category: .data)
                 await MainActor.run {
                     self.dietary = DietaryPreferences.load()
                 }
@@ -975,12 +975,12 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             // If txn is nil, user cancelled or pending - don't set subscription active
             guard let transaction = txn else {
                 // User cancelled or pending - not an error, just no action
-                print("[StoreKit] Purchase cancelled or pending")
+                Logger.info("Purchase cancelled or pending", category: .data)
                 return
             }
             
             // SUCCESS: User completed purchase
-            print("[StoreKit] Purchase successful: \\(transaction.id)")
+            Logger.info("Purchase successful", category: .data)
             
             // After a successful purchase, always refresh subscription status from
             // StoreKit entitlements so that we rely on Apple's source of truth

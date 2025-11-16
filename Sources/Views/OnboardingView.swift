@@ -488,7 +488,7 @@ struct OnboardingView: View {
                 onboardingCompleted: true
             )
         } catch {
-            print("[Onboarding] Failed to save to Supabase: \(error.localizedDescription)")
+            Logger.error("Failed to save onboarding preferences to Supabase", error: error, category: .data)
             // Continue anyway - data is saved locally
         }
         

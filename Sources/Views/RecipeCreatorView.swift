@@ -361,7 +361,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
             let txnID = await app.getOriginalTransactionId()
             _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: txnID)
         } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
-            print("[RecipeCreator] Backend unreachable, continuing without usage tracking")
+            Logger.info("Backend unreachable, continuing without usage tracking", category: .network)
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
             return

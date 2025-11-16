@@ -500,7 +500,7 @@ struct RecipeCompletionView: View {
         // Get user credentials
         guard let userId = KeychainManager.get(key: "user_id"),
               let token = app.accessToken else {
-            print("[RecipeCompletion] No user credentials")
+            Logger.error("Recipe save aborted - no user credentials", category: .data)
             return
         }
         
@@ -565,7 +565,7 @@ struct RecipeCompletionView: View {
             }
             
             guard (200...299).contains(httpResponse.statusCode) else {
-                print("[RecipeCompletion] Save failed with status: \(httpResponse.statusCode)")
+                Logger.error("Recipe save failed with status \(httpResponse.statusCode)", category: .network)
                 if httpResponse.statusCode == 401 {
                     await MainActor.run {
                         self.errorMessage = "Sitzung abgelaufen. Bitte melde dich neu an."
@@ -619,7 +619,7 @@ struct RecipeCompletionView: View {
             }
             
         } catch {
-            print("[RecipeCompletion] Error saving recipe: \(error)")
+            Logger.error("Error saving recipe", error: error, category: .data)
             await MainActor.run {
                 showSuccess = false
                 isSaving = false
@@ -668,7 +668,7 @@ struct RecipeCompletionView: View {
         }
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            print("[RecipeCompletion] Publish failed with status: \(httpResponse.statusCode)")
+            Logger.error("Community publish failed with status \(httpResponse.statusCode)", category: .network)
             throw URLError(.badServerResponse)
         }
     }
@@ -688,7 +688,7 @@ struct RecipeCompletionView: View {
             throw URLError(.badURL)
         }
         
-        print("[RecipeCompletion] Uploading to: \(uploadUrlString)")
+        Logger.debug("Uploading photo to storage", category: .network)
         
         var uploadRequest = URLRequest(url: uploadUrl)
         uploadRequest.httpMethod = "POST"
@@ -700,24 +700,22 @@ struct RecipeCompletionView: View {
         let (responseData, uploadResponse) = try await SecureURLSession.shared.data(for: uploadRequest)
         
         guard let httpResponse = uploadResponse as? HTTPURLResponse else {
-            print("[RecipeCompletion] Photo upload failed - no response")
+            Logger.error("Photo upload failed - no HTTP response", category: .network)
             throw URLError(.badServerResponse)
         }
         
-        print("[RecipeCompletion] Upload status: \(httpResponse.statusCode)")
-        
-        if let responseString = String(data: responseData, encoding: .utf8) {
-            print("[RecipeCompletion] Upload response: \(responseString)")
-        }
+        Logger.debug("Photo upload response status: \(httpResponse.statusCode)", category: .network)
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            print("[RecipeCompletion] Photo upload failed with status \(httpResponse.statusCode)")
+            if let responseString = String(data: responseData, encoding: .utf8) {
+                Logger.error("Photo upload failed with status \(httpResponse.statusCode): \(responseString)", category: .network)
+            }
             throw URLError(.badServerResponse)
         }
         
         // Return public URL
         let publicUrl = "\(Config.supabaseURL.absoluteString)/storage/v1/object/public/recipe-photo/\(filename)"
-        print("[RecipeCompletion] Photo uploaded successfully: \(publicUrl)")
+        Logger.info("Photo uploaded successfully", category: .network)
         return publicUrl
     }
 }

@@ -254,7 +254,7 @@ struct ReportReasonSheet: View {
             }
             
         } catch {
-            print("[Report] Error: \(error)")
+            Logger.error("Report submission failed", error: error, category: .network)
             await MainActor.run {
                 errorMessage = "Meldung fehlgeschlagen: \(error.localizedDescription)"
                 showError = true

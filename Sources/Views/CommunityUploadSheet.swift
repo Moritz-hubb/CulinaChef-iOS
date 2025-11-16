@@ -336,12 +336,11 @@ struct CommunityUploadSheet: View {
             let (data, response) = try await SecureURLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                print("[CommunityUpload] Response is not HTTPURLResponse")
+                Logger.error("Community upload response is not HTTPURLResponse", category: .network)
                 throw URLError(.badServerResponse)
             }
             
-            print("[CommunityUpload] Status code: \(httpResponse.statusCode)")
-            print("[CommunityUpload] Response data: \(String(data: data, encoding: .utf8) ?? "nil")")
+            Logger.debug("Community upload response status: \(httpResponse.statusCode)", category: .network)
             
             if httpResponse.statusCode == 403 {
                 // Moderation failed
@@ -372,7 +371,7 @@ struct CommunityUploadSheet: View {
             }
             
         } catch {
-            print("[CommunityUpload] Error: \(error)")
+            Logger.error("Community upload failed", error: error, category: .network)
             await MainActor.run {
                 errorMessage = "Upload fehlgeschlagen: \(error.localizedDescription)"
                 showError = true

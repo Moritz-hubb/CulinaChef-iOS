@@ -691,7 +691,14 @@ struct RecipeDetailView: View {
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(16)
         }
-        .navigationTitle("\(L.label_step.localized) \(index)")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("\(L.label_step.localized) \(index)")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
+        }
     }
 
     private func uploadNewPhoto() async {

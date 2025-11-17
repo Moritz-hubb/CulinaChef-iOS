@@ -71,7 +71,7 @@ struct TermsOfServiceView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             ContactInfo(label: isGerman ? "Unternehmen" : "Company", value: "CulinaAI")
                             ContactInfo(label: isGerman ? "Vertreten durch" : "Represented by", value: "Moritz Serrin")
-                            ContactInfo(label: isGerman ? "Adresse" : "Address", value: "21244 Buchholz, " + (isGerman ? "Deutschland" : "Germany"))
+                            ContactInfo(label: isGerman ? "Adresse" : "Address", value: "Sonnenblumenweg 8, 21244 Buchholz, " + (isGerman ? "Deutschland" : "Germany"))
                             ContactInfo(label: "E-Mail", value: "kontakt@culinaai.com")
                             ContactInfo(label: "Support", value: "support@culinaai.com")
                             ContactInfo(label: "Website", value: "https://culinaai.com")

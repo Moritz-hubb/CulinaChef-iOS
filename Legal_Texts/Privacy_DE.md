@@ -88,7 +88,7 @@ Wir nutzen OpenAI GPT-4o-mini für:
 
 ### 3.5 Zahlungsabwicklung (Apple)
 
-**Abonnement:** 6,99 €/Monat via Apple In-App-Purchase
+**Abonnement:** 5,99 €/Monat via Apple In-App-Purchase
 
 **Verarbeitet durch Apple:**
 
@@ -98,7 +98,29 @@ Wir nutzen OpenAI GPT-4o-mini für:
 
 **Hinweis:** Wir erhalten keine Zahlungsdaten, ausschließlich Transaktionsbestätigungen von Apple. Weitere Informationen finden Sie in der Apple Datenschutzrichtlinie.
 
-### 3.6 Lokale Speicherung
+### 3.6 Fehlererfassung und Crash Reporting (Sentry)
+
+Wir nutzen **Sentry** von Functional Software, Inc. zur Verbesserung der App-Stabilität.
+
+**Übermittelte Daten bei Crashes oder Fehlern:**
+
+- Geräteinformationen (Modell, iOS-Version)
+- App-Version und Build-Nummer
+- Stack Traces (technische Fehlerprotokolle)
+- Zeitstempel des Fehlers
+- User-Aktionen vor dem Fehler (Breadcrumbs)
+- **KEINE personenbezogenen Daten** (Namen, E-Mails, etc.)
+
+**Drittanbieter:** Functional Software, Inc. (Sentry)
+
+- **Empfänger:** Functional Software, Inc., USA
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse)
+- **Speicherdauer:** 30 Tage bei Sentry
+- **Zweck:** Erkennung und Behebung von technischen Fehlern zur Verbesserung der App-Stabilität
+
+Weitere Informationen: https://sentry.io/privacy/
+
+### 3.7 Lokale Speicherung
 
 **UserDefaults (nicht sensibel):**
 
@@ -136,6 +158,12 @@ Folgende Drittanbieter verarbeiten Daten außerhalb der EU:
 - **Zweck:** In-App-Käufe und Abonnements
 - **Standort:** USA
 - **Rechtsgrundlage:** Angemessenheitsbeschluss der EU-Kommission
+
+### Functional Software, Inc. (Sentry)
+
+- **Zweck:** Fehlererfassung und Crash Reporting
+- **Standort:** USA/EU
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse)
 
 **Sicherheit:** Alle Datenübertragungen erfolgen verschlüsselt via HTTPS/TLS.
 

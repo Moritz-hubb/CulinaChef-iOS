@@ -15,7 +15,7 @@ for the app "CulinaChef (CulinaAI)"
 
 - **Company:** CulinaAI
 - **Represented by:** Moritz Serrin
-- **Address:** 21244 Buchholz, Germany
+- **Address:** Sonnenblumenweg 8, 21244 Buchholz, Germany
 - **E-Mail:** kontakt@culinaai.com
 - **Support:** support@culinaai.com
 - **Website:** https://culinaai.com
@@ -70,7 +70,7 @@ for the app "CulinaChef (CulinaAI)"
 
 ## 5. Subscription, Prices, and Payment Terms
 
-**(1)** Downloading the app is free of charge. Access to extended features requires a monthly subscription ("Unlimited") at a price of €6.99 (incl. VAT).
+**(1)** Downloading the app is free of charge. Access to extended features requires a monthly subscription ("Unlimited") at a price of €5.99 (incl. VAT).
 
 **(2)** The subscription is concluded, billed, and managed through Apple In-App Purchase. The provider does not receive or store any payment data; such data remains with Apple.
 
@@ -206,7 +206,7 @@ The Privacy Policy is not part of these T&C but applies independently and bindin
 
 - **App Name:** CulinaChef (CulinaAI)
 - **Provider:** CulinaAI – Moritz Serrin
-- **Price:** €6.99/month (Apple In-App Purchase)
+- **Price:** €5.99/month (Apple In-App Purchase)
 - **Cancellation:** Anytime via Apple settings
 - **Privacy:** No ads, no tracking
 - **Minimum Age:** 16 years

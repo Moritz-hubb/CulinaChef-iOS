@@ -15,7 +15,7 @@ für die App "CulinaChef (CulinaAI)"
 
 - **Unternehmen:** CulinaAI
 - **Vertreten durch:** Moritz Serrin
-- **Adresse:** 21244 Buchholz, Deutschland
+- **Adresse:** Sonnenblumenweg 8, 21244 Buchholz, Deutschland
 - **E-Mail:** kontakt@culinaai.com
 - **Support:** support@culinaai.com
 - **Website:** https://culinaai.com
@@ -70,7 +70,7 @@ für die App "CulinaChef (CulinaAI)"
 
 ## 5. Abonnement, Preise und Zahlungsbedingungen
 
-**(1)** Der Basis-Download der App ist kostenlos. Der Zugang zu erweiterten Funktionen erfordert ein monatliches Abonnement ('Unlimited') zum Preis von 6,99 € (inkl. MwSt.).
+**(1)** Der Basis-Download der App ist kostenlos. Der Zugang zu erweiterten Funktionen erfordert ein monatliches Abonnement ('Unlimited') zum Preis von 5,99 € (inkl. MwSt.).
 
 **(2)** Das Abonnement wird über Apple In-App-Purchase abgeschlossen, abgerechnet und verwaltet. Der Anbieter erhält keine Zahlungsdaten; diese verbleiben bei Apple.
 
@@ -206,7 +206,7 @@ Diese ist nicht Bestandteil dieser AGB, gilt jedoch unabhängig bindend.
 
 - **App-Name:** CulinaChef (CulinaAI)
 - **Anbieter:** CulinaAI – Moritz Serrin
-- **Preis:** 6,99 €/Monat (Apple In-App-Purchase)
+- **Preis:** 5,99 €/Monat (Apple In-App-Purchase)
 - **Kündigung:** Jederzeit über Apple-Einstellungen
 - **Datenschutz:** Keine Werbung, kein Tracking
 - **Mindestalter:** 16 Jahre

@@ -88,7 +88,7 @@ We use **OpenAI GPT-4o-mini** for:
 
 ### 3.5 Payment Processing (Apple)
 
-**Subscription:** € 6.99 per month via Apple In-App Purchase
+**Subscription:** € 5.99 per month via Apple In-App Purchase
 
 **Processed by Apple:**
 
@@ -100,7 +100,29 @@ We use **OpenAI GPT-4o-mini** for:
 
 For details, please refer to Apple's Privacy Policy.
 
-### 3.6 Local Storage
+### 3.6 Error Tracking and Crash Reporting (Sentry)
+
+We use **Sentry** by Functional Software, Inc. to improve app stability.
+
+**Data transmitted during crashes or errors:**
+
+- Device information (model, iOS version)
+- App version and build number
+- Stack traces (technical error logs)
+- Error timestamps
+- User actions before the error (breadcrumbs)
+- **No personal data** (names, e-mails, etc.)
+
+**Third-party provider:** Functional Software, Inc. (Sentry)
+
+- **Recipient:** Functional Software, Inc., USA
+- **Legal basis:** Art. 6 (1)(f) GDPR – Legitimate interest
+- **Storage period:** 30 days at Sentry
+- **Purpose:** Detection and resolution of technical errors to improve app stability
+
+For more information, see: https://sentry.io/privacy/
+
+### 3.7 Local Storage
 
 **UserDefaults (non-sensitive):**
 
@@ -126,6 +148,7 @@ The following service providers may process data outside the European Union:
 | Supabase Inc. | Database and authentication | EU / USA | Art. 6 (1)(b) GDPR |
 | OpenAI L.L.C. | AI-based recipe generation | USA | Art. 49 (1)(a) GDPR |
 | Apple Inc. | In-app purchases and subscriptions | USA | EU Adequacy Decision |
+| Functional Software, Inc. (Sentry) | Error tracking and crash reporting | USA / EU | Art. 6 (1)(f) GDPR |
 
 **Security:** All data transmissions are encrypted via HTTPS/TLS.
 

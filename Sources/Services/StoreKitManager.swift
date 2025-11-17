@@ -70,7 +70,11 @@ final class StoreKitManager {
                 print("[StoreKit] DIAGNOSTIC CHECKLIST:")
                 print("[StoreKit] 1. Product ID: \(Self.monthlyProductId)")
                 print("[StoreKit] 2. Bundle ID: \(Bundle.main.bundleIdentifier ?? "unknown")")
-                print("[StoreKit] 3. Build Mode: \(#if DEBUG "DEBUG" #else "RELEASE" #endif)")
+                #if DEBUG
+                print("[StoreKit] 3. Build Mode: DEBUG")
+                #else
+                print("[StoreKit] 3. Build Mode: RELEASE")
+                #endif
                 
                 // Check if we're in TestFlight
                 #if !DEBUG

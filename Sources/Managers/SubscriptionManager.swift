@@ -212,32 +212,54 @@ final class SubscriptionManager {
     }
     
     func purchaseStoreKit(accessToken: String?, userId: String?) async throws -> Bool {
+        Logger.info("[SubscriptionManager] ========== START purchaseStoreKit() ==========", category: .data)
+        Logger.info("[SubscriptionManager] User ID: \(userId ?? "nil")", category: .data)
+        Logger.info("[SubscriptionManager] Has access token: \(accessToken != nil)", category: .data)
+        
         guard let uid = userId else {
+            Logger.error("[SubscriptionManager] ❌ No user ID - cannot purchase", category: .data)
             throw NSError(domain: "Subscription", code: -1, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
         }
         
+        Logger.info("[SubscriptionManager] Calling storeKit.purchaseMonthly()...", category: .data)
+        let purchaseStartTime = Date()
+        
         let txn = try await storeKit.purchaseMonthly()
         
+        let purchaseDuration = Date().timeIntervalSince(purchaseStartTime)
+        Logger.info("[SubscriptionManager] Purchase completed in \(String(format: "%.2f", purchaseDuration))s", category: .data)
+        
         // IMPORTANT: Only proceed if transaction exists (user completed purchase)
-        guard let _ = txn else {
+        guard let transaction = txn else {
             // User cancelled or pending
-            Logger.info("Purchase cancelled or pending", category: .data)
+            Logger.info("[SubscriptionManager] ⚠️ Purchase cancelled or pending (transaction is nil)", category: .data)
+            Logger.info("[SubscriptionManager] ========== END purchaseStoreKit() - CANCELLED/PENDING ==========", category: .data)
             return false
         }
         
         // SUCCESS: User completed purchase
-        Logger.info("Purchase successful", category: .data)
+        Logger.info("[SubscriptionManager] ✅ Purchase successful!", category: .data)
+        Logger.info("[SubscriptionManager] Transaction ID: \(transaction.id)", category: .data)
+        Logger.info("[SubscriptionManager] Product ID: \(transaction.productID)", category: .data)
         
         // Refresh from StoreKit entitlements
+        Logger.info("[SubscriptionManager] Refreshing subscription status from StoreKit...", category: .data)
         let isActive = await refreshSubscriptionStatusFromStoreKit()
+        Logger.info("[SubscriptionManager] Subscription active status: \(isActive)", category: .data)
         
         // Read normalized values
         let now = getSubscriptionLastPayment() ?? Date()
         let periodEnd = getSubscriptionPeriodEnd() ?? addOneMonth(to: now)
         let autoRenew = getSubscriptionAutoRenew()
         
+        Logger.info("[SubscriptionManager] Subscription details:", category: .data)
+        Logger.info("[SubscriptionManager]   - Last Payment: \(now)", category: .data)
+        Logger.info("[SubscriptionManager]   - Period End: \(periodEnd)", category: .data)
+        Logger.info("[SubscriptionManager]   - Auto Renew: \(autoRenew)", category: .data)
+        
         // Sync to Supabase if authenticated
         if let token = accessToken {
+            Logger.info("[SubscriptionManager] Syncing subscription to Supabase...", category: .data)
             Task {
                 let params = SubscriptionUpsertParams(
                     userId: uid,
@@ -250,10 +272,18 @@ final class SubscriptionManager {
                     priceCents: 599,
                     currency: "EUR"
                 )
-                try? await subscriptionsClient.upsertSubscription(params: params, accessToken: token)
+                do {
+                    try await subscriptionsClient.upsertSubscription(params: params, accessToken: token)
+                    Logger.info("[SubscriptionManager] ✅ Subscription synced to Supabase successfully", category: .data)
+                } catch {
+                    Logger.error("[SubscriptionManager] ❌ Failed to sync subscription to Supabase", error: error, category: .data)
+                }
             }
+        } else {
+            Logger.info("[SubscriptionManager] ⚠️ No access token - skipping Supabase sync", category: .data)
         }
         
+        Logger.info("[SubscriptionManager] ========== END purchaseStoreKit() - SUCCESS (isActive: \(isActive)) ==========", category: .data)
         return isActive
     }
     

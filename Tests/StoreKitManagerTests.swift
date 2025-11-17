@@ -20,7 +20,7 @@ final class StoreKitManagerTests: XCTestCase {
     // MARK: - Product Loading Tests
     
     func testMonthlyProductId() {
-        XCTAssertEqual(StoreKitManager.monthlyProductId, "com.moritzserrin.culinachef.unlimited.monthly")
+        XCTAssertEqual(StoreKitManager.monthlyProductId, "com.moritzserrin.culinachef.unlimited.subscription")
     }
     
     func testProductInitiallyNil() {

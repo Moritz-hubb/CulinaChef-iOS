@@ -151,18 +151,44 @@ final class AppState: ObservableObject {
         menuManager = MenuManager()
         recipeManager = RecipeManager()
         
-        // Prime StoreKit
-        Task { [weak self] in
-            guard let self else { return }
+        // Prime StoreKit - delay to ensure app is fully initialized
+        Task { @MainActor [weak self] in
+            guard let self else {
+                #if DEBUG
+                print("[AppState] StoreKit Task: self is nil, returning")
+                #endif
+                return
+            }
+            // Delay to ensure StoreKit and app are fully ready
+            #if DEBUG
+            print("[AppState] StoreKit Task: Starting, will wait 0.5s...")
+            #endif
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            #if DEBUG
+            print("[AppState] StoreKit Task: Delay complete, calling loadProducts()...")
+            #endif
+            Logger.info("[AppState] Initializing StoreKit on app startup...", category: .data)
+            Logger.info("[AppState] Calling storeKit.loadProducts()...", category: .data)
             await self.storeKit.loadProducts()
+            #if DEBUG
+            print("[AppState] StoreKit Task: loadProducts() completed")
+            #endif
+            Logger.info("[AppState] Calling refreshSubscriptionFromEntitlements()...", category: .data)
             await self.refreshSubscriptionFromEntitlements()
+            Logger.info("[AppState] Starting Transaction.updates listener...", category: .data)
             // Listen for transaction updates
             for await result in Transaction.updates {
+                Logger.info("[AppState] Received Transaction.update", category: .data)
                 if case .verified(let transaction) = result, transaction.productID == StoreKitManager.monthlyProductId {
+                    Logger.info("[AppState] ✅ Verified transaction for our product received", category: .data)
+                    Logger.info("[AppState] Transaction ID: \(transaction.id)", category: .data)
                     // Always refresh local and backend subscription status when a new
                     // verified transaction for our product appears, then finish it
                     await self.refreshSubscriptionFromEntitlements()
                     await transaction.finish()
+                    Logger.info("[AppState] Transaction finished", category: .data)
+                } else {
+                    Logger.debug("[AppState] Transaction update not for our product or unverified", category: .data)
                 }
             }
         }
@@ -621,16 +647,36 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     ///
     /// - Hinweis: Bei Abbruch oder pending-Status wird kein Fehler gesetzt.
     func purchaseStoreKit() async {
+        Logger.info("[AppState] ========== START purchaseStoreKit() ==========", category: .data)
+        Logger.info("[AppState] Has access token: \(self.accessToken != nil)", category: .data)
+        Logger.info("[AppState] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")", category: .data)
+        
         await MainActor.run { self.error = nil }
         do {
+            Logger.info("[AppState] Calling subscriptionManager.purchaseStoreKit()...", category: .data)
             let isActive = try await subscriptionManager.purchaseStoreKit(accessToken: self.accessToken, userId: KeychainManager.get(key: "user_id"))
+            Logger.info("[AppState] Purchase completed, isActive: \(isActive)", category: .data)
+            
             await MainActor.run {
+                Logger.info("[AppState] Updating app state...", category: .data)
                 self.isSubscribed = isActive
+                Logger.info("[AppState] isSubscribed set to: \(isActive)", category: .data)
                 self.loadSubscriptionStatus()
+                Logger.info("[AppState] Starting aggressive subscription polling...", category: .data)
                 self.startAggressiveSubscriptionPolling(durationSeconds: 5 * 60, intervalSeconds: 30)
             }
+            Logger.info("[AppState] ========== END purchaseStoreKit() - SUCCESS ==========", category: .data)
         } catch {
-            await MainActor.run { self.error = error.localizedDescription }
+            Logger.error("[AppState] ❌ Purchase failed", error: error, category: .data)
+            Logger.error("[AppState] Error: \(error.localizedDescription)", category: .data)
+            if let nsError = error as NSError? {
+                Logger.error("[AppState] Error domain: \(nsError.domain), code: \(nsError.code)", category: .data)
+            }
+            await MainActor.run { 
+                self.error = error.localizedDescription
+                Logger.info("[AppState] Error message set in app state: \(error.localizedDescription)", category: .data)
+            }
+            Logger.info("[AppState] ========== END purchaseStoreKit() - ERROR ==========", category: .data)
         }
     }
 

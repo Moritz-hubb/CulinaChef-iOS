@@ -741,6 +741,18 @@ private struct RecipeSuggestionsView: View {
             return
         }
         
+        // Check DSGVO consent before using OpenAI
+        guard OpenAIConsentManager.hasConsent else {
+            await MainActor.run {
+                createError = NSLocalizedString(
+                    "consent.required",
+                    value: "KI-Funktionen benötigen Ihre Einwilligung",
+                    comment: "Consent required error"
+                )
+            }
+            return
+        }
+        
         creatingMenu = true
         createError = nil
         defer { creatingMenu = false }

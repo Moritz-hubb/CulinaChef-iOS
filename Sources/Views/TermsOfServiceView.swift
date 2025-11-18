@@ -5,6 +5,7 @@ struct TermsOfServiceView: View {
 
     @Environment(\.dismiss) var dismiss
     @State private var showFairUsePolicy = false
+    @State private var showPrivacy = false
     
     // Language detection - use German content for DE, English for all others
     private var isGerman: Bool {
@@ -178,6 +179,43 @@ struct TermsOfServiceView: View {
                         TermsParagraph(number: "(2)", text: isGerman ? "Diese Inhalte werden automatisiert generiert und können fehlerhaft, unvollständig oder ungeeignet sein. Der Anbieter übernimmt keine Gewähr für Richtigkeit, Vollständigkeit oder gesundheitliche Eignung der KI-generierten Inhalte." : "Such content is automatically generated and may be inaccurate, incomplete, or unsuitable. The provider assumes no liability for the accuracy, completeness, or health suitability of AI-generated content.")
                         
                         DisclaimerNote(text: isGerman ? "Nutzer sollten Rezepte, Zutaten und Ernährungsempfehlungen stets kritisch prüfen, insbesondere bei Allergien, Unverträglichkeiten oder diätischen Anforderungen." : "Users should always review recipes, ingredients, and nutritional advice critically—especially in cases of allergies, intolerances, or dietary requirements.")
+                        
+                        // Wichtiger Disclaimer-Box
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                                    .font(.title3)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(isGerman ? "⚠️ Wichtiger Hinweis zu KI-generierten Rezepten" : "⚠️ Important Notice Regarding AI-Generated Recipes")
+                                        .font(.subheadline.weight(.bold))
+                                        .foregroundStyle(.white)
+                                    
+                                    Text(isGerman ?
+                                        "KI-Systeme können Fehler machen. Bitte überprüfen Sie alle KI-generierten Rezepte sorgfältig, bevor Sie sie zubereiten. Insbesondere bei Allergien, Unverträglichkeiten oder speziellen Ernährungsanforderungen sollten Sie die Zutatenliste und Anweisungen doppelt prüfen." :
+                                        "AI systems can make errors. Please carefully review all AI-generated recipes before preparing them. Especially if you have allergies, intolerances, or special dietary requirements, you should double-check the ingredient list and instructions.")
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.9))
+                                        .lineSpacing(4)
+                                    
+                                    Text(isGerman ?
+                                        "Wir übernehmen keine Haftung für gesundheitliche Folgen, die durch die Verwendung von KI-generierten Rezepten entstehen. Die Verantwortung für die Überprüfung der Rezepte und die Entscheidung, ob ein Rezept für Ihre individuellen Bedürfnisse geeignet ist, liegt allein bei Ihnen." :
+                                        "We assume no liability for health consequences arising from the use of AI-generated recipes. The responsibility for reviewing recipes and deciding whether a recipe is suitable for your individual needs lies solely with you.")
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.9))
+                                        .lineSpacing(4)
+                                }
+                            }
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.orange.opacity(0.2))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.orange.opacity(0.4), lineWidth: 1.5)
+                        )
+                        .padding(.top, 8)
                     }
                     
                     TermsSection(isGerman ? "9a. Fair Use Policy für KI-Funktionen" : "9a. Fair Use Policy for AI Functions", icon: "shield.checkered") {
@@ -221,11 +259,13 @@ struct TermsOfServiceView: View {
                             .font(.subheadline)
                             .foregroundStyle(.white)
                         
-                        Link("https://culinaai.com/datenschutz", destination: URL(string: "https://culinaai.com/datenschutz")!)
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                            .underline()
-                            .padding(.vertical, 4)
+                        Button(action: { showPrivacy = true }) {
+                            Text(isGerman ? "Datenschutzerklärung in der App öffnen" : "Open Privacy Policy in App")
+                                .font(.subheadline)
+                                .foregroundStyle(.blue)
+                                .underline()
+                        }
+                        .padding(.vertical, 4)
                         
                         Text(isGerman ? L.ui_diese_ist_nicht_bestandteil.localized : "The Privacy Policy is not part of these T&C but applies independently and bindingly.")
                             .font(.caption)
@@ -318,6 +358,9 @@ struct TermsOfServiceView: View {
                 }
             }
         }
+        .sheet(isPresented: $showPrivacy) {
+            PrivacyPolicyView()
+        }
         .sheet(isPresented: $showFairUsePolicy) {
             FairUseView()
         }
@@ -374,10 +417,41 @@ private struct TermsParagraph: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(.white.opacity(0.9))
                 .frame(width: 32, alignment: .leading)
-            Text(text)
-                .font(.subheadline)
-                .lineSpacing(5)
-                .foregroundStyle(.white)
+            // Check if text contains an email address
+            if let emailRange = text.range(of: #"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"#, options: .regularExpression) {
+                let beforeEmail = String(text[..<emailRange.lowerBound])
+                let email = String(text[emailRange])
+                let afterEmail = String(text[emailRange.upperBound...])
+                
+                VStack(alignment: .leading, spacing: 0) {
+                    if !beforeEmail.isEmpty {
+                        Text(beforeEmail)
+                            .font(.subheadline)
+                            .lineSpacing(5)
+                            .foregroundStyle(.white)
+                    }
+                    if let emailURL = URL(string: "mailto:\(email)") {
+                        Link(email, destination: emailURL)
+                            .font(.subheadline)
+                            .foregroundStyle(.blue)
+                    } else {
+                        Text(email)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                    }
+                    if !afterEmail.isEmpty {
+                        Text(afterEmail)
+                            .font(.subheadline)
+                            .lineSpacing(5)
+                            .foregroundStyle(.white)
+                    }
+                }
+            } else {
+                Text(text)
+                    .font(.subheadline)
+                    .lineSpacing(5)
+                    .foregroundStyle(.white)
+            }
             Spacer()
         }
         .padding(.vertical, 4)
@@ -415,9 +489,24 @@ private struct ContactInfo: View {
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 110, alignment: .leading)
-            Text(value)
-                .font(.caption)
-                .foregroundStyle(.white)
+            // Check if value is an email address or URL
+            if value.contains("@") && value.contains("."), let emailURL = URL(string: "mailto:\(value)") {
+                Link(value, destination: emailURL)
+                    .font(.caption)
+                    .foregroundStyle(.blue)
+            } else if value.hasPrefix("https://") || value.hasPrefix("http://"), let url = URL(string: value) {
+                Link(value, destination: url)
+                    .font(.caption)
+                    .foregroundStyle(.blue)
+            } else if value.hasPrefix("www."), let url = URL(string: "https://\(value)") {
+                Link(value, destination: url)
+                    .font(.caption)
+                    .foregroundStyle(.blue)
+            } else {
+                Text(value)
+                    .font(.caption)
+                    .foregroundStyle(.white)
+            }
             Spacer()
         }
     }

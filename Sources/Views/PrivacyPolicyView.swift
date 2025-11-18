@@ -169,6 +169,43 @@ struct PrivacyPolicyView: View {
                             DisclaimerBox(
                                 text: isGerman ? "Wichtig: KI-generierte Inhalte sind automatisiert erstellt. Es besteht keine Haftung für Richtigkeit, Vollständigkeit oder gesundheitliche Verträglichkeit." : "Important: AI-generated content is automatically created. There is no liability for accuracy, completeness, or health compatibility."
                             )
+                            
+                            // KI-Disclaimer: Fehler und Gesundheit
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(alignment: .top, spacing: 10) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(.orange)
+                                        .font(.title3)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(isGerman ? "Wichtiger Hinweis zu KI-generierten Rezepten" : "Important Notice Regarding AI-Generated Recipes")
+                                            .font(.subheadline.weight(.bold))
+                                            .foregroundStyle(.white)
+                                        
+                                        Text(isGerman ? 
+                                            "KI-Systeme können Fehler machen. Bitte überprüfen Sie alle KI-generierten Rezepte sorgfältig, bevor Sie sie zubereiten. Insbesondere bei Allergien, Unverträglichkeiten oder speziellen Ernährungsanforderungen sollten Sie die Zutatenliste und Anweisungen doppelt prüfen." :
+                                            "AI systems can make errors. Please carefully review all AI-generated recipes before preparing them. Especially if you have allergies, intolerances, or special dietary requirements, you should double-check the ingredient list and instructions.")
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.9))
+                                            .lineSpacing(4)
+                                        
+                                        Text(isGerman ?
+                                            "Wir übernehmen keine Haftung für gesundheitliche Folgen, die durch die Verwendung von KI-generierten Rezepten entstehen. Die Verantwortung für die Überprüfung der Rezepte und die Entscheidung, ob ein Rezept für Ihre individuellen Bedürfnisse geeignet ist, liegt allein bei Ihnen." :
+                                            "We assume no liability for health consequences arising from the use of AI-generated recipes. The responsibility for reviewing recipes and deciding whether a recipe is suitable for your individual needs lies solely with you.")
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.9))
+                                            .lineSpacing(4)
+                                    }
+                                }
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.orange.opacity(0.2))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.orange.opacity(0.4), lineWidth: 1.5)
+                            )
+                            .padding(.top, 8)
                         }
                         
                         SubSection(isGerman ? "3.5 Zahlungsabwicklung (Apple)" : "3.5 Payment Processing (Apple)") {
@@ -767,10 +804,18 @@ private struct InfoRow: View {
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 130, alignment: .leading)
-            Text(value)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundStyle(.white)
+            // Check if value is an email address
+            if value.contains("@") && value.contains("."), let emailURL = URL(string: "mailto:\(value)") {
+                Link(value, destination: emailURL)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.blue)
+            } else {
+                Text(value)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.white)
+            }
             Spacer()
         }
     }
@@ -810,10 +855,44 @@ private struct LegalBox: View {
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white)
-            Text(content)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.7))
-                .lineSpacing(3)
+            // Parse content and make URLs clickable
+            if let httpsRange = content.range(of: "https://") {
+                let beforeURL = String(content[..<httpsRange.lowerBound])
+                let urlStart = httpsRange.lowerBound
+                // Find the end of the URL (space or end of string)
+                let remaining = content[urlStart...]
+                let urlEnd = remaining.firstIndex(where: { $0 == " " || $0 == "." || $0 == "," }) ?? remaining.endIndex
+                let urlString = String(content[urlStart..<urlEnd])
+                let afterURL = String(content[urlEnd...])
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    if !beforeURL.isEmpty {
+                        Text(beforeURL)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    if let url = URL(string: urlString) {
+                        Link(urlString, destination: url)
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                            .underline()
+                    } else {
+                        Text(urlString)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    if !afterURL.isEmpty {
+                        Text(afterURL)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
+            } else {
+                Text(content)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineSpacing(3)
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -991,12 +1070,24 @@ private struct ContactBox: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white)
             
-            HStack(spacing: 8) {
-                Image(systemName: "envelope.fill")
-                    .foregroundStyle(.white)
-                Text(email)
-                    .font(.subheadline)
-                    .foregroundStyle(.white)
+            if let emailURL = URL(string: "mailto:\(email)") {
+                Link(destination: emailURL) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "envelope.fill")
+                            .foregroundStyle(.white)
+                        Text(email)
+                            .font(.subheadline)
+                            .foregroundStyle(.blue)
+                    }
+                }
+            } else {
+                HStack(spacing: 8) {
+                    Image(systemName: "envelope.fill")
+                        .foregroundStyle(.white)
+                    Text(email)
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                }
             }
             
             Text(note)
@@ -1140,13 +1231,26 @@ private struct ContactInfoBox: View {
                     Text(contact.label)
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.7))
-                    HStack(spacing: 6) {
-                        Image(systemName: "envelope")
-                            .font(.caption)
-                            .foregroundStyle(.white)
-                        Text(contact.email)
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
+                    if let emailURL = URL(string: "mailto:\(contact.email)") {
+                        Link(destination: emailURL) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "envelope")
+                                    .font(.caption)
+                                    .foregroundStyle(.white)
+                                Text(contact.email)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    } else {
+                        HStack(spacing: 6) {
+                            Image(systemName: "envelope")
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                            Text(contact.email)
+                                .font(.subheadline)
+                                .foregroundStyle(.white)
+                        }
                     }
                 }
                 

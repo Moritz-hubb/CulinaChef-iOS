@@ -506,9 +506,38 @@ private struct RequestStep: View {
                 .background(Color.blue.opacity(0.3))
                 .clipShape(Circle())
             
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(.white)
+            // Check if text contains an email address
+            if let emailRange = text.range(of: #"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"#, options: .regularExpression) {
+                let beforeEmail = String(text[..<emailRange.lowerBound])
+                let email = String(text[emailRange])
+                let afterEmail = String(text[emailRange.upperBound...])
+                
+                VStack(alignment: .leading, spacing: 0) {
+                    if !beforeEmail.isEmpty {
+                        Text(beforeEmail)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                    }
+                    if let emailURL = URL(string: "mailto:\(email)") {
+                        Link(email, destination: emailURL)
+                            .font(.subheadline)
+                            .foregroundStyle(.blue)
+                    } else {
+                        Text(email)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                    }
+                    if !afterEmail.isEmpty {
+                        Text(afterEmail)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                    }
+                }
+            } else {
+                Text(text)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+            }
             
             Spacer()
         }
@@ -561,12 +590,24 @@ private struct ContactCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Image(systemName: "envelope.fill")
-                    .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
-                Text(email)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
+            if let emailURL = URL(string: "mailto:\(email)?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                Link(destination: emailURL) {
+                    HStack {
+                        Image(systemName: "envelope.fill")
+                            .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                        Text(email)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.blue)
+                    }
+                }
+            } else {
+                HStack {
+                    Image(systemName: "envelope.fill")
+                        .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                    Text(email)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                }
             }
             Text("Betreff: \(subject)")
                 .font(.caption)

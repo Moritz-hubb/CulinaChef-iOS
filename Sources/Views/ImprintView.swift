@@ -201,11 +201,26 @@ private struct ImprintRow: View {
                 Spacer()
                     .frame(width: 120)
             }
-            Text(value)
-                .foregroundStyle(.white)
+            // Check if value is an email address or URL
+            if value.contains("@") && value.contains("."), let emailURL = URL(string: "mailto:\(value)") {
+                Link(value, destination: emailURL)
+                    .foregroundStyle(.blue)
+                    .font(.subheadline)
+            } else if value.hasPrefix("https://") || value.hasPrefix("http://"), let url = URL(string: value) {
+                Link(value, destination: url)
+                    .foregroundStyle(.blue)
+                    .font(.subheadline)
+            } else if value.hasPrefix("www."), let url = URL(string: "https://\(value)") {
+                Link(value, destination: url)
+                    .foregroundStyle(.blue)
+                    .font(.subheadline)
+            } else {
+                Text(value)
+                    .foregroundStyle(.white)
+                    .font(.subheadline)
+            }
             Spacer()
         }
-        .font(.subheadline)
     }
 }
 

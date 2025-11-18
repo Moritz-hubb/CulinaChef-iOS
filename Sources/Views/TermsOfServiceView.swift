@@ -67,7 +67,7 @@ struct TermsOfServiceView: View {
                     TermsSection(isGerman ? "1. Geltungsbereich und Vertragsparteien" : "1. Scope and Contracting Parties", icon: "doc.text") {
                         TermsParagraph(number: "(1)", text: isGerman ? "Diese Allgemeinen Geschäftsbedingungen (nachfolgend 'AGB') gelten für die Nutzung der mobilen Applikation 'CulinaChef (CulinaAI)' (nachfolgend 'App') durch Verbraucher im Sinne des § 13 BGB." : "These Terms and Conditions (hereinafter referred to as 'T&C') apply to the use of the mobile application 'CulinaChef (CulinaAI)' (hereinafter 'App') by consumers within the meaning of Section 13 of the German Civil Code (BGB).")
                         
-                        TermsParagraph(number: "(2)", text: isGerman ? "Anbieter und Vertragspartner des Nutzers ist:" : "The provider and contractual partner of the user is:")
+                        TermsParagraph(number: "(2)", text: isGerman ? "Anbieter und Vertragspartner des Nutzers ist:" : "Provider and Contractual Partner:")
                         
                         VStack(alignment: .leading, spacing: 4) {
                             ContactInfo(label: isGerman ? "Unternehmen" : "Company", value: "CulinaAI")
@@ -92,7 +92,7 @@ struct TermsOfServiceView: View {
                             TermsBullet(isGerman ? "Ernährungspräferenzen zu verwalten," : "manage dietary preferences,")
                             TermsBullet(isGerman ? "KI-gestützte Rezeptvorschläge zu erhalten (OpenAI GPT-4o-mini)," : "receive AI-based recipe suggestions (OpenAI GPT-4o-mini),")
                             TermsBullet(isGerman ? "Menüs zu planen," : "plan menus, and")
-                            TermsBullet(isGerman ? "und über ein optionales Abonnement ('Unlimited') zusätzliche Premium-Funktionen zu nutzen." : "access additional premium features through an optional subscription ('Unlimited').")
+                            TermsBullet(isGerman ? "und über ein optionales Abonnement ('Unlimited') zusätzliche Premium-Funktionen zu nutzen." : "and access additional premium features through an optional subscription ('Unlimited').")
                         }
                         
                         TermsParagraph(number: "(2)", text: isGerman ? "Die App steht ausschließlich auf iOS-Geräten (iPhone) über den Apple App Store zur Verfügung." : "The app is available exclusively for iOS devices (iPhone) via the Apple App Store.")
@@ -255,9 +255,7 @@ struct TermsOfServiceView: View {
                     }
                     
                     TermsSection(isGerman ? "11. Datenschutz" : "11. Data Protection", icon: "lock.shield") {
-                        Text(isGerman ? L.ui_die_verarbeitung_personenbezogener_.localized : "Processing of personal data is governed by our separate Privacy Policy, available at:")
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
+                        TermsParagraph(number: "(1)", text: isGerman ? "Die Verarbeitung personenbezogener Daten ist in unserer separaten Datenschutzerklärung geregelt, die in der App verfügbar ist." : "Processing of personal data is governed by our separate Privacy Policy, available in the app.")
                         
                         Button(action: { showPrivacy = true }) {
                             Text(isGerman ? "Datenschutzerklärung in der App öffnen" : "Open Privacy Policy in App")
@@ -267,9 +265,7 @@ struct TermsOfServiceView: View {
                         }
                         .padding(.vertical, 4)
                         
-                        Text(isGerman ? L.ui_diese_ist_nicht_bestandteil.localized : "The Privacy Policy is not part of these T&C but applies independently and bindingly.")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.7))
+                        TermsParagraph(number: "(2)", text: isGerman ? "Die Datenschutzerklärung ist nicht Bestandteil dieser AGB, gilt jedoch unabhängig und bindend." : "The Privacy Policy is not part of these T&C but applies independently and bindingly.")
                     }
                     
                     TermsSection(isGerman ? "12. Laufzeit, Kündigung und Account-Löschung" : "12. Term, Termination, and Account Deletion", icon: "person.crop.circle.badge.xmark") {

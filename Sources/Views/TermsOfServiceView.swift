@@ -187,7 +187,7 @@ struct TermsOfServiceView: View {
                                     .foregroundStyle(.orange)
                                     .font(.title3)
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text(isGerman ? "⚠️ Wichtiger Hinweis zu KI-generierten Rezepten" : "⚠️ Important Notice Regarding AI-Generated Recipes")
+                                    Text(isGerman ? "Wichtiger Hinweis zu KI-generierten Rezepten" : "Important Notice Regarding AI-Generated Recipes")
                                         .font(.subheadline.weight(.bold))
                                         .foregroundStyle(.white)
                                     

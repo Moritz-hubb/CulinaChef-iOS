@@ -354,7 +354,7 @@ private struct DietarySettingsSheet: View {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundStyle(.orange)
                                     .font(.title3)
-                                Text(isGerman ? "⚠️ Wichtiger Hinweis zu KI-generierten Rezepten" : "⚠️ Important Notice Regarding AI-Generated Recipes")
+                                Text(isGerman ? "Wichtiger Hinweis zu KI-generierten Rezepten" : "Important Notice Regarding AI-Generated Recipes")
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.white)
                                 Spacer()

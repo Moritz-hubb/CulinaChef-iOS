@@ -306,6 +306,7 @@ private struct DietarySettingsSheet: View {
         "bitter": false,
         "umami": false
     ]
+    @State private var isAIDisclaimerExpanded = false
 
     private var dietOptions: [String] {
         [
@@ -319,6 +320,10 @@ private struct DietarySettingsSheet: View {
             L.category_halal.localized,
             L.category_kosher.localized
         ]
+    }
+    
+    private var isGerman: Bool {
+        localizationManager.currentLanguage == "de"
     }
 
     var body: some View {
@@ -337,6 +342,65 @@ private struct DietarySettingsSheet: View {
 .background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
                             .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
                     }
+                    
+                    // Ausklappbare KI-Disclaimer-Box
+                    VStack(alignment: .leading, spacing: 0) {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                isAIDisclaimerExpanded.toggle()
+                            }
+                        }) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                                    .font(.title3)
+                                Text(isGerman ? "⚠️ Wichtiger Hinweis zu KI-generierten Rezepten" : "⚠️ Important Notice Regarding AI-Generated Recipes")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                Image(systemName: isAIDisclaimerExpanded ? "chevron.up" : "chevron.down")
+                                    .foregroundStyle(.white.opacity(0.7))
+                                    .font(.caption)
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.orange.opacity(0.2))
+                            .cornerRadius(12, corners: isAIDisclaimerExpanded ? [.topLeft, .topRight] : .allCorners)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.orange.opacity(0.4), lineWidth: 1.5)
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        if isAIDisclaimerExpanded {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(isGerman ?
+                                    "KI-Systeme können Fehler machen. Bitte überprüfen Sie alle KI-generierten Rezepte sorgfältig, bevor Sie sie zubereiten. Insbesondere bei Allergien, Unverträglichkeiten oder speziellen Ernährungsanforderungen sollten Sie die Zutatenliste und Anweisungen doppelt prüfen." :
+                                    "AI systems can make errors. Please carefully review all AI-generated recipes before preparing them. Especially if you have allergies, intolerances, or special dietary requirements, you should double-check the ingredient list and instructions.")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .lineSpacing(4)
+                                
+                                Text(isGerman ?
+                                    "Wir übernehmen keine Haftung für gesundheitliche Folgen, die durch die Verwendung von KI-generierten Rezepten entstehen. Die Verantwortung für die Überprüfung der Rezepte und die Entscheidung, ob ein Rezept für Ihre individuellen Bedürfnisse geeignet ist, liegt allein bei Ihnen." :
+                                    "We assume no liability for health consequences arising from the use of AI-generated recipes. The responsibility for reviewing recipes and deciding whether a recipe is suitable for your individual needs lies solely with you.")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .lineSpacing(4)
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.orange.opacity(0.15))
+                            .cornerRadius(12, corners: [.bottomLeft, .bottomRight])
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.orange.opacity(0.4), lineWidth: 1.5)
+                            )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+                    .padding(.bottom, 8)
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text(L.settings_ernährungsweisen_003f.localized).font(.subheadline)

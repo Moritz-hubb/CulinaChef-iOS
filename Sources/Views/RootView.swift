@@ -41,6 +41,22 @@ struct RootView: View {
                     .id(localizationManager.currentLanguage) // Force re-render on language change
             }
         }
+        .fullScreenCover(isPresented: $app.showPasswordReset) {
+            ResetPasswordView()
+                .environmentObject(app)
+        }
+        .onAppear {
+            // Check if we have password reset tokens from a deep link
+            // This handles the case when the app is opened from a deep link
+            if app.passwordResetToken != nil && app.passwordResetRefreshToken != nil {
+                app.showPasswordReset = true
+            }
+        }
+        .onChange(of: app.showPasswordReset) { _, shouldShow in
+            if shouldShow {
+                Logger.debug("Password reset view should be shown", category: .auth)
+            }
+        }
         .alert(L.error.localized, isPresented: Binding(get: { app.error != nil }, set: { if !$0 { app.error = nil } })) {
             Button(L.ok.localized) { app.error = nil }
         } message: {

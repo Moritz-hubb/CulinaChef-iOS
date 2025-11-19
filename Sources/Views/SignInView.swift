@@ -11,6 +11,7 @@ struct SignInView: View {
     @State private var showPassword = false
     @State private var errorMessage: String?
     @State private var appleNonce: String?
+    @State private var showForgotPassword = false
     @FocusState private var focusedField: Field?
     
     enum Field: Hashable {
@@ -206,6 +207,18 @@ struct SignInView: View {
                         }
                         .padding(.vertical, 4)
                         
+                        // Forgot Password Button
+                        Button {
+                            showForgotPassword = true
+                        } label: {
+                            Text(L.forgotPassword.localized)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                        .accessibilityLabel(L.forgotPassword.localized)
+                        .accessibilityHint("Öffnet den Passwort-Reset-Bildschirm")
+                        .padding(.top, 8)
+                        
                         // Apple Sign In (official button)
                         SignInWithAppleButton(.signIn, onRequest: { request in
                             // Prepare nonce for replay protection
@@ -241,6 +254,11 @@ struct SignInView: View {
                 }
             }
         }
+        .sheet(isPresented: $showForgotPassword) {
+            ForgotPasswordView()
+                .environmentObject(app)
+        }
+        .id(localizationManager.currentLanguage) // Force re-render on language change
     }
     
     private func signIn() async {

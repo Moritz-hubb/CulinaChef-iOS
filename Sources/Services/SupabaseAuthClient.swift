@@ -218,6 +218,121 @@ final class SupabaseAuthClient {
         }
     }
     
+    // MARK: - Reset Password
+    /// Sendet eine Passwort-Reset-E-Mail an die angegebene E-Mail-Adresse.
+    ///
+    /// - Parameter email: E-Mail-Adresse des Nutzers, für die das Passwort zurückgesetzt werden soll.
+    /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
+    func resetPasswordForEmail(email: String) async throws {
+        var url = baseURL
+        url.append(path: "/auth/v1/recover")
+        
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.addValue(apiKey, forHTTPHeaderField: "apikey")
+        
+        // Supabase requires redirectTo URL for password reset
+        // For iOS apps, we can use a deep link or a custom URL scheme
+        let redirectTo = "culinachef://reset-password"
+        let body = ["email": email, "redirect_to": redirectTo]
+        req.httpBody = try JSONEncoder().encode(body)
+        
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
+        
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        
+        // Supabase returns 200 on success (even if email doesn't exist, for security)
+        if http.statusCode == 200 {
+            return
+        } else {
+            let error = try? JSONDecoder().decode(AuthError.self, from: data)
+            throw NSError(domain: "SupabaseAuth", code: http.statusCode,
+                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? "Passwort-Reset-E-Mail konnte nicht gesendet werden"])
+        }
+    }
+    
+    // MARK: - Update Password (from reset token)
+    /// Aktualisiert das Passwort eines Nutzers mit einem Reset-Token.
+    /// Nach dem Klick auf den Reset-Link ist der User bereits authentifiziert.
+    ///
+    /// - Parameters:
+    ///   - accessToken: Access-Token aus dem Passwort-Reset-Link.
+    ///   - refreshToken: Refresh-Token aus dem Passwort-Reset-Link.
+    ///   - newPassword: Neues Passwort.
+    /// - Returns: `AuthResponse` mit aktualisierten Tokens.
+    /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
+    func updatePassword(accessToken: String, refreshToken: String, newPassword: String) async throws -> AuthResponse {
+        var url = baseURL
+        url.append(path: "/auth/v1/user")
+        
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        req.addValue(apiKey, forHTTPHeaderField: "apikey")
+        
+        let body = ["password": newPassword]
+        req.httpBody = try JSONEncoder().encode(body)
+        
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
+        
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        
+        if http.statusCode == 200 {
+            // After password update, refresh the session to get new tokens
+            // The user is already authenticated, so we can refresh
+            return try await refreshSession(refreshToken: refreshToken)
+        } else {
+            let error = try? JSONDecoder().decode(AuthError.self, from: data)
+            throw NSError(domain: "SupabaseAuth", code: http.statusCode,
+                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? "Passwort-Update fehlgeschlagen"])
+        }
+    }
+    
+    // MARK: - Get User (Check Session)
+    /// Ruft die aktuellen User-Daten ab, um zu prüfen, ob eine gültige Session existiert.
+    ///
+    /// - Parameter accessToken: Optionales Access-Token. Wenn nicht angegeben, wird versucht, es aus dem Keychain zu lesen.
+    /// - Returns: User-Daten, falls eine gültige Session existiert.
+    /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
+    func getUser(accessToken: String?) async throws -> AuthResponse.User? {
+        guard let token = accessToken else {
+            return nil
+        }
+        
+        var url = baseURL
+        url.append(path: "/auth/v1/user")
+        
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.addValue(apiKey, forHTTPHeaderField: "apikey")
+        
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
+        
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        
+        if http.statusCode == 200 {
+            // Supabase returns user data directly
+            struct UserResponse: Codable {
+                let id: String
+                let email: String
+            }
+            let user = try JSONDecoder().decode(UserResponse.self, from: data)
+            return AuthResponse.User(id: user.id, email: user.email)
+        } else {
+            return nil
+        }
+    }
+    
     // MARK: - Change Password
     /// Ändert das Passwort des aktuell angemeldeten Nutzers.
     ///

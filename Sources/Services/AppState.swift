@@ -98,6 +98,11 @@ final class AppState: ObservableObject {
     // Recipe selected for community upload (for upload sheet)
     @Published var selectedRecipeForUpload: Recipe? = nil
     
+    // Password reset state
+    @Published var showPasswordReset: Bool = false
+    @Published var passwordResetToken: String? = nil
+    @Published var passwordResetRefreshToken: String? = nil
+    
     // Deep link recipe navigation
     @Published var deepLinkRecipe: Recipe? = nil
 
@@ -490,7 +495,48 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         try await authManager.saveProfile(fullName: fullName, email: email, accessToken: accessToken, userId: KeychainManager.get(key: "user_id"), userEmail: userEmail)
     }
     
-    /// Führt den Login via „Sign in with Apple“ durch und aktualisiert Tokens & State.
+    /// Sendet eine Passwort-Reset-E-Mail an die angegebene E-Mail-Adresse.
+    ///
+    /// - Parameter email: E-Mail-Adresse des Nutzers.
+    /// - Throws: Fehler aus `AuthenticationManager`.
+    func resetPassword(email: String) async throws {
+        try await authManager.resetPassword(email: email)
+    }
+    
+    /// Prüft, ob eine gültige Session für den angegebenen Access-Token existiert.
+    ///
+    /// - Parameter accessToken: Access-Token zum Prüfen.
+    /// - Returns: User-Daten, falls eine gültige Session existiert.
+    /// - Throws: Fehler aus `SupabaseAuthClient`.
+    func getUser(accessToken: String) async throws -> AuthResponse.User? {
+        return try await auth.getUser(accessToken: accessToken)
+    }
+    
+    /// Aktualisiert das Passwort mit einem Reset-Token.
+    ///
+    /// - Parameters:
+    ///   - accessToken: Access-Token aus dem Passwort-Reset-Link.
+    ///   - refreshToken: Refresh-Token aus dem Passwort-Reset-Link.
+    ///   - newPassword: Neues Passwort.
+    /// - Throws: Fehler aus `AuthenticationManager`.
+    func updatePassword(accessToken: String, refreshToken: String, newPassword: String) async throws {
+        loading = true
+        defer { loading = false }
+        
+        let result = try await authManager.updatePassword(accessToken: accessToken, refreshToken: refreshToken, newPassword: newPassword)
+        
+        await MainActor.run {
+            self.accessToken = result.accessToken
+            self.userEmail = result.email
+            self.isAuthenticated = true
+            self.showPasswordReset = false
+            self.passwordResetToken = nil
+            self.passwordResetRefreshToken = nil
+            self.loadSubscriptionStatus()
+        }
+    }
+    
+    /// Führt den Login via „Sign in with Apple" durch und aktualisiert Tokens & State.
     ///
     /// - Parameters:
     ///   - idToken: Vom Apple-SDK geliefertes Token.

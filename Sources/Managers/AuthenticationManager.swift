@@ -102,6 +102,40 @@ final class AuthenticationManager {
         )
     }
     
+    // MARK: - Reset Password
+    
+    /// Sendet eine Passwort-Reset-E-Mail an die angegebene E-Mail-Adresse.
+    ///
+    /// - Parameter email: E-Mail-Adresse des Nutzers.
+    /// - Throws: Fehler aus `SupabaseAuthClient`.
+    func resetPassword(email: String) async throws {
+        try await auth.resetPasswordForEmail(email: email)
+    }
+    
+    /// Aktualisiert das Passwort mit einem Reset-Token.
+    ///
+    /// - Parameters:
+    ///   - accessToken: Access-Token aus dem Passwort-Reset-Link.
+    ///   - refreshToken: Refresh-Token aus dem Passwort-Reset-Link.
+    ///   - newPassword: Neues Passwort.
+    /// - Returns: `SignInResult` mit neuen Tokens.
+    /// - Throws: Fehler aus `SupabaseAuthClient`.
+    func updatePassword(accessToken: String, refreshToken: String, newPassword: String) async throws -> SignInResult {
+        let response = try await auth.updatePassword(accessToken: accessToken, refreshToken: refreshToken, newPassword: newPassword)
+        
+        try KeychainManager.save(key: "access_token", value: response.access_token)
+        try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
+        try KeychainManager.save(key: "user_id", value: response.user.id)
+        try KeychainManager.save(key: "user_email", value: response.user.email)
+        
+        return SignInResult(
+            accessToken: response.access_token,
+            refreshToken: response.refresh_token,
+            userId: response.user.id,
+            email: response.user.email
+        )
+    }
+    
     // MARK: - Sign Out
     
     func signOut(accessToken: String?) async {

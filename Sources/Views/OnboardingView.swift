@@ -140,6 +140,8 @@ struct OnboardingView: View {
         .onChange(of: localizationManager.currentLanguage) { _, _ in
             // Re-initialize taste preferences when language changes
             initializeTastePreferences()
+            // Reset selected diets when language changes (keys are localized)
+            selectedDiets = []
         }
     }
     
@@ -321,6 +323,7 @@ struct OnboardingView: View {
                             allergyChip(item)
                         }
                         .transition(.scale.combined(with: .opacity))
+                        .id(localizationManager.currentLanguage) // Force re-render on language change
                     } else {
                         Text(L.onboarding_keine_allergien_perfekt_weiter.localized)
                             .font(.system(size: 14))
@@ -495,6 +498,7 @@ struct OnboardingView: View {
                             dislikeChip(item)
                         }
                         .transition(.scale.combined(with: .opacity))
+                        .id(localizationManager.currentLanguage) // Force re-render on language change
                     } else {
                         Text(L.onboarding_keine_abneigungen_super_flexibel.localized)
                             .font(.system(size: 14))
@@ -763,6 +767,7 @@ private struct WrapDietChips: View {
             }
             .frame(height: totalHeight)
         }
+        .id(options) // Force re-render when options change (language change)
     }
     
     private func chip(_ text: String) -> some View {

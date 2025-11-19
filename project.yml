@@ -56,6 +56,10 @@ targets:
         SupabaseAnonKey: $(SUPABASE_ANON_KEY)
         OpenAIAPIKey: $(OPENAI_API_KEY)
         SentryDSN: $(SENTRY_DSN)
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - culinachef
+            CFBundleURLName: com.moritzserrin.culinachef
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
     settings:

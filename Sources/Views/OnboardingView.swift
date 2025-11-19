@@ -171,16 +171,19 @@ struct OnboardingView: View {
     // MARK: - Step 0: Language Selection
     private var step0LanguageSelection: some View {
         let systemLang = getSystemLanguage()
+        let currentLang = localizationManager.currentLanguage // Use current app language, not system language
         
         return ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(getSystemLocalizedTitle(systemLang: systemLang))
+                    Text(getSystemLocalizedTitle(systemLang: currentLang))
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.black)
-                    Text(getSystemLocalizedSubtitle(systemLang: systemLang))
+                        .id(localizationManager.currentLanguage) // Force re-render on language change
+                    Text(getSystemLocalizedSubtitle(systemLang: currentLang))
                         .font(.system(size: 15))
                         .foregroundColor(.black.opacity(0.6))
+                        .id(localizationManager.currentLanguage) // Force re-render on language change
                 }
                 .padding(.top, 20)
                 

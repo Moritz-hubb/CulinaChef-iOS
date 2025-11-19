@@ -205,6 +205,7 @@ struct PaywallView: View {
                 Text(errorMessage ?? L.errorGeneric.localized)
             }
         }
+        .id(localizationManager.currentLanguage) // Force re-render on language change
     }
     
     private func purchaseUnlimited() {
@@ -261,7 +262,6 @@ struct PaywallView: View {
                 }
             }
         }
-        .id(localizationManager.currentLanguage) // Force re-render on language change
     }
 }
 

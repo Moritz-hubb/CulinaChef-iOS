@@ -5,9 +5,30 @@ struct PrivacyPolicyView: View {
 
     @Environment(\.dismiss) var dismiss
     
-    // Language detection - use German content for DE, English for all others
+    // Language detection - use German content for DE, French for FR, Italian for IT, Spanish for ES, English for all others
     private var isGerman: Bool {
         localizationManager.currentLanguage == "de"
+    }
+    
+    private var isFrench: Bool {
+        localizationManager.currentLanguage == "fr"
+    }
+    
+    private var isItalian: Bool {
+        localizationManager.currentLanguage == "it"
+    }
+    
+    private var isSpanish: Bool {
+        localizationManager.currentLanguage == "es"
+    }
+    
+    // Helper function to get localized text
+    private func localized(_ german: String, _ french: String, _ italian: String, _ spanish: String, _ english: String) -> String {
+        if isGerman { return german }
+        if isFrench { return french }
+        if isItalian { return italian }
+        if isSpanish { return spanish }
+        return english
     }
     
     var body: some View {
@@ -58,51 +79,81 @@ struct PrivacyPolicyView: View {
                             .stroke(.white.opacity(0.4), lineWidth: 1.5)
                     )
                     
-                    PrivacySection(isGerman ? "1. Verantwortlicher" : "1. Data Controller", icon: "person.text.rectangle") {
+                    PrivacySection(localized("1. Verantwortlicher", "1. Responsable", "1. Titolare del trattamento", "1. Responsable", "1. Data Controller"), icon: "person.text.rectangle") {
                         VStack(alignment: .leading, spacing: 6) {
-                            InfoRow(label: isGerman ? "Unternehmen" : "Company", value: "CulinaAI")
-                            InfoRow(label: isGerman ? "Vertreten durch" : "Represented by", value: "Moritz Serrin")
-                            InfoRow(label: isGerman ? "Adresse" : "Address", value: isGerman ? "Sonnenblumenweg 8, 21244 Buchholz, Deutschland" : "Sonnenblumenweg 8, 21244 Buchholz, Germany")
+                            InfoRow(label: localized("Unternehmen", "Entreprise", "Azienda", "Empresa", "Company"), value: "CulinaAI")
+                            InfoRow(label: localized("Vertreten durch", "Représentée par", "Rappresentata da", "Representada por", "Represented by"), value: "Moritz Serrin")
+                            InfoRow(label: localized("Adresse", "Adresse", "Indirizzo", "Dirección", "Address"), value: localized("Sonnenblumenweg 8, 21244 Buchholz, Deutschland", "Sonnenblumenweg 8, 21244 Buchholz, Allemagne", "Sonnenblumenweg 8, 21244 Buchholz, Germania", "Sonnenblumenweg 8, 21244 Buchholz, Alemania", "Sonnenblumenweg 8, 21244 Buchholz, Germany"))
                             InfoRow(label: "E-Mail", value: "kontakt@culinaai.com")
-                            InfoRow(label: isGerman ? "Datenschutz" : "Data Protection Contact", value: "datenschutz@culinaai.com")
+                            InfoRow(label: localized("Datenschutz", "Protection des données", "Privacy", "Privacidad", "Data Protection Contact"), value: "datenschutz@culinaai.com")
                         }
                     }
                     
-                    PrivacySection(isGerman ? "2. Allgemeines" : "2. General Information", icon: "info.circle") {
-                        Text(isGerman ? L.ui_der_schutz_ihrer_personenbezogenen.localized : "Protecting your personal data is important to us. This Privacy Policy explains the type, scope, and purpose of processing personal data within our iOS app CulinaChef (CulinaAI).")
+                    PrivacySection(localized("2. Allgemeines", "2. Généralités", "2. Informazioni generali", "2. Información general", "2. General Information"), icon: "info.circle") {
+                        Text(localized(
+                            isGerman ? L.ui_der_schutz_ihrer_personenbezogenen.localized : "Der Schutz Ihrer personenbezogenen Daten ist uns wichtig. Diese Datenschutzerklärung informiert Sie über die Art, den Umfang und Zweck der Verarbeitung personenbezogener Daten in unserer iOS-App CulinaChef (CulinaAI).",
+                            "La protection de vos données personnelles est une priorité pour nous. Nous traitons les données personnelles conformément au RGPD, à la loi fédérale allemande sur la protection des données (BDSG) et aux autres réglementations pertinentes.",
+                            "La protezione dei dati personali è una priorità. Trattiamo i dati personali conformemente al GDPR, al BDSG e ad altre normative applicabili.",
+                            "La protección de sus datos personales es prioritaria. Procesamos datos conforme al RGPD, BDSG y otras leyes aplicables.",
+                            "Protecting your personal data is important to us. This Privacy Policy explains the type, scope, and purpose of processing personal data within our iOS app CulinaChef (CulinaAI)."
+                        ))
                             .foregroundStyle(.white)
                             .lineSpacing(4)
                         
-                        Text(isGerman ? L.ui_grundsätze_der_datenverarbeitung.localized : "Principles of data processing:")
+                        Text(localized(
+                            isGerman ? L.ui_grundsätze_der_datenverarbeitung.localized : "Grundsätze der Datenverarbeitung:",
+                            "Principes de traitement des données :",
+                            "Principi di trattamento dei dati :",
+                            "Principios :",
+                            "Principles of data processing:"
+                        ))
                             .fontWeight(.semibold)
                             .foregroundStyle(.white)
                             .padding(.top, 12)
                         
                         VStack(spacing: 8) {
-                            PrincipleRow(title: isGerman ? "Datenminimierung" : "Data minimization", description: isGerman ? "Nur notwendige Daten werden erfasst" : "Only the data necessary for operation are collected")
-                            PrincipleRow(title: isGerman ? "Transparenz" : "Transparency", description: isGerman ? "Klare Kommunikation über Datennutzung" : "We clearly communicate how your data are used")
-                            PrincipleRow(title: isGerman ? "Sicherheit" : "Security", description: isGerman ? "TLS-Verschlüsselung und sichere Speicherung" : "TLS encryption and secure storage")
-                            PrincipleRow(title: isGerman ? "Keine Werbung" : "No advertising", description: isGerman ? "Kein Tracking oder Profilbildung" : "No tracking or profiling")
+                            PrincipleRow(
+                                title: localized("Datenminimierung", "Minimisation des données", "Minimizzazione", "Minimización", "Data minimization"),
+                                description: localized("Nur notwendige Daten werden erfasst", "seules les données nécessaires sont collectées", "raccogliamo solo i dati necessari", "solo recogemos datos necesarios", "Only the data necessary for operation are collected")
+                            )
+                            PrincipleRow(
+                                title: localized("Transparenz", "Transparence", "Trasparenza", "Transparencia", "Transparency"),
+                                description: localized("Klare Kommunikation über Datennutzung", "communication claire sur l'utilisation des données", "comunicazione chiara sull'uso dei dati", "comunicación clara sobre el uso de datos", "We clearly communicate how your data are used")
+                            )
+                            PrincipleRow(
+                                title: localized("Sicherheit", "Sécurité", "Sicurezza", "Seguridad", "Security"),
+                                description: localized("TLS-Verschlüsselung und sichere Speicherung", "cryptage TLS et stockage sécurisé", "crittografia TLS e archiviazione sicura", "cifrado TLS y almacenamiento seguro", "TLS encryption and secure storage")
+                            )
+                            PrincipleRow(
+                                title: localized("Keine Werbung", "Pas de publicité", "Nessuna pubblicità", "Sin publicidad", "No advertising"),
+                                description: localized("Kein Tracking oder Profilbildung", "pas de suivi ni de profilage", "niente tracciamento o profilazione", "no hay seguimiento ni perfilado", "No tracking or profiling")
+                            )
                         }
                     }
                     
-                    PrivacySection(isGerman ? "3. Erhobene Daten" : "3. Data Collected", icon: "list.bullet.rectangle") {
-                        SubSection(isGerman ? "3.1 Benutzerkonto" : "3.1 User Account") {
-                            Text(isGerman ? L.ui_erforderlich_bei_registrierung.localized : "Required for registration:")
+                    PrivacySection(localized("3. Erhobene Daten", "3. Données collectées", "3. Dati raccolti", "3. Datos recogidos", "3. Data Collected"), icon: "list.bullet.rectangle") {
+                        SubSection(localized("3.1 Benutzerkonto", "3.1 Compte utilisateur", "3.1 Account utente", "3.1 Cuenta de usuario", "3.1 User Account")) {
+                            Text(localized(
+                                isGerman ? L.ui_erforderlich_bei_registrierung.localized : "Erforderlich bei Registrierung:",
+                                "Données requises lors de l'inscription :",
+                                "Dati richiesti alla registrazione :",
+                                "Datos necesarios al registrarse :",
+                                "Required for registration:"
+                            ))
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.white)
-                            BulletPoint(isGerman ? "Benutzername (3–32 Zeichen)" : "Username (3–32 characters)")
-                            BulletPoint(isGerman ? "E-Mail-Adresse" : "E-mail address")
-                            BulletPoint(isGerman ? "Passwort (mind. 6 Zeichen, bcrypt)" : "Password (min. 6 characters, bcrypt)")
+                            BulletPoint(localized("Benutzername (3–32 Zeichen)", "Nom d'utilisateur (3–32 caractères)", "Nome utente (3–32 caratteri)", "Nombre de usuario (3–32 caracteres)", "Username (3–32 characters)"))
+                            BulletPoint(localized("E-Mail-Adresse", "Adresse e-mail", "Indirizzo e-mail", "Correo electrónico", "E-mail address"))
+                            BulletPoint(localized("Passwort (mind. 6 Zeichen, bcrypt)", "Mot de passe (min. 6 caractères, bcrypt)", "Password (min. 6 caratteri, bcrypt)", "Contraseña (mín. 6 caracteres, bcrypt)", "Password (min. 6 characters, bcrypt)"))
                             BulletPoint("Optional: Sign in with Apple")
                             
                             LegalBox(
-                                title: isGerman ? "Zweck" : "Purpose",
-                                content: isGerman ? "Kontoerstellung und Authentifizierung" : "Account creation and authentication"
+                                title: localized("Zweck", "Objectif", "Scopo", "Propósito", "Purpose"),
+                                content: localized("Kontoerstellung und Authentifizierung", "création et authentification du compte", "creazione e autenticazione account", "creación y autenticación de cuenta", "Account creation and authentication")
                             )
                             LegalBox(
-                                title: isGerman ? "Rechtsgrundlage" : "Legal basis",
-                                content: isGerman ? "Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung)" : "Art. 6 (1)(b) GDPR (contract performance)"
+                                title: localized("Rechtsgrundlage", "Base légale", "Base legale", "Base legal", "Legal basis"),
+                                content: localized("Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung)", "Art. 6 Abs. 1 lit. b RGPD (exécution du contrat)", "Art. 6 Abs. 1 lit. b GDPR (esecuzione contratto)", "Art. 6 Abs. 1 lit. b RGPD (ejecución contrato)", "Art. 6 (1)(b) GDPR (contract performance)")
                             )
                         }
                         

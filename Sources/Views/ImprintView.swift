@@ -1,13 +1,31 @@
 import SwiftUI
 
 struct ImprintView: View {
-@ObservedObject private var localizationManager = LocalizationManager.shared
-
+    @ObservedObject private var localizationManager = LocalizationManager.shared
     @Environment(\.dismiss) var dismiss
     
-    // Language detection - use German content for DE, English for all others
     private var isGerman: Bool {
         localizationManager.currentLanguage == "de"
+    }
+    
+    private var isFrench: Bool {
+        localizationManager.currentLanguage == "fr"
+    }
+    
+    private var isSpanish: Bool {
+        localizationManager.currentLanguage == "es"
+    }
+    
+    private var isItalian: Bool {
+        localizationManager.currentLanguage == "it"
+    }
+    
+    private func localized(_ german: String, _ french: String, _ spanish: String, _ italian: String, _ english: String) -> String {
+        if isGerman { return german }
+        if isFrench { return french }
+        if isSpanish { return spanish }
+        if isItalian { return italian }
+        return english
     }
     
     var body: some View {
@@ -19,115 +37,160 @@ struct ImprintView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Header
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(L.legalImprintTitle.localized)
+                            Text(localized("Impressum", "Mentions légales", "Aviso legal", "Note legali", "Legal Notice (Impressum)"))
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundStyle(.white)
-                        
-                        Text(isGerman ? L.ui_angaben_gemäß_5_tmg.localized : "Information pursuant to § 5 German Telemedia Act (TMG)")
+                            
+                            Text(localized(
+                                "Angaben gemäß § 5 TMG",
+                                "Informations selon § 5 TMG",
+                                "Información según § 5 TMG",
+                                "Informazioni secondo § 5 TMG",
+                                "Information pursuant to § 5 German Telemedia Act (TMG)"
+                            ))
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.8))
-                    }
-                    .padding(.bottom, 8)
-                    
-                    Divider().background(.white.opacity(0.3))
-                    
-                    // Language Notice
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "info.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.white)
-                        Text(L.legalLanguageNotice.localized)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.white)
-                            .lineSpacing(4)
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.white.opacity(0.25))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(.white.opacity(0.4), lineWidth: 1.5)
-                    )
-                    
-                    ImprintSection(isGerman ? "Anbieter" : "Provider", icon: "building.2") {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ImprintRow(label: isGerman ? "Unternehmen" : "Company", value: "CulinaAI")
-                            ImprintRow(label: isGerman ? "Vertreten durch" : "Represented by", value: "Moritz Serrin")
-                            ImprintRow(label: isGerman ? "Adresse" : "Address", value: "Sonnenblumenweg 8")
-                            ImprintRow(label: "", value: "21244 Buchholz")
-                            ImprintRow(label: "", value: isGerman ? "Deutschland" : "Germany")
                         }
-                    }
-                    
-                    ImprintSection(isGerman ? "Kontakt" : "Contact", icon: "envelope") {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ImprintRow(label: "E-Mail", value: "kontakt@culinaai.com")
-                            ImprintRow(label: "Website", value: "www.culinaai.com")
-                        }
-                    }
-                    
-                    ImprintSection(isGerman ? "Vertretungsberechtigt" : "Authorized Representative", icon: "person.text.rectangle") {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ImprintRow(label: isGerman ? "Geschäftsführer" : "Managing Director", value: "Moritz Serrin")
-                        }
-                    }
-                    
-                    ImprintSection(isGerman ? "Verantwortlich für den Inhalt" : "Responsible for Content", icon: "doc.text") {
-                        Text(isGerman ? "Nach § 55 Abs. 2 RStV:" : "in accordance with § 55 (2) of the German Interstate Broadcasting Treaty (RStV):")
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                            .padding(.bottom, 4)
+                        .padding(.bottom, 8)
                         
-                        VStack(alignment: .leading, spacing: 6) {
-                            ImprintRow(label: isGerman ? "Name" : "Name", value: "Moritz Serrin")
-                            ImprintRow(label: isGerman ? "Adresse" : "Address", value: "Sonnenblumenweg 8")
-                            ImprintRow(label: "", value: "21244 Buchholz")
-                            ImprintRow(label: "", value: isGerman ? "Deutschland" : "Germany")
+                        Divider().background(.white.opacity(0.3))
+                        
+                        // Language Notice
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: "info.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(.white)
+                            Text(L.legalLanguageNotice.localized)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.white)
+                                .lineSpacing(4)
                         }
-                    }
-                    
-                    ImprintSection(isGerman ? "EU-Streitschlichtung" : "EU Online Dispute Resolution (ODR)", icon: "scale.3d") {
-                        Text(isGerman ? L.ui_die_europäische_kommission_stellt.localized : "The European Commission provides a platform for online dispute resolution (ODR):")
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                            .lineSpacing(4)
-                        
-                        Link("https://consumer-redress.ec.europa.eu/dispute-resolution-bodies", 
-                             destination: URL(string: "https://consumer-redress.ec.europa.eu/dispute-resolution-bodies")!)
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                            .underline()
-                            .padding(.vertical, 4)
-                        
-                        Text(isGerman ? "Unsere E-Mail-Adresse finden Sie oben im Impressum." : "Our e-mail address can be found above in this legal notice.")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.7))
-                            .padding(.top, 4)
-                    }
-                    
-                    ImprintSection(isGerman ? "Verbraucherstreitbeilegung" : "Consumer Dispute Resolution", icon: "person.2") {
-                        InfoBox(
-                            title: isGerman ? "Hinweis" : "Note",
-                            content: isGerman ? "Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen." : "We are neither willing nor obliged to participate in dispute resolution proceedings before a consumer arbitration board."
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.white.opacity(0.25))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(.white.opacity(0.4), lineWidth: 1.5)
                         )
-                    }
-                    
-                    Divider().background(.white.opacity(0.3))
-                        .padding(.vertical, 8)
-                    
-                    // Footer
-                    VStack(spacing: 8) {
-                        Text(L.legalFooterDate.localized)
+                        
+                        // Anbieter Section
+                        ImprintSection(localized("Anbieter", "Fournisseur", "Proveedor", "Fornitore", "Provider"), icon: "building.2") {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ContactInfo(label: localized("Unternehmen:", "Entreprise:", "Empresa:", "Azienda:", "Company:"), value: "CulinaAI")
+                                ContactInfo(label: localized("Vertreten durch:", "Représentée par:", "Representado por:", "Rappresentato da:", "Represented by:"), value: "Moritz Serrin")
+                                ContactInfo(label: localized("Adresse:", "Adresse:", "Dirección:", "Indirizzo:", "Address:"), value: "Sonnenblumenweg 8\n21244 Buchholz\n" + localized("Deutschland", "Allemagne", "Alemania", "Germania", "Germany"))
+                            }
+                            .padding(12)
+                            .background(.white.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        
+                        // Kontakt Section
+                        ImprintSection(localized("Kontakt", "Contact", "Contacto", "Contatto", "Contact"), icon: "envelope") {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ContactInfo(label: "E-Mail:", value: "kontakt@culinaai.com")
+                                ContactInfo(label: localized("Website:", "Site web:", "Sitio web:", "Sito web:", "Website:"), value: "www.culinaai.com")
+                            }
+                            .padding(12)
+                            .background(.white.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        
+                        // Vertretungsberechtigt Section
+                        ImprintSection(localized("Vertretungsberechtigt", "Représentant autorisé", "Representante autorizado", "Rappresentante autorizzato", "Authorized Representative"), icon: "person.badge.shield.checkmark") {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ContactInfo(label: localized("Geschäftsführer:", "Directeur général:", "Director general:", "Direttore generale:", "Managing Director:"), value: "Moritz Serrin")
+                            }
+                            .padding(12)
+                            .background(.white.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        
+                        // Verantwortlich für den Inhalt Section
+                        ImprintSection(localized("Verantwortlich für den Inhalt", "Responsable du contenu", "Responsable del contenido", "Responsabile del contenuto", "Responsible for Content"), icon: "doc.text") {
+                            Text(localized(
+                                "Nach § 55 Abs. 2 RStV:",
+                                "Selon § 55 Abs. 2 RStV:",
+                                "Según § 55 Abs. 2 RStV:",
+                                "Secondo § 55 Abs. 2 RStV:",
+                                "in accordance with § 55 (2) of the German Interstate Broadcasting Treaty (RStV):"
+                            ))
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.8))
+                            .padding(.bottom, 8)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                ContactInfo(label: localized("Name:", "Nom:", "Nombre:", "Nome:", "Name:"), value: "Moritz Serrin")
+                                ContactInfo(label: localized("Adresse:", "Adresse:", "Dirección:", "Indirizzo:", "Address:"), value: "Sonnenblumenweg 8\n21244 Buchholz\n" + localized("Deutschland", "Allemagne", "Alemania", "Germania", "Germany"))
+                            }
+                            .padding(12)
+                            .background(.white.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        
+                        // EU-Streitschlichtung
+                        InfoBox(
+                            title: localized("EU-Streitschlichtung", "Règlement des litiges UE", "Resolución de litigios de la UE", "Risoluzione delle controversie UE", "EU Online Dispute Resolution (ODR)"),
+                            icon: "globe.europe.africa"
+                        ) {
+                            Text(localized(
+                                "Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:",
+                                "La Commission européenne fournit une plateforme de règlement en ligne des litiges (OS):",
+                                "La Comisión Europea proporciona una plataforma de resolución de litigios en línea (OS):",
+                                "La Commissione europea fornisce una piattaforma per la risoluzione online delle controversie (OS):",
+                                "The European Commission provides a platform for online dispute resolution (ODR):"
+                            ))
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                            .lineSpacing(5)
+                            .padding(.bottom, 8)
+                            
+                            if let url = URL(string: "https://consumer-redress.ec.europa.eu/dispute-resolution-bodies") {
+                                Link("https://consumer-redress.ec.europa.eu/dispute-resolution-bodies", destination: url)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.blue)
+                                    .underline()
+                            }
+                            
+                            Text(localized(
+                                "Unsere E-Mail-Adresse finden Sie oben im Impressum.",
+                                "Notre adresse e-mail se trouve ci-dessus dans les mentions légales.",
+                                "Nuestra dirección de correo electrónico se encuentra arriba en el aviso legal.",
+                                "Il nostro indirizzo email si trova sopra nelle note legali.",
+                                "Our e-mail address can be found above in this legal notice."
+                            ))
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.7))
-                        Text(L.legalVersion.localized)
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.5))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.bottom, 8)
+                            .foregroundStyle(.white.opacity(0.8))
+                            .padding(.top, 8)
+                        }
+                        
+                        // Verbraucherstreitbeilegung
+                        InfoBox(
+                            title: localized("Verbraucherstreitbeilegung", "Règlement des litiges consommateurs", "Resolución de litigios de consumidores", "Risoluzione delle controversie dei consumatori", "Consumer Dispute Resolution"),
+                            icon: "scale.3d"
+                        ) {
+                            Text(localized(
+                                "Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.",
+                                "Nous ne sommes pas disposés ou obligés de participer à des procédures de règlement des litiges devant un organisme de médiation des consommateurs.",
+                                "No estamos dispuestos ni obligados a participar en procedimientos de resolución de litigios ante un organismo de resolución de disputas de consumidores.",
+                                "Non siamo disposti né obbligati a partecipare a procedure di risoluzione delle controversie davanti a un organismo di risoluzione delle controversie dei consumatori.",
+                                "We are neither willing nor obliged to participate in dispute resolution proceedings before a consumer arbitration board."
+                            ))
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                            .lineSpacing(5)
+                        }
+                        
+                        // Footer
+                        VStack(spacing: 8) {
+                            Text(localized("Stand: 04. November 2025 | Version 1.0", "Date: 04 novembre 2025 | Version 1.0", "Fecha: 04 de noviembre de 2025 | Versión 1.0", "Data: 04 novembre 2025 | Versione 1.0", "Date: November 4, 2025 | Version 1.0"))
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
                     }
                     .padding(20)
                 }
@@ -187,65 +250,65 @@ private struct ImprintSection<Content: View>: View {
     }
 }
 
-private struct ImprintRow: View {
+private struct ContactInfo: View {
     let label: String
     let value: String
     
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            if !label.isEmpty {
-                Text(label + ":")
-                    .foregroundStyle(.white.opacity(0.7))
-                    .frame(width: 120, alignment: .leading)
-            } else {
-                Spacer()
-                    .frame(width: 120)
-            }
-            // Check if value is an email address or URL
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: 110, alignment: .leading)
             if value.contains("@") && value.contains("."), let emailURL = URL(string: "mailto:\(value)") {
                 Link(value, destination: emailURL)
+                    .font(.caption)
                     .foregroundStyle(.blue)
-                    .font(.subheadline)
-            } else if value.hasPrefix("https://") || value.hasPrefix("http://"), let url = URL(string: value) {
-                Link(value, destination: url)
-                    .foregroundStyle(.blue)
-                    .font(.subheadline)
             } else if value.hasPrefix("www."), let url = URL(string: "https://\(value)") {
                 Link(value, destination: url)
+                    .font(.caption)
                     .foregroundStyle(.blue)
-                    .font(.subheadline)
             } else {
                 Text(value)
+                    .font(.caption)
                     .foregroundStyle(.white)
-                    .font(.subheadline)
             }
             Spacer()
         }
     }
 }
 
-private struct InfoBox: View {
+private struct InfoBox<Content: View>: View {
     let title: String
-    let content: String
+    let icon: String
+    let content: Content
+    
+    init(title: String, icon: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.content = content()
+    }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
             
-            Text(content)
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.7))
-                .lineSpacing(4)
+            content
         }
-        .padding(14)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white.opacity(0.2))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(.white.opacity(0.3), lineWidth: 1)
+                .stroke(.white.opacity(0.3), lineWidth: 1.5)
         )
     }
 }

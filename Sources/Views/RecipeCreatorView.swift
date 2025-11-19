@@ -82,6 +82,8 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                         .foregroundStyle(.white)
                         .tint(.white)
                         .focused($isFocused)
+                        .accessibilityLabel(L.label_whatToCook.localized)
+                        .accessibilityHint(L.placeholder_describeDish.localized)
                         .onAppear {
                             if let pending = app.pendingRecipeGoal {
                                 // Combine name and description if description exists
@@ -105,6 +107,8 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                             .padding(12)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .focused($isFocused)
+                            .accessibilityLabel(L.label_maxTimeMinutes.localized)
+                            .accessibilityHint(L.placeholder_maxTime.localized)
                     }
                     
                     
@@ -144,6 +148,8 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
 .background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
                             .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
                         }
+                        .accessibilityLabel(L.recipe_ernährung.localized)
+                        .accessibilityHint("Öffnet Einstellungen für Ernährungspräferenzen")
                     }
                     WrapChips(options: categoryOptions, selection: $selectedCategories)
                     
@@ -160,6 +166,8 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                         }
                         Slider(value: $spicyLevel, in: 0...3, step: 1)
                             .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
+                            .accessibilityLabel(L.label_spicyLevel.localized)
+                            .accessibilityValue([L.spicy_mild.localized, L.spicy_normal.localized, L.spicy_hot.localized, L.spicy_veryHot.localized][Int(spicyLevel)])
                         
                         ForEach(tastePreferenceKeys, id: \.self) { key in
                             Toggle(key, isOn: Binding(
@@ -184,6 +192,8 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
 .background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
                             .shadow(color: .blue.opacity(0.4), radius: 10, x: 0, y: 6)
                     }
+                    .accessibilityLabel(generating ? L.loading.localized : L.button_generate.localized)
+                    .accessibilityHint("Generiert ein Rezept basierend auf den Eingaben")
                     .disabled(generating || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .foregroundStyle(.white)

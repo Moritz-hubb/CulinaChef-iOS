@@ -68,11 +68,11 @@
 		B74612E22263F9B53F9A7E78 /* SupabaseAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9C8E97CEA997977B04DFDC /* SupabaseAuthClient.swift */; };
 		B7F7142CE863BED29C2914A7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C4F8F3DE07184AAFB7382E /* AppState.swift */; };
 		BCCE65B26AF0840BE3CACBEE /* StringValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EF4F84771B3193FD68A9F08 /* StringValidationTests.swift */; };
-		BFBFB53A2EC9323E00300125 /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5372EC9323E00300125 /* es.json */; };
-		BFBFB53B2EC9323E00300125 /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5382EC9323E00300125 /* fr.json */; };
-		BFBFB53C2EC9323E00300125 /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5362EC9323E00300125 /* en.json */; };
-		BFBFB53D2EC9323E00300125 /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5352EC9323E00300125 /* de.json */; };
-		BFBFB53E2EC9323E00300125 /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5392EC9323E00300125 /* it.json */; };
+		BF8465312ECE3CF800EB4EAE /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BF84652D2ECE3CF800EB4EAE /* en.json */; };
+		BF8465322ECE3CF800EB4EAE /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BF8465302ECE3CF800EB4EAE /* it.json */; };
+		BF8465332ECE3CF800EB4EAE /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BF84652F2ECE3CF800EB4EAE /* fr.json */; };
+		BF8465342ECE3CF800EB4EAE /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BF84652E2ECE3CF800EB4EAE /* es.json */; };
+		BF8465352ECE3CF800EB4EAE /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BF84652C2ECE3CF800EB4EAE /* de.json */; };
 		BFBFB5452EC9327A00300125 /* backend.cer in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5432EC9327A00300125 /* backend.cer */; };
 		BFBFB5462EC9327A00300125 /* supabase.cer in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5442EC9327A00300125 /* supabase.cer */; };
 		BFBFB5482EC93D4F00300125 /* StoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = BFBFB5472EC93D4F00300125 /* StoreKit.storekit */; };
@@ -181,11 +181,11 @@
 		AEFC116B45F42B7AC65DE574 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		B5AB35019F11A4B305D520B8 /* RatingsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsClient.swift; sourceTree = "<group>"; };
 		BE0F947BFCEA08029A50CFC7 /* FairUseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairUseView.swift; sourceTree = "<group>"; };
-		BFBFB5352EC9323E00300125 /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
-		BFBFB5362EC9323E00300125 /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
-		BFBFB5372EC9323E00300125 /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
-		BFBFB5382EC9323E00300125 /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
-		BFBFB5392EC9323E00300125 /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
+		BF84652C2ECE3CF800EB4EAE /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
+		BF84652D2ECE3CF800EB4EAE /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
+		BF84652E2ECE3CF800EB4EAE /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
+		BF84652F2ECE3CF800EB4EAE /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
+		BF8465302ECE3CF800EB4EAE /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
 		BFBFB5432EC9327A00300125 /* backend.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = backend.cer; sourceTree = "<group>"; };
 		BFBFB5442EC9327A00300125 /* supabase.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = supabase.cer; sourceTree = "<group>"; };
 		BFBFB5472EC93D4F00300125 /* StoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = StoreKit.storekit; sourceTree = "<group>"; };
@@ -260,14 +260,14 @@
 		40728F1A522F5676DA8C2A7A = {
 			isa = PBXGroup;
 			children = (
+				BF84652C2ECE3CF800EB4EAE /* de.json */,
+				BF84652D2ECE3CF800EB4EAE /* en.json */,
+				BF84652E2ECE3CF800EB4EAE /* es.json */,
+				BF84652F2ECE3CF800EB4EAE /* fr.json */,
+				BF8465302ECE3CF800EB4EAE /* it.json */,
 				BFBFB5472EC93D4F00300125 /* StoreKit.storekit */,
 				BFBFB5432EC9327A00300125 /* backend.cer */,
 				BFBFB5442EC9327A00300125 /* supabase.cer */,
-				BFBFB5352EC9323E00300125 /* de.json */,
-				BFBFB5362EC9323E00300125 /* en.json */,
-				BFBFB5372EC9323E00300125 /* es.json */,
-				BFBFB5382EC9323E00300125 /* fr.json */,
-				BFBFB5392EC9323E00300125 /* it.json */,
 				ED62F7E2D93415139BD2695B /* Configs */,
 				9A787DBC0B50C38AFCD7641B /* Sources */,
 				0B4517B2259DC6F3B5AA8263 /* Tests */,
@@ -506,14 +506,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				7B8C4F644351423A14A74554 /* Assets.xcassets in Resources */,
-				BFBFB53A2EC9323E00300125 /* es.json in Resources */,
-				BFBFB53B2EC9323E00300125 /* fr.json in Resources */,
 				BFBFB5452EC9327A00300125 /* backend.cer in Resources */,
 				BFBFB5462EC9327A00300125 /* supabase.cer in Resources */,
 				BFBFB5482EC93D4F00300125 /* StoreKit.storekit in Resources */,
-				BFBFB53C2EC9323E00300125 /* en.json in Resources */,
-				BFBFB53D2EC9323E00300125 /* de.json in Resources */,
-				BFBFB53E2EC9323E00300125 /* it.json in Resources */,
+				BF8465312ECE3CF800EB4EAE /* en.json in Resources */,
+				BF8465322ECE3CF800EB4EAE /* it.json in Resources */,
+				BF8465332ECE3CF800EB4EAE /* fr.json in Resources */,
+				BF8465342ECE3CF800EB4EAE /* es.json in Resources */,
+				BF8465352ECE3CF800EB4EAE /* de.json in Resources */,
 				ABF9438D01967639E9300DA0 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

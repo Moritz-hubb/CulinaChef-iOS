@@ -7,26 +7,61 @@ struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentStep = 0
+    @State private var selectedLanguage: String = ""
     @State private var allergies: [String] = []
     @State private var newAllergyText = ""
     @State private var selectedDiets: Set<String> = []
     @State private var spicyLevel: Double = 2 // 0=mild, 1=normal, 2=scharf, 3=sehr scharf
-    @State private var tastePreferences: [String: Bool] = [
-        "süß": false,
-        "sauer": false,
-        "bitter": false,
-        "umami": false
-    ]
+    @State private var tastePreferences: [String: Bool] = [:]
+    
+    private func initializeTastePreferences() {
+        let keys = [
+            L.taste_sweet.localized,
+            L.taste_sour.localized,
+            L.taste_bitter.localized,
+            L.taste_umami.localized
+        ]
+        for key in keys {
+            if tastePreferences[key] == nil {
+                tastePreferences[key] = false
+            }
+        }
+    }
     @State private var dislikes: [String] = []
     @State private var newDislikeText = ""
     @State private var isSaving = false
     
-    private let dietOptions = [
-        "vegetarisch", "vegan", "pescetarisch", "low-carb", 
-        "high-protein", "glutenfrei", "laktosefrei", "halal", "koscher"
-    ]
+    private var dietOptions: [String] {
+        [
+            L.vegetarian.localized,
+            L.vegan.localized,
+            L.pescetarian.localized,
+            L.lowCarb.localized,
+            L.highProtein.localized,
+            L.glutenFree.localized,
+            L.lactoseFree.localized,
+            L.halal.localized,
+            L.kosher.localized
+        ]
+    }
     
-    private let spicyLabels = ["Mild", "Normal", "Scharf", "Sehr Scharf"]
+    private var spicyLabels: [String] {
+        [
+            L.mild.localized,
+            L.normal.localized,
+            L.spicy.localized,
+            L.verySpicy.localized
+        ]
+    }
+    
+    private var tastePreferenceKeys: [String] {
+        [
+            L.taste_sweet.localized,
+            L.taste_sour.localized,
+            L.taste_bitter.localized,
+            L.taste_umami.localized
+        ]
+    }
     
     var body: some View {
         ZStack {
@@ -62,10 +97,11 @@ struct OnboardingView: View {
                 
                 // Content
                 TabView(selection: $currentStep) {
-                    step1Allergies.tag(0)
-                    step2DietaryTypes.tag(1)
-                    step3Preferences.tag(2)
-                    step4Dislikes.tag(3)
+                    step0LanguageSelection.tag(0)
+                    step1Allergies.tag(1)
+                    step2DietaryTypes.tag(2)
+                    step3Preferences.tag(3)
+                    step4Dislikes.tag(4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut, value: currentStep)
@@ -75,13 +111,16 @@ struct OnboardingView: View {
             }
         }
         .interactiveDismissDisabled()
+        .onAppear {
+            initializeTastePreferences()
+        }
     }
     
     // MARK: - Progress Bar
     private var progressBar: some View {
         VStack(spacing: 12) {
             HStack(spacing: 8) {
-                ForEach(0..<4) { index in
+                ForEach(0..<5) { index in
                     Capsule()
                         .fill(index <= currentStep ? 
                               LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
@@ -93,10 +132,115 @@ struct OnboardingView: View {
             .padding(.horizontal, 20)
             .padding(.top, 50)
             
-            Text("Schritt \(currentStep + 1) von 4")
+            Text(L.onboarding_stepOfTotal.localized.replacingOccurrences(of: "{step}", with: "\(currentStep + 1)").replacingOccurrences(of: "{total}", with: "5"))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.black.opacity(0.6))
+                .id(localizationManager.currentLanguage) // Force update when language changes
         }
+    }
+    
+    // MARK: - Step 0: Language Selection
+    private var step0LanguageSelection: some View {
+        let systemLang = getSystemLanguage()
+        
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(getSystemLocalizedTitle(systemLang: systemLang))
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.black)
+                    Text(getSystemLocalizedSubtitle(systemLang: systemLang))
+                        .font(.system(size: 15))
+                        .foregroundColor(.black.opacity(0.6))
+                }
+                .padding(.top, 20)
+                
+                VStack(spacing: 12) {
+                    ForEach(Array(LocalizationManager.shared.availableLanguages.keys.sorted()), id: \.self) { langCode in
+                        LanguageOption(
+                            languageCode: langCode,
+                            languageName: LocalizationManager.shared.availableLanguages[langCode] ?? langCode,
+                            isSelected: selectedLanguage == langCode,
+                            systemLanguage: systemLang
+                        ) {
+                            withAnimation(.spring(response: 0.3)) {
+                                selectedLanguage = langCode
+                                // Set language immediately when selected
+                                localizationManager.setLanguage(langCode)
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 20)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 100)
+        }
+        .onAppear {
+            // Initialize with system language if not set
+            if selectedLanguage.isEmpty {
+                selectedLanguage = getSystemLanguage()
+                // Pre-select system language but don't set it yet - user should confirm
+            }
+        }
+    }
+    
+    // Helper functions to get system language
+    private func getSystemLanguage() -> String {
+        // Get device language using the same method as LocalizationManager
+        var deviceLang: String = "en"
+        
+        // Method 1: Try Locale.current.language.languageCode
+        if let langCode = Locale.current.language.languageCode?.identifier {
+            deviceLang = langCode
+        }
+        
+        // Method 2: If that didn't work or gave a region code, try preferredLanguages
+        if deviceLang == "en" || deviceLang.count > 2 {
+            if let preferredLang = Locale.preferredLanguages.first {
+                // Extract language code from "fr-FR" format
+                let components = preferredLang.components(separatedBy: "-")
+                if let langCode = components.first, langCode.count == 2 {
+                    deviceLang = langCode.lowercased()
+                }
+            }
+        }
+        
+        // Method 3: Try Locale.current.identifier
+        if deviceLang == "en" || deviceLang.count > 2 {
+            let identifier = Locale.current.identifier
+            let components = identifier.components(separatedBy: "_")
+            if let langCode = components.first, langCode.count == 2 {
+                deviceLang = langCode.lowercased()
+            }
+        }
+        
+        return LocalizationManager.shared.availableLanguages.keys.contains(deviceLang) ? deviceLang : "en"
+    }
+    
+    // Helper functions to get system language strings
+    private func getSystemLocalizedTitle(systemLang: String) -> String {
+        // Get translation in system language
+        let translations: [String: String] = [
+            "de": "Sprache auswählen",
+            "en": "Select Language",
+            "fr": "Choisir la langue",
+            "es": "Seleccionar idioma",
+            "it": "Seleziona lingua"
+        ]
+        return translations[systemLang] ?? translations["de"] ?? "Sprache auswählen"
+    }
+    
+    private func getSystemLocalizedSubtitle(systemLang: String) -> String {
+        // Get translation in system language
+        let translations: [String: String] = [
+            "de": "Wähle die Sprache für die App aus",
+            "en": "Choose the language for the app",
+            "fr": "Choisissez la langue de l'application",
+            "es": "Elige el idioma de la aplicación",
+            "it": "Scegli la lingua dell'app"
+        ]
+        return translations[systemLang] ?? translations["de"] ?? "Wähle die Sprache für die App aus"
     }
     
     // MARK: - Step 1: Allergies
@@ -115,7 +259,7 @@ struct OnboardingView: View {
                 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
-                        TextField("z.B. Nüsse, Erdbeeren...", text: $newAllergyText)
+                        TextField(L.placeholder_newAllergy.localized, text: $newAllergyText)
                             .textFieldStyle(.plain)
                             .padding(12)
                             .background(.white)
@@ -195,9 +339,11 @@ struct OnboardingView: View {
                     Text(L.onboarding_geschmackspräferenzen.localized)
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.black)
-                    Text("Wie scharf magst du es?")
+                        .id(localizationManager.currentLanguage)
+                    Text(L.onboarding_howSpicyDoYouLikeIt.localized)
                         .font(.system(size: 15))
                         .foregroundColor(.black.opacity(0.6))
+                        .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
                 
@@ -235,9 +381,10 @@ struct OnboardingView: View {
                     
                     Divider().padding(.vertical, 8)
                     
-                    Text("Weitere Vorlieben (optional)")
+                    Text(L.onboarding_additionalPreferencesOptional.localized)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.black)
+                        .id(localizationManager.currentLanguage)
                     
                     VStack(spacing: 10) {
                         ForEach(Array(tastePreferences.keys.sorted()), id: \.self) { key in
@@ -271,7 +418,7 @@ struct OnboardingView: View {
                 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
-                        TextField("z.B. Koriander, Oliven...", text: $newDislikeText)
+                        TextField(L.placeholder_newDislike.localized, text: $newDislikeText)
                             .textFieldStyle(.plain)
                             .padding(12)
                             .background(.white)
@@ -317,13 +464,18 @@ struct OnboardingView: View {
     // MARK: - Navigation Buttons
     private var navigationButtons: some View {
         VStack(spacing: 12) {
-            if currentStep < 3 {
+            if currentStep < 4 {
                 Button {
+                    // For language selection step, ensure language is selected
+                    if currentStep == 0 && selectedLanguage.isEmpty {
+                        // Can't proceed without selecting a language
+                        return
+                    }
                     withAnimation(.spring(response: 0.3)) {
                         currentStep += 1
                     }
                 } label: {
-                    Text("Weiter")
+                    Text(L.next.localized)
                         .font(.system(size: 17, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
@@ -334,6 +486,7 @@ struct OnboardingView: View {
                         .cornerRadius(14)
                         .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
                 }
+                .disabled(currentStep == 0 && selectedLanguage.isEmpty)
             } else {
                 Button {
                     Task { await completeOnboarding() }
@@ -343,7 +496,7 @@ struct OnboardingView: View {
                             ProgressView()
                                 .tint(.white)
                         } else {
-                            Text("Fertig!")
+                            Text(L.done.localized)
                                 .font(.system(size: 17, weight: .semibold))
                         }
                     }
@@ -616,6 +769,68 @@ private struct WrapDietChips: View {
             DispatchQueue.main.async { binding.wrappedValue = geometry.size.height }
             return .clear
         }
+    }
+}
+
+// MARK: - LanguageOption View
+private struct LanguageOption: View {
+    let languageCode: String
+    let languageName: String
+    let isSelected: Bool
+    let systemLanguage: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                // Flag emoji based on language code
+                Text(getFlagEmoji(for: languageCode))
+                    .font(.system(size: 32))
+                
+                Text(languageName)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.black)
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(
+                            LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                } else {
+                    Image(systemName: "circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(.black.opacity(0.3))
+                }
+            }
+            .padding(16)
+            .background(isSelected ? 
+                       LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.1), Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing) :
+                       LinearGradient(colors: [Color.white], startPoint: .topLeading, endPoint: .bottomTrailing))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? 
+                           LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing) :
+                           LinearGradient(colors: [Color.black.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                           lineWidth: isSelected ? 2 : 1)
+            )
+            .shadow(color: isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .black.opacity(0.05), radius: isSelected ? 8 : 4, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private func getFlagEmoji(for code: String) -> String {
+        let flags: [String: String] = [
+            "de": "🇩🇪",
+            "en": "🇬🇧",
+            "fr": "🇫🇷",
+            "es": "🇪🇸",
+            "it": "🇮🇹"
+        ]
+        return flags[code] ?? "🌐"
     }
 }
 

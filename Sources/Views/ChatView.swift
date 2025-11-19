@@ -184,105 +184,8 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
     private var inputBar: some View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
-                // Image preview (if attached)
-                if let imgData = pickedImageData, let uiImg = UIImage(data: imgData) {
-                    HStack {
-                        Image(uiImage: uiImg)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 60, height: 60)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
-                        
-                        Text(L.chat_bild_angehängt.localized)
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.8))
-                        
-                        Spacer()
-                        
-                        Button {
-                            pickedImageData = nil
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.white.opacity(0.6))
-                                .font(.system(size: 20))
-                        }
-                    }
-                    .padding(8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                            .opacity(0.8)
-                    )
-                    .padding(.horizontal, 16)
-                }
-                
-                HStack(spacing: 12) {
-                    // Image button (camera/gallery)
-                    Button { showImageSourcePicker = true } label: {
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 42, height: 42)
-                            .background(.ultraThinMaterial, in: Circle())
-                            .overlay(Circle().stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
-                            .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 6)
-                    }
-                    .scaleEffect(showImageSourcePicker ? 0.98 : 1)
-                    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: showImageSourcePicker)
-
-                    // Input field
-                    ZStack(alignment: .leading) {
-                        if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Text(pickedImageData == nil ? L.placeholder_askMe.localized : L.chat_frage_mich_alles_übers.localized)
-                                .foregroundStyle(.white.opacity(0.5))
-                                .font(.system(size: 14))
-                        }
-                        TextField("", text: $inputText, axis: .vertical)
-                            .textFieldStyle(.plain)
-                            .foregroundStyle(.white)
-                            .tint(.white)
-                            .focused($isInputFocused)
-                            .onChange(of: inputText) { _, newValue in
-                                if newValue.count > 5000 {
-                                    inputText = String(newValue.prefix(5000))
-                                }
-                            }
-                    }
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 12)
-                    .background(.clear)
-                    .frame(minHeight: 42)
-
-                    // Send button
-                    Button(action: { Task { if pickedImageData != nil { await sendImage() } else { await sendText() } } }) {
-                        Group {
-                            if sending { ProgressView().tint(.white) } else { Image(systemName: "paperplane.fill").foregroundStyle(.white) }
-                        }
-                        .frame(width: 42, height: 42)
-.background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                        .shadow(color: Color.orange.opacity(0.35), radius: 12, x: 0, y: 6)
-                    }
-                    .disabled(sending || inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .opacity(0.88)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                                .opacity(0.6)
-                        )
-                        .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 10)
-                        .shadow(color: .purple.opacity(0.25), radius: 30, x: 0, y: 12)
-                )
-                .padding(.horizontal, 16)
+                imagePreviewView
+                inputContainerView
             }
             
             // Safe area spacer for home indicator
@@ -290,6 +193,136 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 .frame(height: 0)
                 .background(.ultraThinMaterial)
         }
+    }
+    
+    @ViewBuilder
+    private var imagePreviewView: some View {
+        if let imgData = pickedImageData, let uiImg = UIImage(data: imgData) {
+            HStack {
+                Image(uiImage: uiImg)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                
+                Text(L.chat_bild_angehängt.localized)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                
+                Spacer()
+                
+                Button {
+                    pickedImageData = nil
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.white.opacity(0.6))
+                        .font(.system(size: 20))
+                }
+            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.8)
+            )
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    private var inputContainerView: some View {
+        HStack(spacing: 12) {
+            imageButtonView
+            inputFieldView
+            sendButtonView
+        }
+        .padding(10)
+        .background(inputContainerBackground)
+        .padding(.horizontal, 16)
+    }
+    
+    private var imageButtonView: some View {
+        Button { showImageSourcePicker = true } label: {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 42, height: 42)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(Circle().stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+                .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 6)
+        }
+        .accessibilityLabel(L.common_chooseImage.localized)
+        .accessibilityHint(L.chat_bild_angehängt.localized)
+        .scaleEffect(showImageSourcePicker ? 0.98 : 1)
+        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: showImageSourcePicker)
+    }
+    
+    private var inputFieldView: some View {
+        ZStack(alignment: .leading) {
+            if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(pickedImageData == nil ? L.placeholder_askMe.localized : L.chat_frage_mich_alles_übers.localized)
+                    .foregroundStyle(.white.opacity(0.5))
+                    .font(.system(size: 14))
+            }
+            TextField("", text: $inputText, axis: .vertical)
+                .textFieldStyle(.plain)
+                .foregroundStyle(.white)
+                .tint(.white)
+                .focused($isInputFocused)
+                .accessibilityLabel(L.placeholder_askMe.localized)
+                .accessibilityHint(L.chat_frage_mich_alles_übers.localized)
+                .onChange(of: inputText) { _, newValue in
+                    if newValue.count > 5000 {
+                        inputText = String(newValue.prefix(5000))
+                    }
+                }
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(.clear)
+        .frame(minHeight: 42)
+    }
+    
+    private var sendButtonView: some View {
+        Button(action: { Task { if pickedImageData != nil { await sendImage() } else { await sendText() } } }) {
+            Group {
+                if sending { 
+                    ProgressView().tint(.white) 
+                } else { 
+                    Image(systemName: "paperplane.fill").foregroundStyle(.white) 
+                }
+            }
+            .frame(width: 42, height: 42)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], 
+                    startPoint: .topLeading, 
+                    endPoint: .bottomTrailing
+                ), 
+                in: Circle()
+            )
+            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+            .shadow(color: Color.orange.opacity(0.35), radius: 12, x: 0, y: 6)
+        }
+        .accessibilityLabel(sending ? L.loading.localized : L.sendMessage.localized)
+        .accessibilityHint(L.sendMessage.localized)
+        .disabled(sending || inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+    
+    private var inputContainerBackground: some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .opacity(0.88)
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                    .opacity(0.6)
+            )
+            .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 10)
+            .shadow(color: .purple.opacity(0.25), radius: 30, x: 0, y: 12)
     }
 
     private func sendText() async {

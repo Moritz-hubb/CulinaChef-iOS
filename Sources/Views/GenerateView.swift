@@ -21,6 +21,8 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
                             .foregroundStyle(.white)
+                            .accessibilityLabel("Zutat eingeben")
+                            .accessibilityHint("Geben Sie eine Zutat ein, z.B. Tomaten")
                         Button("Hinzufügen") {
                             let trimmed = newIngredientText.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !trimmed.isEmpty {
@@ -28,6 +30,8 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                                 newIngredientText = ""
                             }
                         }
+                        .accessibilityLabel("Zutat hinzufügen")
+                        .accessibilityHint("Fügt die eingegebene Zutat zur Liste hinzu")
                     }
                     if !ingredients.isEmpty {
                         ForEach(ingredients.indices, id: \.self) { index in
@@ -38,6 +42,8 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                                     Image(systemName: "trash")
                                         .foregroundColor(.red)
                                 }
+                                .accessibilityLabel("Zutat entfernen")
+                                .accessibilityHint("Entfernt \(ingredients[index]) aus der Liste")
                             }
                         }
                     }
@@ -45,6 +51,8 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                 Button(action: { Task { await generate() } }) {
                     if generating { ProgressView() } else { Text(L.generate_cookFromThis.localized) }
                 }
+                .accessibilityLabel(generating ? L.loading.localized : L.generate_cookFromThis.localized)
+                .accessibilityHint("Generiert ein Rezept aus den eingegebenen Zutaten")
                 .disabled(generating || ingredients.isEmpty)
 
                 if let r = generated {

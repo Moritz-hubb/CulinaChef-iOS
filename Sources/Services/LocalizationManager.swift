@@ -11,7 +11,14 @@ class LocalizationManager: ObservableObject {
     
     @Published var currentLanguage: String {
         didSet {
-            UserDefaults.standard.set(currentLanguage, forKey: "app_language")
+            // Don't save during initialization - we'll handle that separately
+            if !_isInitializing {
+                UserDefaults.standard.set(currentLanguage, forKey: "app_language")
+                // Mark that user has explicitly set a language preference (unless we're resetting)
+                if !_isResettingToDevice {
+                    UserDefaults.standard.set(true, forKey: "app_language_explicitly_set")
+                }
+            }
             loadTranslations()
             // Trigger UI update via NotificationCenter
             NotificationCenter.default.post(name: .languageChanged, object: nil)
@@ -22,13 +29,16 @@ class LocalizationManager: ObservableObject {
         }
     }
     
+    private var _isResettingToDevice = false
+    private var _isInitializing = false
+    
     private var translations: [String: String] = [:] {
         didSet {
             // Trigger UI update when translations change
             objectWillChange.send()
         }
     }
-    private let fallbackLanguage = "de"
+    private let fallbackLanguage = "en"
     
     let availableLanguages: [String: String] = [
         "de": "Deutsch",
@@ -39,17 +49,124 @@ class LocalizationManager: ObservableObject {
     ]
     
     private init() {
-        // Get saved language or use device language, fallback to German
-        let savedLang = UserDefaults.standard.string(forKey: "app_language")
-        let deviceLang = Locale.current.language.languageCode?.identifier ?? "de"
+        // Mark that we're initializing to prevent saving during init
+        _isInitializing = true
         
-        // Use saved language if exists, otherwise device language
-        let initialLang = savedLang ?? deviceLang
+        // Get device language - try multiple methods to ensure we get the correct language code
+        var deviceLang: String = "en"
         
-        // Validate language exists, fallback to German
-        self.currentLanguage = availableLanguages.keys.contains(initialLang) ? initialLang : fallbackLanguage
+        // Method 1: Try Locale.current.language.languageCode
+        if let langCode = Locale.current.language.languageCode?.identifier {
+            deviceLang = langCode
+        }
+        
+        // Method 2: If that didn't work or gave a region code, try preferredLanguages
+        if deviceLang == "en" || deviceLang.count > 2 {
+            if let preferredLang = Locale.preferredLanguages.first {
+                // Extract language code from "fr-FR" format
+                let components = preferredLang.components(separatedBy: "-")
+                if let langCode = components.first, langCode.count == 2 {
+                    deviceLang = langCode.lowercased()
+                }
+            }
+        }
+        
+        // Method 3: Try Locale.current.identifier
+        if deviceLang == "en" || deviceLang.count > 2 {
+            let identifier = Locale.current.identifier
+            let components = identifier.components(separatedBy: "_")
+            if let langCode = components.first, langCode.count == 2 {
+                deviceLang = langCode.lowercased()
+            }
+        }
+        
+        #if DEBUG
+        print("[LocalizationManager] Detected device language: \(deviceLang)")
+        print("[LocalizationManager] Locale.current.language.languageCode: \(Locale.current.language.languageCode?.identifier ?? "nil")")
+        print("[LocalizationManager] Locale.preferredLanguages: \(Locale.preferredLanguages)")
+        print("[LocalizationManager] Locale.current.identifier: \(Locale.current.identifier)")
+        #endif
+        
+        // Check if user is authenticated
+        let isAuthenticated = KeychainManager.get(key: "access_token") != nil
+        
+        // If not authenticated, always use device language
+        let initialLang: String
+        if !isAuthenticated {
+            // Not authenticated - always use device language
+            initialLang = deviceLang
+            // Don't save device language - it will be detected on each launch
+            // Clear any old saved language to ensure device language is always used
+            UserDefaults.standard.removeObject(forKey: "app_language")
+            UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
+        } else {
+            // User is authenticated - check if they have explicitly set a language preference
+            let hasExplicitLanguage = UserDefaults.standard.bool(forKey: "app_language_explicitly_set")
+            let savedLang = UserDefaults.standard.string(forKey: "app_language")
+            
+            if hasExplicitLanguage, let saved = savedLang, availableLanguages.keys.contains(saved) {
+                // User has explicitly set a language, use it
+                initialLang = saved
+                // Save it properly
+                UserDefaults.standard.set(initialLang, forKey: "app_language")
+            } else {
+                // No explicit preference - use device language
+                initialLang = deviceLang
+                // Don't save device language - it will be detected on each launch
+                // Clear any old saved language to ensure device language is always used
+                UserDefaults.standard.removeObject(forKey: "app_language")
+                UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
+            }
+        }
+        
+        // Validate language exists, fallback to English if device language is not supported
+        let validatedLang = availableLanguages.keys.contains(initialLang) ? initialLang : fallbackLanguage
+        
+        #if DEBUG
+        print("[LocalizationManager] Initial language: \(initialLang), validated: \(validatedLang)")
+        print("[LocalizationManager] Is authenticated: \(isAuthenticated)")
+        #endif
+        
+        // Set currentLanguage (won't save because _isInitializing is true)
+        self.currentLanguage = validatedLang
+        
+        // Done initializing
+        _isInitializing = false
         
         loadTranslations()
+    }
+    
+    /// Check if user is authenticated and update language accordingly
+    func updateLanguageForAuthState(isAuthenticated: Bool) {
+        // Only update if state actually changed
+        if !isAuthenticated {
+            // User logged out - reset to device language
+            resetToDeviceLanguage()
+        }
+        // If authenticated, keep current language (it's already set correctly)
+    }
+    
+    /// Set language explicitly (e.g., from onboarding)
+    func setLanguage(_ language: String) {
+        guard availableLanguages.keys.contains(language) else { return }
+        
+        // Don't do anything if language is already set
+        if currentLanguage == language {
+            return
+        }
+        
+        _isInitializing = true
+        self.currentLanguage = language
+        UserDefaults.standard.set(language, forKey: "app_language")
+        UserDefaults.standard.set(true, forKey: "app_language_explicitly_set")
+        _isInitializing = false
+        
+        // loadTranslations() is already called by currentLanguage.didSet, so we don't need to call it again
+        // Just ensure notification is sent
+        NotificationCenter.default.post(name: .languageChanged, object: nil)
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
     }
     
     private func loadTranslations() {
@@ -169,6 +286,57 @@ class LocalizationManager: ObservableObject {
         
         // Return key itself as fallback
         return key
+    }
+    
+    /// Reset to device language and clear explicit preference
+    func resetToDeviceLanguage() {
+        // Get device language using the same method as init
+        var deviceLang: String = "en"
+        
+        // Method 1: Try Locale.current.language.languageCode
+        if let langCode = Locale.current.language.languageCode?.identifier {
+            deviceLang = langCode
+        }
+        
+        // Method 2: If that didn't work or gave a region code, try preferredLanguages
+        if deviceLang == "en" || deviceLang.count > 2 {
+            if let preferredLang = Locale.preferredLanguages.first {
+                // Extract language code from "fr-FR" format
+                let components = preferredLang.components(separatedBy: "-")
+                if let langCode = components.first, langCode.count == 2 {
+                    deviceLang = langCode.lowercased()
+                }
+            }
+        }
+        
+        // Method 3: Try Locale.current.identifier
+        if deviceLang == "en" || deviceLang.count > 2 {
+            let identifier = Locale.current.identifier
+            let components = identifier.components(separatedBy: "_")
+            if let langCode = components.first, langCode.count == 2 {
+                deviceLang = langCode.lowercased()
+            }
+        }
+        
+        let validLang = availableLanguages.keys.contains(deviceLang) ? deviceLang : fallbackLanguage
+        
+        // Don't do anything if already set to device language
+        if currentLanguage == validLang {
+            return
+        }
+        
+        // Set flag to prevent marking as explicit
+        _isResettingToDevice = true
+        
+        // Clear explicit preference flag and saved language
+        UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
+        UserDefaults.standard.removeObject(forKey: "app_language")
+        
+        // Set to device language
+        self.currentLanguage = validLang
+        
+        // Reset flag
+        _isResettingToDevice = false
     }
 }
 
@@ -583,6 +751,9 @@ enum L {
     static let onboarding_zutaten_die_du_nicht = "onboarding.zutaten_die_du_nicht"
     static let onboarding_keine_abneigungen_super_flexibel = "onboarding.keine_abneigungen_super_flexibel"
     static let onboarding_zurück = "onboarding.zurück"
+    static let onboarding_stepOfTotal = "onboarding.stepOfTotal"
+    static let onboarding_howSpicyDoYouLikeIt = "onboarding.howSpicyDoYouLikeIt"
+    static let onboarding_additionalPreferencesOptional = "onboarding.additionalPreferencesOptional"
     static let ui_datenschutzerklärung = "ui.datenschutzerklärung"
     static let ui_der_schutz_ihrer_personenbezogenen = "ui.der_schutz_ihrer_personenbezogenen"
     static let ui_grundsätze_der_datenverarbeitung = "ui.grundsätze_der_datenverarbeitung"

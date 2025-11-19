@@ -45,6 +45,9 @@ struct RootView: View {
             Text(app.error ?? "")
         }
         .onChange(of: app.isAuthenticated) { _, newValue in
+            // Update language based on auth state
+            localizationManager.updateLanguageForAuthState(isAuthenticated: newValue)
+            
             if newValue {
                 checkOnboardingStatus()
                 checkSubscriptionStatus()
@@ -59,8 +62,11 @@ struct RootView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
-            // Force view refresh by updating UUID
-            languageRefreshTrigger = UUID()
+            // Force view refresh by updating UUID, but only if onboarding is not showing
+            // This prevents the onboarding from being dismissed when language changes
+            if !showOnboarding {
+                languageRefreshTrigger = UUID()
+            }
         }
         .id(languageRefreshTrigger)
     }
@@ -266,6 +272,9 @@ struct TabBarButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
         }
+        .accessibilityLabel(title)
+        .accessibilityHint(isSelected ? "Aktuell ausgewählt" : "Wechselt zu \(title)")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .buttonStyle(PlainButtonStyle())
     }
 }

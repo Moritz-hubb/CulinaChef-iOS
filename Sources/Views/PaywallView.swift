@@ -131,6 +131,8 @@ struct PaywallView: View {
                                 )
                                 .shadow(color: .blue.opacity(0.4), radius: 20, x: 0, y: 10)
                             }
+                            .accessibilityLabel(isPurchasing ? L.loading.localized : L.paywallSubscribeButton.localized)
+                            .accessibilityHint("Abonniert Unlimited und erhält Zugang zu allen KI-Funktionen")
                             .disabled(isPurchasing)
                             
                             Button(action: restorePurchases) {
@@ -146,6 +148,8 @@ struct PaywallView: View {
                                 }
                                 .foregroundStyle(.white.opacity(0.7))
                             }
+                            .accessibilityLabel(isRestoring ? L.loading.localized : L.paywallRestorePurchase.localized)
+                            .accessibilityHint("Stellt vorherige Käufe wieder her")
                             .disabled(isRestoring)
                         }
                         .padding(.horizontal, 24)
@@ -173,6 +177,8 @@ struct PaywallView: View {
                                             .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
                                     )
                             }
+                            .accessibilityLabel(L.paywallContinueFree.localized)
+                            .accessibilityHint("Schließt den Paywall und nutzt die App kostenlos")
                             .padding(.horizontal, 48)
                         }
                         .padding(.top, 16)
@@ -188,6 +194,8 @@ struct PaywallView: View {
                             .font(.title2)
                             .foregroundStyle(.white.opacity(0.7))
                     }
+                    .accessibilityLabel(L.cancel.localized)
+                    .accessibilityHint("Schließt den Paywall")
                 }
             }
 .alert(L.alert_error.localized, isPresented: $showError) {

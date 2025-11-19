@@ -71,6 +71,8 @@ struct SignInView: View {
                                     .font(.system(size: 28))
                                     .foregroundColor(.gray.opacity(0.6))
                             }
+                            .accessibilityLabel(L.cancel.localized)
+                            .accessibilityHint("Schließt den Anmeldebildschirm")
                         }
                         .padding(.top, 16)
                         .padding(.trailing, 16)
@@ -92,6 +94,8 @@ struct SignInView: View {
                                 .focused($focusedField, equals: .email)
                                 .submitLabel(.next)
                                 .onSubmit { focusedField = .password }
+                                .accessibilityLabel(L.email.localized)
+                                .accessibilityHint(L.emailPlaceholder.localized)
                                 .padding(12)
                                 .background(Color(UIColor.systemGray6))
                                 .cornerRadius(10)
@@ -115,12 +119,14 @@ struct SignInView: View {
                                         .focused($focusedField, equals: .password)
                                         .submitLabel(.go)
                                         .onSubmit { Task { await signIn() } }
+                                        .accessibilityLabel(L.password.localized)
                                 } else {
                                     SecureField("", text: $password, prompt: Text(L.passwordPlaceholderDots.localized).foregroundColor(.gray.opacity(0.5)))
                                         .textContentType(.password)
                                         .focused($focusedField, equals: .password)
                                         .submitLabel(.go)
                                         .onSubmit { Task { await signIn() } }
+                                        .accessibilityLabel(L.password.localized)
                                 }
                                 
                                 Button { showPassword.toggle() } label: {
@@ -128,6 +134,7 @@ struct SignInView: View {
                                         .foregroundColor(.gray)
                                         .font(.system(size: 16))
                                 }
+                                .accessibilityLabel(showPassword ? "Passwort verbergen" : "Passwort anzeigen")
                             }
                             .padding(12)
                             .background(Color(UIColor.systemGray6))
@@ -180,6 +187,8 @@ struct SignInView: View {
                             .cornerRadius(10)
                             .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3), radius: 6, x: 0, y: 3)
                         }
+                        .accessibilityLabel(app.loading ? L.loading.localized : L.loginButton.localized)
+                        .accessibilityHint("Meldet sich mit E-Mail und Passwort an")
                         .disabled(app.loading || email.isEmpty || password.isEmpty)
                         .opacity((app.loading || email.isEmpty || password.isEmpty) ? 0.6 : 1)
                         

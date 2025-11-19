@@ -52,13 +52,58 @@ class LocalizationManager: ObservableObject {
         // Mark that we're initializing to prevent saving during init
         _isInitializing = true
         
-        // Get device language - use the same detection method
+        // Get device language - detect using the same logic as detectDeviceLanguage()
         // This will return a supported language or "en" as fallback
-        let deviceLang = detectDeviceLanguage()
+        var deviceLang: String? = nil
+        
+        // Method 1: Try Locale.preferredLanguages first (most reliable)
+        // Check ALL preferred languages, not just the first one
+        for preferredLang in Locale.preferredLanguages {
+            // Extract language code from formats like "en-US", "en_US", "en"
+            let components = preferredLang.components(separatedBy: CharacterSet(charactersIn: "-_"))
+            if let langCode = components.first, langCode.count == 2 {
+                let lowercased = langCode.lowercased()
+                // If this language is in our available languages, use it
+                if availableLanguages.keys.contains(lowercased) {
+                    deviceLang = lowercased
+                    break // Found a supported language, stop searching
+                }
+            }
+        }
+        
+        // Method 2: Fallback to Locale.current.language.languageCode
+        // Only use this if we didn't find a supported language in preferredLanguages
+        if deviceLang == nil {
+            if let langCode = Locale.current.language.languageCode?.identifier {
+                let lowercased = langCode.lowercased()
+                if lowercased.count == 2 && availableLanguages.keys.contains(lowercased) {
+                    deviceLang = lowercased
+                }
+            }
+        }
+        
+        // Method 3: Fallback to Locale.current.identifier
+        // Only use this if we still haven't found a supported language
+        if deviceLang == nil {
+            let identifier = Locale.current.identifier
+            let components = identifier.components(separatedBy: CharacterSet(charactersIn: "-_"))
+            if let langCode = components.first, langCode.count == 2 {
+                let lowercased = langCode.lowercased()
+                if availableLanguages.keys.contains(lowercased) {
+                    deviceLang = lowercased
+                }
+            }
+        }
+        
+        // If no supported language was found, default to English
+        let finalDeviceLang = deviceLang ?? fallbackLanguage
+        if deviceLang == nil {
+            print("[LocalizationManager] ⚠️ No supported language found in system preferences, defaulting to English")
+        }
         
         // Always print (not just in DEBUG) to ensure we see what's happening
         print("[LocalizationManager] ========== INIT START ==========")
-        print("[LocalizationManager] Detected device language: \(deviceLang)")
+        print("[LocalizationManager] Detected device language: \(finalDeviceLang)")
         print("[LocalizationManager] Locale.current.language.languageCode: \(Locale.current.language.languageCode?.identifier ?? "nil")")
         print("[LocalizationManager] Locale.preferredLanguages: \(Locale.preferredLanguages)")
         print("[LocalizationManager] Locale.current.identifier: \(Locale.current.identifier)")
@@ -85,11 +130,11 @@ class LocalizationManager: ObservableObject {
         let initialLang: String
         if !isAuthenticated {
             // Not authenticated - always use device language, ignore any saved preferences
-            initialLang = deviceLang
+            initialLang = finalDeviceLang
             // Clear any old saved language to ensure device language is always used
             UserDefaults.standard.removeObject(forKey: "app_language")
             UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
-            print("[LocalizationManager] Not authenticated - using device language: \(deviceLang)")
+            print("[LocalizationManager] Not authenticated - using device language: \(finalDeviceLang)")
         } else {
             // User is authenticated - check if they have explicitly set a language preference
             if hasExplicitLanguage, let saved = savedLang, availableLanguages.keys.contains(saved) {
@@ -100,11 +145,11 @@ class LocalizationManager: ObservableObject {
                 print("[LocalizationManager] Authenticated with explicit language preference: \(saved)")
             } else {
                 // No explicit preference - use device language
-                initialLang = deviceLang
+                initialLang = finalDeviceLang
                 // Clear any old saved language to ensure device language is always used
                 UserDefaults.standard.removeObject(forKey: "app_language")
                 UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
-                print("[LocalizationManager] Authenticated but no explicit preference - using device language: \(deviceLang)")
+                print("[LocalizationManager] Authenticated but no explicit preference - using device language: \(finalDeviceLang)")
             }
         }
         
@@ -135,48 +180,39 @@ class LocalizationManager: ObservableObject {
     
     /// Check if user is authenticated and update language accordingly
     func updateLanguageForAuthState(isAuthenticated: Bool) {
-        #if DEBUG
         print("[LocalizationManager] updateLanguageForAuthState called: isAuthenticated=\(isAuthenticated), currentLanguage=\(currentLanguage)")
-        #endif
         
         // Only update if state actually changed
         if !isAuthenticated {
             // User logged out - reset to device language
-            #if DEBUG
             print("[LocalizationManager] User logged out - resetting to device language")
-            #endif
             resetToDeviceLanguage()
         } else {
-            // User is authenticated - check if we need to use device language (if no explicit preference)
+            // User is authenticated - check if they have explicitly set a language preference
             let hasExplicitLanguage = UserDefaults.standard.bool(forKey: "app_language_explicitly_set")
             let savedLang = UserDefaults.standard.string(forKey: "app_language")
             
-            #if DEBUG
             print("[LocalizationManager] User authenticated - hasExplicitLanguage=\(hasExplicitLanguage), savedLang=\(savedLang ?? "nil")")
-            #endif
             
-            if !hasExplicitLanguage {
-                // No explicit preference - detect device language but only change if different
-                let deviceLang = detectDeviceLanguage()
-                let validLang = availableLanguages.keys.contains(deviceLang) ? deviceLang : fallbackLanguage
-                
-                #if DEBUG
-                print("[LocalizationManager] No explicit language preference - device=\(deviceLang), valid=\(validLang), current=\(currentLanguage)")
-                #endif
-                
-                // Only reset if device language is different from current
-                if currentLanguage != validLang {
-                    #if DEBUG
-                    print("[LocalizationManager] Device language (\(validLang)) differs from current (\(currentLanguage)) - resetting")
-                    #endif
-                    resetToDeviceLanguage()
+            if hasExplicitLanguage, let saved = savedLang, availableLanguages.keys.contains(saved) {
+                // User has explicitly set a language preference - use it
+                if currentLanguage != saved {
+                    print("[LocalizationManager] Switching to saved explicit language: \(saved)")
+                    _isInitializing = true
+                    self.currentLanguage = saved
+                    _isInitializing = false
                 } else {
-                    #if DEBUG
-                    print("[LocalizationManager] Device language matches current language - no change needed")
-                    #endif
+                    print("[LocalizationManager] Already using explicit language: \(saved)")
                 }
+            } else {
+                // No explicit preference - keep current language (which should be system language)
+                // Don't change the language when user authenticates - keep the system language
+                // that was set before authentication
+                print("[LocalizationManager] No explicit language preference - keeping current language: \(currentLanguage)")
+                // Clear any old saved language to ensure we don't use stale preferences
+                UserDefaults.standard.removeObject(forKey: "app_language")
+                UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
             }
-            // If explicit preference exists, keep current language
         }
     }
     

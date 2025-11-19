@@ -58,30 +58,41 @@ class LocalizationManager: ObservableObject {
         
         // Method 1: Try Locale.preferredLanguages first (most reliable)
         // This is the user's actual system language preference
-        if let preferredLang = Locale.preferredLanguages.first {
+        // Check ALL preferred languages, not just the first one
+        for preferredLang in Locale.preferredLanguages {
             // Extract language code from formats like "en-US", "en_US", "en"
             let components = preferredLang.components(separatedBy: CharacterSet(charactersIn: "-_"))
             if let langCode = components.first, langCode.count == 2 {
-                deviceLang = langCode.lowercased()
+                let lowercased = langCode.lowercased()
+                // If this language is in our available languages, use it
+                if availableLanguages.keys.contains(lowercased) {
+                    deviceLang = lowercased
+                    break // Found a supported language, stop searching
+                }
             }
         }
         
         // Method 2: Fallback to Locale.current.language.languageCode
+        // Only use this if we didn't find a supported language in preferredLanguages
         if deviceLang == "en" || !availableLanguages.keys.contains(deviceLang) {
             if let langCode = Locale.current.language.languageCode?.identifier {
                 let lowercased = langCode.lowercased()
-                if lowercased.count == 2 {
+                if lowercased.count == 2 && availableLanguages.keys.contains(lowercased) {
                     deviceLang = lowercased
                 }
             }
         }
         
         // Method 3: Fallback to Locale.current.identifier
+        // Only use this if we still haven't found a supported language
         if deviceLang == "en" || !availableLanguages.keys.contains(deviceLang) {
             let identifier = Locale.current.identifier
             let components = identifier.components(separatedBy: CharacterSet(charactersIn: "-_"))
             if let langCode = components.first, langCode.count == 2 {
-                deviceLang = langCode.lowercased()
+                let lowercased = langCode.lowercased()
+                if availableLanguages.keys.contains(lowercased) {
+                    deviceLang = lowercased
+                }
             }
         }
         
@@ -207,29 +218,41 @@ class LocalizationManager: ObservableObject {
         var deviceLang: String = "en"
         
         // Method 1: Try Locale.preferredLanguages first (most reliable)
-        if let preferredLang = Locale.preferredLanguages.first {
+        // Check ALL preferred languages, not just the first one
+        for preferredLang in Locale.preferredLanguages {
+            // Extract language code from formats like "en-US", "en_US", "en"
             let components = preferredLang.components(separatedBy: CharacterSet(charactersIn: "-_"))
             if let langCode = components.first, langCode.count == 2 {
-                deviceLang = langCode.lowercased()
+                let lowercased = langCode.lowercased()
+                // If this language is in our available languages, use it
+                if availableLanguages.keys.contains(lowercased) {
+                    deviceLang = lowercased
+                    break // Found a supported language, stop searching
+                }
             }
         }
         
         // Method 2: Fallback to Locale.current.language.languageCode
+        // Only use this if we didn't find a supported language in preferredLanguages
         if deviceLang == "en" || !availableLanguages.keys.contains(deviceLang) {
             if let langCode = Locale.current.language.languageCode?.identifier {
                 let lowercased = langCode.lowercased()
-                if lowercased.count == 2 {
+                if lowercased.count == 2 && availableLanguages.keys.contains(lowercased) {
                     deviceLang = lowercased
                 }
             }
         }
         
         // Method 3: Fallback to Locale.current.identifier
+        // Only use this if we still haven't found a supported language
         if deviceLang == "en" || !availableLanguages.keys.contains(deviceLang) {
             let identifier = Locale.current.identifier
             let components = identifier.components(separatedBy: CharacterSet(charactersIn: "-_"))
             if let langCode = components.first, langCode.count == 2 {
-                deviceLang = langCode.lowercased()
+                let lowercased = langCode.lowercased()
+                if availableLanguages.keys.contains(lowercased) {
+                    deviceLang = lowercased
+                }
             }
         }
         

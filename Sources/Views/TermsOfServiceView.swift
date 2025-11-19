@@ -7,9 +7,20 @@ struct TermsOfServiceView: View {
     @State private var showFairUsePolicy = false
     @State private var showPrivacy = false
     
-    // Language detection - use German content for DE, English for all others
+    // Language detection - use German content for DE, French for FR, English for all others
     private var isGerman: Bool {
         localizationManager.currentLanguage == "de"
+    }
+    
+    private var isFrench: Bool {
+        localizationManager.currentLanguage == "fr"
+    }
+    
+    // Helper function to get localized text
+    private func localized(_ german: String, _ french: String, _ english: String) -> String {
+        if isGerman { return german }
+        if isFrench { return french }
+        return english
     }
     
     var body: some View {
@@ -64,113 +75,245 @@ struct TermsOfServiceView: View {
                             .stroke(.white.opacity(0.4), lineWidth: 1.5)
                     )
                     
-                    TermsSection(isGerman ? "1. Geltungsbereich und Vertragsparteien" : "1. Scope and Contracting Parties", icon: "doc.text") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Diese Allgemeinen Geschäftsbedingungen (nachfolgend 'AGB') gelten für die Nutzung der mobilen Applikation 'CulinaChef (CulinaAI)' (nachfolgend 'App') durch Verbraucher im Sinne des § 13 BGB." : "These Terms and Conditions (hereinafter referred to as 'T&C') apply to the use of the mobile application 'CulinaChef (CulinaAI)' (hereinafter 'App') by consumers within the meaning of Section 13 of the German Civil Code (BGB).")
+                    TermsSection(localized("1. Geltungsbereich und Vertragsparteien", "1. Champ d'application et parties contractantes", "1. Scope and Contracting Parties"), icon: "doc.text") {
+                        TermsParagraph(number: "(1)", text: localized(
+                            "Diese Allgemeinen Geschäftsbedingungen (nachfolgend 'AGB') gelten für die Nutzung der mobilen Applikation 'CulinaChef (CulinaAI)' (nachfolgend 'App') durch Verbraucher im Sinne des § 13 BGB.",
+                            "Ces conditions générales (CGU) s'appliquent à l'utilisation de l'application mobile CulinaChef (CulinaAI) par les consommateurs au sens du § 13 BGB.",
+                            "These Terms and Conditions (hereinafter referred to as 'T&C') apply to the use of the mobile application 'CulinaChef (CulinaAI)' (hereinafter 'App') by consumers within the meaning of Section 13 of the German Civil Code (BGB)."
+                        ))
                         
-                        TermsParagraph(number: "(2)", text: isGerman ? "Anbieter und Vertragspartner des Nutzers ist:" : "Provider and Contractual Partner:")
+                        TermsParagraph(number: "(2)", text: localized(
+                            "Anbieter und Vertragspartner des Nutzers ist:",
+                            "Fournisseur et partie contractante :",
+                            "Provider and Contractual Partner:"
+                        ))
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            ContactInfo(label: isGerman ? "Unternehmen" : "Company", value: "CulinaAI")
-                            ContactInfo(label: isGerman ? "Vertreten durch" : "Represented by", value: "Moritz Serrin")
-                            ContactInfo(label: isGerman ? "Adresse" : "Address", value: "Sonnenblumenweg 8, 21244 Buchholz, " + (isGerman ? "Deutschland" : "Germany"))
+                            ContactInfo(label: localized("Unternehmen", "Entreprise", "Company"), value: "CulinaAI")
+                            ContactInfo(label: localized("Vertreten durch", "Représentée par", "Represented by"), value: "Moritz Serrin")
+                            ContactInfo(label: localized("Adresse", "Adresse", "Address"), value: "Sonnenblumenweg 8, 21244 Buchholz, " + localized("Deutschland", "Allemagne", "Germany"))
                             ContactInfo(label: "E-Mail", value: "kontakt@culinaai.com")
                             ContactInfo(label: "Support", value: "support@culinaai.com")
-                            ContactInfo(label: "Website", value: "https://culinaai.com")
+                            ContactInfo(label: localized("Website", "Site web", "Website"), value: "https://culinaai.com")
                         }
                         .padding(12)
                         .background(.white.opacity(0.1))
                         .cornerRadius(10)
                         
-                        TermsParagraph(number: "(3)", text: isGerman ? "Abweichende, entgegenstehende oder ergänzende Bedingungen des Nutzers werden nicht Vertragsbestandteil, es sei denn, der Anbieter stimmt ihrer Geltung ausdrücklich schriftlich zu." : "Any deviating, conflicting, or supplementary terms and conditions of the user shall not become part of the contract unless the provider expressly agrees to them in writing.")
+                        TermsParagraph(number: "(3)", text: localized(
+                            "Abweichende, entgegenstehende oder ergänzende Bedingungen des Nutzers werden nicht Vertragsbestandteil, es sei denn, der Anbieter stimmt ihrer Geltung ausdrücklich schriftlich zu.",
+                            "Les conditions différentes ou contraires de l'utilisateur ne font pas partie du contrat, sauf accord explicite écrit du fournisseur.",
+                            "Any deviating, conflicting, or supplementary terms and conditions of the user shall not become part of the contract unless the provider expressly agrees to them in writing."
+                        ))
                     }
                     
-                    TermsSection(isGerman ? "2. Vertragsgegenstand und Leistungsbeschreibung" : "2. Subject Matter and Description of Services", icon: "app.badge") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Die App CulinaChef (CulinaAI) ist eine digitale Rezept- und Ernährungs-App, die es Nutzern ermöglicht," : "The CulinaChef (CulinaAI) app is a digital recipe and nutrition app that allows users to:")
+                    TermsSection(localized("2. Vertragsgegenstand und Leistungsbeschreibung", "2. Objet du contrat et description des services", "2. Subject Matter and Description of Services"), icon: "app.badge") {
+                        TermsParagraph(number: "(1)", text: localized(
+                            "Die App CulinaChef (CulinaAI) ist eine digitale Rezept- und Ernährungs-App, die es Nutzern ermöglicht,",
+                            "L'application CulinaChef (CulinaAI) est une application de recettes et de nutrition qui permet aux utilisateurs :",
+                            "The CulinaChef (CulinaAI) app is a digital recipe and nutrition app that allows users to:"
+                        ))
                         
                         VStack(alignment: .leading, spacing: 6) {
-                            TermsBullet(isGerman ? "eigene Rezepte zu speichern," : "store their own recipes,")
-                            TermsBullet(isGerman ? "Ernährungspräferenzen zu verwalten," : "manage dietary preferences,")
-                            TermsBullet(isGerman ? "KI-gestützte Rezeptvorschläge zu erhalten (OpenAI GPT-4o-mini)," : "receive AI-based recipe suggestions (OpenAI GPT-4o-mini),")
-                            TermsBullet(isGerman ? "Menüs zu planen," : "plan menus, and")
-                            TermsBullet(isGerman ? "und über ein optionales Abonnement ('Unlimited') zusätzliche Premium-Funktionen zu nutzen." : "and access additional premium features through an optional subscription ('Unlimited').")
+                            TermsBullet(localized("eigene Rezepte zu speichern,", "d'enregistrer leurs propres recettes,", "store their own recipes,"))
+                            TermsBullet(localized("Ernährungspräferenzen zu verwalten,", "de gérer leurs préférences alimentaires,", "manage dietary preferences,"))
+                            TermsBullet(localized("KI-gestützte Rezeptvorschläge zu erhalten (OpenAI GPT-4o-mini),", "de recevoir des suggestions de recettes basées sur l'IA (OpenAI GPT-4o-mini),", "receive AI-based recipe suggestions (OpenAI GPT-4o-mini),"))
+                            TermsBullet(localized("Menüs zu planen,", "de planifier des menus,", "plan menus, and"))
+                            TermsBullet(localized("und über ein optionales Abonnement ('Unlimited') zusätzliche Premium-Funktionen zu nutzen.", "et d'utiliser des fonctionnalités Premium via un abonnement optionnel (Unlimited).", "and access additional premium features through an optional subscription ('Unlimited')."))
                         }
                         
-                        TermsParagraph(number: "(2)", text: isGerman ? "Die App steht ausschließlich auf iOS-Geräten (iPhone) über den Apple App Store zur Verfügung." : "The app is available exclusively for iOS devices (iPhone) via the Apple App Store.")
+                        TermsParagraph(number: "(2)", text: localized(
+                            "Die App steht ausschließlich auf iOS-Geräten (iPhone) über den Apple App Store zur Verfügung.",
+                            "L'application est disponible uniquement sur iOS via l'Apple App Store.",
+                            "The app is available exclusively for iOS devices (iPhone) via the Apple App Store."
+                        ))
                         
-                        TermsParagraph(number: "(3)", text: isGerman ? "Die Nutzung setzt eine vorherige Registrierung oder Anmeldung ('Sign in with Apple') voraus." : "Use of the app requires prior registration or login ('Sign in with Apple').")
+                        TermsParagraph(number: "(3)", text: localized(
+                            "Die Nutzung setzt eine vorherige Registrierung oder Anmeldung ('Sign in with Apple') voraus.",
+                            "L'utilisation nécessite une inscription ou connexion préalable (« Sign in with Apple »).",
+                            "Use of the app requires prior registration or login ('Sign in with Apple')."
+                        ))
                         
-                        TermsParagraph(number: "(4)", text: isGerman ? "Der Anbieter behält sich vor, den Funktionsumfang der App im Rahmen technischer oder rechtlicher Weiterentwicklungen anzupassen, soweit dies dem Nutzer zumutbar ist." : "The provider reserves the right to modify the app's functionality within reasonable limits for technical or legal reasons, provided such changes are reasonable for the user.")
+                        TermsParagraph(number: "(4)", text: localized(
+                            "Der Anbieter behält sich vor, den Funktionsumfang der App im Rahmen technischer oder rechtlicher Weiterentwicklungen anzupassen, soweit dies dem Nutzer zumutbar ist.",
+                            "Le fournisseur se réserve le droit d'adapter les fonctionnalités dans le cadre de développements techniques ou juridiques, dans la limite du raisonnable pour l'utilisateur.",
+                            "The provider reserves the right to modify the app's functionality within reasonable limits for technical or legal reasons, provided such changes are reasonable for the user."
+                        ))
                     }
                     
-                    TermsSection(isGerman ? "3. Vertragsabschluss" : "3. Conclusion of Contract", icon: "signature") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Der Nutzungsvertrag kommt mit Herunterladen der App und Registrierung eines Nutzerkontos zustande." : "The user agreement is concluded when the app is downloaded and a user account is registered.")
+                    TermsSection(localized("3. Vertragsabschluss", "3. Conclusion du contrat", "3. Conclusion of Contract"), icon: "signature") {
+                        TermsParagraph(number: "(1)", text: localized(
+                            "Der Nutzungsvertrag kommt mit Herunterladen der App und Registrierung eines Nutzerkontos zustande.",
+                            "Le contrat d'utilisation est conclu lors du téléchargement de l'application et de la création d'un compte utilisateur.",
+                            "The user agreement is concluded when the app is downloaded and a user account is registered."
+                        ))
                         
-                        TermsParagraph(number: "(2)", text: isGerman ? "Das Abonnement ('Unlimited') wird ausschließlich über den Apple App Store (In-App-Purchase) abgeschlossen. Der Vertrag über das Abonnement kommt direkt zwischen dem Nutzer und Apple Inc. zustande." : "The Unlimited subscription can only be purchased via the Apple App Store (In-App Purchase). The subscription contract is concluded directly between the user and Apple Inc.")
+                        TermsParagraph(number: "(2)", text: localized(
+                            "Das Abonnement ('Unlimited') wird ausschließlich über den Apple App Store (In-App-Purchase) abgeschlossen. Der Vertrag über das Abonnement kommt direkt zwischen dem Nutzer und Apple Inc. zustande.",
+                            "L'abonnement (Unlimited) est conclu exclusivement via l'Apple App Store (In-App Purchase) et constitue un contrat direct entre l'utilisateur et Apple Inc.",
+                            "The Unlimited subscription can only be purchased via the Apple App Store (In-App Purchase). The subscription contract is concluded directly between the user and Apple Inc."
+                        ))
                         
-                        TermsParagraph(number: "(3)", text: isGerman ? "Die Abrechnung, Verlängerung und Kündigung des Abonnements erfolgen ausschließlich über das Apple-Benutzerkonto des Nutzers." : "Billing, renewal, and cancellation of the subscription are handled exclusively via the user's Apple account.")
+                        TermsParagraph(number: "(3)", text: localized(
+                            "Die Abrechnung, Verlängerung und Kündigung des Abonnements erfolgen ausschließlich über das Apple-Benutzerkonto des Nutzers.",
+                            "La facturation, le renouvellement et la résiliation sont gérés uniquement par le compte Apple de l'utilisateur.",
+                            "Billing, renewal, and cancellation of the subscription are handled exclusively via the user's Apple account."
+                        ))
                     }
                     
-                    TermsSection(isGerman ? "4. Registrierung, Konto und Zugangsdaten" : "4. Registration, Account, and Access Data", icon: "person.badge.key") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Zur Nutzung der App ist ein Nutzerkonto erforderlich. Hierfür werden folgende Angaben benötigt:" : "A user account is required to use the app. The following information is needed:")
+                    TermsSection(localized("4. Registrierung, Konto und Zugangsdaten", "4. Inscription, compte et identifiants", "4. Registration, Account, and Access Data"), icon: "person.badge.key") {
+                        TermsParagraph(number: "(1)", text: localized(
+                            "Zur Nutzung der App ist ein Nutzerkonto erforderlich. Hierfür werden folgende Angaben benötigt:",
+                            "Pour utiliser l'application, un compte utilisateur est nécessaire :",
+                            "A user account is required to use the app. The following information is needed:"
+                        ))
                         
                         VStack(alignment: .leading, spacing: 6) {
-                            TermsBullet(isGerman ? "Benutzername" : "Username")
-                            TermsBullet(isGerman ? "E-Mail-Adresse" : "E-mail address")
-                            TermsBullet(isGerman ? "Passwort" : "Password")
+                            TermsBullet(localized("Benutzername", "Nom d'utilisateur", "Username"))
+                            TermsBullet(localized("E-Mail-Adresse", "Adresse e-mail", "E-mail address"))
+                            TermsBullet(localized("Passwort", "Mot de passe", "Password"))
                         }
                         
-                        TermsParagraph(number: "(2)", text: isGerman ? "Der Nutzer ist verpflichtet, seine Zugangsdaten geheim zu halten und nicht an Dritte weiterzugeben." : "Users must keep their login credentials confidential and not disclose them to third parties.")
+                        TermsParagraph(number: "(2)", text: localized(
+                            "Der Nutzer ist verpflichtet, seine Zugangsdaten geheim zu halten und nicht an Dritte weiterzugeben.",
+                            "L'utilisateur doit garder ses identifiants confidentiels et ne pas les partager.",
+                            "Users must keep their login credentials confidential and not disclose them to third parties."
+                        ))
                         
-                        TermsParagraph(number: "(3)", text: isGerman ? "Mehrfachkonten, falsche Angaben oder Missbrauch führen zur Sperrung des Kontos." : "Multiple accounts, false information, or misuse may lead to account suspension.")
+                        TermsParagraph(number: "(3)", text: localized(
+                            "Mehrfachkonten, falsche Angaben oder Missbrauch führen zur Sperrung des Kontos.",
+                            "Des comptes multiples, fausses informations ou abus peuvent entraîner la suspension du compte.",
+                            "Multiple accounts, false information, or misuse may lead to account suspension."
+                        ))
                         
-                        ImportantNote(text: isGerman ? "Die Nutzung ist nur Personen ab 16 Jahren gestattet (§ 8 DSGVO)." : "Use of the app is permitted only for persons aged 16 years or older (Art. 8 GDPR).")
+                        ImportantNote(text: localized(
+                            "Die Nutzung ist nur Personen ab 16 Jahren gestattet (§ 8 DSGVO).",
+                            "l'utilisation est autorisée uniquement aux personnes âgées de 16 ans et plus (§ 8 DSGVO).",
+                            "Use of the app is permitted only for persons aged 16 years or older (Art. 8 GDPR)."
+                        ))
                     }
                     
-                    TermsSection(isGerman ? "5. Abonnement, Preise und Zahlungsbedingungen" : "5. Subscription, Prices, and Payment Terms", icon: "creditcard") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Der Basis-Download der App ist kostenlos. Der Zugang zu erweiterten Funktionen erfordert ein monatliches Abonnement ('Unlimited') zum Preis von 5,99 € (inkl. MwSt.)." : "Downloading the app is free of charge. Access to extended features requires a monthly subscription ('Unlimited') at a price of €5.99 (incl. VAT).")
+                    TermsSection(localized("5. Abonnement, Preise und Zahlungsbedingungen", "5. Abonnement, prix et conditions de paiement", "5. Subscription, Prices, and Payment Terms"), icon: "creditcard") {
+                        TermsParagraph(number: "(1)", text: localized(
+                            "Der Basis-Download der App ist kostenlos. Der Zugang zu erweiterten Funktionen erfordert ein monatliches Abonnement ('Unlimited') zum Preis von 5,99 € (inkl. MwSt.).",
+                            "Le téléchargement de base est gratuit. L'accès aux fonctions avancées nécessite un abonnement mensuel (Unlimited) de 5,99 € (TVA incluse).",
+                            "Downloading the app is free of charge. Access to extended features requires a monthly subscription ('Unlimited') at a price of €5.99 (incl. VAT)."
+                        ))
                         
-                        TermsParagraph(number: "(2)", text: isGerman ? "Das Abonnement wird über Apple In-App-Purchase abgeschlossen, abgerechnet und verwaltet. Der Anbieter erhält keine Zahlungsdaten; diese verbleiben bei Apple." : "The subscription is concluded, billed, and managed through Apple In-App Purchase. The provider does not receive or store any payment data; such data remains with Apple.")
+                        TermsParagraph(number: "(2)", text: localized(
+                            "Das Abonnement wird über Apple In-App-Purchase abgeschlossen, abgerechnet und verwaltet. Der Anbieter erhält keine Zahlungsdaten; diese verbleiben bei Apple.",
+                            "L'abonnement est géré via Apple In-App Purchase. Le fournisseur ne reçoit aucune donnée de paiement.",
+                            "The subscription is concluded, billed, and managed through Apple In-App Purchase. The provider does not receive or store any payment data; such data remains with Apple."
+                        ))
                         
-                        TermsParagraph(number: "(3)", text: isGerman ? "Das Abonnement verlängert sich automatisch um jeweils einen Monat, wenn es nicht mindestens 24 Stunden vor Ablauf der aktuellen Laufzeit im Apple-Account des Nutzers gekündigt wird." : "The subscription automatically renews for one month unless it is cancelled at least 24 hours before the end of the current term in the user's Apple account.")
+                        TermsParagraph(number: "(3)", text: localized(
+                            "Das Abonnement verlängert sich automatisch um jeweils einen Monat, wenn es nicht mindestens 24 Stunden vor Ablauf der aktuellen Laufzeit im Apple-Account des Nutzers gekündigt wird.",
+                            "L'abonnement se renouvelle automatiquement d'un mois si l'utilisateur ne résilie pas au moins 24 heures avant la fin de la période actuelle.",
+                            "The subscription automatically renews for one month unless it is cancelled at least 24 hours before the end of the current term in the user's Apple account."
+                        ))
                         
-                        TermsParagraph(number: "(4)", text: isGerman ? "Eine anteilige Rückerstattung bereits gezahlter Gebühren ist ausgeschlossen, soweit kein gesetzliches Widerrufsrecht besteht." : "Partial refunds of fees already paid are excluded unless a statutory right of withdrawal applies.")
+                        TermsParagraph(number: "(4)", text: localized(
+                            "Eine anteilige Rückerstattung bereits gezahlter Gebühren ist ausgeschlossen, soweit kein gesetzliches Widerrufsrecht besteht.",
+                            "Un remboursement partiel n'est pas possible, sauf droit légal de rétractation.",
+                            "Partial refunds of fees already paid are excluded unless a statutory right of withdrawal applies."
+                        ))
                         
-                        TermsParagraph(number: "(5)", text: isGerman ? "Preisänderungen können vom Anbieter vorgenommen werden, gelten jedoch erst ab der nächsten Abonnement-Periode und nur nach vorheriger Information durch Apple." : "The provider may change prices; however, such changes only take effect for the next subscription period and only after prior notification by Apple.")
+                        TermsParagraph(number: "(5)", text: localized(
+                            "Preisänderungen können vom Anbieter vorgenommen werden, gelten jedoch erst ab der nächsten Abonnement-Periode und nur nach vorheriger Information durch Apple.",
+                            "Les modifications de prix s'appliquent à la période suivante et après information via Apple.",
+                            "The provider may change prices; however, such changes only take effect for the next subscription period and only after prior notification by Apple."
+                        ))
                     }
                     
-                    TermsSection(isGerman ? "6. Widerrufsrecht" : "6. Right of Withdrawal", icon: "arrow.uturn.backward") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Verbraucher haben bei digitalen Inhalten grundsätzlich ein gesetzliches Widerrufsrecht (§ 356 Abs. 5 BGB)." : "Consumers generally have a statutory right of withdrawal for digital content (Section 356(5) BGB).")
+                    TermsSection(localized("6. Widerrufsrecht", "6. Droit de rétractation", "6. Right of Withdrawal"), icon: "arrow.uturn.backward") {
+                        TermsParagraph(number: "(1)", text: localized(
+                            "Verbraucher haben bei digitalen Inhalten grundsätzlich ein gesetzliches Widerrufsrecht (§ 356 Abs. 5 BGB).",
+                            "Les consommateurs disposent d'un droit légal de rétractation pour les contenus numériques (§ 356 Abs. 5 BGB).",
+                            "Consumers generally have a statutory right of withdrawal for digital content (Section 356(5) BGB)."
+                        ))
                         
-                        TermsParagraph(number: "(2)", text: isGerman ? "Das Widerrufsrecht erlischt jedoch, wenn der Nutzer ausdrücklich zugestimmt hat, dass die Ausführung des Vertrages vor Ablauf der Widerrufsfrist beginnt, und bestätigt, dass er sein Widerrufsrecht dadurch verliert." : "The right of withdrawal expires once the user has expressly consented to the immediate execution of the contract and acknowledged that they thereby lose their right of withdrawal.")
+                        TermsParagraph(number: "(2)", text: localized(
+                            "Das Widerrufsrecht erlischt jedoch, wenn der Nutzer ausdrücklich zugestimmt hat, dass die Ausführung des Vertrages vor Ablauf der Widerrufsfrist beginnt, und bestätigt, dass er sein Widerrufsrecht dadurch verliert.",
+                            "Ce droit expire si l'utilisateur a consenti expressément au début de l'exécution du contrat avant la fin du délai de rétractation.",
+                            "The right of withdrawal expires once the user has expressly consented to the immediate execution of the contract and acknowledged that they thereby lose their right of withdrawal."
+                        ))
                         
-                        TermsParagraph(number: "(3)", text: isGerman ? "Die Widerrufsabwicklung erfolgt ausschließlich über den Apple App Store nach den dort geltenden Richtlinien." : "Withdrawal handling is carried out exclusively via the Apple App Store in accordance with Apple's applicable policies.")
+                        TermsParagraph(number: "(3)", text: localized(
+                            "Die Widerrufsabwicklung erfolgt ausschließlich über den Apple App Store nach den dort geltenden Richtlinien.",
+                            "La procédure de rétractation s'effectue exclusivement via l'Apple App Store.",
+                            "Withdrawal handling is carried out exclusively via the Apple App Store in accordance with Apple's applicable policies."
+                        ))
                     }
                     
-                    TermsSection(isGerman ? "7. Nutzungsrechte" : "7. Usage Rights", icon: "key") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Der Anbieter räumt dem Nutzer ein einfaches, nicht übertragbares, widerrufliches Nutzungsrecht an der App und deren Inhalten ein." : "The provider grants the user a simple, non-transferable, and revocable right to use the app and its contents.")
+                    TermsSection(localized("7. Nutzungsrechte", "7. Droits d'utilisation", "7. Usage Rights"), icon: "key") {
+                        TermsParagraph(number: "(1)", text: localized(
+                            "Der Anbieter räumt dem Nutzer ein einfaches, nicht übertragbares, widerrufliches Nutzungsrecht an der App und deren Inhalten ein.",
+                            "Le fournisseur accorde à l'utilisateur un droit simple, non transférable et révocable d'utiliser l'application et ses contenus.",
+                            "The provider grants the user a simple, non-transferable, and revocable right to use the app and its contents."
+                        ))
                         
-                        TermsParagraph(number: "(2)", text: isGerman ? "Der Nutzer darf die App ausschließlich zu privaten, nicht-kommerziellen Zwecken verwenden." : "The app may only be used for private, non-commercial purposes.")
+                        TermsParagraph(number: "(2)", text: localized(
+                            "Der Nutzer darf die App ausschließlich zu privaten, nicht-kommerziellen Zwecken verwenden.",
+                            "L'utilisation est strictement privée et non commerciale.",
+                            "The app may only be used for private, non-commercial purposes."
+                        ))
                         
-                        TermsParagraph(number: "(3)", text: isGerman ? "Eine Weitergabe, Vervielfältigung oder öffentliche Zugänglichmachung der Inhalte, insbesondere KI-generierter Rezepte, ist ohne ausdrückliche Zustimmung untersagt." : "Sharing, reproducing, or publicly making available any content — particularly AI-generated recipes — without explicit consent is prohibited.")
+                        TermsParagraph(number: "(3)", text: localized(
+                            "Eine Weitergabe, Vervielfältigung oder öffentliche Zugänglichmachung der Inhalte, insbesondere KI-generierter Rezepte, ist ohne ausdrückliche Zustimmung untersagt.",
+                            "Toute diffusion, reproduction ou mise à disposition publique, notamment des recettes générées par l'IA, est interdite sans accord explicite.",
+                            "Sharing, reproducing, or publicly making available any content — particularly AI-generated recipes — without explicit consent is prohibited."
+                        ))
                         
-                        TermsParagraph(number: "(4)", text: isGerman ? "Bei Verstößen gegen diese Lizenzbedingungen kann das Konto gesperrt oder gelöscht werden." : "Violations of these license terms may result in suspension or deletion of the account.")
+                        TermsParagraph(number: "(4)", text: localized(
+                            "Bei Verstößen gegen diese Lizenzbedingungen kann das Konto gesperrt oder gelöscht werden.",
+                            "En cas de violation, le compte peut être suspendu ou supprimé.",
+                            "Violations of these license terms may result in suspension or deletion of the account."
+                        ))
                     }
                     
-                    TermsSection(isGerman ? "8. Pflichten und Verantwortlichkeiten der Nutzer" : "8. User Obligations and Responsibilities", icon: "checkmark.shield") {
-                        Text(isGerman ? L.ui_der_nutzer_verpflichtet_sich.localized : "The user agrees:")
+                    TermsSection(localized("8. Pflichten und Verantwortlichkeiten der Nutzer", "8. Obligations de l'utilisateur", "8. User Obligations and Responsibilities"), icon: "checkmark.shield") {
+                        Text(localized(
+                            isGerman ? L.ui_der_nutzer_verpflichtet_sich.localized : "Der Nutzer verpflichtet sich:",
+                            "L'utilisateur s'engage à :",
+                            "The user agrees:"
+                        ))
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.white)
                             .padding(.bottom, 4)
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            ObligationRow(text: isGerman ? "keine rechtswidrigen, beleidigenden oder diskriminierenden Inhalte zu erstellen oder zu teilen," : "not to create or share unlawful, offensive, or discriminatory content,")
-                            ObligationRow(text: isGerman ? "keine Urheberrechte oder Markenrechte Dritter zu verletzen," : "not to infringe third-party copyrights or trademarks,")
-                            ObligationRow(text: isGerman ? "keine falschen oder gesundheitsgefährdenden Angaben in Rezepten zu verbreiten," : "not to spread false or health-endangering information in recipes,")
-                            ObligationRow(text: isGerman ? "die App nicht missbrauchlich oder automatisiert zu verwenden (z. B. Scraping, Bots)," : "not to misuse or automate the app's functions (e.g., scraping, bots),")
-                            ObligationRow(text: isGerman ? "keine sicherheitsrelevanten Funktionen zu umgehen." : "not to bypass security-related features.")
+                            ObligationRow(text: localized(
+                                "keine rechtswidrigen, beleidigenden oder diskriminierenden Inhalte zu erstellen oder zu teilen,",
+                                "ne pas créer ou partager de contenus illégaux, offensants ou discriminatoires,",
+                                "not to create or share unlawful, offensive, or discriminatory content,"
+                            ))
+                            ObligationRow(text: localized(
+                                "keine Urheberrechte oder Markenrechte Dritter zu verletzen,",
+                                "ne pas violer les droits de tiers (copyright, marques),",
+                                "not to infringe third-party copyrights or trademarks,"
+                            ))
+                            ObligationRow(text: localized(
+                                "keine falschen oder gesundheitsgefährdenden Angaben in Rezepten zu verbreiten,",
+                                "ne pas diffuser d'informations fausses ou dangereuses pour la santé,",
+                                "not to spread false or health-endangering information in recipes,"
+                            ))
+                            ObligationRow(text: localized(
+                                "die App nicht missbrauchlich oder automatisiert zu verwenden (z. B. Scraping, Bots),",
+                                "ne pas utiliser l'application de manière abusive ou automatisée (ex. scraping, bots),",
+                                "not to misuse or automate the app's functions (e.g., scraping, bots),"
+                            ))
+                            ObligationRow(text: localized(
+                                "keine sicherheitsrelevanten Funktionen zu umgehen.",
+                                "ne pas contourner les fonctions de sécurité.",
+                                "not to bypass security-related features."
+                            ))
                         }
                         
-                        WarningNote(text: isGerman ? "Bei Verstößen kann der Anbieter den Nutzer sperren, Daten löschen oder den Vertrag außerordentlich kündigen." : "In case of violations, the provider may suspend the user, delete data, or terminate the contract without notice.")
+                        WarningNote(text: localized(
+                            "Bei Verstößen kann der Anbieter den Nutzer sperren, Daten löschen oder den Vertrag außerordentlich kündigen.",
+                            "En cas de violation, le fournisseur peut suspendre le compte, supprimer des données ou résilier le contrat.",
+                            "In case of violations, the provider may suspend the user, delete data, or terminate the contract without notice."
+                        ))
                     }
                     
                     TermsSection(isGerman ? "9. KI-Inhalte (OpenAI)" : "9. AI-Generated Content (OpenAI)", icon: "sparkles") {

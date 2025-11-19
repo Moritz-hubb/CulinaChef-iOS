@@ -129,6 +129,10 @@ struct OnboardingView: View {
         }
         .interactiveDismissDisabled()
         .onAppear {
+            // Initialize selectedLanguage with current language (system language) if not already set
+            if selectedLanguage.isEmpty {
+                selectedLanguage = localizationManager.currentLanguage
+            }
             initializeTastePreferences()
         }
         .onChange(of: localizationManager.currentLanguage) { _, _ in
@@ -198,10 +202,12 @@ struct OnboardingView: View {
             .padding(.bottom, 100)
         }
         .onAppear {
-            // Initialize with system language if not set
+            // Initialize with current language (system language) if not set
+            // This ensures the language shown in signup is pre-selected in onboarding
             if selectedLanguage.isEmpty {
-                selectedLanguage = getSystemLanguage()
-                // Pre-select system language but don't set it yet - user should confirm
+                selectedLanguage = localizationManager.currentLanguage
+                // Pre-select current language but don't explicitly set it yet - user should confirm
+                // The language will only be explicitly set when user clicks on a language option
             }
         }
     }

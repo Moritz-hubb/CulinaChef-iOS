@@ -62,6 +62,7 @@ struct RecipeCreatorView: View {
                 paywallContent
             }
         }
+        .id(localizationManager.currentLanguage) // Force re-render on language change
     }
     
     private var recipeCreatorContent: some View {

@@ -11,6 +11,7 @@ struct RootView: View {
         Group {
             if app.isAuthenticated {
                 MainTabView()
+                    .id(localizationManager.currentLanguage) // Force re-render on language change
                     .fullScreenCover(isPresented: $showOnboarding) {
                         OnboardingView()
                     }
@@ -37,6 +38,7 @@ struct RootView: View {
                     }
             } else {
                 AuthView()
+                    .id(localizationManager.currentLanguage) // Force re-render on language change
             }
         }
         .alert(L.error.localized, isPresented: Binding(get: { app.error != nil }, set: { if !$0 { app.error = nil } })) {
@@ -68,7 +70,7 @@ struct RootView: View {
                 languageRefreshTrigger = UUID()
             }
         }
-        .id(languageRefreshTrigger)
+        .id("\(languageRefreshTrigger)_\(localizationManager.currentLanguage)") // Include language in ID for complete refresh
     }
     
     private func onboardingCompletedForCurrentUser() -> Bool {
@@ -131,17 +133,22 @@ struct MainTabView: View {
                 ChatView()
                     .tabItem { EmptyView() }
                     .tag(0)
+                    .id(localizationManager.currentLanguage) // Force re-render on language change
                 RecipeCreatorView()
                     .tabItem { EmptyView() }
                     .tag(1)
+                    .id(localizationManager.currentLanguage) // Force re-render on language change
                 RecipesView()
                     .tabItem { EmptyView() }
                     .tag(2)
+                    .id(localizationManager.currentLanguage) // Force re-render on language change
                 ShoppingListView()
                     .tabItem { EmptyView() }
                     .tag(3)
+                    .id(localizationManager.currentLanguage) // Force re-render on language change
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .id(localizationManager.currentLanguage) // Force TabView re-render on language change
         }
         .safeAreaInset(edge: .top) {
             HStack {

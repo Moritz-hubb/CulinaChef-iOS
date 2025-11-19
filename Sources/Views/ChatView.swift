@@ -24,6 +24,7 @@ struct ChatView: View {
                 paywallContent
             }
         }
+        .id(localizationManager.currentLanguage) // Force re-render on language change
     }
     
     private var chatContent: some View {

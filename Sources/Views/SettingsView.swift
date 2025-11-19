@@ -228,6 +228,7 @@ struct SettingsView: View {
         } message: {
             Text(L.accountDeletedMessage.localized)
         }
+        .id(localizationManager.currentLanguage) // Force re-render on language change
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()

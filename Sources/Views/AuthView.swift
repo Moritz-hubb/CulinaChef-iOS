@@ -147,6 +147,7 @@ struct AuthView: View {
             .navigationBarHidden(true)
         }
         .navigationViewStyle(.stack)
+        .id(localizationManager.currentLanguage) // Force re-render on language change
     }
 }
 

@@ -45,6 +45,7 @@ struct RecipesView: View {
             .navigationBarHidden(true)
         }
         .navigationViewStyle(.stack)
+        .id(localizationManager.currentLanguage) // Force re-render on language change
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()

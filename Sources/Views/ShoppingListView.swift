@@ -125,6 +125,7 @@ struct ShoppingListView: View {
                 shoppingListManager.clearShoppingList()
             }
         }
+        .id(localizationManager.currentLanguage) // Force re-render on language change
     }
     
     private var emptyStateView: some View {

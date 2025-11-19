@@ -3,6 +3,7 @@ import SwiftUI
 struct PaywallView: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) var dismiss
+    @ObservedObject private var localizationManager = LocalizationManager.shared
     
     @State private var isPurchasing = false
     @State private var isRestoring = false
@@ -260,6 +261,7 @@ struct PaywallView: View {
                 }
             }
         }
+        .id(localizationManager.currentLanguage) // Force re-render on language change
     }
 }
 

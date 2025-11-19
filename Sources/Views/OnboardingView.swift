@@ -122,12 +122,14 @@ struct OnboardingView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut, value: currentStep)
+                .id(localizationManager.currentLanguage) // Force re-render when language changes
                 
                 // Navigation buttons
                 navigationButtons
             }
         }
         .interactiveDismissDisabled()
+        .id(localizationManager.currentLanguage) // Force entire view to re-render when language changes
         .onAppear {
             // Initialize selectedLanguage with current language (system language) if not already set
             if selectedLanguage.isEmpty {
@@ -273,6 +275,7 @@ struct OnboardingView: View {
     // MARK: - Step 1: Allergies
     private var step1Allergies: some View {
         ScrollView {
+            let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.onboarding_allergien_unverträglichkeiten.localized)
@@ -336,6 +339,7 @@ struct OnboardingView: View {
     // MARK: - Step 2: Dietary Types
     private var step2DietaryTypes: some View {
         ScrollView {
+            let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.onboarding_ernährungsweise.localized)
@@ -369,6 +373,7 @@ struct OnboardingView: View {
     // MARK: - Step 3: Taste Preferences
     private var step3Preferences: some View {
         ScrollView {
+            let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.onboarding_geschmackspräferenzen.localized)
@@ -444,6 +449,7 @@ struct OnboardingView: View {
     // MARK: - Step 4: Dislikes
     private var step4Dislikes: some View {
         ScrollView {
+            let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.onboarding_was_möchtest_du_meiden.localized)

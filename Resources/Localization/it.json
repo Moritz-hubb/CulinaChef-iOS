@@ -310,7 +310,6 @@
   "recipe.keine_schritte_gefunden": "Nessun passaggio trovato.",
   "recipe.regenerateHint": "Si prega di rigenerare.",
   "recipe.keine_schritte_gefunden_2c3f": "Nessun passaggio trovato.",
-  "recipe.regenerateHint": "Si prega di rigenerare.",
   "recipe.meine": "Mie",
   "recipe.menü": "Menu",
   "recipe.menü_539e": "Menu",
@@ -633,5 +632,7 @@
   "consent.title": "Usa le funzioni IA",
   "consent.subtitle": "La tua richiesta può essere inviata a OpenAI (USA). Senza consenso non puoi usare le funzioni IA.",
   "consent.decline": "Rifiuta",
-  "consent.accept": "Accetta e continua"
+  "consent.accept": "Accetta e continua",
+  "onboarding.selectLanguageTitle": "Seleziona lingua",
+  "onboarding.selectLanguageSubtitle": "Scegli la lingua dell'app"
 }

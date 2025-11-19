@@ -252,29 +252,15 @@ struct OnboardingView: View {
         return LocalizationManager.shared.availableLanguages.keys.contains(deviceLang) ? deviceLang : "en"
     }
     
-    // Helper functions to get system language strings
+    // Helper functions to get localized strings using LocalizationManager
     private func getSystemLocalizedTitle(systemLang: String) -> String {
-        // Get translation in system language
-        let translations: [String: String] = [
-            "de": "Sprache auswählen",
-            "en": "Select Language",
-            "fr": "Choisir la langue",
-            "es": "Seleccionar idioma",
-            "it": "Seleziona lingua"
-        ]
-        return translations[systemLang] ?? translations["de"] ?? "Sprache auswählen"
+        // Use LocalizationManager to get the translation in the current app language
+        return L.onboarding_selectLanguageTitle.localized
     }
     
     private func getSystemLocalizedSubtitle(systemLang: String) -> String {
-        // Get translation in system language
-        let translations: [String: String] = [
-            "de": "Wähle die Sprache für die App aus",
-            "en": "Choose the language for the app",
-            "fr": "Choisissez la langue de l'application",
-            "es": "Elige el idioma de la aplicación",
-            "it": "Scegli la lingua dell'app"
-        ]
-        return translations[systemLang] ?? translations["de"] ?? "Wähle die Sprache für die App aus"
+        // Use LocalizationManager to get the translation in the current app language
+        return L.onboarding_selectLanguageSubtitle.localized
     }
     
     // MARK: - Step 1: Allergies

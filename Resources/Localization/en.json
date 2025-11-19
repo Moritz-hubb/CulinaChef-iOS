@@ -310,7 +310,6 @@
   "recipe.keine_schritte_gefunden": "No Schritte gefunden.",
   "recipe.regenerateHint": "Please regenerate.",
   "recipe.keine_schritte_gefunden_2c3f": "No Schritte gefunden.",
-  "recipe.regenerateHint": "Please regenerate.",
   "recipe.meine": "My",
   "recipe.menü": "Menü",
   "recipe.menü_539e": "Menu",
@@ -634,5 +633,7 @@
   "consent.title": "Use AI features",
   "consent.subtitle": "Your request may be sent to OpenAI (USA). Without consent you cannot use AI features.",
   "consent.decline": "Decline",
-  "consent.accept": "Accept and Continue"
+  "consent.accept": "Accept and Continue",
+  "onboarding.selectLanguageTitle": "Select Language",
+  "onboarding.selectLanguageSubtitle": "Choose the language for the app"
 }

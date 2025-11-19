@@ -870,6 +870,8 @@ enum L {
     static let onboarding_stepOfTotal = "onboarding.stepOfTotal"
     static let onboarding_howSpicyDoYouLikeIt = "onboarding.howSpicyDoYouLikeIt"
     static let onboarding_additionalPreferencesOptional = "onboarding.additionalPreferencesOptional"
+    static let onboarding_selectLanguageTitle = "onboarding.selectLanguageTitle"
+    static let onboarding_selectLanguageSubtitle = "onboarding.selectLanguageSubtitle"
     static let ui_datenschutzerklärung = "ui.datenschutzerklärung"
     static let ui_der_schutz_ihrer_personenbezogenen = "ui.der_schutz_ihrer_personenbezogenen"
     static let ui_grundsätze_der_datenverarbeitung = "ui.grundsätze_der_datenverarbeitung"

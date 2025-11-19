@@ -21,9 +21,23 @@ struct OnboardingView: View {
             L.taste_bitter.localized,
             L.taste_umami.localized
         ]
-        for key in keys {
-            if tastePreferences[key] == nil {
+        
+        // Check if we need to migrate (if current keys don't match new keys)
+        let currentKeys = Set(tastePreferences.keys)
+        let newKeys = Set(keys)
+        
+        if currentKeys != newKeys {
+            // Language changed - reset preferences with new keys
+            tastePreferences = [:]
+            for key in keys {
                 tastePreferences[key] = false
+            }
+        } else {
+            // Same language - just ensure all keys exist
+            for key in keys {
+                if tastePreferences[key] == nil {
+                    tastePreferences[key] = false
+                }
             }
         }
     }
@@ -32,7 +46,8 @@ struct OnboardingView: View {
     @State private var isSaving = false
     
     private var dietOptions: [String] {
-        [
+        let _ = localizationManager.currentLanguage // Force recomputation when language changes
+        return [
             L.vegetarian.localized,
             L.vegan.localized,
             L.pescetarian.localized,
@@ -46,7 +61,8 @@ struct OnboardingView: View {
     }
     
     private var spicyLabels: [String] {
-        [
+        let _ = localizationManager.currentLanguage // Force recomputation when language changes
+        return [
             L.mild.localized,
             L.normal.localized,
             L.spicy.localized,
@@ -55,7 +71,8 @@ struct OnboardingView: View {
     }
     
     private var tastePreferenceKeys: [String] {
-        [
+        let _ = localizationManager.currentLanguage // Force recomputation when language changes
+        return [
             L.taste_sweet.localized,
             L.taste_sour.localized,
             L.taste_bitter.localized,
@@ -112,6 +129,10 @@ struct OnboardingView: View {
         }
         .interactiveDismissDisabled()
         .onAppear {
+            initializeTastePreferences()
+        }
+        .onChange(of: localizationManager.currentLanguage) { _, _ in
+            // Re-initialize taste preferences when language changes
             initializeTastePreferences()
         }
     }
@@ -251,15 +272,18 @@ struct OnboardingView: View {
                     Text(L.onboarding_allergien_unverträglichkeiten.localized)
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.black)
+                        .id(localizationManager.currentLanguage)
                     Text(L.onboarding_damit_wir_deine_rezepte.localized)
                         .font(.system(size: 15))
                         .foregroundColor(.black.opacity(0.6))
+                        .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
                 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
                         TextField(L.placeholder_newAllergy.localized, text: $newAllergyText)
+                            .id(localizationManager.currentLanguage)
                             .textFieldStyle(.plain)
                             .padding(12)
                             .background(.white)
@@ -294,6 +318,7 @@ struct OnboardingView: View {
                             .foregroundColor(.black.opacity(0.4))
                             .italic()
                             .padding(.top, 8)
+                            .id(localizationManager.currentLanguage)
                     }
                 }
             }
@@ -310,13 +335,16 @@ struct OnboardingView: View {
                     Text(L.onboarding_ernährungsweise.localized)
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.black)
+                        .id(localizationManager.currentLanguage)
                     Text(L.onboarding_wähle_deine_ernährungspräferenzen_a.localized)
                         .font(.system(size: 15))
                         .foregroundColor(.black.opacity(0.6))
+                        .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
                 
                 WrapDietChips(options: dietOptions, selection: $selectedDiets)
+                    .id(localizationManager.currentLanguage)
                 
                 if selectedDiets.isEmpty {
                     Text(L.onboarding_keine_spezielle_ernährungsweise_kei.localized)
@@ -324,6 +352,7 @@ struct OnboardingView: View {
                         .foregroundColor(.black.opacity(0.4))
                         .italic()
                         .padding(.top, 8)
+                        .id(localizationManager.currentLanguage)
                 }
             }
             .padding(.horizontal, 20)
@@ -355,6 +384,7 @@ struct OnboardingView: View {
                         Text(spicyLabels[Int(spicyLevel)])
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
+                            .id(localizationManager.currentLanguage)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
@@ -374,6 +404,7 @@ struct OnboardingView: View {
                                     .font(.system(size: 11, weight: Int(spicyLevel) == index ? .bold : .regular))
                                     .foregroundColor(Int(spicyLevel) == index ? Color(red: 0.85, green: 0.4, blue: 0.2) : .black.opacity(0.5))
                                     .frame(maxWidth: .infinity)
+                                    .id("\(localizationManager.currentLanguage)_\(index)")
                             }
                         }
                     }
@@ -389,8 +420,10 @@ struct OnboardingView: View {
                     VStack(spacing: 10) {
                         ForEach(Array(tastePreferences.keys.sorted()), id: \.self) { key in
                             tastePreferenceToggle(key: key)
+                                .id("\(localizationManager.currentLanguage)_\(key)")
                         }
                     }
+                    .id(localizationManager.currentLanguage)
                 }
                 .padding(20)
                 .background(.white)
@@ -410,15 +443,18 @@ struct OnboardingView: View {
                     Text(L.onboarding_was_möchtest_du_meiden.localized)
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.black)
+                        .id(localizationManager.currentLanguage)
                     Text(L.onboarding_zutaten_die_du_nicht.localized)
                         .font(.system(size: 15))
                         .foregroundColor(.black.opacity(0.6))
+                        .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
                 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
                         TextField(L.placeholder_newDislike.localized, text: $newDislikeText)
+                            .id(localizationManager.currentLanguage)
                             .textFieldStyle(.plain)
                             .padding(12)
                             .background(.white)
@@ -485,6 +521,7 @@ struct OnboardingView: View {
                         .foregroundColor(.white)
                         .cornerRadius(14)
                         .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
+                        .id(localizationManager.currentLanguage)
                 }
                 .disabled(currentStep == 0 && selectedLanguage.isEmpty)
             } else {
@@ -498,6 +535,7 @@ struct OnboardingView: View {
                         } else {
                             Text(L.done.localized)
                                 .font(.system(size: 17, weight: .semibold))
+                                .id(localizationManager.currentLanguage)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -521,6 +559,7 @@ struct OnboardingView: View {
                     Text(L.onboarding_zurück.localized)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.black.opacity(0.6))
+                        .id(localizationManager.currentLanguage)
                 }
             }
         }

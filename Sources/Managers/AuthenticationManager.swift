@@ -60,7 +60,18 @@ final class AuthenticationManager {
         try KeychainManager.save(key: "user_email", value: response.user.email)
         
         // Create/Upsert profile with unique username
-        try await upsertProfile(userId: response.user.id, username: uname, accessToken: response.access_token)
+        // If profile saving fails, log it but don't fail the entire signup
+        // The account is already created, so we can retry profile creation later
+        do {
+            try await upsertProfile(userId: response.user.id, username: uname, accessToken: response.access_token)
+        } catch {
+            #if DEBUG
+            print("[AuthenticationManager] Warning: Profile could not be saved during signup: \(error.localizedDescription)")
+            print("[AuthenticationManager] User account was created successfully. Profile can be created/updated later.")
+            #endif
+            // Don't throw - account is created, profile can be fixed later
+            // The user can still use the app, and profile will be created on next login or profile update
+        }
         
         return SignInResult(
             accessToken: response.access_token,
@@ -174,10 +185,46 @@ final class AuthenticationManager {
         req.addValue("resolution=merge-duplicates,return=representation", forHTTPHeaderField: "Prefer")
         req.httpBody = try JSONEncoder().encode([Row(user_id: userId, username: username, full_name: fullName, email: email)])
         
-        let (_, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw NSError(domain: "Profiles", code: (resp as? HTTPURLResponse)?.statusCode ?? -1, userInfo: [NSLocalizedDescriptionKey: "Profil konnte nicht gespeichert werden"])
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse else {
+            throw NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: "Profil konnte nicht gespeichert werden: Ungültige Server-Antwort"])
         }
+        
+        // Accept 200 (OK), 201 (Created), and 204 (No Content) as success
+        // Also accept 409 (Conflict) if profile already exists (upsert should handle this)
+        let successCodes = [200, 201, 204]
+        let acceptableCodes = successCodes + [409] // 409 might occur if profile exists but upsert didn't work as expected
+        
+        if !successCodes.contains(http.statusCode) {
+            #if DEBUG
+            let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
+            print("[AuthenticationManager] Profile upsert response: Status \(http.statusCode)")
+            print("[AuthenticationManager] Response body: \(responseBody)")
+            #endif
+            
+            if acceptableCodes.contains(http.statusCode) {
+                // 409 Conflict might mean profile already exists - this is actually OK for upsert
+                #if DEBUG
+                print("[AuthenticationManager] Profile upsert returned \(http.statusCode) - treating as success (profile may already exist)")
+                #endif
+                return
+            }
+            
+            // Try to decode error message from response
+            let errorMessage: String
+            if let errorData = try? JSONDecoder().decode([String: String].self, from: data),
+               let message = errorData["message"] ?? errorData["error"] {
+                errorMessage = "Profil konnte nicht gespeichert werden: \(message)"
+            } else {
+                errorMessage = "Profil konnte nicht gespeichert werden (Status: \(http.statusCode))"
+            }
+            
+            throw NSError(domain: "Profiles", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        }
+        
+        #if DEBUG
+        print("[AuthenticationManager] Profile successfully saved/updated (Status: \(http.statusCode))")
+        #endif
     }
     
     // MARK: - Onboarding Status

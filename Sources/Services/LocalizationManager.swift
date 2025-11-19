@@ -52,49 +52,9 @@ class LocalizationManager: ObservableObject {
         // Mark that we're initializing to prevent saving during init
         _isInitializing = true
         
-        // Get device language - try multiple methods to ensure we get the correct language code
-        // Priority: preferredLanguages > current.language.languageCode > current.identifier
-        var deviceLang: String = "en"
-        
-        // Method 1: Try Locale.preferredLanguages first (most reliable)
-        // This is the user's actual system language preference
-        // Check ALL preferred languages, not just the first one
-        for preferredLang in Locale.preferredLanguages {
-            // Extract language code from formats like "en-US", "en_US", "en"
-            let components = preferredLang.components(separatedBy: CharacterSet(charactersIn: "-_"))
-            if let langCode = components.first, langCode.count == 2 {
-                let lowercased = langCode.lowercased()
-                // If this language is in our available languages, use it
-                if availableLanguages.keys.contains(lowercased) {
-                    deviceLang = lowercased
-                    break // Found a supported language, stop searching
-                }
-            }
-        }
-        
-        // Method 2: Fallback to Locale.current.language.languageCode
-        // Only use this if we didn't find a supported language in preferredLanguages
-        if deviceLang == "en" || !availableLanguages.keys.contains(deviceLang) {
-            if let langCode = Locale.current.language.languageCode?.identifier {
-                let lowercased = langCode.lowercased()
-                if lowercased.count == 2 && availableLanguages.keys.contains(lowercased) {
-                    deviceLang = lowercased
-                }
-            }
-        }
-        
-        // Method 3: Fallback to Locale.current.identifier
-        // Only use this if we still haven't found a supported language
-        if deviceLang == "en" || !availableLanguages.keys.contains(deviceLang) {
-            let identifier = Locale.current.identifier
-            let components = identifier.components(separatedBy: CharacterSet(charactersIn: "-_"))
-            if let langCode = components.first, langCode.count == 2 {
-                let lowercased = langCode.lowercased()
-                if availableLanguages.keys.contains(lowercased) {
-                    deviceLang = lowercased
-                }
-            }
-        }
+        // Get device language - use the same detection method
+        // This will return a supported language or "en" as fallback
+        let deviceLang = detectDeviceLanguage()
         
         // Always print (not just in DEBUG) to ensure we see what's happening
         print("[LocalizationManager] ========== INIT START ==========")
@@ -149,7 +109,14 @@ class LocalizationManager: ObservableObject {
         }
         
         // Validate language exists, fallback to English if device language is not supported
-        let validatedLang = availableLanguages.keys.contains(initialLang) ? initialLang : fallbackLanguage
+        let validatedLang: String
+        if availableLanguages.keys.contains(initialLang) {
+            validatedLang = initialLang
+        } else {
+            // Device language is not supported - use English as fallback
+            validatedLang = fallbackLanguage
+            print("[LocalizationManager] ⚠️ Device language '\(initialLang)' is not supported, falling back to English")
+        }
         
         print("[LocalizationManager] Initial language: \(initialLang), validated: \(validatedLang)")
         print("[LocalizationManager] Is authenticated: \(isAuthenticated)")
@@ -214,8 +181,9 @@ class LocalizationManager: ObservableObject {
     }
     
     /// Detect device language using the same method as init
+    /// Returns a supported language code, or "en" as fallback if no supported language is found
     private func detectDeviceLanguage() -> String {
-        var deviceLang: String = "en"
+        var deviceLang: String? = nil
         
         // Method 1: Try Locale.preferredLanguages first (most reliable)
         // Check ALL preferred languages, not just the first one
@@ -234,7 +202,7 @@ class LocalizationManager: ObservableObject {
         
         // Method 2: Fallback to Locale.current.language.languageCode
         // Only use this if we didn't find a supported language in preferredLanguages
-        if deviceLang == "en" || !availableLanguages.keys.contains(deviceLang) {
+        if deviceLang == nil {
             if let langCode = Locale.current.language.languageCode?.identifier {
                 let lowercased = langCode.lowercased()
                 if lowercased.count == 2 && availableLanguages.keys.contains(lowercased) {
@@ -245,7 +213,7 @@ class LocalizationManager: ObservableObject {
         
         // Method 3: Fallback to Locale.current.identifier
         // Only use this if we still haven't found a supported language
-        if deviceLang == "en" || !availableLanguages.keys.contains(deviceLang) {
+        if deviceLang == nil {
             let identifier = Locale.current.identifier
             let components = identifier.components(separatedBy: CharacterSet(charactersIn: "-_"))
             if let langCode = components.first, langCode.count == 2 {
@@ -256,7 +224,12 @@ class LocalizationManager: ObservableObject {
             }
         }
         
-        return deviceLang
+        // If no supported language was found, default to English
+        let finalLang = deviceLang ?? fallbackLanguage
+        if deviceLang == nil {
+            print("[LocalizationManager] ⚠️ No supported language found in system preferences, defaulting to English")
+        }
+        return finalLang
     }
     
     /// Set language explicitly (e.g., from onboarding)
@@ -408,12 +381,17 @@ class LocalizationManager: ObservableObject {
     func resetToDeviceLanguage() {
         // Get device language using the same method as init
         let deviceLang = detectDeviceLanguage()
-        let validLang = availableLanguages.keys.contains(deviceLang) ? deviceLang : fallbackLanguage
+        let validLang: String
+        if availableLanguages.keys.contains(deviceLang) {
+            validLang = deviceLang
+        } else {
+            // Device language is not supported - use English as fallback
+            validLang = fallbackLanguage
+            print("[LocalizationManager] ⚠️ Device language '\(deviceLang)' is not supported, falling back to English")
+        }
         
-        #if DEBUG
         print("[LocalizationManager] resetToDeviceLanguage: detected=\(deviceLang), valid=\(validLang), current=\(currentLanguage)")
         print("[LocalizationManager] Locale.preferredLanguages: \(Locale.preferredLanguages)")
-        #endif
         
         // Don't do anything if already set to device language
         if currentLanguage == validLang {

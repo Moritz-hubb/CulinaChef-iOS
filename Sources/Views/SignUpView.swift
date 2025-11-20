@@ -378,14 +378,6 @@ struct SignUpView: View {
                         }
                         .padding(.vertical, 2)
                         
-                        // Info text about Apple Sign In behavior
-                        Text("Hinweis: Wenn deine Apple ID bereits verwendet wurde, zeigt Apple den Anmelde-Dialog. Die App erkennt automatisch, ob du dich registrieren oder anmelden möchtest.")
-                            .font(.system(size: 10))
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 8)
-                            .padding(.bottom, 4)
-                        
                         // Apple Sign In (localized button)
                         // NOTE: Apple Sign In remembers if the Apple ID was used before.
                         // After first use, Apple will always show Sign In dialog, even with .signUp.

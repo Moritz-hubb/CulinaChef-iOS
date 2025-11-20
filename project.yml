@@ -41,6 +41,8 @@ targets:
     configFiles:
       Debug: Configs/Secrets.xcconfig
       Release: Configs/Secrets.xcconfig
+    entitlements:
+      path: Configs/CulinaChef.entitlements
     info:
       path: Sources/Info.plist
       properties:

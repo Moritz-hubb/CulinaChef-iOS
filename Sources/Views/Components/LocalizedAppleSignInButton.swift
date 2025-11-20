@@ -13,6 +13,8 @@ struct LocalizedAppleSignInButton: View {
     let onCompletion: (Result<ASAuthorization, Error>) -> Void
     
     @State private var authorizationController: ASAuthorizationController?
+    @State private var authorizationDelegate: AuthorizationDelegate?
+    @State private var presentationProvider: PresentationContextProvider?
     
     init(
         buttonType: ASAuthorizationAppleIDButton.ButtonType = .signIn,
@@ -52,17 +54,40 @@ struct LocalizedAppleSignInButton: View {
     }
     
     private func performAppleSignIn() {
+        // Ensure we're on main thread
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async {
+                self.performAppleSignIn()
+            }
+            return
+        }
+        
         let provider = ASAuthorizationAppleIDProvider()
         let request = provider.createRequest()
         onRequest(request)
         
         let controller = ASAuthorizationController(authorizationRequests: [request])
-        controller.delegate = AuthorizationDelegate(onCompletion: onCompletion)
-        controller.presentationContextProvider = PresentationContextProvider()
-        controller.performRequests()
+        let completionHandler = onCompletion
+        let delegate = AuthorizationDelegate(onCompletion: { [weak self] result in
+            // Clear references after completion
+            DispatchQueue.main.async {
+                self?.authorizationController = nil
+                self?.authorizationDelegate = nil
+                self?.presentationProvider = nil
+            }
+            completionHandler(result)
+        })
+        let presentationProvider = PresentationContextProvider()
         
-        // Keep a reference to prevent deallocation
+        controller.delegate = delegate
+        controller.presentationContextProvider = presentationProvider
+        
+        // Keep references to prevent deallocation
         self.authorizationController = controller
+        self.authorizationDelegate = delegate
+        self.presentationProvider = presentationProvider
+        
+        controller.performRequests()
     }
 }
 
@@ -75,11 +100,17 @@ private class AuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate
     }
     
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-        onCompletion(.success(authorization))
+        // Ensure callback is on main thread
+        DispatchQueue.main.async {
+            self.onCompletion(.success(authorization))
+        }
     }
     
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        onCompletion(.failure(error))
+        // Ensure callback is on main thread
+        DispatchQueue.main.async {
+            self.onCompletion(.failure(error))
+        }
     }
 }
 

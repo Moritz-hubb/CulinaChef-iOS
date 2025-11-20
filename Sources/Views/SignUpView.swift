@@ -391,8 +391,8 @@ struct SignUpView: View {
                         // After first use, Apple will always show Sign In dialog, even with .signUp.
                         // Our app logic handles this by checking if profile exists after authentication.
                         LocalizedAppleSignInButton(
-                            buttonType: .signUp,
-                            buttonStyle: .black,
+                            buttonType: ASAuthorizationAppleIDButton.ButtonType.signUp,
+                            buttonStyle: ASAuthorizationAppleIDButton.Style.black,
                             localizedText: L.signUpWithApple.localized,
                             onRequest: { request in
                                 // Prepare nonce for replay protection

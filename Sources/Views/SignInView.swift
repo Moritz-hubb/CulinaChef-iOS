@@ -221,8 +221,8 @@ struct SignInView: View {
                         
                         // Apple Sign In (localized button)
                         LocalizedAppleSignInButton(
-                            buttonType: .signIn,
-                            buttonStyle: .black,
+                            buttonType: ASAuthorizationAppleIDButton.ButtonType.signIn,
+                            buttonStyle: ASAuthorizationAppleIDButton.Style.black,
                             localizedText: L.loginWithApple.localized,
                             onRequest: { request in
                                 // Prepare nonce for replay protection

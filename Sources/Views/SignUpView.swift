@@ -386,63 +386,65 @@ struct SignUpView: View {
                             .padding(.horizontal, 8)
                             .padding(.bottom, 4)
                         
-                        // Apple Sign In (official button)
+                        // Apple Sign In (localized button)
                         // NOTE: Apple Sign In remembers if the Apple ID was used before.
                         // After first use, Apple will always show Sign In dialog, even with .signUp.
                         // Our app logic handles this by checking if profile exists after authentication.
-                        SignInWithAppleButton(.signUp, onRequest: { request in
-                            // Prepare nonce for replay protection
-                            let nonce = randomNonceString()
-                            self.appleNonce = nonce
-                            request.requestedScopes = [.fullName, .email]
-                            request.nonce = sha256(nonce)
-                        }, onCompletion: { result in
-                            switch result {
-                            case .success(let authResult):
-                                if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
-                                   let tokenData = credential.identityToken,
-                                   let idToken = String(data: tokenData, encoding: .utf8) {
-                                    // Extract full name if available (only provided on first sign in)
-                                    let fullName: String?
-                                    if let givenName = credential.fullName?.givenName,
-                                       let familyName = credential.fullName?.familyName {
-                                        fullName = "\(givenName) \(familyName)"
-                                    } else if let givenName = credential.fullName?.givenName {
-                                        fullName = givenName
+                        LocalizedAppleSignInButton(
+                            buttonType: .signUp,
+                            buttonStyle: .black,
+                            localizedText: L.signUpWithApple.localized,
+                            onRequest: { request in
+                                // Prepare nonce for replay protection
+                                let nonce = randomNonceString()
+                                self.appleNonce = nonce
+                                request.requestedScopes = [.fullName, .email]
+                                request.nonce = sha256(nonce)
+                            },
+                            onCompletion: { result in
+                                switch result {
+                                case .success(let authResult):
+                                    if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
+                                       let tokenData = credential.identityToken,
+                                       let idToken = String(data: tokenData, encoding: .utf8) {
+                                        // Extract full name if available (only provided on first sign in)
+                                        let fullName: String?
+                                        if let givenName = credential.fullName?.givenName,
+                                           let familyName = credential.fullName?.familyName {
+                                            fullName = "\(givenName) \(familyName)"
+                                        } else if let givenName = credential.fullName?.givenName {
+                                            fullName = givenName
+                                        } else {
+                                            fullName = nil
+                                        }
+                                        Task { await handleAppleSignIn(idToken: idToken, fullName: fullName) }
                                     } else {
-                                        fullName = nil
+                                        self.errorMessage = "Apple Anmelde-Token ungültig"
                                     }
-                                    Task { await handleAppleSignIn(idToken: idToken, fullName: fullName) }
-                                } else {
-                                    self.errorMessage = "Apple Anmelde-Token ungültig"
-                                }
-                            case .failure(let error):
-                                // Handle Apple Sign In errors with better messages
-                                let nsError = error as NSError
-                                let errorCode = nsError.code
-                                let errorDomain = nsError.domain
-                                
-                                // Check for simulator/device-specific errors
-                                if errorDomain == "AKAuthenticationError" || errorDomain.contains("AuthenticationServices") {
-                                    #if targetEnvironment(simulator)
-                                    self.errorMessage = "Sign in with Apple funktioniert nicht im Simulator. Bitte teste auf einem echten Gerät."
-                                    #else
-                                    // Real device errors
-                                    if errorCode == -7022 || errorCode == -7071 {
-                                        self.errorMessage = "Apple Sign In Fehler. Bitte versuche es erneut oder melde dich mit E-Mail an."
+                                case .failure(let error):
+                                    // Handle Apple Sign In errors with better messages
+                                    let nsError = error as NSError
+                                    let errorCode = nsError.code
+                                    let errorDomain = nsError.domain
+                                    
+                                    // Check for simulator/device-specific errors
+                                    if errorDomain == "AKAuthenticationError" || errorDomain.contains("AuthenticationServices") {
+                                        #if targetEnvironment(simulator)
+                                        self.errorMessage = "Sign in with Apple funktioniert nicht im Simulator. Bitte teste auf einem echten Gerät."
+                                        #else
+                                        // Real device errors
+                                        if errorCode == -7022 || errorCode == -7071 {
+                                            self.errorMessage = "Apple Sign In Fehler. Bitte versuche es erneut oder melde dich mit E-Mail an."
+                                        } else {
+                                            self.errorMessage = error.localizedDescription.isEmpty ? "Apple Sign In fehlgeschlagen. Bitte versuche es erneut." : error.localizedDescription
+                                        }
+                                        #endif
                                     } else {
-                                        self.errorMessage = error.localizedDescription.isEmpty ? "Apple Sign In fehlgeschlagen. Bitte versuche es erneut." : error.localizedDescription
+                                        self.errorMessage = error.localizedDescription.isEmpty ? "Anmeldung fehlgeschlagen" : error.localizedDescription
                                     }
-                                    #endif
-                                } else {
-                                    self.errorMessage = error.localizedDescription.isEmpty ? "Anmeldung fehlgeschlagen" : error.localizedDescription
                                 }
                             }
-                        })
-                        .signInWithAppleButtonStyle(.black)
-                        .frame(height: 44)
-                        .frame(maxWidth: 375) // Prevent constraint conflicts
-                        .cornerRadius(8)
+                        )
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 8)

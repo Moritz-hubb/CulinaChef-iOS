@@ -121,7 +121,7 @@ com.moritzserrin.culinachef.service
 - Erstelle ein Client Secret mit diesem Tool: https://appleid.apple.com/signinwithapple/privatekey
 - Oder verwende dieses Python-Script:
 
-```python
+```python 
 import jwt
 import time
 

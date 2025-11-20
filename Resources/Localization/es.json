@@ -601,6 +601,7 @@
   "ui.übersicht_über_die_aufbewahrungsfri": "Resumen de los períodos de retención para diferentes tipos de datos:",
   "auth.loginButton": "Iniciar sesión",
   "auth.loginWithApple": "Iniciar sesión con Apple",
+  "auth.signUpWithApple": "Registrarse con Apple",
   "auth.or": "o",
   "auth.passwordPlaceholderDots": "••••••••",
   "auth.signUpButton": "Registrarse",

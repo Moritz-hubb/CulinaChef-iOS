@@ -601,6 +601,7 @@
   "ui.übersicht_über_die_aufbewahrungsfri": "Übersicht über die Aufbewahrungsfristen verschiedener Datentypen:",
   "auth.loginButton": "Anmelden",
   "auth.loginWithApple": "Mit Apple anmelden",
+  "auth.signUpWithApple": "Mit Apple registrieren",
   "auth.or": "oder",
   "auth.passwordPlaceholderDots": "••••••••",
   "auth.signUpButton": "Registrieren",

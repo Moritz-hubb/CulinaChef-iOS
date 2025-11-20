@@ -601,6 +601,7 @@
   "ui.übersicht_über_die_aufbewahrungsfri": "Panoramica dei periodi di conservazione per diversi tipi di dati:",
   "auth.loginButton": "Accedi",
   "auth.loginWithApple": "Accedi con Apple",
+  "auth.signUpWithApple": "Iscriviti con Apple",
   "auth.or": "o",
   "auth.passwordPlaceholderDots": "••••••••",
   "auth.signUpButton": "Iscriviti",

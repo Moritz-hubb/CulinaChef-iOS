@@ -558,6 +558,7 @@ enum L {
     static let minCharacters = "auth.minCharacters"
     static let loginButton = "auth.loginButton"
     static let loginWithApple = "auth.loginWithApple"
+    static let signUpWithApple = "auth.signUpWithApple"
     static let or = "auth.or"
     static let passwordPlaceholderDots = "auth.passwordPlaceholderDots"
     static let signUpButton = "auth.signUpButton"

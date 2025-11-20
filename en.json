@@ -602,6 +602,7 @@
   "ui.übersicht_über_die_aufbewahrungsfri": "Overview of the retention periods for different types of data:",
   "auth.loginButton": "Log In",
   "auth.loginWithApple": "Log in with Apple",
+  "auth.signUpWithApple": "Sign up with Apple",
   "auth.or": "or",
   "auth.passwordPlaceholderDots": "••••••••",
   "auth.signUpButton": "Sign Up",

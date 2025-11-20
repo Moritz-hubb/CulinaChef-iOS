@@ -183,5 +183,7 @@
   "chat.messagePlaceholder": "Message…",
   "chat.culinaName": "Culina",
   "chat.welcomeMessage": "Salut ! Je t'aide avec cette recette. Que veux-tu savoir ?",
-  "chat.inRecipeAI": "IA de recette"
+  "chat.inRecipeAI": "IA de recette",
+  "legal.fairUseCheckbox": "J'ai lu et j'accepte la Politique d'utilisation équitable",
+  "legal.fairUseCheckboxLink": "Politique d'utilisation équitable"
 }

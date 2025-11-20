@@ -1,3 +1,4 @@
+/Users/moritzserrin/CulinaChef/ios/Sources/Views/ChatView.swift:185:9 The compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
 # Fair Use Policy
 Limites d'utilisation et prévention des abus
 
@@ -158,4 +159,5 @@ Pour toute question concernant cette politique ou votre utilisation, contactez :
 
 **Stand :** 11. November 2025  
 **Version :** 1.0
+
 

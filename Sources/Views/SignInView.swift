@@ -234,7 +234,7 @@ struct SignInView: View {
                                    let idToken = String(data: tokenData, encoding: .utf8) {
                                     Task { await handleAppleSignIn(idToken: idToken) }
                                 } else {
-                                    self.errorMessage = "Apple Anmelde-Token ungültig"
+                                    self.errorMessage = L.errorAppleTokenInvalid.localized
                                 }
                             case .failure(let error):
                                 self.errorMessage = error.localizedDescription

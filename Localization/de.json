@@ -385,5 +385,7 @@
   "chat.messagePlaceholder": "Nachricht…",
   "chat.culinaName": "Culina",
   "chat.welcomeMessage": "Hi! Ich helfe dir bei diesem Rezept. Was möchtest du wissen?",
-  "chat.inRecipeAI": "In-Rezept KI"
+  "chat.inRecipeAI": "In-Rezept KI",
+  "legal.fairUseCheckbox": "Ich habe die Fair Use Policy gelesen und akzeptiere sie",
+  "legal.fairUseCheckboxLink": "Fair Use Policy"
 }

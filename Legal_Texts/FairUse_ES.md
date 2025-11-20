@@ -159,3 +159,4 @@ Para preguntas sobre esta política o tu uso, contacta :
 **Stand :** 11. November 2025  
 **Versión :** 1.0
 
+

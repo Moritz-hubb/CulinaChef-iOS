@@ -19,6 +19,8 @@ struct SignUpView: View {
     @State private var showTerms = false
     @State private var showPrivacy = false
     @FocusState private var focusedField: Field?
+    @State private var showAccountExistsError = false
+    var onNavigateToSignIn: (() -> Void)?
     
     enum Field: Hashable {
         case username, email, password, confirmPassword
@@ -80,24 +82,25 @@ struct SignUpView: View {
                 
                 // White card with form
                 VStack(spacing: 0) {
-                    VStack(spacing: 16) {
-                        // Close button
-                        HStack {
-                            Spacer()
-                            Button {
-                                dismiss()
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 28))
-                                    .foregroundColor(.gray.opacity(0.6))
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            // Close button
+                            HStack {
+                                Spacer()
+                                Button {
+                                    dismiss()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 28))
+                                        .foregroundColor(.gray.opacity(0.6))
+                                }
                             }
-                        }
-                        .padding(.top, 16)
-                        .padding(.trailing, 16)
-                        Text(L.ui_registrieren.localized)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 16)
+                            .padding(.trailing, 16)
+                            Text(L.ui_registrieren.localized)
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         
                         // Username Field
                         VStack(alignment: .leading, spacing: 4) {
@@ -289,7 +292,36 @@ struct SignUpView: View {
                         .padding(.vertical, 4)
                         
                         // Error Message
-                        if let error = errorMessage {
+                        if showAccountExistsError {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "exclamationmark.circle.fill")
+                                        .font(.system(size: 11))
+                                    Text(L.errorAccountExists.localized)
+                                        .font(.system(size: 11))
+                                }
+                                .foregroundColor(.red)
+                                
+                                Button(action: {
+                                    dismiss()
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                        onNavigateToSignIn?()
+                                    }
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Text(L.errorAccountExistsLoginLink.localized)
+                                            .font(.system(size: 11, weight: .semibold))
+                                        Image(systemName: "arrow.right")
+                                            .font(.system(size: 10))
+                                    }
+                                    .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                }
+                            }
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(6)
+                        } else if let error = errorMessage {
                             HStack(spacing: 5) {
                                 Image(systemName: "exclamationmark.circle.fill")
                                     .font(.system(size: 11))
@@ -370,11 +402,11 @@ struct SignUpView: View {
                         .signInWithAppleButtonStyle(.black)
                         .frame(height: 44)
                         .cornerRadius(8)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        .padding(.bottom, 20)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
-                    .frame(maxHeight: .infinity)
                     .background(Color.white)
                     .cornerRadius(30, corners: [.topLeft, .topRight])
                     .ignoresSafeArea(edges: .bottom)
@@ -407,6 +439,7 @@ struct SignUpView: View {
     
     private func signUp() async {
         errorMessage = nil
+        showAccountExistsError = false
         focusedField = nil
         
         // Validate input before sending to backend
@@ -455,7 +488,25 @@ struct SignUpView: View {
                 username: uname
             )
         } catch {
-            errorMessage = error.localizedDescription
+            // Check if it's a 422 error (account already exists) or if error message indicates email exists
+            let errorDescription = error.localizedDescription.lowercased()
+            let errorDomain = (error as NSError).domain
+            let errorCode = (error as NSError).code
+            
+            // Check for 422 status code or error messages indicating email already exists
+            if errorCode == 422 || 
+               errorDescription.contains("422") ||
+               errorDescription.contains("email") && (errorDescription.contains("already") || 
+                                                       errorDescription.contains("exist") || 
+                                                       errorDescription.contains("registered") ||
+                                                       errorDescription.contains("duplicate") ||
+                                                       errorDescription.contains("taken")) {
+                showAccountExistsError = true
+                errorMessage = nil
+            } else {
+                showAccountExistsError = false
+                errorMessage = error.localizedDescription
+            }
         }
     }
     

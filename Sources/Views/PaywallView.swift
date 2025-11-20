@@ -9,6 +9,8 @@ struct PaywallView: View {
     @State private var isRestoring = false
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var hasAcceptedFairUse = false
+    @State private var showFairUse = false
     
     private var backgroundGradient: LinearGradient {
         LinearGradient(
@@ -107,8 +109,40 @@ struct PaywallView: View {
                             )
                         #endif
                         
-                        // CTA Button
+                        // Fair Use Policy Checkbox
                         VStack(spacing: 12) {
+                            HStack(alignment: .top, spacing: 12) {
+                                Button(action: { hasAcceptedFairUse.toggle() }) {
+                                    Image(systemName: hasAcceptedFairUse ? "checkmark.square.fill" : "square")
+                                        .font(.title3)
+                                        .foregroundStyle(hasAcceptedFairUse ? Color(red: 0.2, green: 0.6, blue: 0.9) : .white.opacity(0.7))
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(spacing: 4) {
+                                        Text(L.legalFairUseCheckbox.localized)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.white)
+                                        
+                                        Button(action: { showFairUse = true }) {
+                                            Text(L.legalFairUseCheckboxLink.localized)
+                                                .font(.subheadline)
+                                                .underline()
+                                                .foregroundStyle(Color(red: 0.2, green: 0.6, blue: 0.9))
+                                        }
+                                    }
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color.white.opacity(0.1))
+                            )
+                            
+                            // CTA Button
                             Button(action: purchaseUnlimited) {
                                 HStack {
                                     if isPurchasing {
@@ -199,16 +233,59 @@ struct PaywallView: View {
                     .accessibilityHint("Schließt den Paywall")
                 }
             }
-.alert(L.alert_error.localized, isPresented: $showError) {
+            .alert(L.alert_error.localized, isPresented: $showError) {
                 Button(L.button_ok.localized, role: .cancel) { }
             } message: {
                 Text(errorMessage ?? L.errorGeneric.localized)
+            }
+            .sheet(isPresented: $showFairUse) {
+                FairUseView()
             }
         }
         .id(localizationManager.currentLanguage) // Force re-render on language change
     }
     
+    private func userFriendlyErrorMessage(from error: Error) -> String {
+        let errorDescription = error.localizedDescription.lowercased()
+        return userFriendlyErrorMessage(from: errorDescription)
+    }
+    
+    private func userFriendlyErrorMessage(from errorString: String) -> String {
+        let errorDescription = errorString.lowercased()
+        
+        // Network errors
+        if errorDescription.contains("cannotfindhost") || 
+           errorDescription.contains("cannotconnecttohost") ||
+           errorDescription.contains("network") ||
+           errorDescription.contains("internet") {
+            return L.errorNetworkConnection.localized
+        }
+        
+        // StoreKit errors
+        if errorDescription.contains("purchase") || 
+           errorDescription.contains("storekit") ||
+           errorDescription.contains("payment") {
+            return L.errorPurchaseFailed.localized
+        }
+        
+        // Rate limit errors
+        if errorDescription.contains("rate limit") || 
+           errorDescription.contains("limit exceeded") {
+            return L.errorRateLimitExceeded.localized
+        }
+        
+        // Generic fallback
+        return L.errorGenericUserFriendly.localized
+    }
+    
     private func purchaseUnlimited() {
+        // Validate Fair Use Policy acceptance
+        guard hasAcceptedFairUse else {
+            errorMessage = L.legalFairUseCheckboxRequired.localized
+            showError = true
+            return
+        }
+        
         isPurchasing = true
         errorMessage = nil
         
@@ -222,8 +299,8 @@ struct PaywallView: View {
                 // Check if purchase was successful
                 if app.isSubscribed {
                     dismiss()
-                } else if let error = app.error {
-                    errorMessage = error
+                } else if let errorString = app.error {
+                    errorMessage = userFriendlyErrorMessage(from: errorString)
                     showError = true
                 } else {
                     // User cancelled - no error, just don't dismiss
@@ -257,7 +334,7 @@ struct PaywallView: View {
             } catch {
                 await MainActor.run {
                     isRestoring = false
-                    errorMessage = error.localizedDescription
+                    errorMessage = userFriendlyErrorMessage(from: error)
                     showError = true
                 }
             }

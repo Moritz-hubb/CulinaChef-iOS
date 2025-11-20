@@ -375,7 +375,12 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             let reply = try await openai.chatReply(messages: prefixed, maxHistory: prefixed.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
-            await MainActor.run { messages.append(.init(role: .assistant, text: "Fehler: \(error.localizedDescription)")) }
+            await MainActor.run { 
+                let errorMsg = error.localizedDescription.contains("cannotFindHost") || error.localizedDescription.contains("cannotConnectToHost") 
+                    ? L.errorNetworkConnection.localized 
+                    : L.errorChatError.localized
+                messages.append(.init(role: .assistant, text: errorMsg))
+            }
         }
     }
 
@@ -448,7 +453,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             let reply = try await openai.chatReply(messages: contextMsgs, maxHistory: contextMsgs.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
-            await MainActor.run { messages.append(.init(role: .assistant, text: "Fehler bei Bildanalyse: \(error.localizedDescription)")) }
+            await MainActor.run { messages.append(.init(role: .assistant, text: L.errorImageAnalysisError.localized)) }
         }
     }
 }
@@ -771,7 +776,7 @@ private struct RecipeSuggestionsView: View {
         
         // Block AI features on jailbroken devices
         if app.isJailbroken {
-            createError = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
+            createError = L.errorJailbreakDetected.localized
             return
         }
         
@@ -859,7 +864,7 @@ private struct RecipeSuggestionsView: View {
         // Block AI features on jailbroken devices
         if app.isJailbroken {
             await MainActor.run {
-                createError = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
+                createError = L.errorJailbreakDetected.localized
             }
             return
         }

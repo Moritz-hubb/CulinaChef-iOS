@@ -11,7 +11,6 @@ struct RootView: View {
         Group {
             if app.isAuthenticated {
                 MainTabView()
-                    .id(localizationManager.currentLanguage) // Force re-render on language change
                     .fullScreenCover(isPresented: $showOnboarding) {
                         OnboardingView()
                     }
@@ -82,11 +81,22 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
             // Force view refresh by updating UUID, but only if onboarding is not showing
             // This prevents the onboarding from being dismissed when language changes
+            // Also prevent refresh if settings sheet is open to avoid closing it
+            // Use a small delay to ensure settings state is preserved
             if !showOnboarding {
-                languageRefreshTrigger = UUID()
+                if app.showSettings || app.showLanguageSettings {
+                    // Don't refresh if settings are open - preserve the state
+                    return
+                }
+                // Small delay to ensure any state changes are processed first
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    if !app.showSettings && !app.showLanguageSettings {
+                        languageRefreshTrigger = UUID()
+                    }
+                }
             }
         }
-        .id("\(languageRefreshTrigger)_\(localizationManager.currentLanguage)") // Include language in ID for complete refresh
+        .id(app.showSettings || app.showLanguageSettings ? "stable" : "\(languageRefreshTrigger)_\(localizationManager.currentLanguage)") // Prevent refresh when settings are open
     }
     
     private func onboardingCompletedForCurrentUser() -> Bool {
@@ -139,7 +149,6 @@ struct MainTabView: View {
     @EnvironmentObject var app: AppState
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @State private var showNotifications = false
-    @State private var showSettings = false
     @State private var showDeepLinkRecipe = false
     @State private var deepLinkRecipeToShow: Recipe? = nil
     
@@ -164,7 +173,6 @@ struct MainTabView: View {
                     .id(localizationManager.currentLanguage) // Force re-render on language change
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .id(localizationManager.currentLanguage) // Force TabView re-render on language change
         }
         .safeAreaInset(edge: .top) {
             HStack {
@@ -189,7 +197,7 @@ struct MainTabView: View {
                             .overlay(Circle().stroke(Color.gray.opacity(0.1), lineWidth: 1))
                     }
                     
-                    Button(action: { showSettings = true }) {
+                    Button(action: { app.showSettings = true }) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
@@ -246,9 +254,9 @@ LinearGradient(
         )
         .sheet(isPresented: $showNotifications) {
             NotificationsSettingsSheet()
-                .presentationDetents([.large])
+                .presentationDetents([PresentationDetent.large])
         }
-        .sheet(isPresented: $showSettings) {
+        .sheet(isPresented: $app.showSettings) {
             SettingsView()
         }
         .sheet(isPresented: $showDeepLinkRecipe) {

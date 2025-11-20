@@ -128,7 +128,12 @@ struct AuthView: View {
             .fullScreenCover(isPresented: $showSignUp, onDismiss: {
                 showSignUp = false
             }) {
-                SignUpView()
+                SignUpView(onNavigateToSignIn: {
+                    showSignUp = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showSignIn = true
+                    }
+                })
             }
             .fullScreenCover(isPresented: $showSignIn, onDismiss: {
                 showSignIn = false

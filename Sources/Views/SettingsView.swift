@@ -9,13 +9,14 @@ struct SettingsView: View {
     @State private var showProfile = false
     @State private var showSubscription = false
     @State private var showNotifications = false
-    @State private var showLanguage = false
     @State private var showDeleteConfirm = false
     @State private var showDeleteSuccess = false
     @State private var showTerms = false
     @State private var showPrivacy = false
     @State private var showImprint = false
     @State private var showFairUse = false
+    @State private var showError = false
+    @State private var errorMessage: String?
     
     private var backgroundGradient: LinearGradient {
         LinearGradient(
@@ -35,7 +36,7 @@ struct SettingsView: View {
                 Button(action: { showNotifications = true }) {
                     settingsRow(icon: "bell", text: L.notifications.localized)
                 }
-                Button(action: { showLanguage = true }) {
+                Button(action: { app.showLanguageSettings = true }) {
                     settingsRow(icon: "globe", text: L.language.localized)
                 }
             }
@@ -191,7 +192,7 @@ struct SettingsView: View {
             NotificationsSettingsSheet()
                 .presentationDetents([PresentationDetent.large])
         }
-        .sheet(isPresented: $showLanguage) {
+        .sheet(isPresented: $app.showLanguageSettings) {
             LanguageSettingsSheet()
                 .presentationDetents([PresentationDetent.large])
         }
@@ -228,7 +229,11 @@ struct SettingsView: View {
         } message: {
             Text(L.accountDeletedMessage.localized)
         }
-        .id(localizationManager.currentLanguage) // Force re-render on language change
+        .alert(L.alert_error.localized, isPresented: $showError) {
+            Button(L.button_ok.localized, role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? L.errorGeneric.localized)
+        }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -270,6 +275,8 @@ private struct LegalPlaceholderView: View {
 private struct SectionCard<Content: View>: View {
     let title: String
     let content: Content
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    
     init(title: String, @ViewBuilder content: () -> Content) {
         self.title = title
         self.content = content()
@@ -279,6 +286,7 @@ private struct SectionCard<Content: View>: View {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(.white.opacity(0.95))
+                .id(localizationManager.currentLanguage)
             content
         }
         .padding(16)
@@ -904,7 +912,7 @@ private struct ProfileSettingsSheet: View {
         do {
             // Fetch all recipes from backend
             guard let token = app.accessToken else {
-                error = isGerman ? "Nicht angemeldet" : "Not logged in"
+                error = L.errorNotLoggedIn.localized
                 return
             }
             
@@ -925,7 +933,7 @@ private struct ProfileSettingsSheet: View {
             
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
-                error = isGerman ? "Export fehlgeschlagen" : "Export failed"
+                error = L.errorExportFailed.localized
                 return
             }
             
@@ -989,6 +997,9 @@ private struct SubscriptionSettingsSheet: View {
     @State private var showFairUsePolicy = false
     @State private var showTerms = false
     @State private var showPrivacy = false
+    @State private var hasAcceptedFairUse = false
+    @State private var showError = false
+    @State private var errorMessage: String?
 
     private var dateFormatter: DateFormatter {
         let f = DateFormatter()
@@ -1168,9 +1179,50 @@ private struct SubscriptionSettingsSheet: View {
                                     .foregroundStyle(.white.opacity(0.8))
                                     .multilineTextAlignment(.center)
                             } else {
-                                // Purchase Button
-                                Button {
+                                // Fair Use Policy Checkbox
+                                VStack(spacing: 12) {
+                                    HStack(alignment: .top, spacing: 12) {
+                                        Button(action: { hasAcceptedFairUse.toggle() }) {
+                                            Image(systemName: hasAcceptedFairUse ? "checkmark.square.fill" : "square")
+                                                .font(.title3)
+                                                .foregroundStyle(hasAcceptedFairUse ? Color(red: 0.2, green: 0.6, blue: 0.9) : .white.opacity(0.7))
+                                        }
+                                        
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack(spacing: 4) {
+                                                Text(L.legalFairUseCheckbox.localized)
+                                                    .font(.subheadline)
+                                                    .foregroundStyle(.white)
+                                                
+                                                Button(action: { showFairUsePolicy = true }) {
+                                                    Text(L.legalFairUseCheckboxLink.localized)
+                                                        .font(.subheadline)
+                                                        .underline()
+                                                        .foregroundStyle(Color(red: 0.2, green: 0.6, blue: 0.9))
+                                                }
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .fill(Color.white.opacity(0.1))
+                                    )
+                                    
+                                    // Purchase Button
+                                    Button {
+                                    // Validate Fair Use Policy acceptance
+                                    guard hasAcceptedFairUse else {
+                                        errorMessage = L.legalFairUseCheckboxRequired.localized
+                                        showError = true
+                                        return
+                                    }
+                                    
                                     isPurchasing = true
+                                    errorMessage = nil
                                     Task {
                                         await app.purchaseStoreKit()
                                         isPurchasing = false
@@ -1227,6 +1279,7 @@ private struct SubscriptionSettingsSheet: View {
                                     .font(.caption)
                                     .foregroundStyle(.white.opacity(0.8))
                                     .multilineTextAlignment(.center)
+                                }
                             }
                         }
                         .padding(.top, 8)
@@ -1461,7 +1514,14 @@ Toggle(L.notificationsOffers.localized, isOn: $notifOffers).tint(Color(red: 0.95
 
 private struct LanguageSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var app: AppState
     @ObservedObject private var localizationManager = LocalizationManager.shared
+    @State private var selectedLanguage: String
+    
+    init() {
+        // Initialize with current language
+        _selectedLanguage = State(initialValue: LocalizationManager.shared.currentLanguage)
+    }
     
     var body: some View {
         ZStack {
@@ -1471,7 +1531,29 @@ private struct LanguageSettingsSheet: View {
                 HStack {
                     Text(L.language.localized).font(.title2.bold()).foregroundStyle(.white)
                     Spacer()
-                    Button(L.done.localized) { dismiss() }
+                    Button(L.done.localized) {
+                        // Save the current settings sheet state
+                        let wasSettingsOpen = app.showSettings
+                        
+                        // Close the language settings sheet first
+                        dismiss()
+                        
+                        // Apply language change after a delay to ensure sheet is closed
+                        if selectedLanguage != localizationManager.currentLanguage {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                // Change language
+                                localizationManager.currentLanguage = selectedLanguage
+                                
+                                // Ensure settings sheet stays open if it was open before
+                                if wasSettingsOpen {
+                                    // Use another small delay to ensure the view hierarchy is stable
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        app.showSettings = true
+                                    }
+                                }
+                            }
+                        }
+                    }
                         .foregroundStyle(.white)
                         .padding(.vertical, 6)
                         .padding(.horizontal, 12)
@@ -1482,7 +1564,8 @@ private struct LanguageSettingsSheet: View {
                 VStack(spacing: 12) {
                     ForEach(Array(localizationManager.availableLanguages.keys.sorted()), id: \.self) { code in
                         Button {
-                            localizationManager.currentLanguage = code
+                            // Only update local state, not the actual language
+                            selectedLanguage = code
                         } label: {
                             HStack {
                                 Text(languageFlag(code))
@@ -1491,14 +1574,14 @@ private struct LanguageSettingsSheet: View {
                                     .font(.body)
                                     .foregroundStyle(.white)
                                 Spacer()
-                                if localizationManager.currentLanguage == code {
+                                if selectedLanguage == code {
                                     Image(systemName: "checkmark.circle.fill")
                                         .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
                                 }
                             }
                             .padding(16)
                             .background(
-                                localizationManager.currentLanguage == code 
+                                selectedLanguage == code 
                                     ? Color.white.opacity(0.15) 
                                     : Color.white.opacity(0.06),
                                 in: RoundedRectangle(cornerRadius: 12, style: .continuous)

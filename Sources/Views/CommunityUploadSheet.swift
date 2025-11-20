@@ -246,7 +246,7 @@ struct CommunityUploadSheet: View {
                 }
             }
         }
-        .alert("Fehler", isPresented: $showError) {
+        .alert(L.alert_error.localized, isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage)
@@ -281,7 +281,7 @@ struct CommunityUploadSheet: View {
         // Block uploads on jailbroken devices
         if app.isJailbroken {
             await MainActor.run {
-                errorMessage = "Community-Uploads sind auf modifizierten Geräten nicht verfügbar"
+                errorMessage = L.errorJailbreakCommunityUpload.localized
                 showError = true
             }
             return
@@ -373,9 +373,30 @@ struct CommunityUploadSheet: View {
         } catch {
             Logger.error("Community upload failed", error: error, category: .network)
             await MainActor.run {
-                errorMessage = "Upload fehlgeschlagen: \(error.localizedDescription)"
+                errorMessage = userFriendlyErrorMessage(from: error)
                 showError = true
             }
         }
+    }
+    
+    private func userFriendlyErrorMessage(from error: Error) -> String {
+        let errorDescription = error.localizedDescription.lowercased()
+        
+        // Network errors
+        if errorDescription.contains("cannotfindhost") || 
+           errorDescription.contains("cannotconnecttohost") ||
+           errorDescription.contains("network") ||
+           errorDescription.contains("internet") {
+            return L.errorNetworkConnection.localized
+        }
+        
+        // Upload errors
+        if errorDescription.contains("upload") || 
+           errorDescription.contains("failed") {
+            return L.errorUploadFailed.localized
+        }
+        
+        // Generic fallback
+        return L.errorGenericUserFriendly.localized
     }
 }

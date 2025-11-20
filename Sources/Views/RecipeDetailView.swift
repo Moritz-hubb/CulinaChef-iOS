@@ -723,7 +723,7 @@ struct RecipeDetailView: View {
         } catch {
             Logger.error("Photo upload failed in recipe detail", error: error, category: .network)
             await MainActor.run {
-                uploadError = "\(L.errorUploadFailed.localized). Bitte versuche es erneut."
+                uploadError = "\(L.errorUploadFailed.localized) \(L.errorGenericUserFriendly.localized)"
             }
         }
     }
@@ -1129,6 +1129,27 @@ struct RecipeDetailView: View {
             }
         }
     }
+    
+    private func userFriendlyErrorMessage(from error: Error) -> String {
+        let errorDescription = error.localizedDescription.lowercased()
+        
+        // Network errors
+        if errorDescription.contains("cannotfindhost") || 
+           errorDescription.contains("cannotconnecttohost") ||
+           errorDescription.contains("network") ||
+           errorDescription.contains("internet") {
+            return L.errorNetworkConnection.localized
+        }
+        
+        // Rate limit errors
+        if errorDescription.contains("rate limit") || 
+           errorDescription.contains("limit exceeded") {
+            return L.errorRateLimitExceeded.localized
+        }
+        
+        // Generic fallback
+        return L.errorGenericUserFriendly.localized
+    }
 }
 
 // MARK: - AI Chat Sheet for Saved Recipes
@@ -1305,7 +1326,9 @@ private struct RecipeAISheetForSavedRecipe: View {
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
                 Logger.info("Backend unreachable for recipe AI, continuing without usage tracking", category: .network)
             } catch {
-                await MainActor.run { self.error = error.localizedDescription }
+                await MainActor.run { 
+                    self.error = userFriendlyErrorMessage(from: error)
+                }
                 return
             }
             guard let openai = (app.recipeAI ?? app.openAI) else { throw NSError(domain: "no_api", code: 0) }
@@ -1327,7 +1350,10 @@ private struct RecipeAISheetForSavedRecipe: View {
             let reply = try await openai.chatReply(messages: prefixed, maxHistory: prefixed.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
-            await MainActor.run { messages.append(.init(role: .assistant, text: "Fehler: \(error.localizedDescription)")) }
+            await MainActor.run { 
+                let errorMsg = userFriendlyErrorMessage(from: error)
+                messages.append(.init(role: .assistant, text: errorMsg))
+            }
         }
     }
 
@@ -1403,6 +1429,27 @@ private struct RecipeAISheetForSavedRecipe: View {
             }
             .padding()
         }
+    }
+    
+    private func userFriendlyErrorMessage(from error: Error) -> String {
+        let errorDescription = error.localizedDescription.lowercased()
+        
+        // Network errors
+        if errorDescription.contains("cannotfindhost") || 
+           errorDescription.contains("cannotconnecttohost") ||
+           errorDescription.contains("network") ||
+           errorDescription.contains("internet") {
+            return L.errorNetworkConnection.localized
+        }
+        
+        // Rate limit errors
+        if errorDescription.contains("rate limit") || 
+           errorDescription.contains("limit exceeded") {
+            return L.errorRateLimitExceeded.localized
+        }
+        
+        // Generic fallback
+        return L.errorGenericUserFriendly.localized
     }
 }
 
@@ -1819,8 +1866,29 @@ private struct RatingSubmissionView: View {
             try await app.upsertRating(recipeId: recipeId, rating: selected, accessToken: token, userId: userId)
             await MainActor.run { self.submitted = true }
         } catch {
-            await MainActor.run { self.error = error.localizedDescription }
+            await MainActor.run { self.error = userFriendlyErrorMessage(from: error) }
         }
+    }
+    
+    private func userFriendlyErrorMessage(from error: Error) -> String {
+        let errorDescription = error.localizedDescription.lowercased()
+        
+        // Network errors
+        if errorDescription.contains("cannotfindhost") || 
+           errorDescription.contains("cannotconnecttohost") ||
+           errorDescription.contains("network") ||
+           errorDescription.contains("internet") {
+            return L.errorNetworkConnection.localized
+        }
+        
+        // Rate limit errors
+        if errorDescription.contains("rate limit") || 
+           errorDescription.contains("limit exceeded") {
+            return L.errorRateLimitExceeded.localized
+        }
+        
+        // Generic fallback
+        return L.errorGenericUserFriendly.localized
     }
 }
 

@@ -100,6 +100,8 @@ final class AppState: ObservableObject {
     
     // Password reset state
     @Published var showPasswordReset: Bool = false
+    @Published var showSettings: Bool = false
+    @Published var showLanguageSettings: Bool = false
     @Published var passwordResetToken: String? = nil
     @Published var passwordResetRefreshToken: String? = nil
     

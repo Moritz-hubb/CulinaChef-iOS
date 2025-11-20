@@ -389,14 +389,18 @@ struct SignUpView: View {
                             onRequest: { request in
                                 // Validate that user has accepted terms and privacy
                                 guard self.acceptedTerms && self.confirmedAge else {
-                                    self.errorMessage = L.acceptTermsAndPrivacy.localized
-                                    self.showAccountExistsError = false
+                                    DispatchQueue.main.async {
+                                        self.errorMessage = L.acceptTermsAndPrivacy.localized
+                                        self.showAccountExistsError = false
+                                    }
                                     return
                                 }
                                 
                                 // Clear any previous error messages
-                                self.errorMessage = nil
-                                self.showAccountExistsError = false
+                                DispatchQueue.main.async {
+                                    self.errorMessage = nil
+                                    self.showAccountExistsError = false
+                                }
                                 
                                 // Prepare nonce for replay protection
                                 let nonce = randomNonceString()

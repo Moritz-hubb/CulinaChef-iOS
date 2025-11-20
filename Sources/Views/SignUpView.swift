@@ -378,22 +378,39 @@ struct SignUpView: View {
                         }
                         .padding(.vertical, 2)
                         
-                        // Apple Sign In (localized button)
+                        // Apple Sign In (original button with localized text above)
                         // NOTE: Apple Sign In remembers if the Apple ID was used before.
                         // After first use, Apple will always show Sign In dialog, even with .signUp.
                         // Our app logic handles this by checking if profile exists after authentication.
-                        LocalizedAppleSignInButton(
-                            buttonType: ASAuthorizationAppleIDButton.ButtonType.signUp,
-                            buttonStyle: ASAuthorizationAppleIDButton.Style.black,
-                            localizedText: L.signUpWithApple.localized,
-                            onRequest: { request in
+                        VStack(spacing: 4) {
+                            // Localized label above button
+                            Text(L.signUpWithApple.localized)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.gray)
+                                .padding(.bottom, 2)
+                            
+                            SignInWithAppleButton(.signUp, onRequest: { request in
+                                // Validate that user has accepted terms and privacy
+                                guard self.acceptedTerms && self.confirmedAge else {
+                                    DispatchQueue.main.async {
+                                        self.errorMessage = L.acceptTermsAndPrivacy.localized
+                                        self.showAccountExistsError = false
+                                    }
+                                    return
+                                }
+                                
+                                // Clear any previous error messages
+                                DispatchQueue.main.async {
+                                    self.errorMessage = nil
+                                    self.showAccountExistsError = false
+                                }
+                                
                                 // Prepare nonce for replay protection
                                 let nonce = randomNonceString()
                                 self.appleNonce = nonce
                                 request.requestedScopes = [.fullName, .email]
                                 request.nonce = sha256(nonce)
-                            },
-                            onCompletion: { result in
+                            }, onCompletion: { result in
                                 switch result {
                                 case .success(let authResult):
                                     if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
@@ -435,26 +452,12 @@ struct SignUpView: View {
                                         self.errorMessage = error.localizedDescription.isEmpty ? "Anmeldung fehlgeschlagen" : error.localizedDescription
                                     }
                                 }
-                            },
-                            shouldPerformRequest: {
-                                // Validate that user has accepted terms and privacy
-                                if !self.acceptedTerms || !self.confirmedAge {
-                                    DispatchQueue.main.async {
-                                        self.errorMessage = L.acceptTermsAndPrivacy.localized
-                                        self.showAccountExistsError = false
-                                    }
-                                    return false
-                                }
-                                
-                                // Clear any previous error messages
-                                DispatchQueue.main.async {
-                                    self.errorMessage = nil
-                                    self.showAccountExistsError = false
-                                }
-                                
-                                return true
-                            }
-                        )
+                            })
+                            .signInWithAppleButtonStyle(.black)
+                            .frame(height: 44)
+                            .frame(maxWidth: 375) // Prevent constraint conflicts
+                            .cornerRadius(8)
+                        }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 8)

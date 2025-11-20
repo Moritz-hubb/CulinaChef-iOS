@@ -219,19 +219,21 @@ struct SignInView: View {
                         .accessibilityHint("Öffnet den Passwort-Reset-Bildschirm")
                         .padding(.top, 8)
                         
-                        // Apple Sign In (localized button)
-                        LocalizedAppleSignInButton(
-                            buttonType: ASAuthorizationAppleIDButton.ButtonType.signIn,
-                            buttonStyle: ASAuthorizationAppleIDButton.Style.black,
-                            localizedText: L.loginWithApple.localized,
-                            onRequest: { request in
+                        // Apple Sign In (original button with localized text above)
+                        VStack(spacing: 4) {
+                            // Localized label above button
+                            Text(L.loginWithApple.localized)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.gray)
+                                .padding(.bottom, 2)
+                            
+                            SignInWithAppleButton(.signIn, onRequest: { request in
                                 // Prepare nonce for replay protection
                                 let nonce = randomNonceString()
                                 self.appleNonce = nonce
                                 request.requestedScopes = [.fullName, .email]
                                 request.nonce = sha256(nonce)
-                            },
-                            onCompletion: { result in
+                            }, onCompletion: { result in
                                 switch result {
                                 case .success(let authResult):
                                     if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
@@ -273,8 +275,12 @@ struct SignInView: View {
                                         self.errorMessage = error.localizedDescription.isEmpty ? "Anmeldung fehlgeschlagen" : error.localizedDescription
                                     }
                                 }
-                            }
-                        )
+                            })
+                            .signInWithAppleButtonStyle(.black)
+                            .frame(height: 44)
+                            .frame(maxWidth: 375) // Prevent constraint conflicts
+                            .cornerRadius(8)
+                        }
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 8)

@@ -68,13 +68,9 @@ struct LocalizedAppleSignInButton: View {
         
         let controller = ASAuthorizationController(authorizationRequests: [request])
         let completionHandler = onCompletion
-        let delegate = AuthorizationDelegate(onCompletion: { [weak self] result in
-            // Clear references after completion
-            DispatchQueue.main.async {
-                self?.authorizationController = nil
-                self?.authorizationDelegate = nil
-                self?.presentationProvider = nil
-            }
+        let delegate = AuthorizationDelegate(onCompletion: { result in
+            // Call the completion handler
+            // Note: References are automatically managed by @State and will be cleared when view is recreated
             completionHandler(result)
         })
         let presentationProvider = PresentationContextProvider()

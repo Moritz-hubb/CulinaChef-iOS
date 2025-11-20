@@ -602,6 +602,7 @@
   "auth.loginButton": "Anmelden",
   "auth.loginWithApple": "Mit Apple anmelden",
   "auth.signUpWithApple": "Mit Apple registrieren",
+  "auth.acceptTermsAndPrivacy": "Bitte akzeptiere die AGB und Datenschutzerklärung",
   "auth.or": "oder",
   "auth.passwordPlaceholderDots": "••••••••",
   "auth.signUpButton": "Registrieren",

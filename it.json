@@ -602,6 +602,7 @@
   "auth.loginButton": "Accedi",
   "auth.loginWithApple": "Accedi con Apple",
   "auth.signUpWithApple": "Iscriviti con Apple",
+  "auth.acceptTermsAndPrivacy": "Si prega di accettare i Termini e Condizioni e l'Informativa sulla Privacy",
   "auth.or": "o",
   "auth.passwordPlaceholderDots": "••••••••",
   "auth.signUpButton": "Iscriviti",

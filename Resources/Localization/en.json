@@ -603,6 +603,7 @@
   "auth.loginButton": "Log In",
   "auth.loginWithApple": "Log in with Apple",
   "auth.signUpWithApple": "Sign up with Apple",
+  "auth.acceptTermsAndPrivacy": "Please accept the Terms and Conditions and Privacy Policy",
   "auth.or": "or",
   "auth.passwordPlaceholderDots": "••••••••",
   "auth.signUpButton": "Sign Up",

@@ -123,5 +123,3 @@ private class PresentationContextProvider: NSObject, ASAuthorizationControllerPr
     }
 }
 
-
-

@@ -78,10 +78,7 @@ struct LocalizedAppleSignInButton: View {
         onRequest(request)
         
         // Ensure request is properly configured
-        guard request.nonce != nil else {
-            // Nonce should be set in onRequest, but if not, we can't proceed
-            print("[LocalizedAppleSignInButton] Warning: Nonce not set in request")
-        }
+        // Note: Nonce should be set in onRequest closure
         
         let controller = ASAuthorizationController(authorizationRequests: [request])
         let completionHandler = onCompletion

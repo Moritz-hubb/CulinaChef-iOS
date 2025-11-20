@@ -11,6 +11,7 @@ struct LocalizedAppleSignInButton: View {
     let localizedText: String
     let onRequest: (ASAuthorizationAppleIDRequest) -> Void
     let onCompletion: (Result<ASAuthorization, Error>) -> Void
+    let shouldPerformRequest: (() -> Bool)?
     
     @State private var authorizationController: ASAuthorizationController?
     @State private var authorizationDelegate: AuthorizationDelegate?
@@ -21,13 +22,15 @@ struct LocalizedAppleSignInButton: View {
         buttonStyle: ASAuthorizationAppleIDButton.Style = .black,
         localizedText: String,
         onRequest: @escaping (ASAuthorizationAppleIDRequest) -> Void,
-        onCompletion: @escaping (Result<ASAuthorization, Error>) -> Void
+        onCompletion: @escaping (Result<ASAuthorization, Error>) -> Void,
+        shouldPerformRequest: (() -> Bool)? = nil
     ) {
         self.buttonType = buttonType
         self.buttonStyle = buttonStyle
         self.localizedText = localizedText
         self.onRequest = onRequest
         self.onCompletion = onCompletion
+        self.shouldPerformRequest = shouldPerformRequest
     }
     
     var body: some View {
@@ -59,6 +62,12 @@ struct LocalizedAppleSignInButton: View {
             DispatchQueue.main.async {
                 self.performAppleSignIn()
             }
+            return
+        }
+        
+        // Check if request should be performed (validation)
+        if let shouldPerform = shouldPerformRequest, !shouldPerform() {
+            // Validation failed, don't perform request
             return
         }
         

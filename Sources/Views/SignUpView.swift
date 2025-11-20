@@ -386,14 +386,14 @@ struct SignUpView: View {
                             buttonType: ASAuthorizationAppleIDButton.ButtonType.signUp,
                             buttonStyle: ASAuthorizationAppleIDButton.Style.black,
                             localizedText: L.signUpWithApple.localized,
-                            onRequest: { request in
+                            shouldPerformRequest: {
                                 // Validate that user has accepted terms and privacy
-                                guard self.acceptedTerms && self.confirmedAge else {
+                                if !self.acceptedTerms || !self.confirmedAge {
                                     DispatchQueue.main.async {
                                         self.errorMessage = L.acceptTermsAndPrivacy.localized
                                         self.showAccountExistsError = false
                                     }
-                                    return
+                                    return false
                                 }
                                 
                                 // Clear any previous error messages
@@ -402,6 +402,9 @@ struct SignUpView: View {
                                     self.showAccountExistsError = false
                                 }
                                 
+                                return true
+                            },
+                            onRequest: { request in
                                 // Prepare nonce for replay protection
                                 let nonce = randomNonceString()
                                 self.appleNonce = nonce

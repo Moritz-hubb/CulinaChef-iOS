@@ -386,24 +386,6 @@ struct SignUpView: View {
                             buttonType: ASAuthorizationAppleIDButton.ButtonType.signUp,
                             buttonStyle: ASAuthorizationAppleIDButton.Style.black,
                             localizedText: L.signUpWithApple.localized,
-                            shouldPerformRequest: {
-                                // Validate that user has accepted terms and privacy
-                                if !self.acceptedTerms || !self.confirmedAge {
-                                    DispatchQueue.main.async {
-                                        self.errorMessage = L.acceptTermsAndPrivacy.localized
-                                        self.showAccountExistsError = false
-                                    }
-                                    return false
-                                }
-                                
-                                // Clear any previous error messages
-                                DispatchQueue.main.async {
-                                    self.errorMessage = nil
-                                    self.showAccountExistsError = false
-                                }
-                                
-                                return true
-                            },
                             onRequest: { request in
                                 // Prepare nonce for replay protection
                                 let nonce = randomNonceString()
@@ -453,6 +435,24 @@ struct SignUpView: View {
                                         self.errorMessage = error.localizedDescription.isEmpty ? "Anmeldung fehlgeschlagen" : error.localizedDescription
                                     }
                                 }
+                            },
+                            shouldPerformRequest: {
+                                // Validate that user has accepted terms and privacy
+                                if !self.acceptedTerms || !self.confirmedAge {
+                                    DispatchQueue.main.async {
+                                        self.errorMessage = L.acceptTermsAndPrivacy.localized
+                                        self.showAccountExistsError = false
+                                    }
+                                    return false
+                                }
+                                
+                                // Clear any previous error messages
+                                DispatchQueue.main.async {
+                                    self.errorMessage = nil
+                                    self.showAccountExistsError = false
+                                }
+                                
+                                return true
                             }
                         )
                         }

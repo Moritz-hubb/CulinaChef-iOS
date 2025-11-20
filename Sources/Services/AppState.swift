@@ -543,12 +543,14 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     /// - Parameters:
     ///   - idToken: Vom Apple-SDK geliefertes Token.
     ///   - nonce: Optionaler Nonce zur Absicherung gegen Replay-Angriffe.
+    ///   - fullName: Optionaler vollständiger Name vom Apple Credential (nur beim ersten Sign In verfügbar).
+    ///   - isSignUp: Wenn true, wird geprüft ob Account bereits existiert und Fehler geworfen.
     /// - Throws: Fehler aus `SupabaseAuthClient` oder Keychain-Speicherung.
-    func signInWithApple(idToken: String, nonce: String?) async throws {
+    func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp: Bool = false) async throws {
         loading = true
         defer { loading = false }
         
-        let result = try await authManager.signInWithApple(idToken: idToken, nonce: nonce)
+        let result = try await authManager.signInWithApple(idToken: idToken, nonce: nonce, fullName: fullName, isSignUp: isSignUp)
         
         await MainActor.run {
             self.accessToken = result.accessToken

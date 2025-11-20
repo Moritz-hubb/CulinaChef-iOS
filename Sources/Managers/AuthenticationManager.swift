@@ -83,13 +83,49 @@ final class AuthenticationManager {
     
     // MARK: - Apple Sign-In
     
-    func signInWithApple(idToken: String, nonce: String?) async throws -> SignInResult {
+    func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp: Bool = false) async throws -> SignInResult {
         let response = try await auth.signInWithApple(idToken: idToken, nonce: nonce)
         
         try KeychainManager.save(key: "access_token", value: response.access_token)
         try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
         try KeychainManager.save(key: "user_id", value: response.user.id)
         try KeychainManager.save(key: "user_email", value: response.user.email)
+        
+        // Check if profile exists to determine if this is a new or existing user
+        let existingProfile = try await fetchProfile(accessToken: response.access_token, userId: response.user.id)
+        
+        // If this is a sign up flow and user already exists, throw error
+        if isSignUp && existingProfile != nil {
+            throw NSError(
+                domain: "SupabaseAuth",
+                code: 422,
+                userInfo: [NSLocalizedDescriptionKey: "Ein Account mit dieser Apple ID existiert bereits. Bitte melden Sie sich an."]
+            )
+        }
+        
+        if existingProfile == nil {
+            // New user - create profile with username from email
+            let username = response.user.email.split(separator: "@").first.map(String.init) ?? "user"
+            do {
+                try await upsertProfile(userId: response.user.id, username: username, accessToken: response.access_token, fullName: fullName, email: response.user.email)
+            } catch {
+                #if DEBUG
+                print("[AuthenticationManager] Warning: Profile could not be created during Apple Sign In: \(error.localizedDescription)")
+                print("[AuthenticationManager] User account was created successfully. Profile can be created/updated later.")
+                #endif
+                // Don't throw - account is created, profile can be fixed later
+            }
+        } else if let name = fullName, !name.isEmpty {
+            // Existing user but we have a name update (Apple only provides name on first sign in)
+            // Update profile if name is provided
+            do {
+                try await upsertProfile(userId: response.user.id, username: existingProfile!.username, accessToken: response.access_token, fullName: name, email: response.user.email)
+            } catch {
+                #if DEBUG
+                print("[AuthenticationManager] Warning: Could not update profile with name: \(error.localizedDescription)")
+                #endif
+            }
+        }
         
         // Load onboarding status from backend
         await loadOnboardingStatusFromBackend(userId: response.user.id, accessToken: response.access_token)

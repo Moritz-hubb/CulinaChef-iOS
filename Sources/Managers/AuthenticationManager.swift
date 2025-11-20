@@ -92,10 +92,25 @@ final class AuthenticationManager {
         try KeychainManager.save(key: "user_email", value: response.user.email)
         
         // Check if profile exists to determine if this is a new or existing user
-        let existingProfile = try await fetchProfile(accessToken: response.access_token, userId: response.user.id)
+        // Note: We check the profile, not the auth user, because Supabase creates the auth user
+        // automatically even for new Apple Sign In users
+        // IMPORTANT: Apple Sign In remembers if the Apple ID was used before and will always
+        // show the Sign In dialog after first use, even with .signUp. This is expected behavior.
+        // Our app logic handles this by checking if the profile exists after authentication.
+        let existingProfile: ProfileRow?
+        do {
+            existingProfile = try await fetchProfile(accessToken: response.access_token, userId: response.user.id)
+        } catch {
+            // If fetch fails, assume new user (profile doesn't exist)
+            existingProfile = nil
+        }
         
-        // If this is a sign up flow and user already exists, throw error
-        if isSignUp && existingProfile != nil {
+        // Determine if this is truly a new user (no profile exists)
+        let isNewUser = existingProfile == nil
+        
+        // If this is a sign up flow and user already exists (has profile), throw error
+        // This handles the case where Apple shows Sign In dialog but user is trying to sign up
+        if isSignUp && !isNewUser {
             throw NSError(
                 domain: "SupabaseAuth",
                 code: 422,
@@ -103,7 +118,7 @@ final class AuthenticationManager {
             )
         }
         
-        if existingProfile == nil {
+        if isNewUser {
             // New user - create profile with username from email
             let username = response.user.email.split(separator: "@").first.map(String.init) ?? "user"
             do {
@@ -218,7 +233,14 @@ final class AuthenticationManager {
         req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
         let (data, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else { return nil }
+        guard let http = resp as? HTTPURLResponse else { return nil }
+        
+        // Handle 401/403 as "no profile" (user might not exist or no access)
+        if http.statusCode == 401 || http.statusCode == 403 {
+            return nil
+        }
+        
+        guard (200...299).contains(http.statusCode) else { return nil }
         
         let rows = try JSONDecoder().decode([ProfileRow].self, from: data)
         return rows.first

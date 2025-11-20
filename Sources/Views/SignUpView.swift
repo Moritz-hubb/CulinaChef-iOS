@@ -546,9 +546,12 @@ struct SignUpView: View {
         } catch {
             let errorDescription = error.localizedDescription.lowercased()
             let errorCode = (error as NSError).code
+            let errorDomain = (error as NSError).domain
             
             // Check if it's a 422 error (account already exists)
+            // This happens when user tries to sign up but account already exists
             if errorCode == 422 || 
+               errorDomain == "SupabaseAuth" ||
                errorDescription.contains("422") ||
                errorDescription.contains("bereits") ||
                errorDescription.contains("existiert") ||

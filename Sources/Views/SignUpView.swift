@@ -378,18 +378,11 @@ struct SignUpView: View {
                         }
                         .padding(.vertical, 2)
                         
-                        // Apple Sign In (original button with localized text above)
+                        // Apple Sign In (original button - uses system language)
                         // NOTE: Apple Sign In remembers if the Apple ID was used before.
                         // After first use, Apple will always show Sign In dialog, even with .signUp.
                         // Our app logic handles this by checking if profile exists after authentication.
-                        VStack(spacing: 4) {
-                            // Localized label above button
-                            Text(L.signUpWithApple.localized)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.gray)
-                                .padding(.bottom, 2)
-                            
-                            SignInWithAppleButton(.signUp, onRequest: { request in
+                        SignInWithAppleButton(.signUp, onRequest: { request in
                                 // Validate that user has accepted terms and privacy
                                 guard self.acceptedTerms && self.confirmedAge else {
                                     DispatchQueue.main.async {
@@ -453,11 +446,10 @@ struct SignUpView: View {
                                     }
                                 }
                             })
-                            .signInWithAppleButtonStyle(.black)
-                            .frame(height: 44)
-                            .frame(maxWidth: 375) // Prevent constraint conflicts
-                            .cornerRadius(8)
-                        }
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 44)
+                        .frame(maxWidth: 375) // Prevent constraint conflicts
+                        .cornerRadius(8)
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 8)

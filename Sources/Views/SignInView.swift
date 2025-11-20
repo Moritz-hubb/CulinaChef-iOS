@@ -219,15 +219,8 @@ struct SignInView: View {
                         .accessibilityHint("Öffnet den Passwort-Reset-Bildschirm")
                         .padding(.top, 8)
                         
-                        // Apple Sign In (original button with localized text above)
-                        VStack(spacing: 4) {
-                            // Localized label above button
-                            Text(L.loginWithApple.localized)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.gray)
-                                .padding(.bottom, 2)
-                            
-                            SignInWithAppleButton(.signIn, onRequest: { request in
+                        // Apple Sign In (original button - uses system language)
+                        SignInWithAppleButton(.signIn, onRequest: { request in
                                 // Prepare nonce for replay protection
                                 let nonce = randomNonceString()
                                 self.appleNonce = nonce
@@ -276,11 +269,10 @@ struct SignInView: View {
                                     }
                                 }
                             })
-                            .signInWithAppleButtonStyle(.black)
-                            .frame(height: 44)
-                            .frame(maxWidth: 375) // Prevent constraint conflicts
-                            .cornerRadius(8)
-                        }
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 44)
+                        .frame(maxWidth: 375) // Prevent constraint conflicts
+                        .cornerRadius(8)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 8)

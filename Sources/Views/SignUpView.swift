@@ -378,7 +378,18 @@ struct SignUpView: View {
                         }
                         .padding(.vertical, 2)
                         
+                        // Info text about Apple Sign In behavior
+                        Text("Hinweis: Wenn deine Apple ID bereits verwendet wurde, zeigt Apple den Anmelde-Dialog. Die App erkennt automatisch, ob du dich registrieren oder anmelden möchtest.")
+                            .font(.system(size: 10))
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                            .padding(.bottom, 4)
+                        
                         // Apple Sign In (official button)
+                        // NOTE: Apple Sign In remembers if the Apple ID was used before.
+                        // After first use, Apple will always show Sign In dialog, even with .signUp.
+                        // Our app logic handles this by checking if profile exists after authentication.
                         SignInWithAppleButton(.signUp, onRequest: { request in
                             // Prepare nonce for replay protection
                             let nonce = randomNonceString()
@@ -550,6 +561,9 @@ struct SignUpView: View {
             
             // Check if it's a 422 error (account already exists)
             // This happens when user tries to sign up but account already exists
+            // IMPORTANT: After Apple Sign In is used once (even if it fails), Apple will
+            // always show the Sign In dialog, not Sign Up. This is expected Apple behavior.
+            // Our app detects this and shows the appropriate error message.
             if errorCode == 422 || 
                errorDomain == "SupabaseAuth" ||
                errorDescription.contains("422") ||

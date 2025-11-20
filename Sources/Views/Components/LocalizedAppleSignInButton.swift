@@ -73,7 +73,15 @@ struct LocalizedAppleSignInButton: View {
         
         let provider = ASAuthorizationAppleIDProvider()
         let request = provider.createRequest()
+        
+        // Configure request before calling onRequest
         onRequest(request)
+        
+        // Ensure request is properly configured
+        guard request.nonce != nil else {
+            // Nonce should be set in onRequest, but if not, we can't proceed
+            print("[LocalizedAppleSignInButton] Warning: Nonce not set in request")
+        }
         
         let controller = ASAuthorizationController(authorizationRequests: [request])
         let completionHandler = onCompletion
@@ -92,6 +100,7 @@ struct LocalizedAppleSignInButton: View {
         self.authorizationDelegate = delegate
         self.presentationProvider = presentationProvider
         
+        // Perform requests (we're already on main thread)
         controller.performRequests()
     }
 }
@@ -123,11 +132,28 @@ private class AuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate
 private class PresentationContextProvider: NSObject, ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         // Use modern API for iOS 13+
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first(where: { $0.isKeyWindow }) {
-            return window
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }) else {
+            // Fallback: try to get any active window scene
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                return windowScene.windows.first ?? UIWindow()
+            }
+            // Last resort: return a new window
+            return UIWindow()
         }
-        // Fallback: create a new window (shouldn't happen in normal usage)
+        
+        // Get the key window from the active scene
+        if let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
+            return keyWindow
+        }
+        
+        // Fallback to first window in scene
+        if let firstWindow = windowScene.windows.first {
+            return firstWindow
+        }
+        
+        // Last resort
         return UIWindow()
     }
 }

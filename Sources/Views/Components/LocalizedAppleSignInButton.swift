@@ -31,9 +31,9 @@ struct LocalizedAppleSignInButton: View {
     }
     
     var body: some View {
-        Button(action: {
+        Button {
             performAppleSignIn()
-        }) {
+        } label: {
             HStack(spacing: 8) {
                 Image(systemName: "applelogo")
                     .font(.system(size: 16, weight: .semibold))

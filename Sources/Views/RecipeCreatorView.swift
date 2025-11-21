@@ -349,7 +349,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         // Block AI features on jailbroken devices
         if app.isJailbroken {
             await MainActor.run {
-                error = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
+                error = L.errorJailbreakDetected.localized
             }
             return
         }
@@ -369,7 +369,10 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         generating = true
         defer { generating = false }
         // Enforce rate limit via backend before any OpenAI call
-        guard let token = app.accessToken else { error = "Nicht angemeldet"; return }
+        guard let token = app.accessToken else { 
+            error = L.errorNotLoggedIn.localized
+            return 
+        }
         // Try to increment AI usage, but don't fail if backend is unreachable
         do {
             let txnID = await app.getOriginalTransactionId()
@@ -377,10 +380,15 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
             Logger.info("Backend unreachable, continuing without usage tracking", category: .network)
         } catch {
-            await MainActor.run { self.error = error.localizedDescription }
+            await MainActor.run { 
+                self.error = ErrorMessageHelper.userFriendlyMessage(from: error)
+            }
             return
         }
-        guard let openai = app.openAI else { error = "Kein API-Client konfiguriert."; return }
+        guard let openai = app.openAI else { 
+            error = L.errorApiClientNotConfigured.localized
+            return 
+        }
         let nutrition = NutritionConstraint(
             calories_min: Int(caloriesMin), calories_max: Int(caloriesMax),
             protein_min_g: Int(proteinMin), protein_max_g: Int(proteinMax),
@@ -433,7 +441,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                     self.impossibleRecipeMessage = desc.replacingOccurrences(of: "IMPOSSIBLE_RECIPE:", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
                     self.showImpossibleRecipeAlert = true
                 } else {
-                    self.error = desc
+                    self.error = ErrorMessageHelper.userFriendlyMessage(from: error)
                 }
             }
         }

@@ -183,6 +183,9 @@ private struct InfoSection: View {
 enum OpenAIConsentManager {
     private static let consentKeyPrefix = "openai_consent_granted_"
     
+    // Notification name for consent changes
+    static let consentChangedNotification = Notification.Name("OpenAIConsentChanged")
+    
     // Generate user-specific key to prevent cache bleeding
     private static func consentKey(for userId: String) -> String {
         return "\(consentKeyPrefix)\(userId)"
@@ -204,6 +207,13 @@ enum OpenAIConsentManager {
             }
             UserDefaults.standard.set(newValue, forKey: consentKey(for: userId))
             Logger.sensitive("[OpenAIConsent] Consent set to \(newValue) for user \(userId)", category: .auth)
+            
+            // Broadcast change notification
+            NotificationCenter.default.post(
+                name: consentChangedNotification,
+                object: nil,
+                userInfo: ["hasConsent": newValue]
+            )
         }
     }
     
@@ -214,6 +224,13 @@ enum OpenAIConsentManager {
         }
         UserDefaults.standard.removeObject(forKey: consentKey(for: userId))
         Logger.sensitive("[OpenAIConsent] Reset consent for user \(userId)", category: .auth)
+        
+        // Broadcast change notification
+        NotificationCenter.default.post(
+            name: consentChangedNotification,
+            object: nil,
+            userInfo: ["hasConsent": false]
+        )
     }
 }
 

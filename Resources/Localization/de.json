@@ -655,6 +655,7 @@
   "error.genericUserFriendly": "Etwas ist schiefgelaufen. Bitte versuche es erneut. Falls das Problem weiterhin besteht, kontaktiere den Support.",
   "error.accountExists": "Ein Konto mit dieser E-Mail-Adresse existiert bereits.",
   "error.accountExistsLoginLink": "Hier anmelden",
+  "error.apiClientNotConfigured": "Die Anwendung ist nicht korrekt konfiguriert. Bitte starte die App neu oder kontaktiere den Support.",
   "recipe.timerHide": "Timer verstecken",
   "recipe.timerActive": "Timer aktiv",
   "chat.messagePlaceholder": "Nachricht…",

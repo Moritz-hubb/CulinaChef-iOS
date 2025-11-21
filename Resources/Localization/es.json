@@ -655,6 +655,7 @@
   "error.genericUserFriendly": "Algo salió mal. Por favor, inténtalo de nuevo. Si el problema persiste, contacta con soporte.",
   "error.accountExists": "Ya existe una cuenta con esta dirección de correo electrónico.",
   "error.accountExistsLoginLink": "Iniciar sesión aquí",
+  "error.apiClientNotConfigured": "La aplicación no está configurada correctamente. Por favor, reinicia la aplicación o contacta con soporte.",
   "recipe.timerHide": "Ocultar temporizador",
   "recipe.timerActive": "temporizador activo",
   "chat.messagePlaceholder": "Mensaje…",

@@ -80,11 +80,12 @@
 		BF6281D62ECFB79C00058B08 /* supabase.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF6281D52ECFB79C00058B08 /* supabase.cer */; };
 		BF6281D72ECFB79C00058B08 /* backend.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF6281D42ECFB79C00058B08 /* backend.cer */; };
 		BF6281D92ECFB7AA00058B08 /* StoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = BF6281D82ECFB7AA00058B08 /* StoreKit.storekit */; };
-		BF6281E92ECFC70E00058B08 /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6281E42ECFC70E00058B08 /* de.json */; };
-		BF6281EA2ECFC70E00058B08 /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6281E72ECFC70E00058B08 /* fr.json */; };
-		BF6281EB2ECFC70E00058B08 /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6281E52ECFC70E00058B08 /* en.json */; };
-		BF6281EC2ECFC70E00058B08 /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6281E82ECFC70E00058B08 /* it.json */; };
-		BF6281ED2ECFC70E00058B08 /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6281E62ECFC70E00058B08 /* es.json */; };
+		BF6BE17C2ED0D4EA006E383F /* AppStoreReviewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6BE17B2ED0D4EA006E383F /* AppStoreReviewManager.swift */; };
+		BF6BE1A02ED0DEC5006E383F /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE19D2ED0DEC5006E383F /* es.json */; };
+		BF6BE1A12ED0DEC5006E383F /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE19C2ED0DEC5006E383F /* en.json */; };
+		BF6BE1A22ED0DEC5006E383F /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE19F2ED0DEC5006E383F /* it.json */; };
+		BF6BE1A32ED0DEC5006E383F /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE19E2ED0DEC5006E383F /* fr.json */; };
+		BF6BE1A42ED0DEC5006E383F /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE19B2ED0DEC5006E383F /* de.json */; };
 		C03A9DCD41BA6156094F3F11 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF6FA0F10E39BFDD46C6CF5 /* AnalyticsManager.swift */; };
 		C5DA197679F432B7B8AE0B08 /* OpenAIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E3211EFE8C499247FFEE1F8 /* OpenAIClientTests.swift */; };
 		C894F8BE2A01318D4694C497 /* RatingsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5AB35019F11A4B305D520B8 /* RatingsClient.swift */; };
@@ -199,11 +200,12 @@
 		BF6281D42ECFB79C00058B08 /* backend.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = backend.cer; sourceTree = "<group>"; };
 		BF6281D52ECFB79C00058B08 /* supabase.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = supabase.cer; sourceTree = "<group>"; };
 		BF6281D82ECFB7AA00058B08 /* StoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = StoreKit.storekit; sourceTree = "<group>"; };
-		BF6281E42ECFC70E00058B08 /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
-		BF6281E52ECFC70E00058B08 /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
-		BF6281E62ECFC70E00058B08 /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
-		BF6281E72ECFC70E00058B08 /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
-		BF6281E82ECFC70E00058B08 /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
+		BF6BE17B2ED0D4EA006E383F /* AppStoreReviewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReviewManager.swift; sourceTree = "<group>"; };
+		BF6BE19B2ED0DEC5006E383F /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
+		BF6BE19C2ED0DEC5006E383F /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
+		BF6BE19D2ED0DEC5006E383F /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
+		BF6BE19E2ED0DEC5006E383F /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
+		BF6BE19F2ED0DEC5006E383F /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
 		C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		C6374362E3A330D0BA9829E2 /* SecureURLSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureURLSession.swift; sourceTree = "<group>"; };
 		D4F8960B0FF5281ECE12C22E /* String+Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Validation.swift"; sourceTree = "<group>"; };
@@ -275,11 +277,11 @@
 		40728F1A522F5676DA8C2A7A = {
 			isa = PBXGroup;
 			children = (
-				BF6281E42ECFC70E00058B08 /* de.json */,
-				BF6281E52ECFC70E00058B08 /* en.json */,
-				BF6281E62ECFC70E00058B08 /* es.json */,
-				BF6281E72ECFC70E00058B08 /* fr.json */,
-				BF6281E82ECFC70E00058B08 /* it.json */,
+				BF6BE19B2ED0DEC5006E383F /* de.json */,
+				BF6BE19C2ED0DEC5006E383F /* en.json */,
+				BF6BE19D2ED0DEC5006E383F /* es.json */,
+				BF6BE19E2ED0DEC5006E383F /* fr.json */,
+				BF6BE19F2ED0DEC5006E383F /* it.json */,
 				BF6281D82ECFB7AA00058B08 /* StoreKit.storekit */,
 				BF6281D42ECFB79C00058B08 /* backend.cer */,
 				BF6281D52ECFB79C00058B08 /* supabase.cer */,
@@ -343,6 +345,7 @@
 		C850EB45440C158E36A003D3 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				BF6BE17B2ED0D4EA006E383F /* AppStoreReviewManager.swift */,
 				A9B0E04E90D5EB0F73662CDC /* AuthenticationManager.swift */,
 				21C38F108F9C7302B0520E12 /* LikedRecipesManager.swift */,
 				6B1DFC7CBBC6F57AD4C82BD7 /* MenuManager.swift */,
@@ -531,11 +534,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BF6281E92ECFC70E00058B08 /* de.json in Resources */,
-				BF6281EA2ECFC70E00058B08 /* fr.json in Resources */,
-				BF6281EB2ECFC70E00058B08 /* en.json in Resources */,
-				BF6281EC2ECFC70E00058B08 /* it.json in Resources */,
-				BF6281ED2ECFC70E00058B08 /* es.json in Resources */,
+				BF6BE1A02ED0DEC5006E383F /* es.json in Resources */,
+				BF6BE1A12ED0DEC5006E383F /* en.json in Resources */,
+				BF6BE1A22ED0DEC5006E383F /* it.json in Resources */,
+				BF6BE1A32ED0DEC5006E383F /* fr.json in Resources */,
+				BF6BE1A42ED0DEC5006E383F /* de.json in Resources */,
 				BF6281D62ECFB79C00058B08 /* supabase.cer in Resources */,
 				BF6281D92ECFB7AA00058B08 /* StoreKit.storekit in Resources */,
 				BF6281D72ECFB79C00058B08 /* backend.cer in Resources */,
@@ -605,6 +608,7 @@
 				E9024322447EF2B8086445F5 /* ShoppingListView.swift in Sources */,
 				6B7DA5BACF64F64655483583 /* SignInView.swift in Sources */,
 				0B84752B5F9DCFBA11FF2F26 /* SignUpView.swift in Sources */,
+				BF6BE17C2ED0D4EA006E383F /* AppStoreReviewManager.swift in Sources */,
 				CB709F7443BF09398A478807 /* StoreKitManager.swift in Sources */,
 				A5606507852FC4E19C2DAE5E /* String+Validation.swift in Sources */,
 				7CE27D0310E2E8C4F56CACCB /* SubscriptionManager.swift in Sources */,

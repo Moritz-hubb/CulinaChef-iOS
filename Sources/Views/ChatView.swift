@@ -409,7 +409,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         
         // Block AI features on jailbroken devices
         if app.isJailbroken {
-            messages.append(.init(role: .assistant, text: "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"))
+            messages.append(.init(role: .assistant, text: L.errorJailbreakDetected.localized))
             return
         }
         
@@ -442,7 +442,9 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
                 Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
-                await MainActor.run { messages.append(.init(role: .assistant, text: error.localizedDescription)) }
+                await MainActor.run { 
+                    messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error)))
+                }
                 return
             }
 
@@ -469,7 +471,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         
         // Block AI features on jailbroken devices
         if app.isJailbroken {
-            messages.append(.init(role: .assistant, text: "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"))
+            messages.append(.init(role: .assistant, text: L.errorJailbreakDetected.localized))
             pickedImageData = nil
             return
         }
@@ -504,7 +506,9 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
                 Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
-                await MainActor.run { messages.append(.init(role: .assistant, text: error.localizedDescription)) }
+                await MainActor.run { 
+                    messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error)))
+                }
                 return
             }
 
@@ -910,7 +914,9 @@ private struct RecipeSuggestionsView: View {
             // Start auto-generation of all recipes in the background
             Task { await app.autoGenerateRecipesForMenu(menu: menu, suggestions: placeholders) }
         } catch {
-            await MainActor.run { createError = error.localizedDescription }
+            await MainActor.run { 
+                createError = ErrorMessageHelper.userFriendlyMessage(from: error)
+            }
         }
     }
     
@@ -985,7 +991,9 @@ private struct RecipeSuggestionsView: View {
         } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
             Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
         } catch {
-            await MainActor.run { createError = error.localizedDescription }
+            await MainActor.run { 
+                createError = ErrorMessageHelper.userFriendlyMessage(from: error)
+            }
             return
         }
         
@@ -1038,7 +1046,9 @@ private struct RecipeSuggestionsView: View {
                 self.showAutoResult = true
             }
         } catch {
-            await MainActor.run { createError = error.localizedDescription }
+            await MainActor.run { 
+                createError = ErrorMessageHelper.userFriendlyMessage(from: error)
+            }
         }
     }
 }

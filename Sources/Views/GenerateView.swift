@@ -90,7 +90,7 @@ TextField("z.B. Tomaten", text: $newIngredientText)
         // Block AI features on jailbroken devices
         if app.isJailbroken {
             await MainActor.run {
-                error = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
+                error = L.errorJailbreakDetected.localized
             }
             return
         }
@@ -118,7 +118,9 @@ TextField("z.B. Tomaten", text: $newIngredientText)
             let recipe = try await app.backend.generateRecipe(ingredients: ingredients, accessToken: token)
             await MainActor.run { self.generated = recipe }
         } catch {
-            await MainActor.run { self.error = error.localizedDescription }
+            await MainActor.run { 
+                self.error = ErrorMessageHelper.userFriendlyMessage(from: error)
+            }
         }
     }
 }

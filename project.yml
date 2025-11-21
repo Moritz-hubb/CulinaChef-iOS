@@ -32,11 +32,11 @@ targets:
         optional: false
       - path: Certificates
         type: folder
-        optional: true
+        optional: false
       - path: supabase.cer
-        optional: true
+        optional: false
       - path: backend.cer
-        optional: true
+        optional: false
       - de.json
       - en.json
       - es.json

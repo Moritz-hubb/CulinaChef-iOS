@@ -1,11 +1,12 @@
 import Foundation
 import Security
 
-/// Shared URLSession with optional SSL pinning for critical hosts (Supabase, Backend).
+/// Shared URLSession with REQUIRED SSL pinning for critical hosts (Supabase, Backend).
 ///
 /// - Pins certificates by comparing the server leaf certificate data with `.cer` files
 ///   in the app bundle.
-/// - If no pin is configured for a host, falls back to default system trust evaluation.
+/// - SSL pinning is REQUIRED in production builds - missing certificates will cause a fatal error.
+/// - In debug builds, missing certificates will log a warning but allow the build to continue.
 final class SecureURLSession: NSObject, URLSessionDelegate {
     /// Global Singleton-Instanz, die in der gesamten App für Netzwerkzugriffe verwendet wird.
     static let shared = SecureURLSession()
@@ -40,19 +41,47 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
     }()
 
     private override init() {
-        // Prepare pinned certs (if present in bundle)
+        // Prepare pinned certs - REQUIRED in production
         var pins: [String: [Data]] = [:]
-
-        if let supabaseHost = Config.supabaseURL.host,
-           let cert = SecureURLSession.loadCertificate(named: "supabase") {
-            pins[supabaseHost] = [cert]
+        
+        // Supabase certificate - REQUIRED
+        guard let supabaseHost = Config.supabaseURL.host else {
+            #if DEBUG
+            Logger.error("Supabase host not configured", category: .config)
+            #else
+            fatalError("SSL Pinning: Supabase host not configured - this is a build configuration error")
+            #endif
+            super.init()
+            self.pinnedCertificates = [:]
+            return
         }
-
-        if let backendHost = Config.backendBaseURL.host,
-           let cert = SecureURLSession.loadCertificate(named: "backend") {
-            pins[backendHost] = [cert]
+        
+        guard let supabaseCert = SecureURLSession.loadCertificate(named: "supabase") else {
+            #if DEBUG
+            Logger.error("Supabase SSL certificate not found in bundle - SSL pinning disabled", category: .config)
+            #else
+            fatalError("SSL Pinning: Supabase certificate (supabase.cer) not found in bundle - required for production builds")
+            #endif
+            super.init()
+            self.pinnedCertificates = [:]
+            return
         }
-
+        pins[supabaseHost] = [supabaseCert]
+        
+        // Backend certificate - REQUIRED
+        let backendHost = Config.backendBaseURL.host
+        if let backendCert = SecureURLSession.loadCertificate(named: "backend") {
+            if let host = backendHost {
+                pins[host] = [backendCert]
+            }
+        } else {
+            #if DEBUG
+            Logger.error("Backend SSL certificate not found in bundle - SSL pinning disabled for backend", category: .config)
+            #else
+            fatalError("SSL Pinning: Backend certificate (backend.cer) not found in bundle - required for production builds")
+            #endif
+        }
+        
         self.pinnedCertificates = pins
         super.init()
     }
@@ -68,9 +97,10 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
 
     // MARK: - URLSessionDelegate (SSL pinning)
 
-    /// Validiert TLS-Verbindungen und führt optional SSL-Pinning durch.
+    /// Validiert TLS-Verbindungen und führt SSL-Pinning durch.
     ///
-    /// Wenn für den Host kein Pin konfiguriert ist, wird die Standard-Systemvalidierung verwendet.
+    /// Für gepinnte Hosts (Supabase, Backend) wird das Zertifikat validiert.
+    /// Wenn kein Pin für einen Host konfiguriert ist, wird die Standard-Systemvalidierung verwendet.
     func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {

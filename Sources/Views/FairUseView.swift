@@ -85,11 +85,11 @@ struct FairUseView: View {
                         // Section 1: Zweck
                         FairUseSection(localized("1. Zweck dieser Richtlinie", "1. Objectif de cette politique", "1. Propósito de esta política", "1. Scopo di questa politica", "1. Purpose of this Policy"), icon: "target") {
                             Text(localized(
-                                "Diese Fair Use Policy erläutert die Nutzungsgrenzen für KI-gestützte Funktionen in der CulinaChef (CulinaAI) App. Auch wenn das 'Unlimited'-Abonnement unbegrenzte Funktionen bietet, gelten angemessene technische Limits zum Schutz vor Missbrauch und zur Sicherstellung der Verfügbarkeit für alle Nutzer.",
-                                "Cette politique d'utilisation équitable explique les limites d'utilisation des fonctions basées sur l'IA dans l'application CulinaChef (CulinaAI). Même si l'abonnement 'Unlimited' offre des fonctionnalités illimitées, des limites techniques raisonnables s'appliquent pour protéger contre les abus et assurer la disponibilité pour tous les utilisateurs.",
-                                "Esta política de uso justo explica los límites de uso para las funciones basadas en IA en la aplicación CulinaChef (CulinaAI). Aunque la suscripción 'Unlimited' ofrece funcionalidades ilimitadas, se aplican límites técnicos razonables para proteger contra el abuso y garantizar la disponibilidad para todos los usuarios.",
-                                "Questa politica di utilizzo equo spiega i limiti di utilizzo per le funzioni basate sull'IA nell'app CulinaChef (CulinaAI). Anche se l'abbonamento 'Unlimited' offre funzionalità illimitate, si applicano limiti tecnici ragionevoli per proteggere contro gli abusi e garantire la disponibilità per tutti gli utenti.",
-                                "This Fair Use Policy explains the usage limits for AI-powered functions in the CulinaChef (CulinaAI) app. Even though the 'Unlimited' subscription offers unlimited features, reasonable technical limits apply to protect against abuse and ensure availability for all users."
+                                "Diese Fair Use Policy erläutert die Nutzungsgrenzen für KI-gestützte Funktionen in der CulinaAI App. Auch wenn das 'Unlimited'-Abonnement unbegrenzte Funktionen bietet, gelten angemessene technische Limits zum Schutz vor Missbrauch und zur Sicherstellung der Verfügbarkeit für alle Nutzer.",
+                                "Cette politique d'utilisation équitable explique les limites d'utilisation des fonctions basées sur l'IA dans l'application CulinaAI. Même si l'abonnement 'Unlimited' offre des fonctionnalités illimitées, des limites techniques raisonnables s'appliquent pour protéger contre les abus et assurer la disponibilité pour tous les utilisateurs.",
+                                "Esta política de uso justo explica los límites de uso para las funciones basadas en IA en la aplicación CulinaAI. Aunque la suscripción 'Unlimited' ofrece funcionalidades ilimitadas, se aplican límites técnicos razonables para proteger contra el abuso y garantizar la disponibilidad para todos los usuarios.",
+                                "Questa politica di utilizzo equo spiega i limiti di utilizzo per le funzioni basate sull'IA nell'app CulinaAI. Anche se l'abbonamento 'Unlimited' offre funzionalità illimitate, si applicano limiti tecnici ragionevoli per proteggere contro gli abusi e garantire la disponibilità per tutti gli utenti.",
+                                "This Fair Use Policy explains the usage limits for AI-powered functions in the CulinaAI app. Even though the 'Unlimited' subscription offers unlimited features, reasonable technical limits apply to protect against abuse and ensure availability for all users."
                             ))
                             .font(.subheadline)
                             .foregroundStyle(.white)
@@ -627,6 +627,8 @@ struct FairUseView: View {
                     }
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
+                    .accessibilityLabel(L.done.localized)
+                    .accessibilityHint(L.legalCloseHint.localized)
                 }
             }
         }

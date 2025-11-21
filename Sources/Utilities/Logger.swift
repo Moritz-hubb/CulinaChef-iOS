@@ -11,10 +11,11 @@ enum Logger {
     private static let network = OSLog(subsystem: subsystem, category: "network")
     private static let ui = OSLog(subsystem: subsystem, category: "ui")
     private static let data = OSLog(subsystem: subsystem, category: "data")
+    private static let config = OSLog(subsystem: subsystem, category: "config")
     private static let general = OSLog(subsystem: subsystem, category: "general")
     
     enum Category {
-        case auth, network, ui, data, general
+        case auth, network, ui, data, config, general
         
         var log: OSLog {
             switch self {
@@ -22,6 +23,7 @@ enum Logger {
             case .network: return Logger.network
             case .ui: return Logger.ui
             case .data: return Logger.data
+            case .config: return Logger.config
             case .general: return Logger.general
             }
         }
@@ -70,6 +72,7 @@ enum Logger {
         case .network: return "Network"
         case .ui: return "UI"
         case .data: return "Data"
+        case .config: return "Config"
         case .general: return "General"
         }
     }

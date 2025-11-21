@@ -1,6 +1,6 @@
 # Privacy Policy
 
-for the iOS App "CulinaChef (CulinaAI)"
+for the iOS App "CulinaAI"
 
 **Effective Date:** November 4, 2025  
 **Version:** 1.0
@@ -134,7 +134,7 @@ For more information, see: [Sentry Privacy Policy](https://sentry.io/privacy/)
 
 **UserDefaults (non-sensitive):**
 
-- App language, dark mode setting
+- App language
 - Onboarding status
 - Menu suggestions (cache)
 

@@ -8,7 +8,7 @@ Nutzungsgrenzen und Missbrauchsschutz
 
 ## 1. Zweck dieser Richtlinie
 
-Diese Fair Use Policy erläutert die Nutzungsgrenzen für KI-gestützte Funktionen in der CulinaChef (CulinaAI) App. Auch wenn das 'Unlimited'-Abonnement unbegrenzte Funktionen bietet, gelten angemessene technische Limits zum Schutz vor Missbrauch und zur Sicherstellung der Verfügbarkeit für alle Nutzer.
+Diese Fair Use Policy erläutert die Nutzungsgrenzen für KI-gestützte Funktionen in der CulinaAI App. Auch wenn das 'Unlimited'-Abonnement unbegrenzte Funktionen bietet, gelten angemessene technische Limits zum Schutz vor Missbrauch und zur Sicherstellung der Verfügbarkeit für alle Nutzer.
 
 ---
 

@@ -36,7 +36,6 @@ extension DietaryPreferences {
     }
 }
 
-@MainActor
 /// Zentrale App-weite Statusverwaltung für Auth, Subscriptions, AI-Kontext, Menüs und Präferenzen.
 ///
 /// - Diese Klasse ist `@MainActor`, d.h. alle veröffentlichten Properties und die
@@ -44,6 +43,7 @@ extension DietaryPreferences {
 ///   mit SwiftUI-Views.
 /// - Externe Services (Backend, Supabase, StoreKit) werden über klar getrennte
 ///   Clients gekapselt, um Netzwerklogik vom View-Layer fernzuhalten.
+@MainActor
 final class AppState: ObservableObject {
     /// Gibt an, ob aktuell ein Nutzer angemeldet ist (basierend auf Tokens im Keychain).
     @Published var isAuthenticated: Bool = false
@@ -232,9 +232,9 @@ final class AppState: ObservableObject {
         // Check for existing session
         checkSession()
         // Load subscription status for current user (if any)
-        loadSubscriptionStatus()
+        self.loadSubscriptionStatus()
         // Start polling in foreground
-        startSubscriptionPolling()
+        self.startSubscriptionPolling()
         // Load OpenAI consent status
         openAIConsentGranted = OpenAIConsentManager.hasConsent
         
@@ -269,8 +269,8 @@ final class AppState: ObservableObject {
         }
         // Observe app lifecycle for resume/suspend refresh
         #if canImport(UIKit)
-        NotificationCenter.default.addObserver(self, selector: #selector(onDidBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(onWillResignActive), name: UIApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(AppState.onDidBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(AppState.onWillResignActive), name: UIApplication.willResignActiveNotification, object: nil)
         #endif
         // Try to flush any queued deletions on startup
         Task { @MainActor [weak self] in
@@ -283,7 +283,7 @@ final class AppState: ObservableObject {
 
     deinit {
         #if canImport(UIKit)
-        NotificationCenter.default.removeObserver(self)
+        NotificationCenter.default.removeObserver(self as Any)
         #endif
     }
     
@@ -312,7 +312,7 @@ final class AppState: ObservableObject {
         guard let refreshToken = KeychainManager.get(key: "refresh_token") else {
             if !silent {
                 Logger.info("No refresh token found, logging out", category: .auth)
-                await signOut()
+                await self.signOut()
             } else {
                 Logger.info("No refresh token found, but silent mode - keeping existing session", category: .auth)
             }
@@ -340,7 +340,7 @@ final class AppState: ObservableObject {
             
             if !silent {
                 // Token refresh failed - user needs to log in again
-                await signOut()
+                await self.signOut()
             } else {
                 // Silent mode: Keep user logged in with existing token
                 // Token will be refreshed on next API call or when it expires
@@ -375,19 +375,37 @@ final class AppState: ObservableObject {
         }
         
         // OPTIONALE Geschmackspräferenzen
-        if let data = UserDefaults.standard.data(forKey: "taste_preferences"),
-           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            let spicyLevel = dict["spicy_level"] as? Double ?? 2
-            let spicyLabels = ["Mild", "Normal", "Scharf", "Sehr Scharf"]
-            preferencesParts.append("Schärfe-Präferenz: " + spicyLabels[Int(spicyLevel)])
-            
-            var tastes: [String] = []
-            if dict["sweet"] as? Bool == true { tastes.append("süß") }
-            if dict["sour"] as? Bool == true { tastes.append("sauer") }
-            if dict["bitter"] as? Bool == true { tastes.append("bitter") }
-            if dict["umami"] as? Bool == true { tastes.append("umami") }
-            if !tastes.isEmpty {
-                preferencesParts.append("Bevorzugte Geschmacksrichtungen: " + tastes.joined(separator: ", "))
+        let prefs = TastePreferencesManager.load()
+        let spicyLevel = prefs.spicyLevel
+        let spicyLabels = ["Mild", "Normal", "Scharf", "Sehr Scharf"]
+        preferencesParts.append("Schärfe-Präferenz: " + spicyLabels[Int(spicyLevel)])
+        
+        var tastes: [String] = []
+        if prefs.sweet { tastes.append("süß") }
+        if prefs.sour { tastes.append("sauer") }
+        if prefs.bitter { tastes.append("bitter") }
+        if prefs.umami { tastes.append("umami") }
+        
+        if !tastes.isEmpty {
+            preferencesParts.append("Geschmackspräferenzen: " + tastes.joined(separator: ", "))
+        }
+        
+        // Legacy code path (for backward compatibility)
+        if false { // Disabled - using Keychain now
+            if let data = UserDefaults.standard.data(forKey: "taste_preferences"),
+               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                let spicyLevel = dict["spicy_level"] as? Double ?? 2
+                let spicyLabels = ["Mild", "Normal", "Scharf", "Sehr Scharf"]
+                preferencesParts.append("Schärfe-Präferenz: " + spicyLabels[Int(spicyLevel)])
+                
+                var tastes: [String] = []
+                if dict["sweet"] as? Bool == true { tastes.append("süß") }
+                if dict["sour"] as? Bool == true { tastes.append("sauer") }
+                if dict["bitter"] as? Bool == true { tastes.append("bitter") }
+                if dict["umami"] as? Bool == true { tastes.append("umami") }
+                if !tastes.isEmpty {
+                    preferencesParts.append("Bevorzugte Geschmacksrichtungen: " + tastes.joined(separator: ", "))
+                }
             }
         }
         
@@ -837,12 +855,12 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
     ///
     /// - Throws: Fehler aus `UserPreferencesClient`, wenn der Request selbst fehlschlägt.
     func loadPreferencesFromSupabase() async throws {
-            Logger.debug("[AppState] loadPreferencesFromSupabase called", category: .data)
-            Logger.debug("[AppState] accessToken available: \(accessToken != nil)", category: .auth)
-            Logger.debug("[AppState] userId available: \(KeychainManager.get(key: "user_id") != nil)", category: .auth)
-            
-            guard let userId = KeychainManager.get(key: "user_id"),
-                  let token = accessToken else {
+        Logger.debug("[AppState] loadPreferencesFromSupabase called", category: .data)
+        Logger.debug("[AppState] accessToken available: \(accessToken != nil)", category: .auth)
+        Logger.debug("[AppState] userId available: \(KeychainManager.get(key: "user_id") != nil)", category: .auth)
+        
+        guard let userId = KeychainManager.get(key: "user_id"),
+              let token = accessToken else {
             // Not logged in - try loading from UserDefaults as fallback
             Logger.debug("[AppState] No userId or accessToken - loading from UserDefaults", category: .data)
             await MainActor.run {
@@ -864,17 +882,14 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                 dietary.notes = prefs.notes
                 self.dietary = dietary
                 
-                // Save taste preferences to UserDefaults (as backup)
-                let tasteDict: [String: Any] = [
-                    "spicy_level": prefs.tastePreferences.spicyLevel,
-                    "sweet": prefs.tastePreferences.sweet ?? false,
-                    "sour": prefs.tastePreferences.sour ?? false,
-                    "bitter": prefs.tastePreferences.bitter ?? false,
-                    "umami": prefs.tastePreferences.umami ?? false
-                ]
-                if let data = try? JSONSerialization.data(withJSONObject: tasteDict) {
-                    UserDefaults.standard.set(data, forKey: "taste_preferences")
-                }
+                // Save taste preferences to Keychain (secure storage)
+                var tastePrefs = TastePreferencesManager.TastePreferences()
+                tastePrefs.spicyLevel = prefs.tastePreferences.spicyLevel
+                tastePrefs.sweet = prefs.tastePreferences.sweet ?? false
+                tastePrefs.sour = prefs.tastePreferences.sour ?? false
+                tastePrefs.bitter = prefs.tastePreferences.bitter ?? false
+                tastePrefs.umami = prefs.tastePreferences.umami ?? false
+                try? TastePreferencesManager.save(tastePrefs)
                 
                 // Mark onboarding as completed for this user
                 let key = "onboarding_completed_\(userId)"

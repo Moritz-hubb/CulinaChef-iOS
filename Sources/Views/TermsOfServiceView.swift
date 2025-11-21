@@ -77,9 +77,9 @@ struct TermsOfServiceView: View {
                     
                     TermsSection(localized("1. Geltungsbereich und Vertragsparteien", "1. Champ d'application et parties contractantes", "1. Scope and Contracting Parties"), icon: "doc.text") {
                         TermsParagraph(number: "(1)", text: localized(
-                            "Diese Allgemeinen Geschäftsbedingungen (nachfolgend 'AGB') gelten für die Nutzung der mobilen Applikation 'CulinaChef (CulinaAI)' (nachfolgend 'App') durch Verbraucher im Sinne des § 13 BGB.",
-                            "Ces conditions générales (CGU) s'appliquent à l'utilisation de l'application mobile CulinaChef (CulinaAI) par les consommateurs au sens du § 13 BGB.",
-                            "These Terms and Conditions (hereinafter referred to as 'T&C') apply to the use of the mobile application 'CulinaChef (CulinaAI)' (hereinafter 'App') by consumers within the meaning of Section 13 of the German Civil Code (BGB)."
+                            "Diese Allgemeinen Geschäftsbedingungen (nachfolgend 'AGB') gelten für die Nutzung der mobilen Applikation 'CulinaAI' (nachfolgend 'App') durch Verbraucher im Sinne des § 13 BGB.",
+                            "Ces conditions générales (CGU) s'appliquent à l'utilisation de l'application mobile CulinaAI par les consommateurs au sens du § 13 BGB.",
+                            "These Terms and Conditions (hereinafter referred to as 'T&C') apply to the use of the mobile application 'CulinaAI' (hereinafter 'App') by consumers within the meaning of Section 13 of the German Civil Code (BGB)."
                         ))
                         
                         TermsParagraph(number: "(2)", text: localized(
@@ -109,9 +109,9 @@ struct TermsOfServiceView: View {
                     
                     TermsSection(localized("2. Vertragsgegenstand und Leistungsbeschreibung", "2. Objet du contrat et description des services", "2. Subject Matter and Description of Services"), icon: "app.badge") {
                         TermsParagraph(number: "(1)", text: localized(
-                            "Die App CulinaChef (CulinaAI) ist eine digitale Rezept- und Ernährungs-App, die es Nutzern ermöglicht,",
-                            "L'application CulinaChef (CulinaAI) est une application de recettes et de nutrition qui permet aux utilisateurs :",
-                            "The CulinaChef (CulinaAI) app is a digital recipe and nutrition app that allows users to:"
+                            "Die App CulinaAI ist eine digitale Rezept- und Ernährungs-App, die es Nutzern ermöglicht,",
+                            "L'application CulinaAI est une application de recettes et de nutrition qui permet aux utilisateurs :",
+                            "The CulinaAI app is a digital recipe and nutrition app that allows users to:"
                         ))
                         
                         VStack(alignment: .leading, spacing: 6) {
@@ -453,7 +453,7 @@ struct TermsOfServiceView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 6) {
-                            SummaryRow(label: isGerman ? "App-Name" : "App Name", value: "CulinaChef (CulinaAI)")
+                            SummaryRow(label: isGerman ? "App-Name" : "App Name", value: "CulinaAI")
                             SummaryRow(label: isGerman ? "Anbieter" : "Provider", value: "CulinaAI – Moritz Serrin")
                             SummaryRow(label: isGerman ? "Preis" : "Price", value: isGerman ? "5,99 €/Monat (Apple In-App-Purchase)" : "€5.99/month (Apple In-App Purchase)")
                             SummaryRow(label: isGerman ? "Kündigung" : "Cancellation", value: isGerman ? "Jederzeit über Apple-Einstellungen" : "Anytime via Apple settings")
@@ -494,6 +494,8 @@ struct TermsOfServiceView: View {
                     }
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
+                    .accessibilityLabel(L.done.localized)
+                    .accessibilityHint(L.legalCloseHint.localized)
                 }
             }
         }

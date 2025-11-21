@@ -204,6 +204,8 @@ struct ImprintView: View {
                     }
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
+                    .accessibilityLabel(L.done.localized)
+                    .accessibilityHint(L.legalCloseHint.localized)
                 }
             }
         }

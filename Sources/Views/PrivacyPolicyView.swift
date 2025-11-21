@@ -42,9 +42,9 @@ struct PrivacyPolicyView: View {
                                 .foregroundStyle(.white)
                             
                             Text(localized(
-                                "für die App \"CulinaChef (CulinaAI)\"",
-                                "pour l'application \"CulinaChef (CulinaAI)\"",
-                                "for the app \"CulinaChef (CulinaAI)\""
+                                "für die App \"CulinaAI\"",
+                                "pour l'application \"CulinaAI\"",
+                                "for the app \"CulinaAI\""
                             ))
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.8))
@@ -511,6 +511,8 @@ struct PrivacyPolicyView: View {
                     }
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
+                    .accessibilityLabel(L.done.localized)
+                    .accessibilityHint(L.legalCloseHint.localized)
                 }
             }
         }

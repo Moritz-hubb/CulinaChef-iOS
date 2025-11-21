@@ -1,5 +1,5 @@
 # Terms and Conditions (T&C)
-for the app "CulinaChef (CulinaAI)"
+for the app "CulinaAI"
 
 **Effective Date:** November 4, 2025  
 **Version:** 1.0  
@@ -9,7 +9,7 @@ for the app "CulinaChef (CulinaAI)"
 
 ## 1. Scope and Contracting Parties
 
-**(1)** These Terms and Conditions (hereinafter referred to as "T&C") apply to the use of the mobile application "CulinaChef (CulinaAI)" (hereinafter "App") by consumers within the meaning of Section 13 of the German Civil Code (BGB).
+**(1)** These Terms and Conditions (hereinafter referred to as "T&C") apply to the use of the mobile application "CulinaAI" (hereinafter "App") by consumers within the meaning of Section 13 of the German Civil Code (BGB).
 
 **(2)** The provider and contractual partner of the user is:
 
@@ -26,7 +26,7 @@ for the app "CulinaChef (CulinaAI)"
 
 ## 2. Subject Matter and Description of Services
 
-**(1)** The CulinaChef (CulinaAI) app is a digital recipe and nutrition app that allows users to:
+**(1)** The CulinaAI app is a digital recipe and nutrition app that allows users to:
 
 - store their own recipes,
 - manage dietary preferences,
@@ -204,7 +204,7 @@ The Privacy Policy is not part of these T&C but applies independently and bindin
 
 ## Summary
 
-- **App Name:** CulinaChef (CulinaAI)
+- **App Name:** CulinaAI
 - **Provider:** CulinaAI – Moritz Serrin
 - **Price:** €5.99/month (Apple In-App Purchase)
 - **Cancellation:** Anytime via Apple settings

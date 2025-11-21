@@ -9,7 +9,7 @@
 
 ## 1. Purpose of This Policy
 
-This Fair Use Policy defines reasonable usage limits for AI-powered features within the CulinaChef (CulinaAI) app.
+This Fair Use Policy defines reasonable usage limits for AI-powered features within the CulinaAI app.
 
 While the **Unlimited subscription** provides unrestricted access in principle, technical limits are applied to prevent misuse and to ensure stable availability for all users.
 

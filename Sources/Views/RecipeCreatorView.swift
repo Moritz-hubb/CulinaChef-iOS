@@ -303,15 +303,13 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         // Load from user dietary settings
         selectedCategories = app.dietary.diets
         
-        // Load taste preferences from UserDefaults
-        if let data = UserDefaults.standard.data(forKey: "taste_preferences"),
-           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            spicyLevel = dict["spicy_level"] as? Double ?? 2
-            tastePreferences[L.taste_sweet.localized] = dict["sweet"] as? Bool ?? false
-            tastePreferences[L.taste_sour.localized] = dict["sour"] as? Bool ?? false
-            tastePreferences[L.taste_bitter.localized] = dict["bitter"] as? Bool ?? false
-            tastePreferences[L.taste_umami.localized] = dict["umami"] as? Bool ?? false
-        }
+        // Load taste preferences from Keychain (secure storage)
+        let prefs = TastePreferencesManager.load()
+        spicyLevel = prefs.spicyLevel
+        tastePreferences[L.taste_sweet.localized] = prefs.sweet
+        tastePreferences[L.taste_sour.localized] = prefs.sour
+        tastePreferences[L.taste_bitter.localized] = prefs.bitter
+        tastePreferences[L.taste_umami.localized] = prefs.umami
     }
     
     func buildDietaryContext() -> String {

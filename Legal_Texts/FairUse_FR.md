@@ -9,7 +9,7 @@ Limites d'utilisation et prévention des abus
 
 ## 1. Objet de cette politique
 
-Cette politique Fair Use décrit les limites d'utilisation des fonctionnalités basées sur l'IA dans l'application CulinaChef (CulinaAI). Même si l'abonnement « Unlimited » offre des fonctions illimitées, des limites techniques raisonnables s'appliquent pour prévenir les abus et garantir la disponibilité pour tous les utilisateurs.
+Cette politique Fair Use décrit les limites d'utilisation des fonctionnalités basées sur l'IA dans l'application CulinaAI. Même si l'abonnement « Unlimited » offre des fonctions illimitées, des limites techniques raisonnables s'appliquent pour prévenir les abus et garantir la disponibilité pour tous les utilisateurs.
 
 ---
 

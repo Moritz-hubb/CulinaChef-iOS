@@ -1112,7 +1112,7 @@ struct RecipeDetailView: View {
         }
         
         md += "\n---\n"
-        md += "*Erstellt mit CulinaChef*\n"
+        md += "*Erstellt mit CulinaAI*\n"
         
         return md
     }

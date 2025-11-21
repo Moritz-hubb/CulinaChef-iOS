@@ -224,15 +224,13 @@ struct DietarySettingsView: View {
         dislikes = d.dislikes
         notesText = d.notes ?? ""
         
-        // Load taste preferences from UserDefaults
-        if let data = UserDefaults.standard.data(forKey: "taste_preferences"),
-           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            spicyLevel = dict["spicy_level"] as? Double ?? 2
-            tastePreferences["süß"] = dict["sweet"] as? Bool ?? false
-            tastePreferences["sauer"] = dict["sour"] as? Bool ?? false
-            tastePreferences["bitter"] = dict["bitter"] as? Bool ?? false
-            tastePreferences["umami"] = dict["umami"] as? Bool ?? false
-        }
+        // Load taste preferences from Keychain (secure storage)
+        let prefs = TastePreferencesManager.load()
+        spicyLevel = prefs.spicyLevel
+        tastePreferences["süß"] = prefs.sweet
+        tastePreferences["sauer"] = prefs.sour
+        tastePreferences["bitter"] = prefs.bitter
+        tastePreferences["umami"] = prefs.umami
     }
 
     private func saveBack() {
@@ -243,13 +241,24 @@ struct DietarySettingsView: View {
         d.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines)
         app.dietary = d
         
-        // Save taste preferences to UserDefaults
+        // Save taste preferences to Keychain (secure storage)
+        var prefs = TastePreferencesManager.TastePreferences()
+        prefs.spicyLevel = spicyLevel
+        prefs.sweet = tastePreferences["süß"] ?? false
+        prefs.sour = tastePreferences["sauer"] ?? false
+        prefs.bitter = tastePreferences["bitter"] ?? false
+        prefs.umami = tastePreferences["umami"] ?? false
+        
+        do {
+            try TastePreferencesManager.save(prefs)
+        } catch {
+            Logger.error("Failed to save taste preferences to Keychain", error: error, category: .data)
+        }
+        
+        // Convert to dictionary for Supabase sync
         var tastePrefsDict: [String: Any] = ["spicy_level": spicyLevel]
         for (key, value) in tastePreferences {
             tastePrefsDict[key] = value
-        }
-        if let data = try? JSONSerialization.data(withJSONObject: tastePrefsDict) {
-            UserDefaults.standard.set(data, forKey: "taste_preferences")
         }
         
         // Sync to Supabase in background

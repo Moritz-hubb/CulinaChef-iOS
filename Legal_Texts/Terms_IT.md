@@ -1,5 +1,5 @@
 # Termini e Condizioni Generali (TCG)
-per l'app "CulinaChef (CulinaAI)"
+per l'app "CulinaAI"
 
 **Data:** 04.11.2025  
 **Versione:** 1.0  
@@ -9,7 +9,7 @@ per l'app "CulinaChef (CulinaAI)"
 
 ## 1. Ambito di applicazione e parti contraenti
 
-**(1)** Questi Termini e Condizioni Generali (TCG) si applicano all'uso dell'app mobile CulinaChef (CulinaAI) da parte dei consumatori ai sensi del § 13 BGB.
+**(1)** Questi Termini e Condizioni Generali (TCG) si applicano all'uso dell'app mobile CulinaAI da parte dei consumatori ai sensi del § 13 BGB.
 
 **(2)** Fornitore e parte contraente:
 
@@ -25,7 +25,7 @@ per l'app "CulinaChef (CulinaAI)"
 
 ## 2. Oggetto del contratto e descrizione dei servizi
 
-**(1)** L'app CulinaChef (CulinaAI) è un'app di ricette e nutrizione che consente agli utenti di:
+**(1)** L'app CulinaAI è un'app di ricette e nutrizione che consente agli utenti di:
 
 - salvare le proprie ricette,
 - gestire preferenze alimentari,
@@ -201,7 +201,7 @@ L'utente si impegna a:
 
 ## Riassunto
 
-- **Nome app:** CulinaChef (CulinaAI)
+- **Nome app:** CulinaAI
 - **Fornitore:** CulinaAI – Moritz Serrin
 - **Prezzo:** 5,99 €/mese (Apple In-App Purchase)
 - **Cancellazione:** In qualsiasi momento tramite impostazioni Apple

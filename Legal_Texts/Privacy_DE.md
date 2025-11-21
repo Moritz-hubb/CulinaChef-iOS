@@ -1,5 +1,5 @@
 # Datenschutzerklärung
-für die iOS-App "CulinaChef (CulinaAI)"
+für die iOS-App "CulinaAI"
 
 **Stand:** 04.11.2025  
 **Version:** 1.0
@@ -133,7 +133,7 @@ Weitere Informationen: [Sentry Privacy Policy](https://sentry.io/privacy/)
 
 **UserDefaults (nicht sensibel):**
 
-- App-Sprache, Dark Mode
+- App-Sprache
 - Onboarding-Status
 - Menüvorschläge (Cache)
 

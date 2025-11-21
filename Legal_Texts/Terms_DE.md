@@ -1,5 +1,5 @@
 # Allgemeine Geschäftsbedingungen (AGB)
-für die App "CulinaChef (CulinaAI)"
+für die App "CulinaAI"
 
 **Stand:** 04.11.2025  
 **Version:** 1.0  
@@ -9,7 +9,7 @@ für die App "CulinaChef (CulinaAI)"
 
 ## 1. Geltungsbereich und Vertragsparteien
 
-**(1)** Diese Allgemeinen Geschäftsbedingungen (nachfolgend 'AGB') gelten für die Nutzung der mobilen Applikation 'CulinaChef (CulinaAI)' (nachfolgend 'App') durch Verbraucher im Sinne des § 13 BGB.
+**(1)** Diese Allgemeinen Geschäftsbedingungen (nachfolgend 'AGB') gelten für die Nutzung der mobilen Applikation 'CulinaAI' (nachfolgend 'App') durch Verbraucher im Sinne des § 13 BGB.
 
 **(2)** Anbieter und Vertragspartner des Nutzers ist:
 
@@ -26,7 +26,7 @@ für die App "CulinaChef (CulinaAI)"
 
 ## 2. Vertragsgegenstand und Leistungsbeschreibung
 
-**(1)** Die App CulinaChef (CulinaAI) ist eine digitale Rezept- und Ernährungs-App, die es Nutzern ermöglicht,
+**(1)** Die App CulinaAI ist eine digitale Rezept- und Ernährungs-App, die es Nutzern ermöglicht,
 
 - eigene Rezepte zu speichern,
 - Ernährungspräferenzen zu verwalten,
@@ -204,7 +204,7 @@ Diese ist nicht Bestandteil dieser AGB, gilt jedoch unabhängig bindend.
 
 ## Zusammenfassung
 
-- **App-Name:** CulinaChef (CulinaAI)
+- **App-Name:** CulinaAI
 - **Anbieter:** CulinaAI – Moritz Serrin
 - **Preis:** 5,99 €/Monat (Apple In-App-Purchase)
 - **Kündigung:** Jederzeit über Apple-Einstellungen

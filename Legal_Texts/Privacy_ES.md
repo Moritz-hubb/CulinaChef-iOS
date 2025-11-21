@@ -1,6 +1,6 @@
 # Política de privacidad
 
-para la app iOS "CulinaChef (CulinaAI)"
+para la app iOS "CulinaAI"
 
 **Fecha:** 04.11.2025  
 **Versión:** 1.0

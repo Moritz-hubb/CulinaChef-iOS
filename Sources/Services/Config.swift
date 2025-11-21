@@ -25,7 +25,9 @@ enum Config {
     static let supabaseURL: URL = {
         guard let urlString = Bundle.main.object(forInfoDictionaryKey: "SupabaseURL") as? String,
               let url = URL(string: urlString) else {
-            fatalError("SupabaseURL not configured in Info.plist")
+            Logger.error("SupabaseURL not configured in Info.plist. Using fallback URL.", category: .config)
+            // Fallback to a placeholder URL - app will fail gracefully with network errors
+            return URL(string: "https://placeholder.supabase.co")!
         }
         return url
     }()
@@ -40,7 +42,9 @@ enum Config {
         guard let key = Bundle.main.object(forInfoDictionaryKey: "SupabaseAnonKey") as? String,
               !key.isEmpty,
               !key.hasPrefix("$") else {
-            fatalError("SupabaseAnonKey not configured in Info.plist")
+            Logger.error("SupabaseAnonKey not configured in Info.plist. App may not function correctly.", category: .config)
+            // Return empty string - authentication will fail gracefully
+            return ""
         }
         return key
     }()

@@ -6,13 +6,13 @@ struct TermsContent_EN {
     
     // MARK: - Section 1: Scope and Contracting Parties
     static let section1_title = "1. Scope and Contracting Parties"
-    static let section1_p1 = "(1) These Terms and Conditions (hereinafter 'Terms') apply to the use of the mobile application 'CulinaChef (CulinaAI)' (hereinafter 'App') by consumers within the meaning of § 13 German Civil Code (BGB)."
+    static let section1_p1 = "(1) These Terms and Conditions (hereinafter 'Terms') apply to the use of the mobile application 'CulinaAI' (hereinafter 'App') by consumers within the meaning of § 13 German Civil Code (BGB)."
     static let section1_p2 = "(2) Provider and contractual partner of the user is:"
     static let section1_p3 = "(3) Deviating, conflicting, or supplementary conditions of the user shall not become part of the contract unless the provider expressly agrees to their validity in writing."
     
     // MARK: - Section 2: Subject Matter
     static let section2_title = "2. Subject Matter and Description of Services"
-    static let section2_p1 = "(1) The CulinaChef (CulinaAI) app is a digital recipe and nutrition app that enables users to:"
+    static let section2_p1 = "(1) The CulinaAI app is a digital recipe and nutrition app that enables users to:"
     static let section2_bullets = [
         "save their own recipes,",
         "manage dietary preferences,",

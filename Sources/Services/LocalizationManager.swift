@@ -602,7 +602,6 @@ enum L {
     static let notifications = "settings.notifications"
     static let language = "settings.language"
     static let appearance = "settings.appearance"
-    static let darkMode = "settings.darkMode"
     static let dietary = "settings.dietary"
     static let dietaryPreferences = "settings.dietaryPreferences"
     static let profile = "settings.profile"
@@ -647,6 +646,7 @@ enum L {
         static let legalLanguageNotice = "legal.languageNotice"
         static let legalPurchaseConsentText = "legal.purchaseConsentText"
         static let legalFairUseCheckbox = "legal.fairUseCheckbox"
+        static let legalCloseHint = "legal.closeHint"
         static let legalFairUseCheckboxLink = "legal.fairUseCheckboxLink"
         static let legalFairUseCheckboxRequired = "legal.fairUseCheckboxRequired"
     

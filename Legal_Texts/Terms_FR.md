@@ -1,5 +1,5 @@
 # Conditions Générales d'Utilisation (CGU)
-pour l'application "CulinaChef (CulinaAI)"
+pour l'application "CulinaAI"
 
 **Date :** 04.11.2025  
 **Version :** 1.0  
@@ -9,7 +9,7 @@ pour l'application "CulinaChef (CulinaAI)"
 
 ## 1. Champ d'application et parties contractantes
 
-**(1)** Ces conditions générales (CGU) s'appliquent à l'utilisation de l'application mobile CulinaChef (CulinaAI) par les consommateurs au sens du § 13 BGB.
+**(1)** Ces conditions générales (CGU) s'appliquent à l'utilisation de l'application mobile CulinaAI par les consommateurs au sens du § 13 BGB.
 
 **(2)** Fournisseur et partie contractante :
 
@@ -25,7 +25,7 @@ pour l'application "CulinaChef (CulinaAI)"
 
 ## 2. Objet du contrat et description des services
 
-**(1)** L'application CulinaChef (CulinaAI) est une application de recettes et de nutrition qui permet aux utilisateurs :
+**(1)** L'application CulinaAI est une application de recettes et de nutrition qui permet aux utilisateurs :
 
 - d'enregistrer leurs propres recettes,
 - de gérer leurs préférences alimentaires,
@@ -201,7 +201,7 @@ L'utilisateur s'engage à :
 
 ## Résumé
 
-- **Nom de l'application :** CulinaChef (CulinaAI)
+- **Nom de l'application :** CulinaAI
 - **Fournisseur :** CulinaAI – Moritz Serrin
 - **Prix :** 5,99 €/mois (Apple In-App Purchase)
 - **Résiliation :** À tout moment via les paramètres Apple

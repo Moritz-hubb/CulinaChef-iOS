@@ -622,7 +622,11 @@ struct SignUpView: View {
         while remainingLength > 0 {
             var randoms = [UInt8](repeating: 0, count: 16)
             let status = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
-            if status != errSecSuccess { fatalError("Unable to generate nonce. SecRandomCopyBytes failed") }
+            if status != errSecSuccess {
+                Logger.error("Unable to generate nonce. SecRandomCopyBytes failed with status: \(status)", category: .auth)
+                // Fallback: Use timestamp-based nonce as last resort
+                return String(format: "%08x%08x", UInt32(Date().timeIntervalSince1970), arc4random())
+            }
             for random in randoms {
                 if remainingLength == 0 { break }
                 result.append(charset[Int(random % UInt8(charset.count))])

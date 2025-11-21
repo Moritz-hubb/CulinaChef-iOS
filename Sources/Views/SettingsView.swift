@@ -3,7 +3,6 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var app: AppState
     @ObservedObject private var localizationManager = LocalizationManager.shared
-    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     @FocusState private var isFocused: Bool
     @State private var showDietary = false
     @State private var showProfile = false
@@ -584,15 +583,13 @@ private struct DietarySettingsSheet: View {
         dislikesText = d.dislikes.joined(separator: ", ")
         notesText = d.notes ?? ""
         
-        // Load taste preferences from UserDefaults
-        if let data = UserDefaults.standard.data(forKey: "taste_preferences"),
-           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            spicyLevel = dict["spicy_level"] as? Double ?? 2
-            tastePreferences["süß"] = dict["sweet"] as? Bool ?? false
-            tastePreferences["sauer"] = dict["sour"] as? Bool ?? false
-            tastePreferences["bitter"] = dict["bitter"] as? Bool ?? false
-            tastePreferences["umami"] = dict["umami"] as? Bool ?? false
-        }
+        // Load taste preferences from Keychain (secure storage)
+        let prefs = TastePreferencesManager.load()
+        spicyLevel = prefs.spicyLevel
+        tastePreferences["süß"] = prefs.sweet
+        tastePreferences["sauer"] = prefs.sour
+        tastePreferences["bitter"] = prefs.bitter
+        tastePreferences["umami"] = prefs.umami
     }
 
     private func saveBack() {
@@ -603,13 +600,24 @@ private struct DietarySettingsSheet: View {
         d.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines)
         app.dietary = d
         
-        // Save taste preferences to UserDefaults
+        // Save taste preferences to Keychain (secure storage)
+        var prefs = TastePreferencesManager.TastePreferences()
+        prefs.spicyLevel = spicyLevel
+        prefs.sweet = tastePreferences["süß"] ?? false
+        prefs.sour = tastePreferences["sauer"] ?? false
+        prefs.bitter = tastePreferences["bitter"] ?? false
+        prefs.umami = tastePreferences["umami"] ?? false
+        
+        do {
+            try TastePreferencesManager.save(prefs)
+        } catch {
+            Logger.error("Failed to save taste preferences to Keychain", error: error, category: .data)
+        }
+        
+        // Convert to dictionary for Supabase sync
         var tastePrefsDict: [String: Any] = ["spicy_level": spicyLevel]
         for (key, value) in tastePreferences {
             tastePrefsDict[key] = value
-        }
-        if let data = try? JSONSerialization.data(withJSONObject: tastePrefsDict) {
-            UserDefaults.standard.set(data, forKey: "taste_preferences")
         }
         
         // Sync to Supabase in background
@@ -1042,7 +1050,7 @@ private struct ProfileSettingsSheet: View {
             
             // Save to temporary file
             let tempDir = FileManager.default.temporaryDirectory
-            let fileName = "CulinaChef_Export_\(ISO8601DateFormatter().string(from: Date())).json"
+            let fileName = "CulinaAI_Export_\(ISO8601DateFormatter().string(from: Date())).json"
             let fileURL = tempDir.appendingPathComponent(fileName)
             
             try jsonData.write(to: fileURL)
@@ -1527,41 +1535,6 @@ private struct PlanPill: View {
     }
 }
 
-// MARK: - General Settings Sheets
-private struct AppearanceSettingsSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
-    var body: some View {
-        ZStack {
-            LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
-            .ignoresSafeArea()
-            VStack(spacing: 16) {
-                HStack {
-                    Text(L.settings_erscheinungsbild.localized).font(.title2.bold()).foregroundStyle(.white)
-                    Spacer()
-                    Button(L.settings_finished.localized) { dismiss() }
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-.background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
-                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                }
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle("Dark Mode", isOn: $isDarkMode)
-.tint(Color(red: 0.95, green: 0.5, blue: 0.3))
-.foregroundStyle(.white)
-                        .onChange(of: isDarkMode) { _, _ in
-                            UIApplication.shared.windows.first?.overrideUserInterfaceStyle = isDarkMode ? .dark : .light
-                        }
-                }
-                .padding(16)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
-            }
-            .padding(16)
-        }
-    }
-}
 
 struct NotificationsSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss

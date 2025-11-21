@@ -1,6 +1,6 @@
 import Foundation
 
-/// Client für alle HTTP-Aufrufe an das CulinaChef-Backend.
+/// Client für alle HTTP-Aufrufe an das CulinaAI-Backend.
 ///
 /// - Hinweis: Diese Klasse ist bewusst schlank gehalten und enthält keine
 ///   Business-Logik oder Caching. Sie kapselt nur Transport, Fehlerbehandlung

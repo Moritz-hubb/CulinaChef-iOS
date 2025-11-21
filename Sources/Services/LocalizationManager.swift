@@ -98,19 +98,22 @@ class LocalizationManager: ObservableObject {
         // If no supported language was found, default to English
         let finalDeviceLang = deviceLang ?? fallbackLanguage
         if deviceLang == nil {
-            print("[LocalizationManager] ⚠️ No supported language found in system preferences, defaulting to English")
+            #if DEBUG
+            Logger.debug("[LocalizationManager] ⚠️ No supported language found in system preferences, defaulting to English", category: .data)
+            #endif
         }
         
-        // Always print (not just in DEBUG) to ensure we see what's happening
-        print("[LocalizationManager] ========== INIT START ==========")
-        print("[LocalizationManager] Detected device language: \(finalDeviceLang)")
-        print("[LocalizationManager] Locale.current.language.languageCode: \(Locale.current.language.languageCode?.identifier ?? "nil")")
-        print("[LocalizationManager] Locale.preferredLanguages: \(Locale.preferredLanguages)")
-        print("[LocalizationManager] Locale.current.identifier: \(Locale.current.identifier)")
-        print("[LocalizationManager] Available languages: \(availableLanguages.keys.sorted())")
-        print("[LocalizationManager] UserDefaults before init:")
-        print("[LocalizationManager]   app_language: \(UserDefaults.standard.string(forKey: "app_language") ?? "nil")")
-        print("[LocalizationManager]   app_language_explicitly_set: \(UserDefaults.standard.bool(forKey: "app_language_explicitly_set"))")
+        #if DEBUG
+        Logger.debug("[LocalizationManager] ========== INIT START ==========", category: .data)
+        Logger.debug("[LocalizationManager] Detected device language: \(finalDeviceLang)", category: .data)
+        Logger.debug("[LocalizationManager] Locale.current.language.languageCode: \(Locale.current.language.languageCode?.identifier ?? "nil")", category: .data)
+        Logger.debug("[LocalizationManager] Locale.preferredLanguages: \(Locale.preferredLanguages)", category: .data)
+        Logger.debug("[LocalizationManager] Locale.current.identifier: \(Locale.current.identifier)", category: .data)
+        Logger.debug("[LocalizationManager] Available languages: \(availableLanguages.keys.sorted())", category: .data)
+        Logger.debug("[LocalizationManager] UserDefaults before init:", category: .data)
+        Logger.debug("[LocalizationManager]   app_language: \(UserDefaults.standard.string(forKey: "app_language") ?? "nil")", category: .data)
+        Logger.debug("[LocalizationManager]   app_language_explicitly_set: \(UserDefaults.standard.bool(forKey: "app_language_explicitly_set"))", category: .data)
+        #endif
         
         // Check if user is authenticated
         let isAuthenticated = KeychainManager.get(key: "access_token") != nil
@@ -120,11 +123,12 @@ class LocalizationManager: ObservableObject {
         let hasExplicitLanguage = UserDefaults.standard.bool(forKey: "app_language_explicitly_set")
         let savedLang = UserDefaults.standard.string(forKey: "app_language")
         
-        // Always print (not just in DEBUG) to ensure we see what's happening
-        print("[LocalizationManager] Checking saved language preference:")
-        print("[LocalizationManager]   hasExplicitLanguage: \(hasExplicitLanguage)")
-        print("[LocalizationManager]   savedLang: \(savedLang ?? "nil")")
-        print("[LocalizationManager]   isAuthenticated: \(isAuthenticated)")
+        #if DEBUG
+        Logger.debug("[LocalizationManager] Checking saved language preference:", category: .data)
+        Logger.debug("[LocalizationManager]   hasExplicitLanguage: \(hasExplicitLanguage)", category: .data)
+        Logger.debug("[LocalizationManager]   savedLang: \(savedLang ?? "nil")", category: .data)
+        Logger.debug("[LocalizationManager]   isAuthenticated: \(isAuthenticated)", category: .data)
+        #endif
         
         // If not authenticated, always use device language (ignore saved preferences)
         let initialLang: String
@@ -134,7 +138,9 @@ class LocalizationManager: ObservableObject {
             // Clear any old saved language to ensure device language is always used
             UserDefaults.standard.removeObject(forKey: "app_language")
             UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
-            print("[LocalizationManager] Not authenticated - using device language: \(finalDeviceLang)")
+            #if DEBUG
+            Logger.debug("[LocalizationManager] Not authenticated - using device language: \(finalDeviceLang)", category: .data)
+            #endif
         } else {
             // User is authenticated - check if they have explicitly set a language preference
             if hasExplicitLanguage, let saved = savedLang, availableLanguages.keys.contains(saved) {
@@ -142,14 +148,18 @@ class LocalizationManager: ObservableObject {
                 initialLang = saved
                 // Save it properly
                 UserDefaults.standard.set(initialLang, forKey: "app_language")
-                print("[LocalizationManager] Authenticated with explicit language preference: \(saved)")
+                #if DEBUG
+                Logger.debug("[LocalizationManager] Authenticated with explicit language preference: \(saved)", category: .data)
+                #endif
             } else {
                 // No explicit preference - use device language
                 initialLang = finalDeviceLang
                 // Clear any old saved language to ensure device language is always used
                 UserDefaults.standard.removeObject(forKey: "app_language")
                 UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
-                print("[LocalizationManager] Authenticated but no explicit preference - using device language: \(finalDeviceLang)")
+                #if DEBUG
+                Logger.debug("[LocalizationManager] Authenticated but no explicit preference - using device language: \(finalDeviceLang)", category: .data)
+                #endif
             }
         }
         
@@ -160,14 +170,18 @@ class LocalizationManager: ObservableObject {
         } else {
             // Device language is not supported - use English as fallback
             validatedLang = fallbackLanguage
-            print("[LocalizationManager] ⚠️ Device language '\(initialLang)' is not supported, falling back to English")
+            #if DEBUG
+            Logger.debug("[LocalizationManager] ⚠️ Device language '\(initialLang)' is not supported, falling back to English", category: .data)
+            #endif
         }
         
-        print("[LocalizationManager] Initial language: \(initialLang), validated: \(validatedLang)")
-        print("[LocalizationManager] Is authenticated: \(isAuthenticated)")
-        print("[LocalizationManager] hasExplicitLanguage: \(UserDefaults.standard.bool(forKey: "app_language_explicitly_set"))")
-        print("[LocalizationManager] savedLang: \(UserDefaults.standard.string(forKey: "app_language") ?? "nil")")
-        print("[LocalizationManager] ========== INIT END ==========")
+        #if DEBUG
+        Logger.debug("[LocalizationManager] Initial language: \(initialLang), validated: \(validatedLang)", category: .data)
+        Logger.debug("[LocalizationManager] Is authenticated: \(isAuthenticated)", category: .data)
+        Logger.debug("[LocalizationManager] hasExplicitLanguage: \(UserDefaults.standard.bool(forKey: "app_language_explicitly_set"))", category: .data)
+        Logger.debug("[LocalizationManager] savedLang: \(UserDefaults.standard.string(forKey: "app_language") ?? "nil")", category: .data)
+        Logger.debug("[LocalizationManager] ========== INIT END ==========", category: .data)
+        #endif
         
         // Set currentLanguage (won't save because _isInitializing is true)
         self.currentLanguage = validatedLang
@@ -180,35 +194,47 @@ class LocalizationManager: ObservableObject {
     
     /// Check if user is authenticated and update language accordingly
     func updateLanguageForAuthState(isAuthenticated: Bool) {
-        print("[LocalizationManager] updateLanguageForAuthState called: isAuthenticated=\(isAuthenticated), currentLanguage=\(currentLanguage)")
+        #if DEBUG
+        Logger.debug("[LocalizationManager] updateLanguageForAuthState called: isAuthenticated=\(isAuthenticated), currentLanguage=\(currentLanguage)", category: .data)
+        #endif
         
         // Only update if state actually changed
         if !isAuthenticated {
             // User logged out - reset to device language
-            print("[LocalizationManager] User logged out - resetting to device language")
+            #if DEBUG
+            Logger.debug("[LocalizationManager] User logged out - resetting to device language", category: .data)
+            #endif
             resetToDeviceLanguage()
         } else {
             // User is authenticated - check if they have explicitly set a language preference
             let hasExplicitLanguage = UserDefaults.standard.bool(forKey: "app_language_explicitly_set")
             let savedLang = UserDefaults.standard.string(forKey: "app_language")
             
-            print("[LocalizationManager] User authenticated - hasExplicitLanguage=\(hasExplicitLanguage), savedLang=\(savedLang ?? "nil")")
+            #if DEBUG
+            Logger.debug("[LocalizationManager] User authenticated - hasExplicitLanguage=\(hasExplicitLanguage), savedLang=\(savedLang ?? "nil")", category: .data)
+            #endif
             
             if hasExplicitLanguage, let saved = savedLang, availableLanguages.keys.contains(saved) {
                 // User has explicitly set a language preference - use it
                 if currentLanguage != saved {
-                    print("[LocalizationManager] Switching to saved explicit language: \(saved)")
+                    #if DEBUG
+                    Logger.debug("[LocalizationManager] Switching to saved explicit language: \(saved)", category: .data)
+                    #endif
                     _isInitializing = true
                     self.currentLanguage = saved
                     _isInitializing = false
                 } else {
-                    print("[LocalizationManager] Already using explicit language: \(saved)")
+                    #if DEBUG
+                    Logger.debug("[LocalizationManager] Already using explicit language: \(saved)", category: .data)
+                    #endif
                 }
             } else {
                 // No explicit preference - keep current language (which should be system language)
                 // Don't change the language when user authenticates - keep the system language
                 // that was set before authentication
-                print("[LocalizationManager] No explicit language preference - keeping current language: \(currentLanguage)")
+                #if DEBUG
+                Logger.debug("[LocalizationManager] No explicit language preference - keeping current language: \(currentLanguage)", category: .data)
+                #endif
                 // Clear any old saved language to ensure we don't use stale preferences
                 UserDefaults.standard.removeObject(forKey: "app_language")
                 UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
@@ -263,7 +289,9 @@ class LocalizationManager: ObservableObject {
         // If no supported language was found, default to English
         let finalLang = deviceLang ?? fallbackLanguage
         if deviceLang == nil {
-            print("[LocalizationManager] ⚠️ No supported language found in system preferences, defaulting to English")
+            #if DEBUG
+            Logger.debug("[LocalizationManager] ⚠️ No supported language found in system preferences, defaulting to English", category: .data)
+            #endif
         }
         return finalLang
     }
@@ -295,19 +323,17 @@ class LocalizationManager: ObservableObject {
         // Try multiple paths to find the JSON file
         var path: String?
         
-        // Always print (not just in DEBUG) to ensure we see what's happening
-        print("[LocalizationManager] ⚠️ loadTranslations() called for language: \(currentLanguage)")
-        
         #if DEBUG
-        print("[LocalizationManager] Attempting to load translations for: \(currentLanguage)")
-        print("[LocalizationManager] Bundle.main.resourcePath: \(Bundle.main.resourcePath ?? "nil")")
+        Logger.debug("[LocalizationManager] loadTranslations() called for language: \(currentLanguage)", category: .data)
+        Logger.debug("[LocalizationManager] Attempting to load translations for: \(currentLanguage)", category: .data)
+        Logger.debug("[LocalizationManager] Bundle.main.resourcePath: \(Bundle.main.resourcePath ?? "nil")", category: .data)
         
         // List all JSON files in bundle
         if let resourcePath = Bundle.main.resourcePath {
             let fm = FileManager.default
             if let files = try? fm.contentsOfDirectory(atPath: resourcePath) {
                 let jsonFiles = files.filter { $0.hasSuffix(".json") }
-                print("[LocalizationManager] JSON files in bundle root: \(jsonFiles)")
+                Logger.debug("[LocalizationManager] JSON files in bundle root: \(jsonFiles)", category: .data)
             }
         }
         #endif
@@ -315,14 +341,14 @@ class LocalizationManager: ObservableObject {
         // Try 1: In Resources/Localization subdirectory
         path = Bundle.main.path(forResource: currentLanguage, ofType: "json", inDirectory: "Resources/Localization")
         #if DEBUG
-        if path != nil { print("[LocalizationManager] Found at: Resources/Localization/\(currentLanguage).json") }
+        if path != nil { Logger.debug("[LocalizationManager] Found at: Resources/Localization/\(currentLanguage).json", category: .data) }
         #endif
         
         // Try 2: In Resources directory
         if path == nil {
             path = Bundle.main.path(forResource: currentLanguage, ofType: "json", inDirectory: "Resources")
             #if DEBUG
-            if path != nil { print("[LocalizationManager] Found at: Resources/\(currentLanguage).json") }
+            if path != nil { Logger.debug("[LocalizationManager] Found at: Resources/\(currentLanguage).json", category: .data) }
             #endif
         }
         
@@ -330,7 +356,7 @@ class LocalizationManager: ObservableObject {
         if path == nil {
             path = Bundle.main.path(forResource: currentLanguage, ofType: "json")
             #if DEBUG
-            if path != nil { print("[LocalizationManager] Found at: \(currentLanguage).json (root)") }
+            if path != nil { Logger.debug("[LocalizationManager] Found at: \(currentLanguage).json (root)", category: .data) }
             #endif
         }
         
@@ -341,7 +367,7 @@ class LocalizationManager: ObservableObject {
                 if FileManager.default.fileExists(atPath: possiblePath) {
                     path = possiblePath
                     #if DEBUG
-                    print("[LocalizationManager] Found at: \(possiblePath)")
+                    Logger.debug("[LocalizationManager] Found at: \(possiblePath)", category: .data)
                     #endif
                 }
             }
@@ -351,13 +377,13 @@ class LocalizationManager: ObservableObject {
               let data = try? Data(contentsOf: URL(fileURLWithPath: validPath)),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: String] else {
             #if DEBUG
-            print("[LocalizationManager] Failed to load translations for \(currentLanguage) in any location")
-            print("[LocalizationManager] Searched paths:")
-            print(" - Resources/Localization/\(currentLanguage).json")
-            print(" - Resources/\(currentLanguage).json")
-            print(" - \(currentLanguage).json")
+            Logger.debug("[LocalizationManager] Failed to load translations for \(currentLanguage) in any location", category: .data)
+            Logger.debug("[LocalizationManager] Searched paths:", category: .data)
+            Logger.debug(" - Resources/Localization/\(currentLanguage).json", category: .data)
+            Logger.debug(" - Resources/\(currentLanguage).json", category: .data)
+            Logger.debug(" - \(currentLanguage).json", category: .data)
             if let resourcePath = Bundle.main.resourcePath {
-                print(" - \(resourcePath)/\(currentLanguage).json")
+                Logger.debug(" - \(resourcePath)/\(currentLanguage).json", category: .data)
             }
             #endif
             
@@ -369,7 +395,9 @@ class LocalizationManager: ObservableObject {
         }
         
         translations = json
-        print("[LocalizationManager] ✅ Loaded \(translations.count) translations for \(currentLanguage) from: \(validPath)")
+        #if DEBUG
+        Logger.debug("[LocalizationManager] ✅ Loaded \(translations.count) translations for \(currentLanguage) from: \(validPath)", category: .data)
+        #endif
     }
     
     private func loadFallbackTranslations() {
@@ -390,14 +418,14 @@ class LocalizationManager: ObservableObject {
               let fallbackData = try? Data(contentsOf: URL(fileURLWithPath: validFallbackPath)),
               let fallbackJson = try? JSONSerialization.jsonObject(with: fallbackData) as? [String: String] else {
             #if DEBUG
-            print("[LocalizationManager] Failed to load fallback translations for \(fallbackLanguage)")
+            Logger.debug("[LocalizationManager] Failed to load fallback translations for \(fallbackLanguage)", category: .data)
             #endif
             return
         }
         
         translations = fallbackJson
         #if DEBUG
-        print("[LocalizationManager] Loaded fallback translations (\(translations.count) keys) from: \(validFallbackPath)")
+        Logger.debug("[LocalizationManager] Loaded fallback translations (\(translations.count) keys) from: \(validFallbackPath)", category: .data)
         #endif
     }
     
@@ -423,16 +451,20 @@ class LocalizationManager: ObservableObject {
         } else {
             // Device language is not supported - use English as fallback
             validLang = fallbackLanguage
-            print("[LocalizationManager] ⚠️ Device language '\(deviceLang)' is not supported, falling back to English")
+            #if DEBUG
+            Logger.debug("[LocalizationManager] ⚠️ Device language '\(deviceLang)' is not supported, falling back to English", category: .data)
+            #endif
         }
         
-        print("[LocalizationManager] resetToDeviceLanguage: detected=\(deviceLang), valid=\(validLang), current=\(currentLanguage)")
-        print("[LocalizationManager] Locale.preferredLanguages: \(Locale.preferredLanguages)")
+        #if DEBUG
+        Logger.debug("[LocalizationManager] resetToDeviceLanguage: detected=\(deviceLang), valid=\(validLang), current=\(currentLanguage)", category: .data)
+        Logger.debug("[LocalizationManager] Locale.preferredLanguages: \(Locale.preferredLanguages)", category: .data)
+        #endif
         
         // Don't do anything if already set to device language
         if currentLanguage == validLang {
             #if DEBUG
-            print("[LocalizationManager] Already set to device language, skipping reset")
+            Logger.debug("[LocalizationManager] Already set to device language, skipping reset", category: .data)
             #endif
             return
         }
@@ -445,7 +477,7 @@ class LocalizationManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "app_language")
         
         #if DEBUG
-        print("[LocalizationManager] Resetting language from \(currentLanguage) to \(validLang)")
+        Logger.debug("[LocalizationManager] Resetting language from \(currentLanguage) to \(validLang)", category: .data)
         #endif
         
         // Set to device language

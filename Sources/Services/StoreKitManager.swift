@@ -42,88 +42,95 @@ final class StoreKitManager {
     /// Fehler werden geloggt, aber bewusst nicht nach außen propagiert, damit die
     /// UI den Fehlerfluss kontrollieren kann.
     func loadProducts() async {
-        // Use print() directly without string interpolation to avoid hangs
-        print("[StoreKit] START loadProducts()")
-        print("[StoreKit] Product ID:", Self.monthlyProductId)
-        
-        // Check if we're using StoreKit Configuration (Debug) or real App Store Connect (Release)
         #if DEBUG
-        print("[StoreKit] Mode: DEBUG - Using StoreKit Configuration file if available")
+        Logger.debug("[StoreKit] START loadProducts()", category: .data)
+        Logger.debug("[StoreKit] Product ID: \(Self.monthlyProductId)", category: .data)
+        Logger.debug("[StoreKit] Mode: DEBUG - Using StoreKit Configuration file if available", category: .data)
         #else
-        print("[StoreKit] Mode: RELEASE - Loading from App Store Connect")
+        Logger.info("[StoreKit] START loadProducts()", category: .data)
+        Logger.info("[StoreKit] Product ID: \(Self.monthlyProductId)", category: .data)
+        Logger.info("[StoreKit] Mode: RELEASE - Loading from App Store Connect", category: .data)
         #endif
         
         do {
-            print("[StoreKit] About to call Product.products()")
+            #if DEBUG
+            Logger.debug("[StoreKit] About to call Product.products()", category: .data)
+            #endif
             
             // Add timeout to prevent hanging indefinitely
             let products = try await withTimeout(seconds: 10) {
                 try await Product.products(for: [Self.monthlyProductId])
             }
             
-            print("[StoreKit] Product.products() returned")
-            print("[StoreKit] Product count:", products.count)
+            #if DEBUG
+            Logger.debug("[StoreKit] Product.products() returned", category: .data)
+            Logger.debug("[StoreKit] Product count: \(products.count)", category: .data)
+            #endif
             
             if products.isEmpty {
-                print("[StoreKit] ❌ CRITICAL: No products found!")
-                print("[StoreKit] ========================================")
-                print("[StoreKit] DIAGNOSTIC CHECKLIST:")
-                print("[StoreKit] 1. Product ID: \(Self.monthlyProductId)")
-                print("[StoreKit] 2. Bundle ID: \(Bundle.main.bundleIdentifier ?? "unknown")")
+                Logger.error("[StoreKit] ❌ CRITICAL: No products found!", category: .data)
                 #if DEBUG
-                print("[StoreKit] 3. Build Mode: DEBUG")
+                Logger.debug("[StoreKit] ========================================", category: .data)
+                Logger.debug("[StoreKit] DIAGNOSTIC CHECKLIST:", category: .data)
+                Logger.debug("[StoreKit] 1. Product ID: \(Self.monthlyProductId)", category: .data)
+                Logger.debug("[StoreKit] 2. Bundle ID: \(Bundle.main.bundleIdentifier ?? "unknown")", category: .data)
+                Logger.debug("[StoreKit] 3. Build Mode: DEBUG", category: .data)
                 #else
-                print("[StoreKit] 3. Build Mode: RELEASE")
+                Logger.error("[StoreKit] 3. Build Mode: RELEASE", category: .data)
                 #endif
                 
                 // Check if we're in TestFlight
                 #if !DEBUG
                 if Bundle.main.appStoreReceiptURL != nil {
-                    print("[StoreKit] 4. App Store Receipt: EXISTS (TestFlight/App Store)")
+                    Logger.error("[StoreKit] 4. App Store Receipt: EXISTS (TestFlight/App Store)", category: .data)
                 } else {
-                    print("[StoreKit] 4. App Store Receipt: NOT FOUND")
+                    Logger.error("[StoreKit] 4. App Store Receipt: NOT FOUND", category: .data)
                 }
                 #endif
                 
-                print("[StoreKit] ========================================")
-                print("[StoreKit] COMMON FIXES:")
-                print("[StoreKit] A. App Store Connect → Subscriptions:")
-                print("[StoreKit]    - Subscription Status must be 'Ready to Submit' or 'Approved'")
-                print("[StoreKit]    - NOT 'Waiting for Review' (won't work!)")
-                print("[StoreKit] B. Subscription must be linked to your app:")
-                print("[StoreKit]    - App Store Connect → Your App → Subscriptions")
-                print("[StoreKit]    - Click 'Manage' next to your subscription group")
-                print("[StoreKit]    - Ensure subscription is in the group")
-                print("[StoreKit] C. App must be submitted at least once:")
-                print("[StoreKit]    - Even if rejected, app must exist in App Store Connect")
-                print("[StoreKit] D. TestFlight Sandbox Account:")
-                print("[StoreKit]    - Settings → App Store → Sandbox Account")
-                print("[StoreKit]    - Must be logged in with Sandbox Tester")
-                print("[StoreKit] E. Product ID must match EXACTLY:")
-                print("[StoreKit]    - No spaces, no typos")
-                print("[StoreKit]    - Case-sensitive!")
-                print("[StoreKit] ========================================")
+                #if DEBUG
+                Logger.debug("[StoreKit] ========================================", category: .data)
+                Logger.debug("[StoreKit] COMMON FIXES:", category: .data)
+                Logger.debug("[StoreKit] A. App Store Connect → Subscriptions:", category: .data)
+                Logger.debug("[StoreKit]    - Subscription Status must be 'Ready to Submit' or 'Approved'", category: .data)
+                Logger.debug("[StoreKit]    - NOT 'Waiting for Review' (won't work!)", category: .data)
+                Logger.debug("[StoreKit] B. Subscription must be linked to your app:", category: .data)
+                Logger.debug("[StoreKit]    - App Store Connect → Your App → Subscriptions", category: .data)
+                Logger.debug("[StoreKit]    - Click 'Manage' next to your subscription group", category: .data)
+                Logger.debug("[StoreKit]    - Ensure subscription is in the group", category: .data)
+                Logger.debug("[StoreKit] C. App must be submitted at least once:", category: .data)
+                Logger.debug("[StoreKit]    - Even if rejected, app must exist in App Store Connect", category: .data)
+                Logger.debug("[StoreKit] D. TestFlight Sandbox Account:", category: .data)
+                Logger.debug("[StoreKit]    - Settings → App Store → Sandbox Account", category: .data)
+                Logger.debug("[StoreKit]    - Must be logged in with Sandbox Tester", category: .data)
+                Logger.debug("[StoreKit] E. Product ID must match EXACTLY:", category: .data)
+                Logger.debug("[StoreKit]    - No spaces, no typos", category: .data)
+                Logger.debug("[StoreKit]    - Case-sensitive!", category: .data)
+                Logger.debug("[StoreKit] ========================================", category: .data)
+                #endif
             } else {
-                print("[StoreKit] ✅ SUCCESS: Product found!")
+                #if DEBUG
+                Logger.debug("[StoreKit] ✅ SUCCESS: Product found!", category: .data)
+                #endif
                 if let product = products.first {
-                    print("[StoreKit] Product Details:")
-                    print("[StoreKit]   - ID: \(product.id)")
-                    print("[StoreKit]   - Display Name: '\(product.displayName)'")
-                    print("[StoreKit]   - Description: '\(product.description)'")
-                    print("[StoreKit]   - Price: \(product.displayPrice)")
-                    
                     #if DEBUG
+                    Logger.debug("[StoreKit] Product Details:", category: .data)
+                    Logger.debug("[StoreKit]   - ID: \(product.id)", category: .data)
+                    Logger.debug("[StoreKit]   - Display Name: '\(product.displayName)'", category: .data)
+                    Logger.debug("[StoreKit]   - Description: '\(product.description)'", category: .data)
+                    Logger.debug("[StoreKit]   - Price: \(product.displayPrice)", category: .data)
+                    
                     if product.displayName.isEmpty {
-                        print("[StoreKit] ⚠️ NOTE: Empty display name = StoreKit Configuration file")
+                        Logger.debug("[StoreKit] ⚠️ NOTE: Empty display name = StoreKit Configuration file", category: .data)
                     } else {
-                        print("[StoreKit] ✅ NOTE: Has display name = App Store Connect")
+                        Logger.debug("[StoreKit] ✅ NOTE: Has display name = App Store Connect", category: .data)
                     }
                     #else
                     if product.displayName.isEmpty {
-                        print("[StoreKit] ⚠️ WARNING: Empty display name in RELEASE build!")
-                        print("[StoreKit] This suggests product metadata not loaded from App Store Connect")
+                        Logger.error("[StoreKit] ⚠️ WARNING: Empty display name in RELEASE build!", category: .data)
+                        Logger.error("[StoreKit] This suggests product metadata not loaded from App Store Connect", category: .data)
                     } else {
-                        print("[StoreKit] ✅ Product metadata loaded from App Store Connect")
+                        Logger.info("[StoreKit] ✅ Product metadata loaded from App Store Connect", category: .data)
                     }
                     #endif
                 }
@@ -187,24 +194,29 @@ final class StoreKitManager {
                 Logger.error("[StoreKit] Diagnostic: Verify product exists in App Store Connect with exact ID: \(Self.monthlyProductId)", category: .data)
             }
         } catch {
-            print("[StoreKit] ERROR occurred")
-            print("[StoreKit] Error description:", error.localizedDescription)
+            Logger.error("[StoreKit] ERROR occurred", error: error, category: .data)
             
             if error is TimeoutError {
-                print("[StoreKit] TIMEOUT: Product.products() took longer than 10 seconds")
-                print("[StoreKit] This usually means:")
-                print("[StoreKit] 1. StoreKit Configuration not loaded in Xcode Scheme")
-                print("[StoreKit] 2. Network connectivity issue")
-                print("[StoreKit] 3. App Store services not available in Simulator")
+                #if DEBUG
+                Logger.debug("[StoreKit] TIMEOUT: Product.products() took longer than 10 seconds", category: .data)
+                Logger.debug("[StoreKit] This usually means:", category: .data)
+                Logger.debug("[StoreKit] 1. StoreKit Configuration not loaded in Xcode Scheme", category: .data)
+                Logger.debug("[StoreKit] 2. Network connectivity issue", category: .data)
+                Logger.debug("[StoreKit] 3. App Store services not available in Simulator", category: .data)
+                #endif
             } else if let storeKitError = error as? StoreKitError {
-                print("[StoreKit] StoreKitError type:", String(describing: storeKitError))
+                #if DEBUG
+                Logger.debug("[StoreKit] StoreKitError type: \(String(describing: storeKitError))", category: .data)
+                #endif
             }
             
             Logger.error("[StoreKit] Failed to load products", error: error, category: .data)
         }
         
         let isLoaded = self.product != nil
-        print("[StoreKit] END loadProducts() - Product loaded:", isLoaded)
+        #if DEBUG
+        Logger.debug("[StoreKit] END loadProducts() - Product loaded: \(isLoaded)", category: .data)
+        #endif
     }
 
     /// Startet den Kauf-Flow für das Monatsabo.

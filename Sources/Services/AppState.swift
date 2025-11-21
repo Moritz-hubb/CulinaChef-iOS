@@ -162,23 +162,23 @@ final class AppState: ObservableObject {
         Task { @MainActor [weak self] in
             guard let self else {
                 #if DEBUG
-                print("[AppState] StoreKit Task: self is nil, returning")
+                Logger.debug("[AppState] StoreKit Task: self is nil, returning", category: .data)
                 #endif
                 return
             }
             // Delay to ensure StoreKit and app are fully ready
             #if DEBUG
-            print("[AppState] StoreKit Task: Starting, will wait 0.5s...")
+            Logger.debug("[AppState] StoreKit Task: Starting, will wait 0.5s...", category: .data)
             #endif
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             #if DEBUG
-            print("[AppState] StoreKit Task: Delay complete, calling loadProducts()...")
+            Logger.debug("[AppState] StoreKit Task: Delay complete, calling loadProducts()...", category: .data)
             #endif
             Logger.info("[AppState] Initializing StoreKit on app startup...", category: .data)
             Logger.info("[AppState] Calling storeKit.loadProducts()...", category: .data)
             await self.storeKit.loadProducts()
             #if DEBUG
-            print("[AppState] StoreKit Task: loadProducts() completed")
+            Logger.debug("[AppState] StoreKit Task: loadProducts() completed", category: .data)
             #endif
             Logger.info("[AppState] Calling refreshSubscriptionFromEntitlements()...", category: .data)
             await self.refreshSubscriptionFromEntitlements()

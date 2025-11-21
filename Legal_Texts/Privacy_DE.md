@@ -8,19 +8,19 @@ für die iOS-App "CulinaChef (CulinaAI)"
 
 ## 1. Verantwortlicher
 
-- **Unternehmen:** CulinaAI
-- **Vertreten durch:** Moritz Serrin  
-- **Adresse:** 21244 Buchholz, Deutschland
-- **E-Mail:** kontakt@culinaai.com
-- **Datenschutz:** datenschutz@culinaai.com
+**Unternehmen:** CulinaAI  
+**Vertreten durch:** Moritz Serrin  
+**Adresse:** Sonnenblumenweg 8, 21244 Buchholz, Deutschland  
+**E-Mail:** kontakt@culinaai.com  
+**Datenschutz:** datenschutz@culinaai.com
 
 ---
 
 ## 2. Allgemeines
 
-Der Schutz Ihrer personenbezogenen Daten ist uns wichtig. Diese Datenschutzerklärung informiert Sie über die Art, den Umfang und Zweck der Verarbeitung personenbezogener Daten in unserer iOS-App CulinaChef (CulinaAI).
+Der Schutz Ihrer personenbezogenen Daten ist uns ein wichtiges Anliegen. Wir verarbeiten personenbezogene Daten ausschließlich im Einklang mit der DSGVO, dem BDSG sowie weiteren einschlägigen Rechtsvorschriften.
 
-### Grundsätze der Datenverarbeitung:
+**Grundsätze der Datenverarbeitung:**
 
 - **Datenminimierung:** Nur notwendige Daten werden erfasst
 - **Transparenz:** Klare Kommunikation über Datennutzung
@@ -78,7 +78,7 @@ Wir nutzen OpenAI GPT-4o-mini für:
 - Ernährungspräferenzen (Kontext)
 - KEINE personenbezogenen Daten
 
-**Drittanbieter:** OpenAI L.L.C.
+**Drittanbieter: OpenAI L.L.C.**
 
 - **Empfänger:** OpenAI L.L.C., USA
 - **Rechtsgrundlage:** Art. 49 Abs. 1 lit. a DSGVO (Einwilligung)
@@ -86,11 +86,17 @@ Wir nutzen OpenAI GPT-4o-mini für:
 
 **Wichtig:** KI-generierte Inhalte sind automatisiert erstellt. Es besteht keine Haftung für Richtigkeit, Vollständigkeit oder gesundheitliche Verträglichkeit.
 
+**Wichtiger Hinweis zu KI-generierten Rezepten:**
+
+KI-Systeme können Fehler machen. Bitte überprüfen Sie alle KI-generierten Rezepte sorgfältig, bevor Sie sie zubereiten. Insbesondere bei Allergien, Unverträglichkeiten oder speziellen Ernährungsanforderungen sollten Sie die Zutatenliste und Anweisungen doppelt prüfen.
+
+Wir übernehmen keine Haftung für gesundheitliche Folgen, die durch die Verwendung von KI-generierten Rezepten entstehen. Die Verantwortung für die Überprüfung der Rezepte und die Entscheidung, ob ein Rezept für Ihre individuellen Bedürfnisse geeignet ist, liegt allein bei Ihnen.
+
 ### 3.5 Zahlungsabwicklung (Apple)
 
-**Abonnement:** 5,99 €/Monat via Apple In-App-Purchase
+**Abonnement: 5,99 €/Monat via Apple In-App-Purchase**
 
-**Verarbeitet durch Apple:**
+Verarbeitet durch Apple:
 
 - Apple-ID
 - Zahlungsinformationen
@@ -100,7 +106,7 @@ Wir nutzen OpenAI GPT-4o-mini für:
 
 ### 3.6 Fehlererfassung und Crash Reporting (Sentry)
 
-Wir nutzen **Sentry** von Functional Software, Inc. zur Verbesserung der App-Stabilität.
+Zur Verbesserung der App-Stabilität nutzen wir **Sentry** von Functional Software, Inc.
 
 **Übermittelte Daten bei Crashes oder Fehlern:**
 
@@ -108,17 +114,20 @@ Wir nutzen **Sentry** von Functional Software, Inc. zur Verbesserung der App-Sta
 - App-Version und Build-Nummer
 - Stack Traces (technische Fehlerprotokolle)
 - Zeitstempel des Fehlers
+- Screenshots zum Zeitpunkt des Fehlers (optional)
 - User-Aktionen vor dem Fehler (Breadcrumbs)
-- **KEINE personenbezogenen Daten** (Namen, E-Mails, etc.)
+- KEINE personenbezogenen Daten (Namen, E-Mails, etc.)
 
-**Drittanbieter:** Functional Software, Inc. (Sentry)
+**Drittanbieter: Functional Software, Inc. (Sentry)**
 
 - **Empfänger:** Functional Software, Inc., USA
 - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse)
 - **Speicherdauer:** 30 Tage bei Sentry
-- **Zweck:** Erkennung und Behebung von technischen Fehlern zur Verbesserung der App-Stabilität
+- **Datenübertragung:** EU/USA, DSGVO-konform
 
-Weitere Informationen: https://sentry.io/privacy/
+**Zweck:** Erkennung und Behebung von technischen Fehlern zur Verbesserung der App-Stabilität.
+
+Weitere Informationen: [Sentry Privacy Policy](https://sentry.io/privacy/)
 
 ### 3.7 Lokale Speicherung
 
@@ -141,37 +150,20 @@ Weitere Informationen: https://sentry.io/privacy/
 
 Folgende Drittanbieter verarbeiten Daten außerhalb der EU:
 
-### Supabase Inc.
+| Anbieter | Zweck | Standort | Rechtsgrundlage |
+|----------|-------|----------|-----------------|
+| **Supabase Inc.** | Datenbank und Authentifizierung | EU/USA | Art. 6 Abs. 1 lit. b DSGVO |
+| **OpenAI L.L.C.** | KI-gestützte Rezeptgenerierung | USA | Art. 49 Abs. 1 lit. a DSGVO |
+| **Apple Inc.** | In-App-Käufe und Abonnements | USA | Angemessenheitsbeschluss der EU |
+| **Functional Software, Inc. (Sentry)** | Fehlererfassung und Crash Reporting | USA/EU | Art. 6 Abs. 1 lit. f DSGVO |
 
-- **Zweck:** Datenbank und Authentifizierung
-- **Standort:** EU/USA
-- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung)
-
-### OpenAI L.L.C.
-
-- **Zweck:** KI-gestützte Rezeptgenerierung
-- **Standort:** USA
-- **Rechtsgrundlage:** Art. 49 Abs. 1 lit. a DSGVO (Einwilligung)
-
-### Apple Inc.
-
-- **Zweck:** In-App-Käufe und Abonnements
-- **Standort:** USA
-- **Rechtsgrundlage:** Angemessenheitsbeschluss der EU-Kommission
-
-### Functional Software, Inc. (Sentry)
-
-- **Zweck:** Fehlererfassung und Crash Reporting
-- **Standort:** USA/EU
-- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse)
-
-**Sicherheit:** Alle Datenübertragungen erfolgen verschlüsselt via HTTPS/TLS.
+**Alle Datenübertragungen erfolgen verschlüsselt via HTTPS/TLS.**
 
 ---
 
 ## 5. Technische und organisatorische Maßnahmen
 
-Zum Schutz Ihrer Daten setzen wir folgende Maßnahmen um:
+Zum Schutz Ihrer Daten setzen wir folgende Sicherheitsmaßnahmen ein:
 
 - **Verschlüsselung:** TLS/HTTPS für alle Datenübertragungen
 - **Passwort-Schutz:** bcrypt-Hashing mit Salt
@@ -185,7 +177,7 @@ Zum Schutz Ihrer Daten setzen wir folgende Maßnahmen um:
 
 ## 6. Ihre Rechte nach DSGVO
 
-Sie haben folgende Rechte:
+Sie haben folgende Rechte bezüglich Ihrer personenbezogenen Daten:
 
 - **Auskunft (Art. 15):** Übersicht über alle gespeicherten Daten
 - **Berichtigung (Art. 16):** Korrektur falscher oder unvollständiger Daten
@@ -196,24 +188,22 @@ Sie haben folgende Rechte:
 
 **Ausübung Ihrer Rechte:**
 
-Kontakt: datenschutz@culinaai.com
+Zur Ausübung Ihrer Rechte kontaktieren Sie uns bitte per E-Mail: **datenschutz@culinaai.com**
 
-Zur Ausübung Ihrer Rechte kontaktieren Sie uns bitte per E-Mail. Wir werden Ihre Anfrage unverzüglich bearbeiten.
+Wir werden Ihre Anfrage unverzüglich bearbeiten.
 
 ---
 
 ## 7. Speicherdauer
 
-| Datentyp | Dauer | Löschmethode |
-|----------|-------|--------------|
+| Datentyp | Speicherdauer | Löschmethode |
+|----------|---------------|--------------|
 | Benutzerkonto | Bis zur Löschung | Manuell durch Nutzer |
 | Rezepte & Favoriten | Bis zur Löschung | Mit Konto |
 | Ernährungspräferenzen | Bis zur Löschung | Mit Konto |
 | Chat-Nachrichten | Sitzungsdauer | Nach App-Schließen |
 | API-Protokolle | 30 Tage | Technische Logs |
 | Audit-Protokolle | 3 Jahre | Gesetzliche Pflicht |
-
-**Hinweis:** Chat-Nachrichten werden nur temporär während der aktiven Sitzung gespeichert und nicht dauerhaft in der Datenbank abgelegt.
 
 ---
 
@@ -225,22 +215,22 @@ Zur Ausübung Ihrer Rechte kontaktieren Sie uns bitte per E-Mail. Wir werden Ihr
 
 ## 9. Keine Werbung oder Tracking
 
-Wir verzichten vollständig auf:
+**Wir verzichten vollständig auf:**
 
 - Cookies oder ähnliche Tracking-Technologien
 - Google Analytics oder vergleichbare Analysedienste
 - Werbung, Werbenetzwerke oder Profilbildung
 - Social-Media-Plugins oder externe Tracker
 
-**Garantie:** Ihre persönlichen Daten werden niemals an Dritte verkauft oder für Werbezwecke verwendet.
+**✅ Ihre persönlichen Daten werden niemals an Dritte verkauft oder für Werbezwecke verwendet.**
 
 ---
 
 ## 10. Kontolöschung
 
-Sie können Ihr Konto jederzeit vollständig löschen:
+Sie können Ihr Konto jederzeit in den Einstellungen vollständig löschen.
 
-**So gehen Sie vor:**
+**Löschung durchführen:**
 
 1. Öffnen Sie die Einstellungen in der App
 2. Wählen Sie 'Konto löschen'
@@ -281,11 +271,11 @@ Für diese Datenschutzerklärung und die Datenverarbeitung gilt ausschließlich 
 
 **Maßgebliche Rechtsgrundlagen:**
 
-- **DSGVO** – Datenschutz-Grundverordnung
-- **BDSG** – Bundesdatenschutzgesetz
-- **TMG** – Telemediengesetz
-- **UWG** – Gesetz gegen den unlauteren Wettbewerb
-- **BGB** – Bürgerliches Gesetzbuch
+- **DSGVO:** Datenschutz-Grundverordnung
+- **BDSG:** Bundesdatenschutzgesetz
+- **TMG:** Telemediengesetz
+- **UWG:** Gesetz gegen den unlauteren Wettbewerb
+- **BGB:** Bürgerliches Gesetzbuch
 
 ---
 

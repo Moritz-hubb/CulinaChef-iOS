@@ -11,7 +11,7 @@ for the iOS App "CulinaChef (CulinaAI)"
 
 **Company:** CulinaAI  
 **Represented by:** Moritz Serrin  
-**Address:** 21244 Buchholz, Germany  
+**Address:** Sonnenblumenweg 8, 21244 Buchholz, Germany  
 **E-mail:** kontakt@culinaai.com  
 **Data Protection Contact:** datenschutz@culinaai.com
 
@@ -19,7 +19,7 @@ for the iOS App "CulinaChef (CulinaAI)"
 
 ## 2. General Information
 
-Protecting your personal data is important to us. This Privacy Policy explains the type, scope, and purpose of processing personal data within our iOS app CulinaChef (CulinaAI).
+Protecting your personal data is important to us. We process personal data exclusively in accordance with the GDPR, the German Federal Data Protection Act (BDSG), and other applicable legal provisions.
 
 **Principles of data processing:**
 
@@ -77,28 +77,33 @@ We use **OpenAI GPT-4o-mini** for:
 - Ingredient lists
 - Chat messages
 - Dietary preferences (context)
+- **No personal data are transmitted.**
 
-**No personal data are transmitted.**
+**Third-party provider:** OpenAI L.L.C.
 
-**Third-party provider:** OpenAI L.L.C., USA  
-**Legal basis:** Art. 49 (1)(a) GDPR – User consent  
-**Storage period:** Up to 30 days at OpenAI
+- **Recipient:** OpenAI L.L.C., USA
+- **Legal basis:** Art. 49 (1)(a) GDPR – User consent
+- **Storage period:** Up to 30 days at OpenAI
 
 **Important:** AI-generated content is created automatically. The provider assumes no liability for its accuracy, completeness, or health suitability.
+
+**Important Notice Regarding AI-Generated Recipes:**
+
+AI systems can make errors. Please carefully review all AI-generated recipes before preparing them. Especially if you have allergies, intolerances, or special dietary requirements, you should double-check the ingredient list and instructions.
+
+We assume no liability for health consequences arising from the use of AI-generated recipes. The responsibility for reviewing recipes and deciding whether a recipe is suitable for your individual needs lies solely with you.
 
 ### 3.5 Payment Processing (Apple)
 
 **Subscription:** € 5.99 per month via Apple In-App Purchase
 
-**Processed by Apple:**
+Processed by Apple:
 
 - Apple ID
 - Payment information
 - Purchase history
 
-**Note:** We do not receive or store payment data — only transaction confirmations from Apple.
-
-For details, please refer to Apple's Privacy Policy.
+**Note:** We do not receive or store payment data — only transaction confirmations from Apple. For details, please refer to Apple's Privacy Policy.
 
 ### 3.6 Error Tracking and Crash Reporting (Sentry)
 
@@ -110,6 +115,7 @@ We use **Sentry** by Functional Software, Inc. to improve app stability.
 - App version and build number
 - Stack traces (technical error logs)
 - Error timestamps
+- Screenshots at the time of the error (optional)
 - User actions before the error (breadcrumbs)
 - **No personal data** (names, e-mails, etc.)
 
@@ -118,9 +124,11 @@ We use **Sentry** by Functional Software, Inc. to improve app stability.
 - **Recipient:** Functional Software, Inc., USA
 - **Legal basis:** Art. 6 (1)(f) GDPR – Legitimate interest
 - **Storage period:** 30 days at Sentry
-- **Purpose:** Detection and resolution of technical errors to improve app stability
+- **Data transfer:** EU/USA, GDPR-compliant
 
-For more information, see: https://sentry.io/privacy/
+**Purpose:** Detection and resolution of technical errors to improve app stability.
+
+For more information, see: [Sentry Privacy Policy](https://sentry.io/privacy/)
 
 ### 3.7 Local Storage
 
@@ -145,10 +153,10 @@ The following service providers may process data outside the European Union:
 
 | Provider | Purpose | Location | Legal Basis |
 |----------|---------|----------|-------------|
-| Supabase Inc. | Database and authentication | EU / USA | Art. 6 (1)(b) GDPR |
-| OpenAI L.L.C. | AI-based recipe generation | USA | Art. 49 (1)(a) GDPR |
-| Apple Inc. | In-app purchases and subscriptions | USA | EU Adequacy Decision |
-| Functional Software, Inc. (Sentry) | Error tracking and crash reporting | USA / EU | Art. 6 (1)(f) GDPR |
+| **Supabase Inc.** | Database and authentication | EU / USA | Art. 6 (1)(b) GDPR |
+| **OpenAI L.L.C.** | AI-based recipe generation | USA | Art. 49 (1)(a) GDPR |
+| **Apple Inc.** | In-app purchases and subscriptions | USA | EU Adequacy Decision |
+| **Functional Software, Inc. (Sentry)** | Error tracking and crash reporting | USA / EU | Art. 6 (1)(f) GDPR |
 
 **Security:** All data transmissions are encrypted via HTTPS/TLS.
 
@@ -170,7 +178,7 @@ We implement the following security measures to protect your data:
 
 ## 6. Your Rights under the GDPR
 
-You have the following rights:
+You have the following rights regarding your personal data:
 
 - **Access (Art. 15):** Receive information about your stored data.
 - **Rectification (Art. 16):** Correct inaccurate or incomplete data.
@@ -197,8 +205,6 @@ We will process your request without undue delay.
 | API logs | 30 days | Technical log deletion |
 | Audit logs | 3 years | Legal requirement |
 
-**Note:** Chat messages are stored only temporarily during active sessions and are not permanently saved in the database.
-
 ---
 
 ## 8. Protection of Minors
@@ -211,14 +217,14 @@ Users under 16 must have parental or guardian consent in accordance with Art. 8 
 
 ## 9. No Advertising or Tracking
 
-We strictly refrain from using:
+**We strictly refrain from using:**
 
 - Cookies or similar tracking technologies
 - Google Analytics or comparable analytics tools
 - Advertising, ad networks, or user profiling
 - Social media plugins or external trackers
 
-**Guarantee:** Your personal data will never be sold or used for advertising purposes.
+**✅ Your personal data will never be sold or used for advertising purposes.**
 
 ---
 
@@ -271,11 +277,11 @@ This Privacy Policy and all related data processing activities are governed excl
 
 **Applicable legal framework:**
 
-- GDPR – General Data Protection Regulation
-- BDSG – Federal Data Protection Act
-- TMG – Telemedia Act
-- UWG – Act Against Unfair Competition
-- BGB – German Civil Code
+- **GDPR** – General Data Protection Regulation
+- **BDSG** – Federal Data Protection Act
+- **TMG** – Telemedia Act
+- **UWG** – Act Against Unfair Competition
+- **BGB** – German Civil Code
 
 ---
 

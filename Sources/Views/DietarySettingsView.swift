@@ -42,6 +42,8 @@ struct DietarySettingsView: View {
                             .padding(.horizontal, 12)
                             .background(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
                             .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                            .accessibilityLabel(L.done.localized)
+                            .accessibilityHint("Schließt die Ernährungspräferenzen")
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -58,6 +60,10 @@ struct DietarySettingsView: View {
                         HStack(spacing: 8) {
                             TextField(L.dietary_allergiesPlaceholder.localized, text: $newAllergyText)
                                 .textFieldStyle(.plain)
+                                .foregroundStyle(.white)
+                                .tint(.white)
+                                .accessibilityLabel("Allergie eingeben")
+                                .accessibilityHint(L.dietary_allergiesPlaceholder.localized)
                                 .padding(10)
                                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             Button(L.common_add.localized) {
@@ -68,6 +74,8 @@ struct DietarySettingsView: View {
                                     saveBack()
                                 }
                             }
+                            .accessibilityLabel(L.common_add.localized)
+                            .accessibilityHint("Fügt die eingegebene Allergie hinzu")
                             .foregroundStyle(.white)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
@@ -87,6 +95,8 @@ struct DietarySettingsView: View {
                                         Image(systemName: "xmark.circle.fill")
                                             .font(.caption)
                                     }
+                                    .accessibilityLabel("\(item) entfernen")
+                                    .accessibilityHint("Entfernt diese Allergie aus der Liste")
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -101,6 +111,10 @@ struct DietarySettingsView: View {
                         HStack(spacing: 8) {
                             TextField(L.dietary_dislikesPlaceholder.localized, text: $newDislikeText)
                                 .textFieldStyle(.plain)
+                                .foregroundStyle(.white)
+                                .tint(.white)
+                                .accessibilityLabel("Abneigung eingeben")
+                                .accessibilityHint(L.dietary_dislikesPlaceholder.localized)
                                 .padding(10)
                                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             Button(L.common_add.localized) {
@@ -111,6 +125,8 @@ struct DietarySettingsView: View {
                                     saveBack()
                                 }
                             }
+                            .accessibilityLabel(L.common_add.localized)
+                            .accessibilityHint("Fügt die eingegebene Abneigung hinzu")
                             .foregroundStyle(.white)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
@@ -130,6 +146,8 @@ struct DietarySettingsView: View {
                                         Image(systemName: "xmark.circle.fill")
                                             .font(.caption)
                                     }
+                                    .accessibilityLabel("\(item) entfernen")
+                                    .accessibilityHint("Entfernt diese Abneigung aus der Liste")
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -149,10 +167,12 @@ struct DietarySettingsView: View {
                                 Spacer()
                                 Text(["Mild", "Normal", "Scharf", "Sehr Scharf"][Int(spicyLevel)])
                                     .font(.callout.weight(.medium))
-                                    .foregroundColor(.purple)
+                                    .foregroundStyle(.white)
                             }
                             Slider(value: $spicyLevel, in: 0...3, step: 1)
                                 .tint(.purple)
+                                .accessibilityLabel(L.settings_schärfelevel.localized)
+                                .accessibilityValue(["Mild", "Normal", "Scharf", "Sehr Scharf"][Int(spicyLevel)])
                                 .onChange(of: spicyLevel) { _, _ in saveBack() }
                             
                             ForEach(Array(tastePreferences.keys.sorted()), id: \.self) { key in
@@ -164,6 +184,8 @@ struct DietarySettingsView: View {
                                     }
                                 ))
                                 .font(.callout)
+                                .foregroundStyle(.white)
+                                .tint(.purple)
                             }
                         }
                         .padding(12)
@@ -174,6 +196,10 @@ struct DietarySettingsView: View {
                             .foregroundStyle(.white)
                         TextField(L.dietary_notesPlaceholder.localized, text: $notesText)
                             .textFieldStyle(.plain)
+                            .foregroundStyle(.white)
+                            .tint(.white)
+                            .accessibilityLabel("Notizen")
+                            .accessibilityHint(L.dietary_notesPlaceholder.localized)
                             .padding(10)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .onChange(of: notesText) { _, _ in saveBack() }

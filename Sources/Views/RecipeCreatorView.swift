@@ -247,6 +247,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                     .font(.system(size: 80))
                     .foregroundStyle(.white.opacity(0.9))
                     .shadow(color: .white.opacity(0.3), radius: 20)
+                    .accessibilityHidden(true)
                 
                 VStack(spacing: 12) {
                     Text("KI-Rezeptgenerator")
@@ -276,6 +277,8 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                         )
                         .shadow(color: .blue.opacity(0.4), radius: 20, x: 0, y: 10)
                 }
+                .accessibilityLabel("Unlimited freischalten")
+                .accessibilityHint("Öffnet die Abo-Auswahl")
                 .padding(.top, 16)
             }
             .padding()

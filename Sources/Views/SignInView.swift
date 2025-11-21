@@ -44,10 +44,12 @@ struct SignInView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: 130, height: 130)
+                            .accessibilityHidden(true)
                     } else {
                         Image(systemName: "fork.knife.circle.fill")
                             .font(.system(size: 80))
                             .foregroundColor(.white)
+                            .accessibilityHidden(true)
                     }
                     
                     Text(L.ui_willkommen_zurück.localized)

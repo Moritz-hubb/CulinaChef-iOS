@@ -39,6 +39,7 @@ struct ResetPasswordView: View {
                     Image(systemName: "lock.rotation")
                         .font(.system(size: 80))
                         .foregroundColor(.white)
+                        .accessibilityHidden(true)
                     
                     Text(L.resetPasswordNewPasswordTitle.localized)
                         .font(.system(size: 24, weight: .bold))
@@ -201,6 +202,7 @@ struct ResetPasswordView: View {
                                 .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3), radius: 6, x: 0, y: 3)
                             }
                             .accessibilityLabel(isLoading ? L.loading.localized : L.resetPasswordUpdateButton.localized)
+                            .accessibilityHint("Setzt das Passwort auf den neuen Wert")
                             .disabled(isLoading || newPassword.isEmpty || confirmPassword.isEmpty)
                             .opacity((isLoading || newPassword.isEmpty || confirmPassword.isEmpty) ? 0.6 : 1)
                         }

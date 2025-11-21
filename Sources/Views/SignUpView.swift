@@ -65,10 +65,12 @@ struct SignUpView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: 110, height: 110)
+                            .accessibilityHidden(true)
                     } else {
                         Image(systemName: "fork.knife.circle.fill")
                             .font(.system(size: 70))
                             .foregroundColor(.white)
+                            .accessibilityHidden(true)
                     }
                     
                     Text(L.letsGetStarted.localized)
@@ -113,6 +115,8 @@ struct SignUpView: View {
                                 .focused($focusedField, equals: .username)
                                 .submitLabel(.next)
                                 .onSubmit { focusedField = .email }
+                                .accessibilityLabel(L.username.localized)
+                                .accessibilityHint(L.usernamePlaceholder.localized)
                                 .padding(10)
                                 .background(Color(UIColor.systemGray6))
                                 .cornerRadius(8)
@@ -141,6 +145,8 @@ struct SignUpView: View {
                                 .focused($focusedField, equals: .email)
                                 .submitLabel(.next)
                                 .onSubmit { focusedField = .password }
+                                .accessibilityLabel(L.email.localized)
+                                .accessibilityHint(L.emailPlaceholder.localized)
                                 .padding(10)
                                 .background(Color(UIColor.systemGray6))
                                 .cornerRadius(8)
@@ -164,12 +170,14 @@ struct SignUpView: View {
                                         .focused($focusedField, equals: .password)
                                         .submitLabel(.next)
                                         .onSubmit { focusedField = .confirmPassword }
+                                        .accessibilityLabel(L.password.localized)
                                 } else {
                                     SecureField("", text: $password, prompt: Text(L.minCharacters.localized).foregroundColor(.gray.opacity(0.5)))
                                         .textContentType(.newPassword)
                                         .focused($focusedField, equals: .password)
                                         .submitLabel(.next)
                                         .onSubmit { focusedField = .confirmPassword }
+                                        .accessibilityLabel(L.password.localized)
                                 }
                                 
                                 Button { showPassword.toggle() } label: {
@@ -177,6 +185,7 @@ struct SignUpView: View {
                                         .foregroundColor(.gray)
                                         .font(.system(size: 14))
                                 }
+                                .accessibilityLabel(showPassword ? "Passwort verbergen" : "Passwort anzeigen")
                             }
                             .padding(10)
                             .background(Color(UIColor.systemGray6))
@@ -213,12 +222,14 @@ struct SignUpView: View {
                                         .focused($focusedField, equals: .confirmPassword)
                                         .submitLabel(.go)
                                         .onSubmit { Task { await signUp() } }
+                                        .accessibilityLabel(L.ui_passwort_bestätigen.localized)
                                 } else {
                                     SecureField("", text: $confirmPassword, prompt: Text(L.ui_wiederholen.localized).foregroundColor(.gray.opacity(0.5)))
                                         .textContentType(.newPassword)
                                         .focused($focusedField, equals: .confirmPassword)
                                         .submitLabel(.go)
                                         .onSubmit { Task { await signUp() } }
+                                        .accessibilityLabel(L.ui_passwort_bestätigen.localized)
                                 }
                                 
                                 Button { showConfirmPassword.toggle() } label: {
@@ -226,11 +237,13 @@ struct SignUpView: View {
                                         .foregroundColor(.gray)
                                         .font(.system(size: 14))
                                 }
+                                .accessibilityLabel(showConfirmPassword ? "Passwort verbergen" : "Passwort anzeigen")
                                 
                                 if passwordsMatch {
                                     Image(systemName: "checkmark.circle.fill")
                                         .foregroundColor(.green)
                                         .font(.system(size: 16))
+                                        .accessibilityLabel("Passwörter stimmen überein")
                                 }
                             }
                             .padding(10)
@@ -251,6 +264,7 @@ struct SignUpView: View {
                                         .font(.system(size: 20))
                                         .foregroundStyle(acceptedTerms ? Color(red: 0.95, green: 0.5, blue: 0.3) : .gray)
                                 }
+                                .accessibilityLabel(acceptedTerms ? "Nutzungsbedingungen akzeptiert" : "Nutzungsbedingungen akzeptieren")
                                 
                                 HStack(spacing: 0) {
                                     Text(L.ui_ich_akzeptiere_die.localized)
@@ -262,6 +276,8 @@ struct SignUpView: View {
                                             .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
                                             .underline()
                                     }
+                                    .accessibilityLabel(L.termsOfServiceShort.localized)
+                                    .accessibilityHint("Öffnet die Nutzungsbedingungen")
                                     Text(L.ui_und_die.localized)
                                         .font(.system(size: 11))
                                         .foregroundColor(.gray)
@@ -271,6 +287,8 @@ struct SignUpView: View {
                                             .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
                                             .underline()
                                     }
+                                    .accessibilityLabel(L.ui_datenschutzerklärung_2997.localized)
+                                    .accessibilityHint("Öffnet die Datenschutzerklärung")
                                 }
                             }
                             
@@ -281,6 +299,7 @@ struct SignUpView: View {
                                         .font(.system(size: 20))
                                         .foregroundStyle(confirmedAge ? Color(red: 0.95, green: 0.5, blue: 0.3) : .gray)
                                 }
+                                .accessibilityLabel(confirmedAge ? "Altersbestätigung akzeptiert" : "Altersbestätigung akzeptieren")
                                 
                                 Text(L.ui_ich_bestätige_dass_ich.localized)
                                     .font(.system(size: 11))
@@ -316,6 +335,8 @@ struct SignUpView: View {
                                     }
                                     .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
                                 }
+                                .accessibilityLabel(L.errorAccountExistsLoginLink.localized)
+                                .accessibilityHint("Wechselt zum Anmeldebildschirm")
                             }
                             .padding(8)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -361,6 +382,8 @@ struct SignUpView: View {
                             .cornerRadius(8)
                             .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3), radius: 4, x: 0, y: 2)
                         }
+                        .accessibilityLabel(app.loading ? L.loading.localized : L.signUpButton.localized)
+                        .accessibilityHint("Registriert ein neues Konto")
                         .disabled(app.loading || !isFormValid)
                         .opacity((app.loading || !isFormValid) ? 0.6 : 1)
                         

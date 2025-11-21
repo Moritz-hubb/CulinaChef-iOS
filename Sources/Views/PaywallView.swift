@@ -38,6 +38,7 @@ struct PaywallView: View {
                                 .font(.system(size: 64))
                                 .foregroundStyle(.white)
                                 .shadow(color: .white.opacity(0.3), radius: 20)
+                                .accessibilityHidden(true)
                             
                             Text(L.paywallUnlimited.localized)
                                 .font(.system(size: 40, weight: .bold))
@@ -117,6 +118,7 @@ struct PaywallView: View {
                                         .font(.title3)
                                         .foregroundStyle(hasAcceptedFairUse ? Color(red: 0.2, green: 0.6, blue: 0.9) : .white.opacity(0.7))
                                 }
+                                .accessibilityLabel(hasAcceptedFairUse ? "Fair Use Policy akzeptiert" : "Fair Use Policy akzeptieren")
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack(spacing: 4) {
@@ -130,6 +132,8 @@ struct PaywallView: View {
                                                 .underline()
                                                 .foregroundStyle(Color(red: 0.2, green: 0.6, blue: 0.9))
                                         }
+                                        .accessibilityLabel(L.legalFairUseCheckboxLink.localized)
+                                        .accessibilityHint("Öffnet die Fair Use Policy")
                                     }
                                 }
                                 
@@ -355,15 +359,20 @@ private struct FeatureRow: View {
                 .foregroundStyle(.white)
                 .frame(width: 40)
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .center, spacing: 4) {
                 Text(title)
                     .font(.headline)
                     .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
                 
                 Text(description)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
             }
+            .frame(maxWidth: .infinity)
             
             Spacer()
         }

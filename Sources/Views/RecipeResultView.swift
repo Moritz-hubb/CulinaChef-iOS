@@ -91,6 +91,8 @@ ToolbarItem(placement: .navigationBarTrailing) {
                             .background(.ultraThinMaterial, in: Circle())
                             .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
                     }
+                    .accessibilityLabel("Schließen")
+                    .accessibilityHint("Schließt die Rezeptansicht")
                 }
             }
 .sheet(isPresented: $showAISheet) {
@@ -128,6 +130,8 @@ ToolbarItem(placement: .navigationBarTrailing) {
                                     .fill(.ultraThinMaterial.opacity(0.3))
                             )
                         }
+                        .accessibilityLabel(timersExpanded ? "Timer ausblenden" : "\(timerCenter.timers.count) aktive Timer")
+                        .accessibilityHint(timersExpanded ? "Blendet Timer aus" : "Zeigt Timer an")
                         .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 12)

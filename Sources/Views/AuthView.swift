@@ -34,11 +34,13 @@ struct AuthView: View {
                             .frame(width: showSignUp || showSignIn ? 120 : 240, 
                                    height: showSignUp || showSignIn ? 120 : 240)
                             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showSignUp || showSignIn)
+                            .accessibilityHidden(true)
                     } else {
                         Image(systemName: "fork.knife.circle.fill")
                             .font(.system(size: showSignUp || showSignIn ? 80 : 160))
                             .foregroundColor(.white)
                             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showSignUp || showSignIn)
+                            .accessibilityHidden(true)
                     }
                     
                     Spacer().frame(height: 40)
@@ -68,6 +70,8 @@ struct AuthView: View {
                             .cornerRadius(14)
                             .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
                     }
+                    .accessibilityLabel(L.signUp.localized)
+                    .accessibilityHint("Öffnet den Registrierungsbildschirm")
                     .padding(.horizontal, 32)
                     
                     // Sign In link
@@ -86,6 +90,8 @@ struct AuthView: View {
                         }
                         .font(.system(size: 15))
                     }
+                    .accessibilityLabel("\(L.auth_alreadyHaveAccount.localized) \(L.auth_signInButton.localized)")
+                    .accessibilityHint("Öffnet den Anmeldebildschirm")
                     .padding(.top, 20)
                     
                     // Legal links
@@ -96,10 +102,13 @@ struct AuthView: View {
                                 .foregroundStyle(.white.opacity(0.8))
                                 .underline()
                         }
+                        .accessibilityLabel(L.auth_termsOfService.localized)
+                        .accessibilityHint("Öffnet die Nutzungsbedingungen")
                         
                         Text("•")
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.6))
+                            .accessibilityHidden(true)
                         
                         Button(action: { showPrivacy = true }) {
                             Text(L.auth_privacyPolicy.localized)
@@ -107,10 +116,13 @@ struct AuthView: View {
                                 .foregroundStyle(.white.opacity(0.8))
                                 .underline()
                         }
+                        .accessibilityLabel(L.auth_privacyPolicy.localized)
+                        .accessibilityHint("Öffnet die Datenschutzerklärung")
                         
                         Text("•")
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.6))
+                            .accessibilityHidden(true)
                         
                         Button(action: { showImprint = true }) {
                             Text(L.auth_imprint.localized)
@@ -118,6 +130,8 @@ struct AuthView: View {
                                 .foregroundStyle(.white.opacity(0.8))
                                 .underline()
                         }
+                        .accessibilityLabel(L.auth_imprint.localized)
+                        .accessibilityHint("Öffnet das Impressum")
                     }
                     .padding(.top, 16)
                     .padding(.bottom, 50)

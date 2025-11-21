@@ -29,6 +29,9 @@ struct RecipeDetailView: View {
     @State private var shoppingServings: Int = 4
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
+    
+    // Paywall state
+    @State private var showPaywallSheet = false
 
     private let gradientColors = [
         Color(red: 0.96, green: 0.78, blue: 0.68),
@@ -103,6 +106,8 @@ struct RecipeDetailView: View {
                         .background(.ultraThinMaterial, in: Circle())
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
+                .accessibilityLabel("Schließen")
+                .accessibilityHint("Schließt die Rezeptansicht")
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 10) {
@@ -118,6 +123,8 @@ struct RecipeDetailView: View {
                             .background(.ultraThinMaterial, in: Circle())
                             .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
+                    .accessibilityLabel("Rezept teilen")
+                    .accessibilityHint("Teilt das Rezept über das Teilen-Menü")
                     
                     // AI Button
                     Button(action: { showAISheet = true }) {
@@ -128,6 +135,8 @@ struct RecipeDetailView: View {
                             .background(.ultraThinMaterial, in: Circle())
                             .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
+                    .accessibilityLabel("KI-Assistent")
+                    .accessibilityHint("Öffnet den KI-Assistenten für dieses Rezept")
                 }
             }
         }
@@ -160,6 +169,8 @@ struct RecipeDetailView: View {
                                 .fill(.ultraThinMaterial.opacity(0.3))
                         )
                     }
+                    .accessibilityLabel(timersExpanded ? "Timer ausblenden" : "\(timerCenter.timers.count) aktive Timer")
+                    .accessibilityHint(timersExpanded ? "Blendet Timer aus" : "Zeigt Timer an")
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 12)
@@ -183,6 +194,10 @@ struct RecipeDetailView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: shareItems)
+        }
+        .sheet(isPresented: $showPaywallSheet) {
+            PaywallView()
+                .environmentObject(app)
         }
         .onChange(of: selectedPhoto) { _, newValue in
             Task {
@@ -1164,6 +1179,7 @@ private struct RecipeAISheetForSavedRecipe: View {
     @State private var sending = false
     @State private var error: String?
     @State private var showConsentDialog = false
+    @State private var showPaywallSheet = false
 
     var body: some View {
         Group {
@@ -1180,6 +1196,10 @@ private struct RecipeAISheetForSavedRecipe: View {
                 },
                 onDecline: {}
             )
+        }
+        .sheet(isPresented: $showPaywallSheet) {
+            PaywallView()
+                .environmentObject(app)
         }
     }
     
@@ -1406,28 +1426,34 @@ private struct RecipeAISheetForSavedRecipe: View {
                             .padding(.horizontal, 40)
                     }
                     
-                    Button(action: { Task { await app.purchaseStoreKit() } }) {
+                    Button(action: { showPaywallSheet = true }) {
                         Text("Unlimited freischalten")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: 280)
-                            .frame(height: 52)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color(red: 0.2, green: 0.6, blue: 0.9), Color(red: 0.1, green: 0.4, blue: 0.7)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            )
-                            .shadow(color: .blue.opacity(0.4), radius: 20, x: 0, y: 10)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: 280)
+                        .frame(height: 52)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(red: 0.2, green: 0.6, blue: 0.9), Color(red: 0.1, green: 0.4, blue: 0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        )
+                        .shadow(color: .blue.opacity(0.4), radius: 20, x: 0, y: 10)
                     }
+                    .accessibilityLabel("Unlimited freischalten")
+                    .accessibilityHint("Öffnet die Abo-Auswahl")
                     .padding(.top, 8)
                 }
                 
                 Spacer()
             }
             .padding()
+        }
+        .sheet(isPresented: $showPaywallSheet) {
+            PaywallView()
+                .environmentObject(app)
         }
     }
     

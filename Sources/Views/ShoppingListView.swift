@@ -6,9 +6,15 @@ struct ShoppingListView: View {
     @EnvironmentObject var app: AppState
     @State private var showAddItemSheet = false
     @State private var showClearConfirmation = false
+    @State private var refreshID = UUID()
     
     private var shoppingListManager: ShoppingListManager {
         app.shoppingListManager
+    }
+    
+    // Computed property that changes when categories change
+    private var categories: [ItemCategory] {
+        shoppingListManager.sortedCategories()
     }
     
     var body: some View {
@@ -50,6 +56,8 @@ struct ShoppingListView: View {
                                 )
                                 .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
                             }
+                            .accessibilityLabel(L.shopping_hinzufügen.localized)
+                            .accessibilityHint("Fügt einen neuen Eintrag zur Einkaufsliste hinzu")
                             
                             Button(action: { shoppingListManager.clearCompleted() }) {
                                 HStack {
@@ -69,18 +77,22 @@ struct ShoppingListView: View {
                                         .stroke(Color.white.opacity(0.3), lineWidth: 1)
                                 )
                             }
+                            .accessibilityLabel(L.shopping_erledigte_löschen.localized)
+                            .accessibilityHint("Löscht alle erledigten Einträge")
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                         
                         // Shopping list items grouped by category
-                        ForEach(shoppingListManager.sortedCategories(), id: \.self) { category in
+                        // Use computed categories and force update when they change
+                        ForEach(categories, id: \.self) { category in
                             CategorySection(
                                 category: category,
                                 manager: shoppingListManager
                             )
                         }
-                        .id(shoppingListManager.shoppingList.items.count)
+                        .id(refreshID)
+                        .id(categories.map { $0.rawValue }.sorted().joined(separator: "-"))
                         
                         // Clear all button
                         Button(action: { showClearConfirmation = true }) {
@@ -101,6 +113,8 @@ struct ShoppingListView: View {
                                     .stroke(Color.white.opacity(0.2), lineWidth: 1)
                             )
                         }
+                        .accessibilityLabel(L.shopping_alle_löschen.localized)
+                        .accessibilityHint("Löscht alle Einträge aus der Einkaufsliste")
                         .padding(.horizontal, 16)
                         .padding(.bottom, 16)
                     }
@@ -125,6 +139,10 @@ struct ShoppingListView: View {
                 shoppingListManager.clearShoppingList()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShoppingListDidChange"))) { _ in
+            // Force view refresh when shopping list changes
+            refreshID = UUID()
+        }
         .id(localizationManager.currentLanguage) // Force re-render on language change
     }
     
@@ -133,6 +151,7 @@ struct ShoppingListView: View {
             Image(systemName: "cart")
                 .font(.system(size: 80))
                 .foregroundStyle(.white.opacity(0.6))
+                .accessibilityHidden(true)
             
             Text(L.shopping_einkaufsliste_ist_leer.localized)
                 .font(.title2.bold())
@@ -163,6 +182,8 @@ struct ShoppingListView: View {
                 )
                 .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
             }
+            .accessibilityLabel(L.shopping_eintrag_hinzufügen.localized)
+            .accessibilityHint("Fügt einen neuen Eintrag zur Einkaufsliste hinzu")
             .padding(.top, 8)
         }
     }
@@ -211,6 +232,9 @@ struct CategorySection: View {
                         .fill(.ultraThinMaterial.opacity(0.4))
                 )
             }
+            .accessibilityLabel("\(category.localizedName), \(items.count) Einträge")
+            .accessibilityHint(isExpanded ? "Kategorie ausblenden" : "Kategorie einblenden")
+            .accessibilityAddTraits(isExpanded ? [] : .isButton)
             .buttonStyle(.plain)
             
             // Items list
@@ -301,6 +325,8 @@ struct ShoppingListItemRow: View {
                                 .fill(.ultraThinMaterial.opacity(0.3))
                         )
                 }
+                .accessibilityLabel("\(item.name) löschen")
+                .accessibilityHint("Entfernt diesen Eintrag aus der Einkaufsliste")
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
@@ -314,6 +340,9 @@ struct ShoppingListItemRow: View {
                     .stroke(Color.white.opacity(0.15), lineWidth: 1)
             )
             .opacity(item.isCompleted ? 0.6 : 1.0)
+            .accessibilityLabel(item.isCompleted ? "\(item.name), erledigt" : item.name)
+            .accessibilityHint(item.isCompleted ? "Als nicht erledigt markieren" : "Als erledigt markieren")
+            .accessibilityAddTraits(item.isCompleted ? .isSelected : [])
         }
         .buttonStyle(.plain)
     }

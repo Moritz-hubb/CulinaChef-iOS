@@ -38,10 +38,12 @@ struct ForgotPasswordView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: 130, height: 130)
+                            .accessibilityHidden(true)
                     } else {
                         Image(systemName: "key.fill")
                             .font(.system(size: 80))
                             .foregroundColor(.white)
+                            .accessibilityHidden(true)
                     }
                     
                     Text(L.resetPasswordTitle.localized)
@@ -67,6 +69,7 @@ struct ForgotPasswordView: View {
                                     .foregroundColor(.gray.opacity(0.6))
                             }
                             .accessibilityLabel(L.cancel.localized)
+                            .accessibilityHint("Schließt den Passwort-Reset-Bildschirm")
                         }
                         .padding(.top, 16)
                         .padding(.trailing, 16)

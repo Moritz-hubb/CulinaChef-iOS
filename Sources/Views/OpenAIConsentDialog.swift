@@ -27,6 +27,7 @@ struct OpenAIConsentDialog: View {
                     Image(systemName: "brain.head.profile")
                         .font(.system(size: 50))
                         .foregroundColor(.blue)
+                        .accessibilityHidden(true)
                     
                     Text(isGerman ? "KI-Funktionen nutzen" : "Use AI Features")
                         .font(.title2.bold())
@@ -97,6 +98,8 @@ struct OpenAIConsentDialog: View {
                             .font(.footnote)
                             .foregroundColor(.blue)
                         }
+                        .accessibilityLabel(isGerman ? "Vollständige Datenschutzerklärung" : "Full Privacy Policy")
+                        .accessibilityHint("Öffnet die vollständige Datenschutzerklärung")
                         .padding(.top, 8)
                     }
                     .padding(24)
@@ -116,6 +119,8 @@ struct OpenAIConsentDialog: View {
                             .background(Color.blue)
                             .cornerRadius(12)
                     }
+                    .accessibilityLabel(isGerman ? "Zustimmen und fortfahren" : "Accept and Continue")
+                    .accessibilityHint("Akzeptiert die Datenverarbeitung und aktiviert KI-Funktionen")
                     
                     Button {
                         onDecline()
@@ -125,6 +130,8 @@ struct OpenAIConsentDialog: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
+                    .accessibilityLabel(isGerman ? "Ablehnen" : "Decline")
+                    .accessibilityHint("Lehnt die Datenverarbeitung ab und deaktiviert KI-Funktionen")
                     
                     Text(isGerman ?
                         "Ohne Zustimmung können KI-Funktionen nicht genutzt werden." :

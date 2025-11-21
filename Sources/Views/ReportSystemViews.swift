@@ -127,6 +127,9 @@ struct ReportReasonSheet: View {
                                         )
                                         .clipShape(RoundedRectangle(cornerRadius: 12))
                                     }
+                                    .accessibilityLabel(reason.localizedTitle)
+                                    .accessibilityHint(selectedReason == reason ? "Aktuell ausgewählt" : "Wählt diesen Grund aus")
+                                    .accessibilityAddTraits(selectedReason == reason ? .isSelected : [])
                                     .buttonStyle(.plain)
                                 }
                             }
@@ -143,6 +146,8 @@ struct ReportReasonSheet: View {
                                         .padding(8)
                                         .background(Color(UIColor.secondarySystemGroupedBackground))
                                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        .accessibilityLabel("Zusätzliche Details")
+                                        .accessibilityHint("Optionale zusätzliche Informationen zur Meldung")
                                 }
                                 .padding(.horizontal)
                             }
@@ -165,6 +170,8 @@ struct ReportReasonSheet: View {
                                     .background(Color(red: 0.85, green: 0.4, blue: 0.2))
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
+                                .accessibilityLabel(isSubmitting ? L.loading.localized : L.report_reportButton.localized)
+                                .accessibilityHint("Sendet die Meldung ab")
                                 .disabled(isSubmitting)
                                 .padding(.horizontal)
                                 .padding(.top, 10)

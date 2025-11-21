@@ -86,6 +86,8 @@ class ShoppingListManager: ObservableObject {
         updatedList.items.append(item)
         shoppingList = updatedList
         saveShoppingList()
+        // Notify views that the shopping list changed
+        NotificationCenter.default.post(name: NSNotification.Name("ShoppingListDidChange"), object: nil)
     }
     
     func addItems(_ items: [ShoppingListItem]) {
@@ -93,6 +95,8 @@ class ShoppingListManager: ObservableObject {
         updatedList.items.append(contentsOf: items)
         shoppingList = updatedList
         saveShoppingList()
+        // Notify views that the shopping list changed
+        NotificationCenter.default.post(name: NSNotification.Name("ShoppingListDidChange"), object: nil)
     }
     
     func toggleItemCompletion(item: ShoppingListItem) {
@@ -142,6 +146,12 @@ class ShoppingListManager: ObservableObject {
     
     func sortedCategories() -> [ItemCategory] {
         let grouped = itemsGroupedByCategory()
-        return ItemCategory.allCases.filter { grouped[$0] != nil }
+        let categories = ItemCategory.allCases.filter { grouped[$0] != nil }
+        // Return categories in a consistent order, with new categories appearing at the end
+        return categories.sorted { cat1, cat2 in
+            let index1 = ItemCategory.allCases.firstIndex(of: cat1) ?? Int.max
+            let index2 = ItemCategory.allCases.firstIndex(of: cat2) ?? Int.max
+            return index1 < index2
+        }
     }
 }

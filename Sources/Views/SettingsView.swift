@@ -36,9 +36,13 @@ struct SettingsView: View {
                 Button(action: { showNotifications = true }) {
                     settingsRow(icon: "bell", text: L.notifications.localized)
                 }
+                .accessibilityLabel(L.notifications.localized)
+                .accessibilityHint("Öffnet Benachrichtigungseinstellungen")
                 Button(action: { app.showLanguageSettings = true }) {
                     settingsRow(icon: "globe", text: L.language.localized)
                 }
+                .accessibilityLabel(L.language.localized)
+                .accessibilityHint("Öffnet Spracheinstellungen")
             }
         }
     }
@@ -56,6 +60,8 @@ struct SettingsView: View {
                 .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
+            .accessibilityLabel(L.dietaryPreferences.localized)
+            .accessibilityHint("Öffnet Ernährungspräferenzen")
         }
     }
     
@@ -102,15 +108,23 @@ struct SettingsView: View {
                 Button(action: { showTerms = true }) {
                     settingsRow(icon: "doc.text", text: L.legalTerms.localized)
                 }
+                .accessibilityLabel(L.legalTerms.localized)
+                .accessibilityHint("Öffnet die Nutzungsbedingungen")
                 Button(action: { showPrivacy = true }) {
                     settingsRow(icon: "hand.raised", text: L.legalPrivacy.localized)
                 }
+                .accessibilityLabel(L.legalPrivacy.localized)
+                .accessibilityHint("Öffnet die Datenschutzerklärung")
                 Button(action: { showImprint = true }) {
                     settingsRow(icon: "info.circle", text: L.legalImprint.localized)
                 }
+                .accessibilityLabel(L.legalImprint.localized)
+                .accessibilityHint("Öffnet das Impressum")
                 Button(action: { showFairUse = true }) {
                     settingsRow(icon: "shield.checkered", text: "Fair Use Policy")
                 }
+                .accessibilityLabel("Fair Use Policy")
+                .accessibilityHint("Öffnet die Fair Use Policy")
             }
         }
     }
@@ -121,9 +135,13 @@ struct SettingsView: View {
                 Button(action: { showProfile = true }) {
                     settingsRow(icon: "person.crop.circle", text: L.nav_profileSettings.localized)
                 }
+                .accessibilityLabel(L.nav_profileSettings.localized)
+                .accessibilityHint("Öffnet Profileinstellungen")
                 Button(action: { showSubscription = true }) {
                     settingsRow(icon: "creditcard", text: L.nav_subscription.localized)
                 }
+                .accessibilityLabel(L.nav_subscription.localized)
+                .accessibilityHint("Öffnet Abo-Verwaltung")
                 Button(action: { Task { await app.signOut() } }) {
                     Text(L.signOut.localized)
                         .font(.headline)
@@ -133,6 +151,8 @@ struct SettingsView: View {
                         .background(LinearGradient(colors: [.red, .pink], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
                         .shadow(color: .pink.opacity(0.35), radius: 10, x: 0, y: 6)
                 }
+                .accessibilityLabel(L.signOut.localized)
+                .accessibilityHint("Meldet Sie ab")
                 Button(role: .destructive, action: { showDeleteConfirm = true }) {
                     HStack {
                         Image(systemName: "trash")
@@ -144,6 +164,8 @@ struct SettingsView: View {
                     .background(Color.red.opacity(0.15), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
                 }
+                .accessibilityLabel(L.deleteAccount.localized)
+                .accessibilityHint("Löscht das Konto und alle Daten")
             }
         }
     }
@@ -342,7 +364,9 @@ private struct DietarySettingsSheet: View {
             ScrollView {
                 VStack(spacing: 16) {
                     HStack {
-                        Text(L.settings_ernährung_01ac.localized).font(.title2.bold())
+                        Text(L.settings_ernährung_01ac.localized)
+                            .font(.title2.bold())
+                            .foregroundStyle(.white)
                         Spacer()
                         Button(L.settings_finished.localized) { dismiss() }
                             .foregroundStyle(.white)
@@ -412,28 +436,38 @@ private struct DietarySettingsSheet: View {
                     .padding(.bottom, 8)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(L.settings_ernährungsweisen_003f.localized).font(.subheadline)
+                        Text(L.settings_ernährungsweisen_003f.localized)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
                         WrapDietChipsInline(options: dietOptions, selection: $diets)
                             .padding(.bottom, 6)
                             .onChange(of: diets) { _, _ in saveBack() }
 
-                        Text(L.settings_allergienunverträglichkeiten_kommag.localized).font(.subheadline)
-TextField(L.placeholder_allergies.localized, text: $allergiesText)
+                        Text(L.settings_allergienunverträglichkeiten_kommag.localized)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                        TextField(L.placeholder_allergies.localized, text: $allergiesText)
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
+                            .tint(.white)
                             .padding(10)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .onChange(of: allergiesText) { _, _ in saveBack() }
 
-                        Text(L.settings_dislikes.localized).font(.subheadline)
-TextField(L.placeholder_dislikes.localized, text: $dislikesText)
+                        Text(L.settings_dislikes.localized)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                        TextField(L.placeholder_dislikes.localized, text: $dislikesText)
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
+                            .tint(.white)
                             .padding(10)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .onChange(of: dislikesText) { _, _ in saveBack() }
 
-                        Text(L.settings_geschmackspräferenzen_2f71.localized).font(.subheadline)
+                        Text(L.settings_geschmackspräferenzen_2f71.localized)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
                         VStack(spacing: 10) {
                             HStack {
                                 Text(L.settings_schärfelevel_b3e3.localized)
@@ -442,7 +476,7 @@ TextField(L.placeholder_dislikes.localized, text: $dislikesText)
                                 Spacer()
                                 Text([L.spicy_mild.localized, L.spicy_normal.localized, L.spicy_hot.localized, L.spicy_veryHot.localized][Int(spicyLevel)])
                                     .font(.callout.weight(.medium))
-                                    .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                    .foregroundStyle(.white)
                             }
                             Slider(value: $spicyLevel, in: 0...3, step: 1)
                                 .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
@@ -457,16 +491,20 @@ TextField(L.placeholder_dislikes.localized, text: $dislikesText)
                                     }
                                 ))
                                 .font(.callout)
+                                .foregroundStyle(.white)
                                 .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
                             }
                         }
                         .padding(12)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                        Text(L.settings_hints.localized).font(.subheadline)
-TextField(L.placeholder_notes.localized, text: $notesText)
+                        Text(L.settings_hints.localized)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                        TextField(L.placeholder_notes.localized, text: $notesText)
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
+                            .tint(.white)
                             .padding(10)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .onChange(of: notesText) { _, _ in saveBack() }
@@ -1340,6 +1378,11 @@ private struct SubscriptionSettingsSheet: View {
         }
         .sheet(isPresented: $showPrivacy) {
             PrivacyPolicyView()
+        }
+        .alert(L.alert_error.localized, isPresented: $showError) {
+            Button(L.button_ok.localized, role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? L.errorGeneric.localized)
         }
     }
 }

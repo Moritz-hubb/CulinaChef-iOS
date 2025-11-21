@@ -143,16 +143,20 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                     .font(.system(size: 80))
                     .foregroundStyle(.white.opacity(0.9))
                     .shadow(color: .white.opacity(0.3), radius: 20)
+                    .accessibilityHidden(true)
                 
                 VStack(spacing: 12) {
                     Text(L.subscriptionAIChatUnlimited.localized)
                         .font(.system(size: 32, weight: .bold))
                         .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                     
                     Text(L.subscriptionAllFeaturesExceptAI.localized)
                         .font(.title3)
                         .foregroundStyle(.white.opacity(0.9))
                         .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, 40)
                 }
                 
@@ -172,6 +176,8 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                         )
                         .shadow(color: .blue.opacity(0.4), radius: 20, x: 0, y: 10)
                 }
+                .accessibilityLabel(L.subscriptionUnlockUnlimited.localized)
+                .accessibilityHint("Öffnet die Abo-Auswahl")
                 .padding(.top, 16)
             }
             .padding()
@@ -223,6 +229,8 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                         .foregroundStyle(.white.opacity(0.6))
                         .font(.system(size: 20))
                 }
+                .accessibilityLabel("Bild entfernen")
+                .accessibilityHint("Entfernt das angehängte Bild")
             }
             .padding(8)
             .background(
@@ -584,6 +592,8 @@ private struct RecipeSuggestionsView: View {
                                     .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
                                     .shadow(color: Color.orange.opacity(0.3), radius: 6, x: 0, y: 3)
                                 }
+                                .accessibilityLabel(L.chat_erstelle_ein_rezept.localized)
+                                .accessibilityHint("Erstellt ein Rezept für \(recipe.name)")
                             }
                         }
                         .padding(.vertical, 6)
@@ -617,6 +627,8 @@ private struct RecipeSuggestionsView: View {
                             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white.opacity(0.2), lineWidth: 1))
                             .shadow(color: Color.orange.opacity(0.25), radius: 8, x: 0, y: 4)
                         }
+                        .accessibilityLabel(createdMenuId == nil ? "Menü erstellen" : "Menü erstellt")
+                        .accessibilityHint(creatingMenu ? "Erstellt Menü" : "Erstellt ein Menü aus den vorgeschlagenen Rezepten")
                         .buttonStyle(.plain)
                         .disabled(creatingMenu || recipes.isEmpty)
                     }

@@ -100,12 +100,14 @@ struct CommunityUploadSheet: View {
                                                         .frame(width: 100, height: 100)
                                                         .clipShape(RoundedRectangle(cornerRadius: 10))
                                                         .overlay(alignment: .topTrailing) {
-                                                            Button(action: { imageUrls.remove(at: index) }) {
-                                                                Image(systemName: "xmark.circle.fill")
-                                                                    .foregroundStyle(.white)
-                                                                    .background(Circle().fill(.black.opacity(0.5)))
-                                                            }
-                                                            .padding(4)
+                                            Button(action: { imageUrls.remove(at: index) }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundStyle(.white)
+                                                    .background(Circle().fill(.black.opacity(0.5)))
+                                            }
+                                            .accessibilityLabel("Bild entfernen")
+                                            .accessibilityHint("Entfernt dieses Bild")
+                                            .padding(4)
                                                         }
                                                 default:
                                                     RoundedRectangle(cornerRadius: 10)
@@ -129,6 +131,8 @@ struct CommunityUploadSheet: View {
                                                         .foregroundStyle(.white)
                                                         .background(Circle().fill(.black.opacity(0.5)))
                                                 }
+                                                .accessibilityLabel("Bild entfernen")
+                                                .accessibilityHint("Entfernt dieses Bild")
                                                 .padding(4)
                                             }
                                     }
@@ -148,6 +152,8 @@ struct CommunityUploadSheet: View {
                                                 RoundedRectangle(cornerRadius: 10)
                                                     .fill(.ultraThinMaterial.opacity(0.4))
                                             )
+                                            .accessibilityLabel(L.shareRecipePhoto.localized)
+                                            .accessibilityHint("Fügt ein Foto zum Upload hinzu")
                                         }
                                         .onChange(of: selectedPhotos) { _, newItems in
                                             Task { await loadPhotos(newItems) }
@@ -221,6 +227,8 @@ struct CommunityUploadSheet: View {
                                     .fill(canPublish ? Color(red: 0.85, green: 0.4, blue: 0.2) : Color.gray.opacity(0.5))
                             )
                         }
+                        .accessibilityLabel(isUploading ? L.loading.localized : L.community_veröffentlichen.localized)
+                        .accessibilityHint("Veröffentlicht das Rezept in der Community")
                         .disabled(!canPublish || isUploading)
                         
                         Text(L.community_mit_der_veröffentlichung_wird.localized)
@@ -241,6 +249,8 @@ struct CommunityUploadSheet: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .semibold))
+                            .accessibilityLabel(L.cancel.localized)
+                            .accessibilityHint("Schließt den Community Upload")
                     }
                     .foregroundStyle(.white)
                 }

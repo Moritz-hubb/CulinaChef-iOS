@@ -102,11 +102,13 @@ struct OnboardingView: View {
                         .frame(width: 120, height: 120)
                         .padding(.top, 50)
                         .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
+                        .accessibilityHidden(true)
                 } else {
                     Image(systemName: "list.clipboard")
                         .font(.system(size: 60))
                         .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
                         .padding(.top, 50)
+                        .accessibilityHidden(true)
                 }
                 
                 // Progress indicator
@@ -285,6 +287,8 @@ struct OnboardingView: View {
                         TextField(L.placeholder_newAllergy.localized, text: $newAllergyText)
                             .id(localizationManager.currentLanguage)
                             .textFieldStyle(.plain)
+                            .accessibilityLabel("Allergie eingeben")
+                            .accessibilityHint(L.placeholder_newAllergy.localized)
                             .padding(12)
                             .background(.white)
                             .cornerRadius(12)
@@ -305,6 +309,8 @@ struct OnboardingView: View {
                                     LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
                                 )
                         }
+                        .accessibilityLabel("Allergie hinzufügen")
+                        .accessibilityHint("Fügt die eingegebene Allergie zur Liste hinzu")
                     }
                     
                     if !allergies.isEmpty {
@@ -397,8 +403,10 @@ struct OnboardingView: View {
                     
                     // Slider
                     VStack(spacing: 12) {
-                        Slider(value: $spicyLevel, in: 0...3, step: 1)
-                            .tint(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing))
+                    Slider(value: $spicyLevel, in: 0...3, step: 1)
+                        .tint(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing))
+                        .accessibilityLabel("Schärfelevel")
+                        .accessibilityValue(spicyLabels[Int(spicyLevel)])
                         
                         // Labels below slider
                         HStack {
@@ -528,6 +536,8 @@ struct OnboardingView: View {
                         .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
                         .id(localizationManager.currentLanguage)
                 }
+                .accessibilityLabel(L.next.localized)
+                .accessibilityHint("Geht zum nächsten Schritt")
                 .disabled(currentStep == 0 && selectedLanguage.isEmpty)
             } else {
                 Button {
@@ -552,6 +562,8 @@ struct OnboardingView: View {
                     .cornerRadius(14)
                     .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
                 }
+                .accessibilityLabel(isSaving ? L.loading.localized : L.done.localized)
+                .accessibilityHint("Schließt das Onboarding ab und speichert die Einstellungen")
                 .disabled(isSaving)
             }
             
@@ -566,6 +578,8 @@ struct OnboardingView: View {
                         .foregroundColor(.black.opacity(0.6))
                         .id(localizationManager.currentLanguage)
                 }
+                .accessibilityLabel(L.onboarding_zurück.localized)
+                .accessibilityHint("Geht zum vorherigen Schritt")
             }
         }
         .padding(.horizontal, 20)
@@ -586,6 +600,8 @@ struct OnboardingView: View {
                     .font(.system(size: 14))
                     .foregroundColor(.black.opacity(0.4))
             }
+            .accessibilityLabel("\(item) entfernen")
+            .accessibilityHint("Entfernt diese Allergie aus der Liste")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -598,15 +614,17 @@ struct OnboardingView: View {
         HStack(spacing: 6) {
             Text(item)
                 .font(.system(size: 15, weight: .medium))
-            Button {
-                withAnimation(.spring(response: 0.3)) {
-                    dislikes.removeAll { $0 == item }
-                }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(.black.opacity(0.4))
-            }
+                    Button {
+                        withAnimation(.spring(response: 0.3)) {
+                            dislikes.removeAll { $0 == item }
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.black.opacity(0.4))
+                    }
+                    .accessibilityLabel("\(item) entfernen")
+                    .accessibilityHint("Entfernt diese Abneigung aus der Liste")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -831,6 +849,7 @@ private struct LanguageOption: View {
                 // Flag emoji based on language code
                 Text(getFlagEmoji(for: languageCode))
                     .font(.system(size: 32))
+                    .accessibilityHidden(true)
                 
                 Text(languageName)
                     .font(.system(size: 17, weight: .medium))
@@ -864,6 +883,9 @@ private struct LanguageOption: View {
             )
             .shadow(color: isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .black.opacity(0.05), radius: isSelected ? 8 : 4, y: 2)
         }
+        .accessibilityLabel(languageName)
+        .accessibilityHint(isSelected ? "Aktuell ausgewählt" : "Wählt \(languageName) als Sprache")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .buttonStyle(.plain)
     }
     

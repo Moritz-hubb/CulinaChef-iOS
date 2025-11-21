@@ -16,11 +16,15 @@ struct RecipesView: View {
                             selectedTab = 0
                         }
                     }
+                    .accessibilityLabel(L.myRecipes.localized)
+                    .accessibilityHint(selectedTab == 0 ? "Aktuell ausgewählt" : "Wechselt zu Meine Rezepte")
                     TabButton(title: L.community.localized, isSelected: selectedTab == 1) {
                         withAnimation(.spring(response: 0.3)) {
                             selectedTab = 1
                         }
                     }
+                    .accessibilityLabel(L.community.localized)
+                    .accessibilityHint(selectedTab == 1 ? "Aktuell ausgewählt" : "Wechselt zu Community")
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -70,10 +74,14 @@ private struct SearchBar: View {
                 .textFieldStyle(.plain)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
+                .accessibilityLabel("Suche")
+                .accessibilityHint("Geben Sie einen Suchbegriff ein")
             if !query.isEmpty {
                 Button(action: { query = "" }) {
                     Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
                 }
+                .accessibilityLabel("Suche löschen")
+                .accessibilityHint("Löscht den Suchtext")
                 .buttonStyle(.plain)
             }
         }

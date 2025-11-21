@@ -12,9 +12,19 @@ struct PrivacyPolicyView: View {
         localizationManager.currentLanguage == "fr"
     }
     
-    private func localized(_ german: String, _ french: String, _ english: String) -> String {
+    private var isSpanish: Bool {
+        localizationManager.currentLanguage == "es"
+    }
+    
+    private var isItalian: Bool {
+        localizationManager.currentLanguage == "it"
+    }
+    
+    private func localized(_ german: String, _ french: String, _ english: String, spanish: String? = nil, italian: String? = nil) -> String {
         if isGerman { return german }
         if isFrench { return french }
+        if isSpanish { return spanish ?? english }
+        if isItalian { return italian ?? english }
         return english
     }
     
@@ -226,15 +236,267 @@ struct PrivacyPolicyView: View {
                             .lineSpacing(5)
                         }
                         
-                        PrivacySection(localized("9. Keine Werbung oder Tracking", "9. Pas de publicité ou de suivi", "9. No Advertising or Tracking"), icon: "hand.raised") {
+                        PrivacySection(localized("9. Keine Werbung oder Tracking", "9. Pas de publicité ou de suivi", "9. No Advertising or Tracking", spanish: "9. Sin publicidad ni seguimiento", italian: "9. Nessuna pubblicità o tracciamento"), icon: "hand.raised") {
                             Text(localized(
-                                "Wir zeigen keine Werbung in der App und verwenden keine Tracking-Technologien. Wir verkaufen keine Daten an Dritte.",
-                                "Nous n'affichons pas de publicité dans l'application et n'utilisons pas de technologies de suivi. Nous ne vendons pas de données à des tiers.",
-                                "We do not show advertising in the app and do not use tracking technologies. We do not sell data to third parties."
+                                "Wir verzichten vollständig auf:",
+                                "Nous nous abstenons complètement d'utiliser:",
+                                "We strictly refrain from using:",
+                                spanish: "Nos abstenemos completamente de usar:",
+                                italian: "Ci asteniamo completamente dall'usare:"
+                            ))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.bottom, 8)
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                PrivacyBullet(
+                                    title: "",
+                                    text: localized(
+                                        "Cookies oder ähnliche Tracking-Technologien",
+                                        "Cookies ou technologies de suivi similaires",
+                                        "Cookies or similar tracking technologies",
+                                        spanish: "Cookies o tecnologías de seguimiento similares",
+                                        italian: "Cookie o tecnologie di tracciamento simili"
+                                    )
+                                )
+                                PrivacyBullet(
+                                    title: "",
+                                    text: localized(
+                                        "Google Analytics oder vergleichbare Analysedienste",
+                                        "Google Analytics ou outils d'analyse comparables",
+                                        "Google Analytics or comparable analytics tools",
+                                        spanish: "Google Analytics o herramientas de análisis comparables",
+                                        italian: "Google Analytics o strumenti di analisi comparabili"
+                                    )
+                                )
+                                PrivacyBullet(
+                                    title: "",
+                                    text: localized(
+                                        "Werbung, Werbenetzwerke oder Profilbildung",
+                                        "Publicité, réseaux publicitaires ou profilage d'utilisateurs",
+                                        "Advertising, ad networks, or user profiling",
+                                        spanish: "Publicidad, redes publicitarias o perfilado de usuarios",
+                                        italian: "Pubblicità, reti pubblicitarie o profilazione utenti"
+                                    )
+                                )
+                                PrivacyBullet(
+                                    title: "",
+                                    text: localized(
+                                        "Social-Media-Plugins oder externe Tracker",
+                                        "Plugins de réseaux sociaux ou trackers externes",
+                                        "Social media plugins or external trackers",
+                                        spanish: "Plugins de redes sociales o rastreadores externos",
+                                        italian: "Plugin di social media o tracker esterni"
+                                    )
+                                )
+                            }
+                            
+                            ImportantNote(text: localized(
+                                "Ihre persönlichen Daten werden niemals an Dritte verkauft oder für Werbezwecke verwendet.",
+                                "Vos données personnelles ne seront jamais vendues ou utilisées à des fins publicitaires.",
+                                "Your personal data will never be sold or used for advertising purposes.",
+                                spanish: "Sus datos personales nunca se venderán ni se usarán con fines publicitarios.",
+                                italian: "I vostri dati personali non saranno mai venduti o utilizzati a fini pubblicitari."
+                            ))
+                        }
+                        
+                        PrivacySection(localized("10. Kontolöschung", "10. Suppression du compte", "10. Account Deletion", spanish: "10. Eliminación de cuenta", italian: "10. Cancellazione account"), icon: "trash") {
+                            Text(localized(
+                                "Sie können Ihr Konto jederzeit in den Einstellungen vollständig löschen.",
+                                "Vous pouvez supprimer votre compte à tout moment dans les paramètres.",
+                                "You can delete your account at any time in the settings.",
+                                spanish: "Puede eliminar su cuenta en cualquier momento siguiendo estos pasos:",
+                                italian: "Potete eliminare il vostro account in qualsiasi momento seguendo questi passaggi:"
                             ))
                             .font(.subheadline)
                             .foregroundStyle(.white)
-                            .lineSpacing(5)
+                            .padding(.bottom, 12)
+                            
+                            Text(localized("Löschung durchführen:", "Procédure de suppression:", "To delete your account:", spanish: "Para eliminar su cuenta:", italian: "Per eliminare il vostro account:"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.bottom, 8)
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                PrivacyBullet(
+                                    title: "1.",
+                                    text: localized(
+                                        "Öffnen Sie die Einstellungen in der App",
+                                        "Ouvrez les paramètres dans l'application",
+                                        "Open Settings in the app",
+                                        spanish: "Abra Configuración en la app",
+                                        italian: "Aprite Impostazioni nell'app"
+                                    )
+                                )
+                                PrivacyBullet(
+                                    title: "2.",
+                                    text: localized(
+                                        "Wählen Sie 'Konto löschen'",
+                                        "Sélectionnez 'Supprimer le compte'",
+                                        "Select 'Delete Account'",
+                                        spanish: "Seleccione 'Eliminar cuenta'",
+                                        italian: "Selezionate 'Elimina account'"
+                                    )
+                                )
+                                PrivacyBullet(
+                                    title: "3.",
+                                    text: localized(
+                                        "Bestätigen Sie die Löschung",
+                                        "Confirmez la suppression",
+                                        "Confirm the deletion",
+                                        spanish: "Confirme la eliminación",
+                                        italian: "Confermate la cancellazione"
+                                    )
+                                )
+                            }
+                            .padding(.bottom, 12)
+                            
+                            Text(localized("Folgende Daten werden gelöscht:", "Données supprimées:", "Deleted data include:", spanish: "Los datos eliminados incluyen:", italian: "I dati eliminati includono:"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.bottom, 8)
+                            
+                            VStack(alignment: .leading, spacing: 6) {
+                                DataCategory(
+                                    title: "",
+                                    description: localized(
+                                        "Benutzerkonto und Authentifizierungsdaten",
+                                        "Compte utilisateur et données d'authentification",
+                                        "User account and authentication data",
+                                        spanish: "Cuenta de usuario y datos de autenticación",
+                                        italian: "Account utente e dati di autenticazione"
+                                    )
+                                )
+                                DataCategory(
+                                    title: "",
+                                    description: localized(
+                                        "Alle gespeicherten Rezepte, Menüs und Favoriten",
+                                        "Toutes les recettes, menus et favoris sauvegardés",
+                                        "All saved recipes, menus, and favorites",
+                                        spanish: "Todas las recetas, menús y favoritos guardados",
+                                        italian: "Tutte le ricette, menu e preferiti salvati"
+                                    )
+                                )
+                                DataCategory(
+                                    title: "",
+                                    description: localized(
+                                        "Ernährungspräferenzen und persönliche Einstellungen",
+                                        "Préférences alimentaires et paramètres personnels",
+                                        "Dietary preferences and personal settings",
+                                        spanish: "Preferencias alimentarias y configuraciones personales",
+                                        italian: "Preferenze alimentari e impostazioni personali"
+                                    )
+                                )
+                                DataCategory(
+                                    title: "",
+                                    description: localized(
+                                        "Bewertungen und Notizen",
+                                        "Évaluations et notes",
+                                        "Ratings and notes",
+                                        spanish: "Valoraciones y notas",
+                                        italian: "Valutazioni e note"
+                                    )
+                                )
+                            }
+                            .padding(.bottom, 12)
+                            
+                            ImportantNote(text: localized(
+                                "Wichtig: Apple-Abonnements müssen separat in der Apple-ID-Verwaltung gekündigt werden. Audit-Protokolle der Löschung werden aus rechtlichen Gründen 3 Jahre aufbewahrt. Die Löschung ist endgültig und kann nicht rückgängig gemacht werden.",
+                                "Important: Les abonnements Apple doivent être annulés séparément dans les paramètres de votre compte Apple ID. Les journaux d'audit liés à la suppression sont conservés pendant trois ans. La suppression est permanente et irréversible.",
+                                "Important: Apple subscriptions must be cancelled separately in your Apple ID account settings. Audit logs related to the deletion process are retained for three years. Deletion is permanent and irreversible.",
+                                spanish: "Importante: Las suscripciones de Apple deben cancelarse por separado en la configuración de su cuenta de Apple ID. Los registros de auditoría relacionados con el proceso de eliminación se conservan durante tres años. La eliminación es permanente e irreversible.",
+                                italian: "Importante: Gli abbonamenti Apple devono essere annullati separatamente nelle impostazioni del vostro account Apple ID. I log di audit relativi al processo di cancellazione sono conservati per tre anni. La cancellazione è permanente e irreversibile."
+                            ))
+                        }
+                        
+                        PrivacySection(localized("11. Änderungen dieser Datenschutzerklärung", "11. Modifications de cette politique", "11. Changes to This Privacy Policy", spanish: "11. Cambios en esta política de privacidad", italian: "11. Modifiche all'informativa sulla privacy"), icon: "doc.badge.gearshape") {
+                            ImportantNote(text: localized(
+                                "Wir behalten uns vor, diese Datenschutzerklärung bei rechtlichen oder technischen Änderungen anzupassen. Die jeweils aktuelle Version finden Sie in der App sowie unter https://culinaai.com/datenschutz. Bei wesentlichen Änderungen werden Sie innerhalb der App informiert.",
+                                "Nous nous réservons le droit de modifier cette Politique de Confidentialité en cas de changements légaux ou techniques. La version la plus récente est toujours disponible dans l'app et sur https://culinaai.com/datenschutz. Les utilisateurs seront informés de tout changement important dans l'app.",
+                                "We reserve the right to amend this Privacy Policy in case of legal or technical changes. The latest version is always available in the app and at https://culinaai.com/datenschutz. Users will be informed of any significant changes within the app.",
+                                spanish: "Nos reservamos el derecho de modificar esta Política de Privacidad en caso de cambios legales o técnicos. La versión más reciente está siempre disponible en la app y en https://culinaai.com/datenschutz. Los usuarios serán informados de cualquier cambio significativo dentro de la app.",
+                                italian: "Ci riserviamo il diritto di modificare questa Informativa sulla Privacy in caso di modifiche legali o tecniche. La versione più recente è sempre disponibile nell'app e su https://culinaai.com/datenschutz. Gli utenti saranno informati di eventuali modifiche significative nell'app."
+                            ))
+                        }
+                        
+                        PrivacySection(localized("12. Kontakt", "12. Contact", "12. Contact", spanish: "12. Contacto", italian: "12. Contatti"), icon: "envelope") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                ContactInfo(label: localized("Datenschutzanfragen", "Demandes de protection des données", "Data protection inquiries", spanish: "Consultas de protección de datos", italian: "Richieste di protezione dati"), value: "datenschutz@culinaai.com")
+                                ContactInfo(label: localized("Technischer Support", "Support technique", "Technical support", spanish: "Soporte técnico", italian: "Supporto tecnico"), value: "support@culinaai.com")
+                                ContactInfo(label: localized("Allgemeine Anfragen", "Demandes générales", "General inquiries", spanish: "Consultas generales", italian: "Richieste generali"), value: "kontakt@culinaai.com")
+                            }
+                            .padding(12)
+                            .background(.white.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        
+                        PrivacySection(localized("13. Anwendbares Recht und Gerichtsstand", "13. Droit applicable et juridiction", "13. Applicable Law and Jurisdiction", spanish: "13. Ley aplicable y jurisdicción", italian: "13. Legge applicabile e foro competente"), icon: "scale.3d") {
+                            ImportantNote(text: localized(
+                                "Für diese Datenschutzerklärung und die Datenverarbeitung gilt ausschließlich deutsches Recht. Gerichtsstand ist Deutschland.",
+                                "Cette Politique de Confidentialité et toutes les activités de traitement de données connexes sont régies exclusivement par le droit allemand. Lieu de juridiction: Allemagne.",
+                                "This Privacy Policy and all related data processing activities are governed exclusively by German law. Place of jurisdiction: Germany.",
+                                spanish: "Esta Política de Privacidad y todas las actividades de procesamiento de datos relacionadas se rigen exclusivamente por la ley alemana. Lugar de jurisdicción: Alemania.",
+                                italian: "Questa Informativa sulla Privacy e tutte le attività di trattamento dei dati correlate sono disciplinate esclusivamente dalla legge tedesca. Foro competente: Germania."
+                            ))
+                            
+                            Text(localized("Maßgebliche Rechtsgrundlagen:", "Cadre juridique applicable:", "Applicable legal framework:", spanish: "Marco legal aplicable:", italian: "Quadro giuridico applicabile:"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.top, 12)
+                            .padding(.bottom, 8)
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                PrivacyBullet(
+                                    title: localized("DSGVO:", "RGPD:", "GDPR:", spanish: "RGPD:", italian: "GDPR:"),
+                                    text: localized(
+                                        "Datenschutz-Grundverordnung",
+                                        "Règlement Général sur la Protection des Données",
+                                        "General Data Protection Regulation",
+                                        spanish: "Reglamento General de Protección de Datos",
+                                        italian: "Regolamento Generale sulla Protezione dei Dati"
+                                    )
+                                )
+                                PrivacyBullet(
+                                    title: localized("BDSG:", "BDSG:", "BDSG:", spanish: "BDSG:", italian: "BDSG:"),
+                                    text: localized(
+                                        "Bundesdatenschutzgesetz",
+                                        "Loi fédérale allemande sur la protection des données",
+                                        "Federal Data Protection Act",
+                                        spanish: "Ley Federal Alemana de Protección de Datos",
+                                        italian: "Legge federale tedesca sulla protezione dei dati"
+                                    )
+                                )
+                                PrivacyBullet(
+                                    title: localized("TMG:", "TMG:", "TMG:", spanish: "TMG:", italian: "TMG:"),
+                                    text: localized(
+                                        "Telemediengesetz",
+                                        "Loi sur les télécommunications",
+                                        "Telemedia Act",
+                                        spanish: "Ley de Telemedios",
+                                        italian: "Legge sui servizi di media telematici"
+                                    )
+                                )
+                                PrivacyBullet(
+                                    title: localized("UWG:", "UWG:", "UWG:", spanish: "UWG:", italian: "UWG:"),
+                                    text: localized(
+                                        "Gesetz gegen den unlauteren Wettbewerb",
+                                        "Loi contre la concurrence déloyale",
+                                        "Act Against Unfair Competition",
+                                        spanish: "Ley contra la Competencia Desleal",
+                                        italian: "Legge contro la concorrenza sleale"
+                                    )
+                                )
+                                PrivacyBullet(
+                                    title: localized("BGB:", "BGB:", "BGB:", spanish: "BGB:", italian: "BGB:"),
+                                    text: localized(
+                                        "Bürgerliches Gesetzbuch",
+                                        "Code civil allemand",
+                                        "German Civil Code",
+                                        spanish: "Código Civil Alemán",
+                                        italian: "Codice civile tedesco"
+                                    )
+                                )
+                            }
                         }
                     }
                     .padding(20)

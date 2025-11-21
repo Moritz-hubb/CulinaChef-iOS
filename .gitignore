@@ -1,6 +1,12 @@
 # Secrets - NEVER COMMIT THESE!
 Configs/Secrets.xcconfig
 
+# SSL Certificates - NEVER COMMIT THESE!
+*.cer
+*.p12
+*.mobileprovision
+Certificates/
+
 # Backup files
 *.backup
 *.observer_backup

@@ -615,6 +615,17 @@ enum L {
     static let accountDeletedMessage = "settings.accountDeletedMessage"
     static let manageSubscription = "settings.manageSubscription"
     static let deleteNow = "settings.deleteNow"
+    static let settings_about = "settings.about"
+    static let settings_rateApp = "settings.rateApp"
+    static let settings_rateAppHint = "settings.rateAppHint"
+    static let settings_privacy = "settings.privacy"
+    static let settings_openai_consent = "settings.openai_consent"
+    static let settings_consent_granted = "settings.consent_granted"
+    static let settings_consent_not_granted = "settings.consent_not_granted"
+    static let settings_revoke_consent = "settings.revoke_consent"
+    static let settings_revoke_consent_hint = "settings.revoke_consent_hint"
+    static let settings_revoke_consent_confirm = "settings.revoke_consent_confirm"
+    static let settings_revoke_consent_message = "settings.revoke_consent_message"
     
     // MARK: - Legal
     static let legalTerms = "legal.terms"
@@ -715,6 +726,8 @@ enum L {
     static let culinaName = "chat.culinaName"
     static let chatWelcomeMessage = "chat.welcomeMessage"
     static let inRecipeAI = "chat.inRecipeAI"
+    static let chat_consent_active = "chat.consent_active"
+    static let chat_revoke_consent_hint = "chat.revoke_consent_hint"
     
     // MARK: - Notifications
     static let notificationsGeneral = "notifications.general"
@@ -1303,4 +1316,6 @@ enum L {
     static let consent_subtitle = "consent.subtitle"
     static let consent_decline = "consent.decline"
     static let consent_accept = "consent.accept"
+    static let consent_required = "consent.required"
+    static let consent_revoked = "consent.revoked"
 }

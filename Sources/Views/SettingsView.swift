@@ -67,7 +67,7 @@ struct SettingsView: View {
     }
     
     private var privacySection: some View {
-        SectionCard(title: NSLocalizedString("settings.privacy", value: "Datenschutz & KI", comment: "Privacy section title")) {
+        SectionCard(title: L.settings_privacy.localized) {
             VStack(spacing: 12) {
                 // OpenAI Consent Status - dezent gestaltet
                 HStack(spacing: 12) {
@@ -76,11 +76,11 @@ struct SettingsView: View {
                         .foregroundStyle(hasConsent ? Color.green.opacity(0.8) : Color.orange.opacity(0.8))
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(NSLocalizedString("settings.openai_consent", value: "OpenAI Einwilligung", comment: "OpenAI consent setting"))
+                        Text(L.settings_openai_consent.localized)
                             .font(.subheadline.weight(.medium))
                         Text(hasConsent 
-                            ? NSLocalizedString("settings.consent_granted", value: "Erteilt", comment: "Consent granted") 
-                            : NSLocalizedString("settings.consent_not_granted", value: "Nicht erteilt", comment: "Consent not granted"))
+                            ? L.settings_consent_granted.localized
+                            : L.settings_consent_not_granted.localized)
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.7))
                     }
@@ -96,8 +96,8 @@ struct SettingsView: View {
                                 .font(.system(size: 18, weight: .medium))
                                 .foregroundStyle(.white.opacity(0.6))
                         }
-                        .accessibilityLabel(NSLocalizedString("settings.revoke_consent", value: "Widerrufen", comment: "Revoke consent button"))
-                        .accessibilityHint(NSLocalizedString("settings.revoke_consent_hint", value: "Widerruft die OpenAI Einwilligung", comment: "Revoke consent hint"))
+                        .accessibilityLabel(L.settings_revoke_consent.localized)
+                        .accessibilityHint(L.settings_revoke_consent_hint.localized)
                     }
                 }
                 .foregroundStyle(.white)
@@ -136,14 +136,14 @@ struct SettingsView: View {
     }
     
     private var appReviewSection: some View {
-        SectionCard(title: NSLocalizedString("settings.about", value: "Über die App", comment: "About section title")) {
+        SectionCard(title: L.settings_about.localized) {
             Button(action: {
                 AppStoreReviewManager.requestReviewDirectly()
             }) {
                 HStack {
                     Image(systemName: "star.fill")
                         .foregroundStyle(.yellow)
-                    Text(NSLocalizedString("settings.rateApp", value: "App bewerten", comment: "Rate app button"))
+                    Text(L.settings_rateApp.localized)
                         .font(.subheadline)
                         .foregroundStyle(.white)
                     Spacer()
@@ -154,8 +154,8 @@ struct SettingsView: View {
                 .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
-            .accessibilityLabel(NSLocalizedString("settings.rateApp", value: "App bewerten", comment: "Rate app button"))
-            .accessibilityHint(NSLocalizedString("settings.rateAppHint", value: "Öffnet die App Store Bewertungsseite", comment: "Rate app accessibility hint"))
+            .accessibilityLabel(L.settings_rateApp.localized)
+            .accessibilityHint(L.settings_rateAppHint.localized)
         }
     }
     

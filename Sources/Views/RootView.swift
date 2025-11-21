@@ -3,9 +3,11 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject var app: AppState
     @ObservedObject private var localizationManager = LocalizationManager.shared
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showOnboarding = false
     @State private var showSubscriptionPaywall = false
     @State private var languageRefreshTrigger = UUID()
+    @State private var hasTrackedLaunch = false
 
     var body: some View {
         Group {
@@ -49,6 +51,20 @@ struct RootView: View {
             // This handles the case when the app is opened from a deep link
             if app.passwordResetToken != nil && app.passwordResetRefreshToken != nil {
                 app.showPasswordReset = true
+            }
+            
+            // Track app launch for App Store review (only once per app session)
+            if !hasTrackedLaunch {
+                AppStoreReviewManager.incrementLaunchCount()
+                hasTrackedLaunch = true
+            }
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            // Track app launches when app becomes active from background
+            // This ensures we track launches even if onAppear doesn't fire
+            if oldPhase == .background && newPhase == .active && !hasTrackedLaunch {
+                AppStoreReviewManager.incrementLaunchCount()
+                hasTrackedLaunch = true
             }
         }
         .onChange(of: app.showPasswordReset) { _, shouldShow in

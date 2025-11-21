@@ -415,6 +415,7 @@
   "settings.account": "Account",
   "settings.rateApp": "Valuta l'app",
   "settings.rateAppHint": "Apre la pagina di valutazione dell'App Store",
+  "settings.privacy": "Privacy e IA",
   "settings.openai_consent": "Consenso OpenAI",
   "settings.consent_granted": "Concesso",
   "settings.consent_not_granted": "Non concesso",

@@ -101,8 +101,11 @@ enum AppStoreReviewManager {
         }
         
         // 4. Prüfe ob es eine positive Aktion gab (nicht zu lange her)
+        // WICHTIG: Prüfe zuerst, ob gerade eine positive Aktion aufgezeichnet wurde
+        // (kann passieren, wenn recordPositiveAction() direkt vor requestReviewIfAppropriate() aufgerufen wird)
         if let lastPositiveActionDate = userDefaults.object(forKey: lastPositiveActionDateKey) as? Date {
             let daysSincePositiveAction = Calendar.current.dateComponents([.day], from: lastPositiveActionDate, to: Date()).day ?? 0
+            // Erlaube auch wenn die Aktion heute war (0 Tage)
             guard daysSincePositiveAction <= maxDaysSinceLastPositiveAction else {
                 Logger.debug("[AppStoreReview] Too long since last positive action: \(daysSincePositiveAction) days", category: Logger.Category.ui)
                 return false
@@ -124,11 +127,35 @@ enum AppStoreReviewManager {
     private static func requestReview() {
         // Wichtig: Muss auf dem Main Thread aufgerufen werden
         DispatchQueue.main.async {
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            // Versuche zuerst die aktive WindowScene zu finden
+            let windowScene: UIWindowScene? = {
+                // Methode 1: Suche nach aktiver Scene
+                if let activeScene = UIApplication.shared.connectedScenes
+                    .compactMap({ $0 as? UIWindowScene })
+                    .first(where: { $0.activationState == .foregroundActive }) {
+                    return activeScene
+                }
+                // Methode 2: Fallback auf erste WindowScene
+                if let firstScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    return firstScene
+                }
+                return nil
+            }()
+            
+            if let windowScene = windowScene {
                 SKStoreReviewController.requestReview(in: windowScene)
                 Logger.info("[AppStoreReview] Review request sent to StoreKit", category: Logger.Category.ui)
             } else {
                 Logger.error("[AppStoreReview] Could not get window scene for review request", category: Logger.Category.ui)
+                // Retry nach kurzer Verzögerung, falls die Scene noch nicht bereit war
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if let retryScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                        SKStoreReviewController.requestReview(in: retryScene)
+                        Logger.info("[AppStoreReview] Review request sent to StoreKit (retry)", category: Logger.Category.ui)
+                    } else {
+                        Logger.error("[AppStoreReview] Retry also failed - window scene still not available", category: Logger.Category.ui)
+                    }
+                }
             }
         }
     }

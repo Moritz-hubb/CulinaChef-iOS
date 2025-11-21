@@ -415,6 +415,7 @@
   "settings.account": "Account",
   "settings.rateApp": "Rate App",
   "settings.rateAppHint": "Opens the App Store rating page",
+  "settings.privacy": "Privacy & AI",
   "settings.openai_consent": "OpenAI Consent",
   "settings.consent_granted": "Granted",
   "settings.consent_not_granted": "Not granted",

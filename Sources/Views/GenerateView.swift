@@ -79,7 +79,7 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                         Task { await generate() }
                     },
                     onDecline: {
-                        error = NSLocalizedString("consent.required", value: "KI-Funktionen benötigen Ihre Einwilligung", comment: "Consent required error")
+                        error = L.consent_required.localized
                     }
                 )
             }

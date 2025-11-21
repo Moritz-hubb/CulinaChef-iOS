@@ -216,7 +216,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                     Task { await generate() }
                 },
                 onDecline: {
-                    error = NSLocalizedString("consent.required", value: "KI-Funktionen benötigen Ihre Einwilligung", comment: "Consent required error")
+                    error = L.consent_required.localized
                 }
             )
         }

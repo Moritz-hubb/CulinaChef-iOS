@@ -489,6 +489,11 @@ struct ManualRecipeBuilderView: View {
                     app.lastCreatedRecipe = savedRecipe
                 }
                 showSuccessAlert = true
+                
+                // Track positive action for App Store review
+                AppStoreReviewManager.recordPositiveAction()
+                // Check if we should request a review
+                AppStoreReviewManager.requestReviewIfAppropriate()
             }
             
         } catch {

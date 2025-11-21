@@ -107,6 +107,16 @@ final class AppState: ObservableObject {
     
     // Deep link recipe navigation
     @Published var deepLinkRecipe: Recipe? = nil
+    
+    // OpenAI Consent Status (reactive)
+    @Published var openAIConsentGranted: Bool = false {
+        didSet {
+            // Sync with OpenAIConsentManager (only if different to avoid loops)
+            if OpenAIConsentManager.hasConsent != openAIConsentGranted {
+                OpenAIConsentManager.hasConsent = openAIConsentGranted
+            }
+        }
+    }
 
     private(set) var backend: BackendClient!
     private(set) var openAI: BackendOpenAIClient?
@@ -225,6 +235,22 @@ final class AppState: ObservableObject {
         loadSubscriptionStatus()
         // Start polling in foreground
         startSubscriptionPolling()
+        // Load OpenAI consent status
+        openAIConsentGranted = OpenAIConsentManager.hasConsent
+        
+        // Listen for consent changes
+        NotificationCenter.default.addObserver(
+            forName: OpenAIConsentManager.consentChangedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            if let newValue = notification.userInfo?["hasConsent"] as? Bool {
+                self?.openAIConsentGranted = newValue
+            } else {
+                self?.openAIConsentGranted = OpenAIConsentManager.hasConsent
+            }
+        }
+        
         // Load preferences from Supabase on startup (takes priority over UserDefaults)
         // MUST run after checkSession() has set accessToken
         Task { [weak self] in
@@ -268,9 +294,10 @@ final class AppState: ObservableObject {
             self.userEmail = email
             self.isAuthenticated = true
             
-            // Try to refresh token immediately on startup to ensure session is valid
+            // Try to refresh token in background to ensure session is valid
+            // Don't log out immediately if refresh fails - let user continue with existing token
             Task { [weak self] in
-                await self?.refreshSessionIfNeeded()
+                await self?.refreshSessionIfNeeded(silent: true)
             }
         }
     }
@@ -278,11 +305,17 @@ final class AppState: ObservableObject {
     // MARK: - Token Refresh
     /// Versucht, eine bestehende Supabase-Session mit dem gespeicherten Refresh-Token zu erneuern.
     ///
-    /// - Wenn kein Refresh-Token vorhanden ist oder die Erneuerung scheitert, wird der Nutzer ausgeloggt.
-    func refreshSessionIfNeeded() async {
+    /// - Parameter silent: Wenn `true`, wird der User nicht ausgeloggt, wenn der Refresh fehlschlägt (z.B. beim App-Start).
+    ///                     Der User kann weiterhin mit dem vorhandenen Token arbeiten, bis dieser abläuft.
+    /// - Wenn kein Refresh-Token vorhanden ist oder die Erneuerung scheitert und `silent == false`, wird der Nutzer ausgeloggt.
+    func refreshSessionIfNeeded(silent: Bool = false) async {
         guard let refreshToken = KeychainManager.get(key: "refresh_token") else {
-            Logger.info("No refresh token found, logging out", category: .auth)
-            await signOut()
+            if !silent {
+                Logger.info("No refresh token found, logging out", category: .auth)
+                await signOut()
+            } else {
+                Logger.info("No refresh token found, but silent mode - keeping existing session", category: .auth)
+            }
             return
         }
         
@@ -304,8 +337,15 @@ final class AppState: ObservableObject {
             }
         } catch {
             Logger.error("Token refresh failed", error: error, category: .auth)
-            // Token refresh failed - user needs to log in again
-            await signOut()
+            
+            if !silent {
+                // Token refresh failed - user needs to log in again
+                await signOut()
+            } else {
+                // Silent mode: Keep user logged in with existing token
+                // Token will be refreshed on next API call or when it expires
+                Logger.info("Token refresh failed in silent mode - keeping existing session", category: .auth)
+            }
         }
     }
 
@@ -714,6 +754,12 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                 self.loadSubscriptionStatus()
                 Logger.info("[AppState] Starting aggressive subscription polling...", category: .data)
                 self.startAggressiveSubscriptionPolling(durationSeconds: 5 * 60, intervalSeconds: 30)
+                
+                // Track positive action for App Store review (subscription purchase)
+                if isActive {
+                    AppStoreReviewManager.recordPositiveAction()
+                    AppStoreReviewManager.requestReviewIfAppropriate()
+                }
             }
             Logger.info("[AppState] ========== END purchaseStoreKit() - SUCCESS ==========", category: .data)
         } catch {

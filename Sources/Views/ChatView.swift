@@ -15,6 +15,8 @@ struct ChatView: View {
     @State private var pickedImageData: Data?
     @State private var imageSourceType: UIImagePickerController.SourceType = .camera
     @State private var showConsentDialog = false
+    @State private var showRevokeConsentAlert = false
+    @State private var hasConsent: Bool = OpenAIConsentManager.hasConsent
 
     var body: some View {
         Group {
@@ -95,6 +97,17 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             // Input bar overlay at bottom
             VStack {
                 Spacer()
+                
+                // Dezent consent status indicator über dem Input-Bar (nur wenn Consent erteilt)
+                if hasConsent {
+                    HStack {
+                        Spacer()
+                        consentStatusIndicator
+                            .padding(.trailing, 16)
+                            .padding(.bottom, 8)
+                    }
+                }
+                
                 inputBar
                     .background(.clear)
                     .padding(.bottom, 16)
@@ -121,6 +134,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             OpenAIConsentDialog(
                 onAccept: {
                     OpenAIConsentManager.hasConsent = true
+                    hasConsent = true
                     // Continue with the last action
                 },
                 onDecline: {
@@ -129,6 +143,61 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 }
             )
         }
+        .alert(
+            NSLocalizedString("settings.revoke_consent_confirm", value: "Einwilligung widerrufen?", comment: "Revoke consent confirmation title"),
+            isPresented: $showRevokeConsentAlert
+        ) {
+            Button(NSLocalizedString("settings.revoke_consent", value: "Widerrufen", comment: "Revoke consent button"), role: .destructive) {
+                OpenAIConsentManager.resetConsent()
+                hasConsent = false
+                // Show confirmation message
+                messages.append(.init(role: .assistant, text: NSLocalizedString("consent.revoked", value: "Ihre Einwilligung wurde widerrufen. KI-Funktionen sind deaktiviert.", comment: "Consent revoked message")))
+            }
+            Button(L.cancel.localized, role: .cancel) {}
+        } message: {
+            Text(NSLocalizedString("settings.revoke_consent_message", value: "Möchten Sie Ihre Einwilligung zur Datenverarbeitung durch OpenAI widerrufen? KI-Funktionen werden danach nicht mehr verfügbar sein.", comment: "Revoke consent message"))
+        }
+        .onReceive(NotificationCenter.default.publisher(for: OpenAIConsentManager.consentChangedNotification)) { notification in
+            // Update local state when consent changes
+            if let newValue = notification.userInfo?["hasConsent"] as? Bool {
+                hasConsent = newValue
+            } else {
+                hasConsent = OpenAIConsentManager.hasConsent
+            }
+        }
+        .onAppear {
+            // Initialize state
+            hasConsent = OpenAIConsentManager.hasConsent
+        }
+    }
+    
+    // Dezent consent status indicator mit Opt-Out - Floating über Input-Bar
+    private var consentStatusIndicator: some View {
+        Button {
+            showRevokeConsentAlert = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 12, weight: .medium))
+                Text(NSLocalizedString("chat.consent_active", value: "KI aktiv", comment: "Consent active indicator"))
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundStyle(.white.opacity(0.9))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.85)
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+        }
+        .accessibilityLabel(NSLocalizedString("chat.consent_active", value: "KI aktiv", comment: "Consent active indicator"))
+        .accessibilityHint(NSLocalizedString("chat.revoke_consent_hint", value: "Tippen, um Einwilligung zu widerrufen", comment: "Revoke consent hint"))
     }
     
     @State private var showPaywallSheet = false
@@ -345,7 +414,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         }
         
         // Check DSGVO consent before using OpenAI
-        guard OpenAIConsentManager.hasConsent else {
+        guard hasConsent else {
             await MainActor.run { showConsentDialog = true }
             return
         }
@@ -406,7 +475,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         }
         
         // Check DSGVO consent before using OpenAI
-        guard OpenAIConsentManager.hasConsent else {
+        guard hasConsent else {
             await MainActor.run { showConsentDialog = true }
             return
         }

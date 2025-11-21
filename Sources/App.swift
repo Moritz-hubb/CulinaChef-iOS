@@ -76,6 +76,10 @@ struct CulinaChefApp: App {
                 .onOpenURL { url in
                     handleDeepLink(url)
                 }
+                .onAppear {
+                    // Track app launches for App Store review requests
+                    AppStoreReviewManager.incrementLaunchCount()
+                }
         }
     }
     

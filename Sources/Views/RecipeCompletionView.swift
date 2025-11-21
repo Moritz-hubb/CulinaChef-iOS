@@ -616,6 +616,11 @@ struct RecipeCompletionView: View {
                 showSuccess = true
                 let n = selectedMenuIds.count
                 successMessage = isPublic ? "Rezept veröffentlicht" : (n > 0 ? "In \(n) Menü(s) gespeichert" : "Gespeichert")
+                
+                // Track positive action for App Store review
+                AppStoreReviewManager.recordPositiveAction()
+                // Check if we should request a review
+                AppStoreReviewManager.requestReviewIfAppropriate()
             }
             
         } catch {

@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var showFairUse = false
     @State private var showError = false
     @State private var errorMessage: String?
+    @State private var hasConsent: Bool = OpenAIConsentManager.hasConsent
     
     private var backgroundGradient: LinearGradient {
         LinearGradient(
@@ -68,30 +69,35 @@ struct SettingsView: View {
     private var privacySection: some View {
         SectionCard(title: NSLocalizedString("settings.privacy", value: "Datenschutz & KI", comment: "Privacy section title")) {
             VStack(spacing: 12) {
-                // OpenAI Consent Status
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Image(systemName: "brain.head.profile")
-                            Text(NSLocalizedString("settings.openai_consent", value: "OpenAI Einwilligung", comment: "OpenAI consent setting"))
-                                .font(.subheadline)
-                        }
-                        Text(OpenAIConsentManager.hasConsent 
+                // OpenAI Consent Status - dezent gestaltet
+                HStack(spacing: 12) {
+                    Image(systemName: hasConsent ? "checkmark.shield.fill" : "shield.slash.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(hasConsent ? Color.green.opacity(0.8) : Color.orange.opacity(0.8))
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(NSLocalizedString("settings.openai_consent", value: "OpenAI Einwilligung", comment: "OpenAI consent setting"))
+                            .font(.subheadline.weight(.medium))
+                        Text(hasConsent 
                             ? NSLocalizedString("settings.consent_granted", value: "Erteilt", comment: "Consent granted") 
                             : NSLocalizedString("settings.consent_not_granted", value: "Nicht erteilt", comment: "Consent not granted"))
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.7))
                     }
+                    
                     Spacer()
-                    if OpenAIConsentManager.hasConsent {
-                        Button(NSLocalizedString("settings.revoke_consent", value: "Widerrufen", comment: "Revoke consent button")) {
+                    
+                    if hasConsent {
+                        Button {
                             OpenAIConsentManager.resetConsent()
+                            hasConsent = false
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.6))
                         }
-                        .font(.caption.bold())
-                        .foregroundStyle(.red)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.red.opacity(0.15), in: Capsule())
+                        .accessibilityLabel(NSLocalizedString("settings.revoke_consent", value: "Widerrufen", comment: "Revoke consent button"))
+                        .accessibilityHint(NSLocalizedString("settings.revoke_consent_hint", value: "Widerruft die OpenAI Einwilligung", comment: "Revoke consent hint"))
                     }
                 }
                 .foregroundStyle(.white)
@@ -126,6 +132,30 @@ struct SettingsView: View {
                 .accessibilityLabel("Fair Use Policy")
                 .accessibilityHint("Öffnet die Fair Use Policy")
             }
+        }
+    }
+    
+    private var appReviewSection: some View {
+        SectionCard(title: NSLocalizedString("settings.about", value: "Über die App", comment: "About section title")) {
+            Button(action: {
+                AppStoreReviewManager.requestReviewDirectly()
+            }) {
+                HStack {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(.yellow)
+                    Text(NSLocalizedString("settings.rateApp", value: "App bewerten", comment: "Rate app button"))
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                .padding(12)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            }
+            .accessibilityLabel(NSLocalizedString("settings.rateApp", value: "App bewerten", comment: "Rate app button"))
+            .accessibilityHint(NSLocalizedString("settings.rateAppHint", value: "Öffnet die App Store Bewertungsseite", comment: "Rate app accessibility hint"))
         }
     }
     
@@ -193,6 +223,7 @@ struct SettingsView: View {
                     dietarySection
                     privacySection
                     legalSection
+                    appReviewSection
                     accountSection
                 }
                 .padding(16)
@@ -229,6 +260,18 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showFairUse) {
             FairUseView()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: OpenAIConsentManager.consentChangedNotification)) { notification in
+            // Update local state when consent changes
+            if let newValue = notification.userInfo?["hasConsent"] as? Bool {
+                hasConsent = newValue
+            } else {
+                hasConsent = OpenAIConsentManager.hasConsent
+            }
+        }
+        .onAppear {
+            // Initialize state
+            hasConsent = OpenAIConsentManager.hasConsent
         }
         .alert(L.deleteAccountConfirm.localized, isPresented: $showDeleteConfirm) {
             Button(L.manageSubscription.localized, role: .none) {

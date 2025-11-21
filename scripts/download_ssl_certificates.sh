@@ -25,16 +25,26 @@ echo ""
 # - Supabase Dashboard → Settings → API → Project URL
 # - Your backend deployment URL
 SUPABASE_URL="${SUPABASE_URL:-}"
-BACKEND_URL="${BACKEND_URL:-https://culinachef-backend-production.up.railway.app}"
+BACKEND_URL="${BACKEND_URL:-}"
 
-# If SUPABASE_URL is not set, try to read from Secrets.xcconfig (if it exists)
+# Try to read SUPABASE_URL from Secrets.xcconfig (if it exists)
 if [ -z "$SUPABASE_URL" ] && [ -f "$IOS_DIR/Configs/Secrets.xcconfig" ]; then
-    SUPABASE_URL=$(grep "SUPABASE_URL" "$IOS_DIR/Configs/Secrets.xcconfig" | cut -d'=' -f2 | tr -d ' ' | sed 's/\$()//g')
+    SUPABASE_URL=$(grep "SUPABASE_URL" "$IOS_DIR/Configs/Secrets.xcconfig" | cut -d'=' -f2 | tr -d ' ' | sed 's/\$()//g' | sed 's|https:/$()/|https://|')
+fi
+
+# Try to read BACKEND_URL from Config.swift (production URL)
+if [ -z "$BACKEND_URL" ] && [ -f "$IOS_DIR/Sources/Services/Config.swift" ]; then
+    BACKEND_URL=$(grep -A 5 "case .production:" "$IOS_DIR/Sources/Services/Config.swift" | grep "return URL" | sed -E 's/.*return URL\(string: "([^"]+)".*/\1/')
+fi
+
+# Fallback to default backend URL if still not set
+if [ -z "$BACKEND_URL" ]; then
+    BACKEND_URL="https://culinachef-backend-production.up.railway.app"
 fi
 
 if [ -z "$SUPABASE_URL" ]; then
     echo "❌ Error: SUPABASE_URL not set"
-    echo "   Please set it as environment variable or edit this script"
+    echo "   Please set it as environment variable or in Configs/Secrets.xcconfig"
     echo "   Example: SUPABASE_URL=https://your-project.supabase.co ./scripts/download_ssl_certificates.sh"
     exit 1
 fi

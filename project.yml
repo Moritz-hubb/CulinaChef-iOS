@@ -30,6 +30,13 @@ targets:
         type: folder
       - path: Configs/StoreKit.storekit
         optional: false
+      - path: Certificates
+        type: folder
+        optional: true
+      - path: supabase.cer
+        optional: true
+      - path: backend.cer
+        optional: true
       - de.json
       - en.json
       - es.json
@@ -47,7 +54,6 @@ targets:
       path: Sources/Info.plist
       properties:
         CFBundleIdentifier: com.moritzserrin.culinachef
-        UIUserInterfaceStyle: Automatic
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIRequiresFullScreen: true
         UILaunchStoryboardName: LaunchScreen

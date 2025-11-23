@@ -108,6 +108,9 @@ final class AppState: ObservableObject {
     // Deep link recipe navigation
     @Published var deepLinkRecipe: Recipe? = nil
     
+    // Initial data loading state
+    @Published var isInitialDataLoaded: Bool = false
+    
     // OpenAI Consent Status (reactive)
     @Published var openAIConsentGranted: Bool = false {
         didSet {
@@ -157,7 +160,7 @@ final class AppState: ObservableObject {
         recipeAI = BackendOpenAIClient(backend: backend, accessTokenProvider: { [weak self] in self?.accessToken })
         auth = SupabaseAuthClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey)
         preferencesClient = UserPreferencesClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey)
-        subscriptionsClient = SubscriptionsClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey)
+        subscriptionsClient = SubscriptionsClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey, backendBaseURL: Config.backendBaseURL)
         storeKit = StoreKitManager()
         shoppingListManager = ShoppingListManager()
         likedRecipesManager = LikedRecipesManager()
@@ -231,8 +234,13 @@ final class AppState: ObservableObject {
         
         // Check for existing session
         checkSession()
-        // Load subscription status for current user (if any)
-        self.loadSubscriptionStatus()
+        // Load subscription status directly from StoreKit (Apple) first, not from database
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            // Small delay to ensure StoreKit is ready
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+            await self.refreshSubscriptionStatusFromStoreKit()
+        }
         // Start polling in foreground
         self.startSubscriptionPolling()
         // Load OpenAI consent status
@@ -279,6 +287,14 @@ final class AppState: ObservableObject {
                 await self.recipeManager.processOfflineQueueWithAuth(accessToken: token)
             }
         }
+        
+        // Load initial data after a short delay to ensure everything is initialized
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            // Small delay to ensure all initialization is complete
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+            await self.loadInitialData()
+        }
     }
 
     deinit {
@@ -299,6 +315,57 @@ final class AppState: ObservableObject {
             Task { [weak self] in
                 await self?.refreshSessionIfNeeded(silent: true)
             }
+        }
+    }
+    
+    // MARK: - Initial Data Loading
+    /// Lädt alle initialen Daten im Hintergrund (Subscription, Preferences, Menüs, etc.)
+    /// Diese Funktion wird beim App-Start aufgerufen und setzt `isInitialDataLoaded` auf `true`, wenn fertig.
+    func loadInitialData() async {
+        guard isAuthenticated else {
+            // If not authenticated, mark as loaded immediately
+            await MainActor.run {
+                self.isInitialDataLoaded = true
+            }
+            return
+        }
+        
+        guard let userId = KeychainManager.get(key: "user_id"),
+              let token = accessToken else {
+            await MainActor.run {
+                self.isInitialDataLoaded = true
+            }
+            return
+        }
+        
+        // CRITICAL: Load subscription status directly from StoreKit (Apple) first
+        // This ensures we get the most up-to-date status from Apple, not from database
+        Logger.info("[AppState] Loading subscription status from StoreKit (Apple)...", category: .data)
+        await refreshSubscriptionStatusFromStoreKit()
+        
+        // Wait for subscription status to be initialized
+        var subscriptionReady = false
+        var attempts = 0
+        while !subscriptionReady && attempts < 10 {
+            await MainActor.run {
+                subscriptionReady = self.subscriptionStatusInitialized
+            }
+            if !subscriptionReady {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                attempts += 1
+            }
+        }
+        
+        // Load menus in parallel (they're loaded lazily in RecipesView, but we can preload)
+        // This is optional - menus will be loaded when RecipesView appears anyway
+        // But preloading gives a smoother experience
+        
+        // Mark as loaded after a minimum time to ensure smooth transition
+        // This prevents the loading screen from flashing too quickly
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds minimum
+        
+        await MainActor.run {
+            self.isInitialDataLoaded = true
         }
     }
     
@@ -482,6 +549,11 @@ und schreibe sonst nichts weiter.
 WICHTIG: Wenn nach Rezepten oder Rezeptideen gefragt wird, gib NUR kurze Rezeptvorschläge (Name + 1-2 Sätze Beschreibung).
 Gib KEINE kompletten Rezepte mit Zutaten und Anleitungen.
 
+KRITISCHE LIMITS (NIEMALS ÜBERSCHREITEN):
+- MAXIMAL 10 Rezept-Ideen pro Antwort, auch wenn der User nach mehr fragt (z. B. "100 Rezept-Ideen" → MAXIMAL 10)
+- MAXIMAL 12 Gänge für Menüs, auch wenn der User nach mehr fragt (z. B. "20-Gänge-Menü" → MAXIMAL 12 Gänge)
+- Diese Limits sind HART und dürfen NIEMALS überschritten werden, unabhängig von der User-Anfrage.
+
 Formatiere Rezeptvorschläge so:
 🍴 **[Rezeptname]** ⟦course: [Vorspeise|Zwischengang|Hauptspeise|Nachspeise|Beilage|Getränk|Amuse-Bouche|Aperitif|Digestif|Käsegang]⟧
 [Kurze Beschreibung]
@@ -517,8 +589,14 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             self.accessToken = result.accessToken
             self.userEmail = result.email
             self.isAuthenticated = true
-            self.loadSubscriptionStatus()
+            self.isInitialDataLoaded = false // Reset to show loading screen
         }
+        
+        // Load subscription status directly from StoreKit (Apple) first
+        await refreshSubscriptionStatusFromStoreKit()
+        
+        // Load initial data after sign in
+        await loadInitialData()
     }
     
     /// Registriert einen neuen Nutzer und legt ein Profil mit eindeutigem Benutzernamen an.
@@ -538,8 +616,14 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             self.accessToken = result.accessToken
             self.userEmail = result.email
             self.isAuthenticated = true
-            self.loadSubscriptionStatus()
+            self.isInitialDataLoaded = false // Reset to show loading screen
         }
+        
+        // Load subscription status directly from StoreKit (Apple) first
+        await refreshSubscriptionStatusFromStoreKit()
+        
+        // Load initial data after sign up
+        await loadInitialData()
     }
 
     // moved to AuthenticationManager.upsertProfile(userId:username:accessToken:)
@@ -589,11 +673,17 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             self.accessToken = result.accessToken
             self.userEmail = result.email
             self.isAuthenticated = true
+            self.isInitialDataLoaded = false // Reset to show loading screen
             self.showPasswordReset = false
             self.passwordResetToken = nil
             self.passwordResetRefreshToken = nil
-            self.loadSubscriptionStatus()
         }
+        
+        // Load subscription status directly from StoreKit (Apple) first
+        await refreshSubscriptionStatusFromStoreKit()
+        
+        // Load initial data after password update
+        await loadInitialData()
     }
     
     /// Führt den Login via „Sign in with Apple" durch und aktualisiert Tokens & State.
@@ -614,11 +704,17 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             self.accessToken = result.accessToken
             self.userEmail = result.email
             self.isAuthenticated = true
-            self.loadSubscriptionStatus()
+            self.isInitialDataLoaded = false // Reset to show loading screen
             
             // CRITICAL: Reload shopping list for new user to prevent cache bleeding
             self.shoppingListManager.loadShoppingList()
         }
+        
+        // Load subscription status directly from StoreKit (Apple) first
+        await refreshSubscriptionStatusFromStoreKit()
+        
+        // Load initial data after sign in with Apple
+        await loadInitialData()
     }
     
     // moved to AuthenticationManager.loadOnboardingStatusFromBackend(userId:accessToken:)
@@ -713,11 +809,15 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
         subscriptionManager.getSubscriptionAutoRenew()
     }
     
+    /// Lädt den Subscription-Status direkt von StoreKit (Apple), nicht aus der Datenbank.
+    /// Dies ist die bevorzugte Methode beim App-Start, um den aktuellsten Status zu erhalten.
     func refreshSubscriptionStatusFromStoreKit() async {
+        Logger.info("[AppState] Refreshing subscription status from StoreKit (Apple)...", category: .data)
         let active = await subscriptionManager.refreshSubscriptionStatusFromStoreKit()
         await MainActor.run {
             self.isSubscribed = active
             self.subscriptionStatusInitialized = true
+            Logger.info("[AppState] Subscription status from StoreKit: \(active ? "active" : "inactive")", category: .data)
         }
     }
     

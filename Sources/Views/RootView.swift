@@ -1,5 +1,116 @@
 import SwiftUI
 
+// MARK: - Root View Modifiers
+private struct RootViewModifiers: ViewModifier {
+    @ObservedObject var app: AppState
+    @Binding var showOnboarding: Bool
+    @Binding var showSubscriptionPaywall: Bool
+    @Binding var languageRefreshTrigger: UUID
+    @Binding var hasTrackedLaunch: Bool
+    var scenePhase: ScenePhase
+    var localizationManager: LocalizationManager
+    var checkOnboardingStatus: () -> Void
+    var checkSubscriptionStatus: () -> Void
+    
+    func body(content: Content) -> some View {
+        content
+            .fullScreenCover(isPresented: $app.showPasswordReset) {
+                ResetPasswordView()
+                    .environmentObject(app)
+            }
+            .onAppear(perform: handleAppear)
+            .onChange(of: scenePhase) { oldPhase, newPhase in
+                handleScenePhaseChange(oldPhase: oldPhase, newPhase: newPhase)
+            }
+            .onChange(of: app.showPasswordReset) { _, shouldShow in
+                handlePasswordResetChange(shouldShow)
+            }
+            .alert(L.error.localized, isPresented: errorBinding, actions: {
+                Button(L.ok.localized) { app.error = nil }
+            }, message: {
+                Text(app.error ?? "")
+            })
+            .onChange(of: app.isAuthenticated) { _, newValue in
+                handleAuthChange(newValue)
+            }
+            .onChange(of: app.isSubscribed) { _, isActive in
+                handleSubscriptionChange(isActive)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { notification in
+                handleLanguageChange(notification)
+            }
+            .id(viewId)
+    }
+    
+    private var errorBinding: Binding<Bool> {
+        Binding(
+            get: { app.error != nil },
+            set: { if !$0 { app.error = nil } }
+        )
+    }
+    
+    private var viewId: String {
+        app.showSettings || app.showLanguageSettings 
+            ? "stable" 
+            : "\(languageRefreshTrigger)_\(localizationManager.currentLanguage)"
+    }
+    
+    private func handleAppear() {
+        if app.passwordResetToken != nil && app.passwordResetRefreshToken != nil {
+            app.showPasswordReset = true
+        }
+        
+        if !hasTrackedLaunch {
+            AppStoreReviewManager.incrementLaunchCount()
+            hasTrackedLaunch = true
+        }
+    }
+    
+    private func handleScenePhaseChange(oldPhase: ScenePhase, newPhase: ScenePhase) {
+        if oldPhase == .background && newPhase == .active && !hasTrackedLaunch {
+            AppStoreReviewManager.incrementLaunchCount()
+            hasTrackedLaunch = true
+        }
+    }
+    
+    private func handlePasswordResetChange(_ shouldShow: Bool) {
+        if shouldShow {
+            Logger.debug("Password reset view should be shown", category: .auth)
+        }
+    }
+    
+    private func handleAuthChange(_ newValue: Bool) {
+        localizationManager.updateLanguageForAuthState(isAuthenticated: newValue)
+        
+        if newValue {
+            checkOnboardingStatus()
+            checkSubscriptionStatus()
+        } else {
+            showOnboarding = false
+            showSubscriptionPaywall = false
+        }
+    }
+    
+    private func handleSubscriptionChange(_ isActive: Bool) {
+        if isActive {
+            showSubscriptionPaywall = false
+        }
+    }
+    
+    private func handleLanguageChange(_ notification: Notification) {
+        if !showOnboarding {
+            if app.showSettings || app.showLanguageSettings {
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                if !app.showSettings && !app.showLanguageSettings {
+                    languageRefreshTrigger = UUID()
+                }
+            }
+        }
+    }
+}
+
 struct RootView: View {
     @EnvironmentObject var app: AppState
     @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -10,109 +121,60 @@ struct RootView: View {
     @State private var hasTrackedLaunch = false
 
     var body: some View {
-        Group {
-            if app.isAuthenticated {
-                MainTabView()
-                    .fullScreenCover(isPresented: $showOnboarding) {
-                        OnboardingView()
-                    }
-                    .fullScreenCover(isPresented: $showSubscriptionPaywall, onDismiss: {
-                        // Mark paywall as dismissed for this user
-                        if let userId = KeychainManager.get(key: "user_id") {
-                            let key = "paywall_dismissed_\(userId)"
-                            UserDefaults.standard.set(true, forKey: key)
-                        }
-                    }) {
-                        PaywallView()
-                            .environmentObject(app)
-                            .interactiveDismissDisabled(true)
-                    }
-                    .onAppear {
-                        checkOnboardingStatus()
-                        checkSubscriptionStatus()
-                    }
-                    .onChange(of: showOnboarding) { _, nowShown in
-                        if nowShown == false {
-                            // After onboarding dismissed, enforce paywall if needed
-                            checkSubscriptionStatus()
-                        }
-                    }
+        contentView
+            .modifier(RootViewModifiers(
+                app: app,
+                showOnboarding: $showOnboarding,
+                showSubscriptionPaywall: $showSubscriptionPaywall,
+                languageRefreshTrigger: $languageRefreshTrigger,
+                hasTrackedLaunch: $hasTrackedLaunch,
+                scenePhase: scenePhase,
+                localizationManager: localizationManager,
+                checkOnboardingStatus: checkOnboardingStatus,
+                checkSubscriptionStatus: checkSubscriptionStatus
+            ))
+    }
+    
+    @ViewBuilder
+    private var contentView: some View {
+        if app.isAuthenticated {
+            if app.isInitialDataLoaded {
+                authenticatedContentView
             } else {
-                AuthView()
-                    .id(localizationManager.currentLanguage) // Force re-render on language change
+                LoadingView()
             }
+        } else {
+            AuthView()
+                .id(localizationManager.currentLanguage)
         }
-        .fullScreenCover(isPresented: $app.showPasswordReset) {
-            ResetPasswordView()
-                .environmentObject(app)
-        }
-        .onAppear {
-            // Check if we have password reset tokens from a deep link
-            // This handles the case when the app is opened from a deep link
-            if app.passwordResetToken != nil && app.passwordResetRefreshToken != nil {
-                app.showPasswordReset = true
+    }
+    
+    private var authenticatedContentView: some View {
+        MainTabView()
+            .fullScreenCover(isPresented: $showOnboarding) {
+                OnboardingView()
             }
-            
-            // Track app launch for App Store review (only once per app session)
-            if !hasTrackedLaunch {
-                AppStoreReviewManager.incrementLaunchCount()
-                hasTrackedLaunch = true
+            .fullScreenCover(isPresented: $showSubscriptionPaywall, onDismiss: paywallDismissed) {
+                PaywallView()
+                    .environmentObject(app)
+                    .interactiveDismissDisabled(true)
             }
-        }
-        .onChange(of: scenePhase) { oldPhase, newPhase in
-            // Track app launches when app becomes active from background
-            // This ensures we track launches even if onAppear doesn't fire
-            if oldPhase == .background && newPhase == .active && !hasTrackedLaunch {
-                AppStoreReviewManager.incrementLaunchCount()
-                hasTrackedLaunch = true
-            }
-        }
-        .onChange(of: app.showPasswordReset) { _, shouldShow in
-            if shouldShow {
-                Logger.debug("Password reset view should be shown", category: .auth)
-            }
-        }
-        .alert(L.error.localized, isPresented: Binding(get: { app.error != nil }, set: { if !$0 { app.error = nil } })) {
-            Button(L.ok.localized) { app.error = nil }
-        } message: {
-            Text(app.error ?? "")
-        }
-        .onChange(of: app.isAuthenticated) { _, newValue in
-            // Update language based on auth state
-            localizationManager.updateLanguageForAuthState(isAuthenticated: newValue)
-            
-            if newValue {
+            .onAppear {
                 checkOnboardingStatus()
                 checkSubscriptionStatus()
-            } else {
-                showOnboarding = false
-                showSubscriptionPaywall = false
             }
-        }
-        .onChange(of: app.isSubscribed) { _, isActive in
-            if isActive {
-                showSubscriptionPaywall = false
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
-            // Force view refresh by updating UUID, but only if onboarding is not showing
-            // This prevents the onboarding from being dismissed when language changes
-            // Also prevent refresh if settings sheet is open to avoid closing it
-            // Use a small delay to ensure settings state is preserved
-            if !showOnboarding {
-                if app.showSettings || app.showLanguageSettings {
-                    // Don't refresh if settings are open - preserve the state
-                    return
-                }
-                // Small delay to ensure any state changes are processed first
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    if !app.showSettings && !app.showLanguageSettings {
-                        languageRefreshTrigger = UUID()
-                    }
+            .onChange(of: showOnboarding) { _, nowShown in
+                if nowShown == false {
+                    checkSubscriptionStatus()
                 }
             }
+    }
+    
+    private func paywallDismissed() {
+        if let userId = KeychainManager.get(key: "user_id") {
+            let key = "paywall_dismissed_\(userId)"
+            UserDefaults.standard.set(true, forKey: key)
         }
-        .id(app.showSettings || app.showLanguageSettings ? "stable" : "\(languageRefreshTrigger)_\(localizationManager.currentLanguage)") // Prevent refresh when settings are open
     }
     
     private func onboardingCompletedForCurrentUser() -> Bool {

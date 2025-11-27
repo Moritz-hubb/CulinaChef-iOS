@@ -1835,11 +1835,9 @@ private struct AllergyChipView: View {
                 allergies.removeAll { $0 == item }
                 onRemove()
             }) {
-                Image(systemName: "xmark.circle.fill")
+                Image(systemName: "xmark")
                     .font(.caption)
-                    .foregroundStyle(
-                        LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
+                    .foregroundStyle(.white.opacity(0.7))
             }
             .accessibilityLabel("\(item) entfernen")
             .accessibilityHint("Entfernt diese Allergie aus der Liste")
@@ -1865,11 +1863,9 @@ private struct DislikeChipView: View {
                 dislikes.removeAll { $0 == item }
                 onRemove()
             }) {
-                Image(systemName: "xmark.circle.fill")
+                Image(systemName: "xmark")
                     .font(.caption)
-                    .foregroundStyle(
-                        LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
+                    .foregroundStyle(.white.opacity(0.7))
             }
             .accessibilityLabel("\(item) entfernen")
             .accessibilityHint("Entfernt diese Abneigung aus der Liste")

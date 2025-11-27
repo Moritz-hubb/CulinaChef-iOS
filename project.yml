@@ -114,6 +114,7 @@ targets:
         PRODUCT_NAME: CulinaChefTimerWidget
         PRODUCT_BUNDLE_IDENTIFIER: com.moritzserrin.culinachef.widget
         CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: "Koch-Timer"
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension

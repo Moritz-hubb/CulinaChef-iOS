@@ -310,13 +310,6 @@ struct MainTabView: View {
             .id(localizationManager.currentLanguage)
             .padding(.horizontal)
             .padding(.bottom, 4)
-            .background(.ultraThinMaterial.opacity(0.25))
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
-            )
-            .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 3)
         }
         .background(
 LinearGradient(

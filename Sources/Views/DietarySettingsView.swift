@@ -27,195 +27,240 @@ struct DietarySettingsView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color.pink.opacity(0.2), Color.purple.opacity(0.3), Color.blue.opacity(0.25)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                .ignoresSafeArea()
+            backgroundGradient
             ScrollView {
                 VStack(spacing: 16) {
-                    HStack {
-                        Text(L.settings_ernährung.localized)
-                            .font(.title2.bold())
-                            .foregroundStyle(.white)
-                        Spacer()
-                        Button(L.done.localized) { dismiss() }
-                            .foregroundStyle(.white)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
-                            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                            .accessibilityLabel(L.done.localized)
-                            .accessibilityHint("Schließt die Ernährungspräferenzen")
-                    }
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(L.settings_ernährungsweisen.localized)
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                        WrapDietChips(options: dietOptions, selection: $diets)
-                            .padding(.bottom, 6)
-                            .onChange(of: diets) { _, _ in saveBack() }
-
-                        Text(L.settings_allergienunverträglichkeiten.localized)
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                        HStack(spacing: 8) {
-                            TextField(L.dietary_allergiesPlaceholder.localized, text: $newAllergyText)
-                                .textFieldStyle(.plain)
-                                .foregroundStyle(.white)
-                                .tint(.white)
-                                .accessibilityLabel("Allergie eingeben")
-                                .accessibilityHint(L.dietary_allergiesPlaceholder.localized)
-                                .padding(10)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            Button(L.common_add.localized) {
-                                let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
-                                if !trimmed.isEmpty {
-                                    allergies.append(trimmed)
-                                    newAllergyText = ""
-                                    saveBack()
-                                }
-                            }
-                            .accessibilityLabel(L.common_add.localized)
-                            .accessibilityHint("Fügt die eingegebene Allergie hinzu")
-                            .foregroundStyle(.white)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
-                            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                        }
-                        if !allergies.isEmpty {
-                            FlowLayout(items: allergies) { item in
-                                HStack(spacing: 4) {
-                                    Text(item)
-                                        .font(.callout)
-                                        .foregroundStyle(.white)
-                                    Button(action: { 
-                                        allergies.removeAll { $0 == item }
-                                        saveBack()
-                                    }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.caption)
-                                    }
-                                    .accessibilityLabel("\(item) entfernen")
-                                    .accessibilityHint("Entfernt diese Allergie aus der Liste")
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.ultraThinMaterial, in: Capsule())
-                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                            }
-                        }
-
-                        Text(L.settings_dislikes.localized)
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                        HStack(spacing: 8) {
-                            TextField(L.dietary_dislikesPlaceholder.localized, text: $newDislikeText)
-                                .textFieldStyle(.plain)
-                                .foregroundStyle(.white)
-                                .tint(.white)
-                                .accessibilityLabel("Abneigung eingeben")
-                                .accessibilityHint(L.dietary_dislikesPlaceholder.localized)
-                                .padding(10)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            Button(L.common_add.localized) {
-                                let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
-                                if !trimmed.isEmpty {
-                                    dislikes.append(trimmed)
-                                    newDislikeText = ""
-                                    saveBack()
-                                }
-                            }
-                            .accessibilityLabel(L.common_add.localized)
-                            .accessibilityHint("Fügt die eingegebene Abneigung hinzu")
-                            .foregroundStyle(.white)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
-                            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                        }
-                        if !dislikes.isEmpty {
-                            FlowLayout(items: dislikes) { item in
-                                HStack(spacing: 4) {
-                                    Text(item)
-                                        .font(.callout)
-                                        .foregroundStyle(.white)
-                                    Button(action: { 
-                                        dislikes.removeAll { $0 == item }
-                                        saveBack()
-                                    }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.caption)
-                                    }
-                                    .accessibilityLabel("\(item) entfernen")
-                                    .accessibilityHint("Entfernt diese Abneigung aus der Liste")
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.ultraThinMaterial, in: Capsule())
-                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                            }
-                        }
-
-                        Text(L.settings_geschmackspräferenzen.localized)
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                        VStack(spacing: 10) {
-                            HStack {
-                                Text(L.settings_schärfelevel.localized)
-                                    .font(.callout)
-                                    .foregroundStyle(.white)
-                                Spacer()
-                                Text(["Mild", "Normal", "Scharf", "Sehr Scharf"][Int(spicyLevel)])
-                                    .font(.callout.weight(.medium))
-                                    .foregroundStyle(.white)
-                            }
-                            Slider(value: $spicyLevel, in: 0...3, step: 1)
-                                .tint(.purple)
-                                .accessibilityLabel(L.settings_schärfelevel.localized)
-                                .accessibilityValue(["Mild", "Normal", "Scharf", "Sehr Scharf"][Int(spicyLevel)])
-                                .onChange(of: spicyLevel) { _, _ in saveBack() }
-                            
-                            ForEach(Array(tastePreferences.keys.sorted()), id: \.self) { key in
-                                Toggle(key.capitalized, isOn: Binding(
-                                    get: { tastePreferences[key] ?? false },
-                                    set: { newValue in
-                                        tastePreferences[key] = newValue
-                                        saveBack()
-                                    }
-                                ))
-                                .font(.callout)
-                                .foregroundStyle(.white)
-                                .tint(.purple)
-                            }
-                        }
-                        .padding(12)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        
-                        Text(L.settings_hints.localized)
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                        TextField(L.dietary_notesPlaceholder.localized, text: $notesText)
-                            .textFieldStyle(.plain)
-                            .foregroundStyle(.white)
-                            .tint(.white)
-                            .accessibilityLabel("Notizen")
-                            .accessibilityHint(L.dietary_notesPlaceholder.localized)
-                            .padding(10)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .onChange(of: notesText) { _, _ in saveBack() }
-                    }
-                    .padding(16)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                    )
+                    headerView
+                    preferencesContentView
                 }
                 .padding(16)
             }
         }
         .onAppear { loadFromApp() }
         .onChange(of: app.dietary) { _, _ in loadFromApp() }
+    }
+    
+    private var backgroundGradient: some View {
+        LinearGradient(colors: [Color.pink.opacity(0.2), Color.purple.opacity(0.3), Color.blue.opacity(0.25)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .ignoresSafeArea()
+    }
+    
+    private var headerView: some View {
+        HStack {
+            Text(L.settings_ernährung.localized)
+                .font(.title2.bold())
+                .foregroundStyle(.white)
+            Spacer()
+            Button(L.done.localized) { dismiss() }
+                .foregroundStyle(.white)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .background(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                .accessibilityLabel(L.done.localized)
+                .accessibilityHint("Schließt die Ernährungspräferenzen")
+        }
+    }
+    
+    private var preferencesContentView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            dietsSection
+            allergiesSection
+            dislikesSection
+            tastePreferencesSection
+            notesSection
+        }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+    
+    private var dietsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L.settings_ernährungsweisen.localized)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+            WrapDietChips(options: dietOptions, selection: $diets)
+                .padding(.bottom, 6)
+                .onChange(of: diets) { _, _ in saveBack() }
+        }
+    }
+    
+    private var allergiesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L.settings_allergienunverträglichkeiten.localized)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+            HStack(spacing: 8) {
+                TextField(L.dietary_allergiesPlaceholder.localized, text: $newAllergyText)
+                    .textFieldStyle(.plain)
+                    .foregroundStyle(.white)
+                    .tint(.white)
+                    .accessibilityLabel("Allergie eingeben")
+                    .accessibilityHint(L.dietary_allergiesPlaceholder.localized)
+                    .padding(10)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Button(L.common_add.localized) {
+                    let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        allergies.append(trimmed)
+                        newAllergyText = ""
+                        saveBack()
+                    }
+                }
+                .accessibilityLabel(L.common_add.localized)
+                .accessibilityHint("Fügt die eingegebene Allergie hinzu")
+                .foregroundStyle(.white)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .background(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+            }
+            if !allergies.isEmpty {
+                FlowLayout(items: allergies) { item in
+                    allergyChipView(item: item)
+                }
+            }
+        }
+    }
+    
+    private func allergyChipView(item: String) -> some View {
+        HStack(spacing: 4) {
+            Text(item)
+                .font(.callout)
+                .foregroundStyle(.white)
+            Button(action: { 
+                allergies.removeAll { $0 == item }
+                saveBack()
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+            }
+            .accessibilityLabel("\(item) entfernen")
+            .accessibilityHint("Entfernt diese Allergie aus der Liste")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+    }
+    
+    private var dislikesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L.settings_dislikes.localized)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+            HStack(spacing: 8) {
+                TextField(L.dietary_dislikesPlaceholder.localized, text: $newDislikeText)
+                    .textFieldStyle(.plain)
+                    .foregroundStyle(.white)
+                    .tint(.white)
+                    .accessibilityLabel("Abneigung eingeben")
+                    .accessibilityHint(L.dietary_dislikesPlaceholder.localized)
+                    .padding(10)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Button(L.common_add.localized) {
+                    let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        dislikes.append(trimmed)
+                        newDislikeText = ""
+                        saveBack()
+                    }
+                }
+                .accessibilityLabel(L.common_add.localized)
+                .accessibilityHint("Fügt die eingegebene Abneigung hinzu")
+                .foregroundStyle(.white)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .background(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+            }
+            if !dislikes.isEmpty {
+                FlowLayout(items: dislikes) { item in
+                    dislikeChipView(item: item)
+                }
+            }
+        }
+    }
+    
+    private func dislikeChipView(item: String) -> some View {
+        HStack(spacing: 4) {
+            Text(item)
+                .font(.callout)
+                .foregroundStyle(.white)
+            Button(action: { 
+                dislikes.removeAll { $0 == item }
+                saveBack()
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+            }
+            .accessibilityLabel("\(item) entfernen")
+            .accessibilityHint("Entfernt diese Abneigung aus der Liste")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+    }
+    
+    private var tastePreferencesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L.settings_geschmackspräferenzen.localized)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+            VStack(spacing: 10) {
+                HStack {
+                    Text(L.settings_schärfelevel.localized)
+                        .font(.callout)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Text(["Mild", "Normal", "Scharf", "Sehr Scharf"][Int(spicyLevel)])
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.white)
+                }
+                Slider(value: $spicyLevel, in: 0...3, step: 1)
+                    .tint(.purple)
+                    .accessibilityLabel(L.settings_schärfelevel.localized)
+                    .accessibilityValue(["Mild", "Normal", "Scharf", "Sehr Scharf"][Int(spicyLevel)])
+                    .onChange(of: spicyLevel) { _, _ in saveBack() }
+                
+                ForEach(Array(tastePreferences.keys.sorted()), id: \.self) { key in
+                    Toggle(key.capitalized, isOn: Binding(
+                        get: { tastePreferences[key] ?? false },
+                        set: { newValue in
+                            tastePreferences[key] = newValue
+                            saveBack()
+                        }
+                    ))
+                    .font(.callout)
+                    .foregroundStyle(.white)
+                    .tint(.purple)
+                }
+            }
+            .padding(12)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+    }
+    
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L.settings_hints.localized)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+            TextField(L.dietary_notesPlaceholder.localized, text: $notesText)
+                .textFieldStyle(.plain)
+                .foregroundStyle(.white)
+                .tint(.white)
+                .accessibilityLabel("Notizen")
+                .accessibilityHint(L.dietary_notesPlaceholder.localized)
+                .padding(10)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .onChange(of: notesText) { _, _ in saveBack() }
+        }
     }
 
     private func loadFromApp() {

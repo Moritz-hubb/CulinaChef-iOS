@@ -202,7 +202,11 @@ final class SubscriptionManager {
                 } catch {
                     Logger.error("[SubscriptionManager] ❌ backend.subscriptionStatus() failed: \(error.localizedDescription)", category: .data)
                     if let urlError = error as? URLError {
-                        Logger.error("[SubscriptionManager] URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)", category: .data)
+                        Logger.error("[SubscriptionManager] URLError code: \(urlError.code.rawValue) (\(urlError.code)), description: \(urlError.localizedDescription)", category: .data)
+                        Logger.error("[SubscriptionManager] URLError failureReason: \(urlError.localizedFailureReason ?? "nil")", category: .data)
+                        Logger.error("[SubscriptionManager] URLError underlyingError: \(urlError.underlyingError?.localizedDescription ?? "nil")", category: .data)
+                    } else if let nsError = error as NSError? {
+                        Logger.error("[SubscriptionManager] NSError domain: \(nsError.domain), code: \(nsError.code), description: \(nsError.localizedDescription)", category: .data)
                     }
                 }
                 

@@ -61,10 +61,12 @@ final class BackendClient {
             }
             return (data, http)
         } catch {
-            #if DEBUG
             Logger.error("[BackendClient] Request failed: \(method) \(url.absoluteString) - \(error.localizedDescription)", category: .network)
-            print("❌ [DEBUG] Backend Request FAILED: \(method) \(url.absoluteString) - \(error.localizedDescription)") // Direct print for visibility
-            #endif
+            if let urlError = error as? URLError {
+                Logger.error("[BackendClient] URLError code: \(urlError.code.rawValue) (\(urlError.code)), description: \(urlError.localizedDescription)", category: .network)
+            } else if let nsError = error as NSError? {
+                Logger.error("[BackendClient] NSError domain: \(nsError.domain), code: \(nsError.code)", category: .network)
+            }
             throw error
         }
     }

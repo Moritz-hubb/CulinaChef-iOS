@@ -215,6 +215,18 @@ struct OnboardingView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
+        .mask(
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black, location: 0.05),
+                    .init(color: .black, location: 0.95),
+                    .init(color: .clear, location: 1)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
         .onAppear {
             // Initialize with current language (system language) if not set
             // This ensures the language shown in signup is pre-selected in onboarding

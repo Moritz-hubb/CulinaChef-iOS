@@ -37,6 +37,7 @@
 		44529BFC2C79DD07CC204031 /* TimerCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F507943A1CBD339AE23C041 /* TimerCenter.swift */; };
 		4538B455AAD3A9EEF7BD06F8 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = D13A9434877FBA9E406C05F1 /* README.md */; };
 		46B75DBE7BC06DE28CAB3DA0 /* AppStoreReviewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90E6F0449C15CC5D631DE76 /* AppStoreReviewManager.swift */; };
+		4BFAB3DCB735C57ECB765A2B /* WIDGET_TESTFLIGHT.md in Resources */ = {isa = PBXBuildFile; fileRef = C1ED4B7C4673F02716FA732C /* WIDGET_TESTFLIGHT.md */; };
 		4C3CED17610A1D45C7A844F7 /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF262E16254E15667802A85D /* BackendClient.swift */; };
 		4DE9CCADAC6764AD935D92F7 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B5A2C547FEE0D43851EDBF /* ImageCache.swift */; };
 		57BBA4C3EC5DE8BAE972E286 /* TermsOfServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF1AFB82F4D6DC0FBEADEC2 /* TermsOfServiceView.swift */; };
@@ -54,8 +55,10 @@
 		6B7DA5BACF64F64655483583 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A21805E7372B2AE70242BE0B /* SignInView.swift */; };
 		6CCA57EED5FBBDC6B328E0B6 /* timer_ringtone.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 7D511C7C9E1408418D29B31F /* timer_ringtone.mp3 */; };
 		70F17A107ADAFC9D0D2D055E /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 919E865BA11391F1736AD81A /* App.swift */; };
+		73F861B2FC88B43076CEE327 /* INFO_PLIST_EXPLANATION.md in Resources */ = {isa = PBXBuildFile; fileRef = 3D0B3F8CC66295BAEEAE4DB1 /* INFO_PLIST_EXPLANATION.md */; };
 		75BB4C9CB7F221549C30CD38 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38FC9C621974BD22ECB3E30C /* ChatMessage.swift */; };
 		77EF0CE4FD311108E3379B9D /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C7C61B04ADFA92C3C27DA5 /* ShareSheet.swift */; };
+		7A594A57794A6F3CD618F53E /* WIDGET_ADD_TO_HOME_SCREEN.md in Resources */ = {isa = PBXBuildFile; fileRef = 0E5E00B5EBEA7AAC23ACBDE9 /* WIDGET_ADD_TO_HOME_SCREEN.md */; };
 		7B8C4F644351423A14A74554 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 31B6CABC570BB62BC4321C79 /* Assets.xcassets */; };
 		7CE27D0310E2E8C4F56CACCB /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E061996A232631E0D280E3E /* SubscriptionManager.swift */; };
 		7E3E396AF4C76F2BAB6E3B5E /* WIDGET_TROUBLESHOOTING.md in Resources */ = {isa = PBXBuildFile; fileRef = 4D806CC5ECD1583E3C49F441 /* WIDGET_TROUBLESHOOTING.md */; };
@@ -73,10 +76,12 @@
 		93741DFD3E1CF954D0FD90F9 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D693ECE8B7A5A10EB84E9E8 /* Config.swift */; };
 		99F511B71E6D52861B66D82B /* ShoppingListManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42607E7C104A55A968061A45 /* ShoppingListManager.swift */; };
 		9B7CBB45C82AABE831AC1838 /* RecipeCreatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE18E2F63067CE6BA3CB289 /* RecipeCreatorView.swift */; };
+		9D303DCA915858E820BD6176 /* WIDGET_FIX_APPS_INSTALLED.md in Resources */ = {isa = PBXBuildFile; fileRef = EF5629E46D0728B696DEE0D2 /* WIDGET_FIX_APPS_INSTALLED.md */; };
 		9D8A291F3DBC97C28CD95A08 /* RecipeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 655824500E76357F60D2FCEF /* RecipeManager.swift */; };
 		9DD95003F54A6FF116ACACA4 /* SupabaseAuthClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41612AD3F4BBB5C3EEDE0A28 /* SupabaseAuthClientTests.swift */; };
 		A15B61B1047C766026D8EE88 /* CulinaChefTimerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2BE8A30CED23C70AE85F45 /* CulinaChefTimerWidget.swift */; };
 		A5606507852FC4E19C2DAE5E /* String+Validation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F8960B0FF5281ECE12C22E /* String+Validation.swift */; };
+		A56CD3EF6D86A66E730C579C /* WIDGET_NOT_SHOWING_FIX.md in Resources */ = {isa = PBXBuildFile; fileRef = 1AF21E6AAADB6E30F988DEF5 /* WIDGET_NOT_SHOWING_FIX.md */; };
 		A87DEB86EF1AB56F87377362 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD97221B4FA2497E34222673 /* RecipeDetailView.swift */; };
 		A9D92401FFC32D9E4049A6D2 /* MenuManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B1DFC7CBBC6F57AD4C82BD7 /* MenuManager.swift */; };
 		ABF9438D01967639E9300DA0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EAE72EEFB2F938867B00A5D1 /* LaunchScreen.storyboard */; };
@@ -95,6 +100,7 @@
 		CD140CD448C33A2833376F0E /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C89A4E2F2243029CF62C806 /* RootView.swift */; };
 		D0035064EDF6474FEC4D79B4 /* SecureURLSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6374362E3A330D0BA9829E2 /* SecureURLSession.swift */; };
 		D3490E7919F9989F03AD8FDD /* FeatureAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F58D455277DDC344236C91 /* FeatureAccess.swift */; };
+		D9C86963E18782391C9217D0 /* WIDGET_EXTENSION_FIX.md in Resources */ = {isa = PBXBuildFile; fileRef = 67A927888441BECC00492F2E /* WIDGET_EXTENSION_FIX.md */; };
 		DCC426E9353E48E235BF0096 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFC116B45F42B7AC65DE574 /* AuthView.swift */; };
 		DCD5B046A968E2F75C0C4C81 /* ResetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A54E5C405A2E1BEFB6CF32 /* ResetPasswordView.swift */; };
 		DD49AB573EC1DDEA2EE7D149 /* Menu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C57269C0CC78F6FB79959D /* Menu.swift */; };
@@ -103,6 +109,7 @@
 		E9024322447EF2B8086445F5 /* ShoppingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE9CBB4591C8A19859D11DBE /* ShoppingListView.swift */; };
 		E9A27A948CF2AE019F73144D /* LocalizationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7675AB2EAF24B0AEC5A02AED /* LocalizationManagerTests.swift */; };
 		EC9915DFDE1D29CCAAD0B702 /* ringtone-031-437514.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0E40B94362D780F677CD5609 /* ringtone-031-437514.mp3 */; };
+		EE53AD89C4F0EAE2CFE63C09 /* HOW_TO_OPEN_TERMINAL.md in Resources */ = {isa = PBXBuildFile; fileRef = 25656B9A2B12475B61B2B0AD /* HOW_TO_OPEN_TERMINAL.md */; };
 		F02FDD1C624470B95790160F /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */; };
 		FC7CBA4D2C1EE31188F45E13 /* WIDGET_SETUP_COMPLETE.md in Resources */ = {isa = PBXBuildFile; fileRef = 7D15FB6C27C6F0AC9B1BC33D /* WIDGET_SETUP_COMPLETE.md */; };
 		FEC6CC21CDE44482D442F073 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BCF3CADE470585536DC39E5 /* PaywallView.swift */; };
@@ -135,6 +142,7 @@
 		05B20B80B2F15E59F18F6667 /* UserPreferencesClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesClientTests.swift; sourceTree = "<group>"; };
 		0D90D4F59064989AF68E0CCD /* RecipeResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeResultView.swift; sourceTree = "<group>"; };
 		0E40B94362D780F677CD5609 /* ringtone-031-437514.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "ringtone-031-437514.mp3"; sourceTree = "<group>"; };
+		0E5E00B5EBEA7AAC23ACBDE9 /* WIDGET_ADD_TO_HOME_SCREEN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = WIDGET_ADD_TO_HOME_SCREEN.md; sourceTree = "<group>"; };
 		0F3487977213951EF85063B8 /* RecipesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesView.swift; sourceTree = "<group>"; };
 		13C7C61B04ADFA92C3C27DA5 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		142B38667245A063BD76232A /* LocalizedAppleSignInButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizedAppleSignInButton.swift; sourceTree = "<group>"; };
@@ -143,9 +151,11 @@
 		174E397B5850F0459C63D384 /* KeychainManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManagerTests.swift; sourceTree = "<group>"; };
 		188555D9BE64E850BEE67F00 /* AnalyticsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManagerTests.swift; sourceTree = "<group>"; };
 		1AE18E2F63067CE6BA3CB289 /* RecipeCreatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeCreatorView.swift; sourceTree = "<group>"; };
+		1AF21E6AAADB6E30F988DEF5 /* WIDGET_NOT_SHOWING_FIX.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = WIDGET_NOT_SHOWING_FIX.md; sourceTree = "<group>"; };
 		21B76FF23B7C59DF68BE67EA /* CulinaChef.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CulinaChef.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		21C38F108F9C7302B0520E12 /* LikedRecipesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikedRecipesManager.swift; sourceTree = "<group>"; };
 		24E831A7B1026BCAE595DEB3 /* UIAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAppearance.swift; sourceTree = "<group>"; };
+		25656B9A2B12475B61B2B0AD /* HOW_TO_OPEN_TERMINAL.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = HOW_TO_OPEN_TERMINAL.md; sourceTree = "<group>"; };
 		26317223248F15F1944A9F46 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		2985EDED3592461554F441CD /* SubscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionTests.swift; sourceTree = "<group>"; };
 		2EF4F84771B3193FD68A9F08 /* StringValidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringValidationTests.swift; sourceTree = "<group>"; };
@@ -153,6 +163,7 @@
 		35087D174F4743853D95CE96 /* RatingsClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsClientTests.swift; sourceTree = "<group>"; };
 		38FC9C621974BD22ECB3E30C /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		3C5E4EE6A762DDA8E67A951C /* DietaryPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietaryPreferences.swift; sourceTree = "<group>"; };
+		3D0B3F8CC66295BAEEAE4DB1 /* INFO_PLIST_EXPLANATION.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = INFO_PLIST_EXPLANATION.md; sourceTree = "<group>"; };
 		3F0982C606E537CF58C2E853 /* CulinaChefTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CulinaChefTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F507943A1CBD339AE23C041 /* TimerCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCenter.swift; sourceTree = "<group>"; };
 		40267FFC7AC70239FE17E29F /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
@@ -177,6 +188,7 @@
 		61131757BC709F355AD8060B /* TermsContent_EN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsContent_EN.swift; sourceTree = "<group>"; };
 		62872E3DE7C99499138F6C85 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		655824500E76357F60D2FCEF /* RecipeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeManager.swift; sourceTree = "<group>"; };
+		67A927888441BECC00492F2E /* WIDGET_EXTENSION_FIX.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = WIDGET_EXTENSION_FIX.md; sourceTree = "<group>"; };
 		682480BA01AEC9380FF0F4A6 /* ImprintView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImprintView.swift; sourceTree = "<group>"; };
 		69F58D455277DDC344236C91 /* FeatureAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureAccess.swift; sourceTree = "<group>"; };
 		6B1DFC7CBBC6F57AD4C82BD7 /* MenuManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuManager.swift; sourceTree = "<group>"; };
@@ -215,8 +227,10 @@
 		AEFC116B45F42B7AC65DE574 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		B5AB35019F11A4B305D520B8 /* RatingsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsClient.swift; sourceTree = "<group>"; };
 		B90E6F0449C15CC5D631DE76 /* AppStoreReviewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReviewManager.swift; sourceTree = "<group>"; };
+		BA4A4100513020C2F6697151 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BE0F947BFCEA08029A50CFC7 /* FairUseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairUseView.swift; sourceTree = "<group>"; };
 		C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		C1ED4B7C4673F02716FA732C /* WIDGET_TESTFLIGHT.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = WIDGET_TESTFLIGHT.md; sourceTree = "<group>"; };
 		C6374362E3A330D0BA9829E2 /* SecureURLSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureURLSession.swift; sourceTree = "<group>"; };
 		D13A9434877FBA9E406C05F1 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		D4F8960B0FF5281ECE12C22E /* String+Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Validation.swift"; sourceTree = "<group>"; };
@@ -227,6 +241,7 @@
 		E4B5A2C547FEE0D43851EDBF /* ImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 		EA9B43DCE8036D599CB6941E /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
 		EAE72EEFB2F938867B00A5D1 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		EF5629E46D0728B696DEE0D2 /* WIDGET_FIX_APPS_INSTALLED.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = WIDGET_FIX_APPS_INSTALLED.md; sourceTree = "<group>"; };
 		F366107B89FBDAB81E0E6667 /* LikedRecipesManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikedRecipesManagerTests.swift; sourceTree = "<group>"; };
 		F5C4F2055099FDED27B71EBC /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		FB2BE8A30CED23C70AE85F45 /* CulinaChefTimerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CulinaChefTimerWidget.swift; sourceTree = "<group>"; };
@@ -302,10 +317,18 @@
 			children = (
 				FB2BE8A30CED23C70AE85F45 /* CulinaChefTimerWidget.swift */,
 				8F6DB3309F82637183AA90A4 /* CulinaChefTimerWidgetBundle.swift */,
+				25656B9A2B12475B61B2B0AD /* HOW_TO_OPEN_TERMINAL.md */,
+				3D0B3F8CC66295BAEEAE4DB1 /* INFO_PLIST_EXPLANATION.md */,
+				BA4A4100513020C2F6697151 /* Info.plist */,
 				17344F8965769952DF6497DF /* QUICK_FIX.md */,
 				D13A9434877FBA9E406C05F1 /* README.md */,
+				0E5E00B5EBEA7AAC23ACBDE9 /* WIDGET_ADD_TO_HOME_SCREEN.md */,
+				67A927888441BECC00492F2E /* WIDGET_EXTENSION_FIX.md */,
+				EF5629E46D0728B696DEE0D2 /* WIDGET_FIX_APPS_INSTALLED.md */,
+				1AF21E6AAADB6E30F988DEF5 /* WIDGET_NOT_SHOWING_FIX.md */,
 				7D15FB6C27C6F0AC9B1BC33D /* WIDGET_SETUP_COMPLETE.md */,
 				7A3C510E08A5C795CC908605 /* WIDGET_SIMULATOR_TESTING.md */,
+				C1ED4B7C4673F02716FA732C /* WIDGET_TESTFLIGHT.md */,
 				4D806CC5ECD1583E3C49F441 /* WIDGET_TROUBLESHOOTING.md */,
 			);
 			path = Widgets;
@@ -582,10 +605,17 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE53AD89C4F0EAE2CFE63C09 /* HOW_TO_OPEN_TERMINAL.md in Resources */,
+				73F861B2FC88B43076CEE327 /* INFO_PLIST_EXPLANATION.md in Resources */,
 				09F1056A0F3FFD22DACD8EC1 /* QUICK_FIX.md in Resources */,
 				4538B455AAD3A9EEF7BD06F8 /* README.md in Resources */,
+				7A594A57794A6F3CD618F53E /* WIDGET_ADD_TO_HOME_SCREEN.md in Resources */,
+				D9C86963E18782391C9217D0 /* WIDGET_EXTENSION_FIX.md in Resources */,
+				9D303DCA915858E820BD6176 /* WIDGET_FIX_APPS_INSTALLED.md in Resources */,
+				A56CD3EF6D86A66E730C579C /* WIDGET_NOT_SHOWING_FIX.md in Resources */,
 				FC7CBA4D2C1EE31188F45E13 /* WIDGET_SETUP_COMPLETE.md in Resources */,
 				3B27D136EC003ABC07287C9E /* WIDGET_SIMULATOR_TESTING.md in Resources */,
+				4BFAB3DCB735C57ECB765A2B /* WIDGET_TESTFLIGHT.md in Resources */,
 				7E3E396AF4C76F2BAB6E3B5E /* WIDGET_TROUBLESHOOTING.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -789,7 +819,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Configs/CulinaChefWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Koch-Timer";
 				INFOPLIST_KEY_CFBundlePackageType = "XPC!";
 				INFOPLIST_KEY_CFBundleShortVersionString = 1.0;
@@ -819,7 +849,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Configs/CulinaChefWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Koch-Timer";
 				INFOPLIST_KEY_CFBundlePackageType = "XPC!";
 				INFOPLIST_KEY_CFBundleShortVersionString = 1.0;

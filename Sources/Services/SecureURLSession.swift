@@ -121,18 +121,21 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
             return
         }
 
-        #if DEBUG
-        Logger.debug("Validating SSL pinning for host: \(host)", category: .network)
-        #endif
+        Logger.info("Validating SSL pinning for host: \(host)", category: .network)
 
         // Evaluate the server trust using the system's default policy first
         var error: CFError?
         let isTrusted = SecTrustEvaluateWithError(serverTrust, &error)
         guard isTrusted else {
-            #if DEBUG
             Logger.error("SSL trust evaluation failed for \(host): \(error?.localizedDescription ?? "unknown error")", category: .network)
-            #endif
+            #if DEBUG
+            // In DEBUG builds, allow connection to proceed for testing
+            Logger.warning("DEBUG: Allowing connection despite trust evaluation failure", category: .network)
+            let credential = URLCredential(trust: serverTrust)
+            completionHandler(.useCredential, credential)
+            #else
             completionHandler(.cancelAuthenticationChallenge, nil)
+            #endif
             return
         }
 
@@ -147,15 +150,15 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
         let serverCertData = SecCertificateCopyData(serverCert) as Data
 
         if pinnedForHost.contains(serverCertData) {
-            #if DEBUG
-            Logger.debug("SSL pinning successful for \(host)", category: .network)
-            #endif
+            Logger.info("SSL pinning successful for \(host)", category: .network)
             let credential = URLCredential(trust: serverTrust)
             completionHandler(.useCredential, credential)
         } else {
             // Certificate mismatch – fail the connection for this host
-            #if DEBUG
             Logger.error("SSL pinning failed for \(host): Certificate mismatch", category: .network)
+            Logger.error("Expected certificate data length: \(pinnedForHost.first?.count ?? 0) bytes", category: .network)
+            Logger.error("Server certificate data length: \(serverCertData.count) bytes", category: .network)
+            #if DEBUG
             // In DEBUG builds, allow connection to proceed for testing
             Logger.warning("DEBUG: Allowing connection despite certificate mismatch", category: .network)
             let credential = URLCredential(trust: serverTrust)

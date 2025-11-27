@@ -162,6 +162,8 @@ struct OnboardingView: View {
                         .shadow(color: index <= currentStep ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .clear, radius: 4)
                         .scaleEffect(index == currentStep && showSuccessAnimation ? 1.2 : 1.0)
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: currentStep)
+                        .scaleEffect(index == currentStep && showSuccessAnimation ? 1.2 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: currentStep)
                 }
             }
             .padding(.horizontal, 20)

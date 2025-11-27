@@ -570,8 +570,12 @@ private struct DietarySettingsSheet: View {
         }
         .onChange(of: app.dietary) { oldValue, newValue in
             // Only reload if dietary actually changed (not just a reference update)
+            // But skip reloading if we're currently saving (to prevent overwriting taste preferences)
             if oldValue != newValue {
-                loadFromApp()
+                // Small delay to ensure saveBack() has completed
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    loadFromApp()
+                }
             }
         }
     }
@@ -603,14 +607,8 @@ private struct DietarySettingsSheet: View {
     }
 
     private func saveBack() {
-        var d = app.dietary
-        d.diets = diets
-        d.allergies = allergiesText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-        d.dislikes = dislikesText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-        d.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines)
-        app.dietary = d
-        
-        // Save taste preferences to Keychain (secure storage)
+        // Save taste preferences to Keychain FIRST, before app.dietary changes
+        // This prevents loadFromApp() from overwriting them when onChange is triggered
         var prefs = TastePreferencesManager.TastePreferences()
         prefs.spicyLevel = spicyLevel
         prefs.sweet = tastePreferences["süß"] ?? false
@@ -623,6 +621,14 @@ private struct DietarySettingsSheet: View {
         } catch {
             Logger.error("Failed to save taste preferences to Keychain", error: error, category: .data)
         }
+        
+        // Now update app.dietary (this will trigger onChange, but TastePreferences are already saved)
+        var d = app.dietary
+        d.diets = diets
+        d.allergies = allergiesText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        d.dislikes = dislikesText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        d.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines)
+        app.dietary = d
         
         // Convert to dictionary for Supabase sync
         // Use English keys as expected by Supabase schema

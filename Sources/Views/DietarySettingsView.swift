@@ -43,8 +43,12 @@ struct DietarySettingsView: View {
         }
         .onChange(of: app.dietary) { oldValue, newValue in
             // Only reload if dietary actually changed (not just a reference update)
+            // But skip reloading if we're currently saving (to prevent overwriting taste preferences)
             if oldValue != newValue {
-                loadFromApp()
+                // Small delay to ensure saveBack() has completed
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    loadFromApp()
+                }
             }
         }
     }

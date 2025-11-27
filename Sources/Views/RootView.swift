@@ -309,7 +309,7 @@ struct MainTabView: View {
             }
             .id(localizationManager.currentLanguage)
             .padding(.horizontal)
-            .padding(.bottom, 2)
+            .padding(.bottom, 0)
         }
         .background(
             LinearGradient(
@@ -321,7 +321,7 @@ struct MainTabView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            .ignoresSafeArea(edges: [.top, .leading, .trailing])
+            .ignoresSafeArea()
         )
         .sheet(isPresented: $showNotifications) {
             NotificationsSettingsSheet()

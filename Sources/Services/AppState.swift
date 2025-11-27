@@ -9,7 +9,7 @@ import UIKit
 ///
 /// Dieses Modell ist bewusst schlank und wird sowohl für das In-Memory-State-Management
 /// als auch für die Persistenz in `UserDefaults` verwendet.
-struct DietaryPreferences: Codable {
+struct DietaryPreferences: Codable, Equatable {
     var diets: Set<String> = []
     var allergies: [String] = []
     var dislikes: [String] = []

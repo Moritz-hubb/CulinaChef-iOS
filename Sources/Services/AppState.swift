@@ -976,6 +976,8 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             Logger.debug("[AppState] No userId or accessToken - loading from UserDefaults", category: .data)
             await MainActor.run {
                 self.dietary = DietaryPreferences.load()
+                // Ensure taste preferences are loaded from Keychain
+                _ = TastePreferencesManager.load() // This will load or migrate from UserDefaults
             }
             return
         }

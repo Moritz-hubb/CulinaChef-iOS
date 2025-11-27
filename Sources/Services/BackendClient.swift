@@ -29,6 +29,7 @@ final class BackendClient {
         url.append(path: path)
         #if DEBUG
         Logger.debug("[BackendClient] Request: \(method) \(url.absoluteString)", category: .network)
+        print("🌐 [DEBUG] Backend Request: \(method) \(url.absoluteString)") // Direct print for visibility
         #endif
         var req = URLRequest(url: url)
         req.httpMethod = method
@@ -62,6 +63,7 @@ final class BackendClient {
         } catch {
             #if DEBUG
             Logger.error("[BackendClient] Request failed: \(method) \(url.absoluteString) - \(error.localizedDescription)", category: .network)
+            print("❌ [DEBUG] Backend Request FAILED: \(method) \(url.absoluteString) - \(error.localizedDescription)") // Direct print for visibility
             #endif
             throw error
         }

@@ -155,9 +155,9 @@ final class AppState: ObservableObject {
     /// - Prüft bestehende Sessions und lädt ggf. Nutzerpräferenzen aus Supabase.
     init() {
         let backendURL = Config.backendBaseURL
-        #if DEBUG
+        // Always log in DEBUG to ensure we see it
         Logger.info("[AppState] Initializing BackendClient with URL: \(backendURL.absoluteString)", category: .config)
-        #endif
+        print("🔍 [DEBUG] Backend URL: \(backendURL.absoluteString)") // Direct print for visibility
         backend = BackendClient(baseURL: backendURL)
         // OpenAI now proxied through backend for security
         openAI = BackendOpenAIClient(backend: backend, accessTokenProvider: { [weak self] in self?.accessToken })

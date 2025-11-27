@@ -380,6 +380,7 @@ private struct DietarySettingsSheet: View {
         "umami": false
     ]
     @State private var isAIDisclaimerExpanded = false
+    @State private var isSaving = false
 
     private var dietOptions: [String] {
         [
@@ -571,10 +572,12 @@ private struct DietarySettingsSheet: View {
         .onChange(of: app.dietary) { oldValue, newValue in
             // Only reload if dietary actually changed (not just a reference update)
             // But skip reloading if we're currently saving (to prevent overwriting taste preferences)
-            if oldValue != newValue {
+            if oldValue != newValue && !isSaving {
                 // Small delay to ensure saveBack() has completed
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    loadFromApp()
+                    if !isSaving {
+                        loadFromApp()
+                    }
                 }
             }
         }
@@ -607,6 +610,13 @@ private struct DietarySettingsSheet: View {
     }
 
     private func saveBack() {
+        isSaving = true
+        defer { 
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                isSaving = false
+            }
+        }
+        
         // Save taste preferences to Keychain FIRST, before app.dietary changes
         // This prevents loadFromApp() from overwriting them when onChange is triggered
         var prefs = TastePreferencesManager.TastePreferences()

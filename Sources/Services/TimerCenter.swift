@@ -98,11 +98,7 @@ final class RunningTimer: ObservableObject, Identifiable {
     let id: UUID
     let label: String
     
-    @Published var remaining: Int {
-        didSet {
-            updateFromRemaining()
-        }
-    }
+    @Published var remaining: Int
     @Published var running: Bool = true {
         didSet {
             if running {
@@ -169,16 +165,9 @@ final class RunningTimer: ObservableObject, Identifiable {
         running = true
         audioPlayer?.stop()
         cancelNotification()
+        endTime = Date().addingTimeInterval(TimeInterval(remaining))
         startTicking()
         scheduleNotification()
-        timerCenter?.saveTimers()
-    }
-    
-    private func updateFromRemaining() {
-        if running && remaining > 0 {
-            endTime = Date().addingTimeInterval(TimeInterval(remaining))
-            scheduleNotification()
-        }
         timerCenter?.saveTimers()
     }
     
@@ -188,18 +177,24 @@ final class RunningTimer: ObservableObject, Identifiable {
             while remaining > 0 {
                 try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
                 if running {
-                    // Recalculate from endTime for accuracy (handles background time)
+                    // Always use endTime calculation for accuracy (handles background time)
                     if let end = endTime {
                         let elapsed = max(0, Int(end.timeIntervalSinceNow))
                         remaining = max(0, elapsed)
                     } else {
+                        // Fallback: manual decrement (shouldn't happen, but safety)
                         remaining -= 1
+                        endTime = Date().addingTimeInterval(TimeInterval(remaining))
                     }
+                    
+                    // Save timer state periodically
+                    timerCenter?.saveTimers()
                     
                     if remaining == 0 {
                         playSound()
                         running = false
                         cancelNotification()
+                        timerCenter?.saveTimers()
                     }
                 }
             }

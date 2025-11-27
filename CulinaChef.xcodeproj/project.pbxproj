@@ -86,6 +86,7 @@
 		BF75955B2ED8B65700ED1785 /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BF7595542ED8B65700ED1785 /* de.json */; };
 		BF75955C2ED8B65700ED1785 /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BF7595562ED8B65700ED1785 /* es.json */; };
 		BF75955D2ED8B65700ED1785 /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BF7595572ED8B65700ED1785 /* fr.json */; };
+		BF75955F2ED8C5ED00ED1785 /* ringtone-031-437514.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = BF75955E2ED8C5ED00ED1785 /* ringtone-031-437514.mp3 */; };
 		C03A9DCD41BA6156094F3F11 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF6FA0F10E39BFDD46C6CF5 /* AnalyticsManager.swift */; };
 		C5DA197679F432B7B8AE0B08 /* OpenAIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E3211EFE8C499247FFEE1F8 /* OpenAIClientTests.swift */; };
 		C894F8BE2A01318D4694C497 /* RatingsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5AB35019F11A4B305D520B8 /* RatingsClient.swift */; };
@@ -208,6 +209,7 @@
 		BF7595562ED8B65700ED1785 /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
 		BF7595572ED8B65700ED1785 /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
 		BF7595582ED8B65700ED1785 /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
+		BF75955E2ED8C5ED00ED1785 /* ringtone-031-437514.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "ringtone-031-437514.mp3"; sourceTree = "<group>"; };
 		C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		C6374362E3A330D0BA9829E2 /* SecureURLSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureURLSession.swift; sourceTree = "<group>"; };
 		D4F8960B0FF5281ECE12C22E /* String+Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Validation.swift"; sourceTree = "<group>"; };
@@ -329,6 +331,7 @@
 		9A787DBC0B50C38AFCD7641B /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				BF75955E2ED8C5ED00ED1785 /* ringtone-031-437514.mp3 */,
 				919E865BA11391F1736AD81A /* App.swift */,
 				31B6CABC570BB62BC4321C79 /* Assets.xcassets */,
 				AD13634AB821020FF59626D0 /* Info.plist */,
@@ -546,6 +549,7 @@
 				BF6BE1B02ED0FC69006E383F /* StoreKit.storekit in Resources */,
 				BF7595522ED88CB100ED1785 /* backend.cer in Resources */,
 				BF7595532ED88CB100ED1785 /* supabase.cer in Resources */,
+				BF75955F2ED8C5ED00ED1785 /* ringtone-031-437514.mp3 in Resources */,
 				ABF9438D01967639E9300DA0 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

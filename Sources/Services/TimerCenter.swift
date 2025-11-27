@@ -238,22 +238,38 @@ final class RunningTimer: ObservableObject, Identifiable {
     }
     
     private func playSound() {
-        // Use a pleasant ringtone-like system sound
+        // Try to find custom ringtone file in bundle
+        // Supports multiple file names and formats
+        let possibleNames = ["timer_ringtone", "ringtone", "timer_complete", "timer_sound"]
+        let possibleExtensions = ["mp3", "wav", "m4a", "aiff", "caf", "aac"]
+        
+        var soundURL: URL?
+        for name in possibleNames {
+            for ext in possibleExtensions {
+                if let url = Bundle.main.url(forResource: name, withExtension: ext) {
+                    soundURL = url
+                    break
+                }
+            }
+            if soundURL != nil { break }
+        }
+        
+        // If custom sound found, use it (loops indefinitely)
+        if let url = soundURL {
+            do {
+                audioPlayer = try AVAudioPlayer(contentsOf: url)
+                audioPlayer?.numberOfLoops = -1 // Loop indefinitely until stopped
+                audioPlayer?.play()
+                return // Custom sound playing, don't play system sound
+            } catch {
+                // Custom sound failed, fall through to system sound
+            }
+        }
+        
+        // Fallback: Use pleasant ringtone-like system sound
         // System Sound IDs: 1013, 1014, 1016 are more pleasant than alarm sounds
         // 1016 is a nice ringtone-like sound
         AudioServicesPlaySystemSound(1016) // Pleasant ringtone sound
-        
-        // Also try to play custom sound if available, but loop it indefinitely
-        if let soundURL = Bundle.main.url(forResource: "timer_complete", withExtension: "mp3") ??
-                          Bundle.main.url(forResource: "timer_complete", withExtension: "wav") {
-            do {
-                audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
-                audioPlayer?.numberOfLoops = -1 // Loop indefinitely until stopped
-                audioPlayer?.play()
-            } catch {
-                // Custom sound failed, system sound already played
-            }
-        }
     }
     
     func stopSound() {

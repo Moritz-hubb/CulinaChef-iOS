@@ -34,7 +34,10 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
             config = URLSessionConfiguration.default
             config.timeoutIntervalForRequest = Config.apiTimeout
             config.timeoutIntervalForResource = Config.imageUploadTimeout
-            config.waitsForConnectivity = true
+            config.waitsForConnectivity = false // Don't wait - fail fast to see errors
+            config.allowsCellularAccess = true
+            config.allowsConstrainedNetworkAccess = true
+            config.allowsExpensiveNetworkAccess = true
             delegate = self
         }
         return URLSession(configuration: config, delegate: delegate, delegateQueue: nil)

@@ -1672,7 +1672,7 @@ private struct FloatingTimerView: View {
             Spacer()
             if timer.remaining == 0 {
                 Button(action: {
-                    timer.audioPlayer?.stop()
+                    timer.stopSound()
                     center.remove(timer: timer)
                 }) {
                     Image(systemName: "xmark")

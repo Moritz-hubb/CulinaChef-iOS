@@ -828,12 +828,44 @@ private struct RecipeSuggestionsView: View {
                 }
                 // parse new title line with optional course tag
                 var nameLine = trimmed.replacingOccurrences(of: "🍴", with: "").trimmingCharacters(in: .whitespaces)
-                nameLine = nameLine.replacingOccurrences(of: "**", with: "")
-                nameLine = nameLine.replacingOccurrences(of: "*", with: "")
-                let (clean, foundCourse) = stripCourseTags(nameLine)
-                currentName = clean.trimmingCharacters(in: .whitespaces)
-                currentDesc = ""
+                
+                // Extract course tag first (before processing name/description)
+                let (lineWithoutCourse, foundCourse) = stripCourseTags(nameLine)
                 currentCourse = foundCourse
+                
+                // Try to extract name from **bold** format
+                var extractedName: String? = nil
+                var remainingText: String? = nil
+                
+                // Pattern: **Name** description or **Name**⟦course:...⟧ description
+                let boldPattern = #"\*\*([^*]+)\*\*"#
+                if let boldRegex = try? NSRegularExpression(pattern: boldPattern, options: []),
+                   let match = boldRegex.firstMatch(in: lineWithoutCourse, options: [], range: NSRange(location: 0, length: lineWithoutCourse.utf16.count)),
+                   match.numberOfRanges >= 2,
+                   let nameRange = Range(match.range(at: 1), in: lineWithoutCourse) {
+                    extractedName = String(lineWithoutCourse[nameRange]).trimmingCharacters(in: .whitespaces)
+                    // Get text after the closing **
+                    let afterBoldRange = NSRange(location: match.range.upperBound, length: lineWithoutCourse.utf16.count - match.range.upperBound)
+                    if afterBoldRange.length > 0,
+                       let afterBold = Range(afterBoldRange, in: lineWithoutCourse) {
+                        let afterText = String(lineWithoutCourse[afterBold]).trimmingCharacters(in: .whitespaces)
+                        if !afterText.isEmpty {
+                            remainingText = afterText
+                        }
+                    }
+                }
+                
+                // Fallback: if no bold format, use entire line as name (strip course tag already done)
+                if extractedName == nil || extractedName!.isEmpty {
+                    // Remove any remaining markdown
+                    var clean = lineWithoutCourse.replacingOccurrences(of: "**", with: "")
+                    clean = clean.replacingOccurrences(of: "*", with: "")
+                    extractedName = clean.trimmingCharacters(in: .whitespaces)
+                }
+                
+                currentName = extractedName?.trimmingCharacters(in: .whitespaces) ?? ""
+                // If there's remaining text on the same line, use it as description start
+                currentDesc = remainingText?.trimmingCharacters(in: .whitespaces) ?? ""
             } else if currentName != nil {
                 // append description, strip any course tag if present here
                 let (clean, foundCourse) = stripCourseTags(trimmed)

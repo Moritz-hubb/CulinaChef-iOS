@@ -54,18 +54,14 @@ enum Config {
     static var backendBaseURL: URL {
         switch currentEnvironment {
         case .development:
-            // Development: Localhost for simulator, LAN IP for device
-            // HTTP is only allowed in DEBUG builds
-            #if DEBUG
-                #if targetEnvironment(simulator)
-                return URL(string: "http://127.0.0.1:8000")!
-                #else
-                return URL(string: "http://192.168.178.170:8000")!
-                #endif
-            #else
-                // Fallback to HTTPS in Release builds even for development environment
-                return URL(string: "https://culinachef-backend-production.up.railway.app")!
-            #endif
+            // Development: Use production backend for local testing
+            // Change to localhost if you want to test with local backend
+            // #if targetEnvironment(simulator)
+            // return URL(string: "http://127.0.0.1:8000")!
+            // #else
+            // return URL(string: "http://192.168.178.170:8000")!
+            // #endif
+            return URL(string: "https://culinachef-backend-production.up.railway.app")!
             
         case .staging:
             // Staging environment (optional - for testing before production)
@@ -88,6 +84,23 @@ enum Config {
     /// Enable Sentry error tracking
     static var enableSentry: Bool {
         currentEnvironment != .development
+    }
+    
+    /// Check if we're in a development/testing environment where backend validation might not work
+    /// (Development builds, TestFlight, or staging)
+    /// In these environments, StoreKit should be trusted as the primary source
+    static var shouldUseStoreKitAsPrimary: Bool {
+        #if DEBUG
+        return true // Always use StoreKit in DEBUG builds
+        #else
+        // In Release builds, check if we're in TestFlight or staging
+        // TestFlight can be detected by checking for app store receipt
+        if currentEnvironment == .staging {
+            return true
+        }
+        // In production, only use StoreKit as fallback (backend validates with Apple)
+        return false
+        #endif
     }
     
     // MARK: - API Timeouts

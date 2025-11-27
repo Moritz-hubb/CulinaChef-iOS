@@ -160,6 +160,8 @@ struct OnboardingView: View {
                               LinearGradient(colors: [Color.white.opacity(0.3)], startPoint: .leading, endPoint: .trailing))
                         .frame(height: 4)
                         .shadow(color: index <= currentStep ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .clear, radius: 4)
+                        .scaleEffect(index == currentStep && showSuccessAnimation ? 1.2 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: currentStep)
                 }
             }
             .padding(.horizontal, 20)
@@ -530,8 +532,27 @@ struct OnboardingView: View {
                         // Can't proceed without selecting a language
                         return
                     }
-                    withAnimation(.spring(response: 0.3)) {
-                        currentStep += 1
+                    
+                    // Haptic feedback
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
+                    
+                    // Button animation
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                        buttonScale = 0.95
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            buttonScale = 1.0
+                            currentStep += 1
+                            showSuccessAnimation = true
+                        }
+                        
+                        // Reset success animation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            showSuccessAnimation = false
+                        }
                     }
                 } label: {
                     Text(L.next.localized)
@@ -546,11 +567,27 @@ struct OnboardingView: View {
                         .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
                         .id(localizationManager.currentLanguage)
                 }
+                .scaleEffect(buttonScale)
                 .accessibilityLabel(L.next.localized)
                 .accessibilityHint("Geht zum nächsten Schritt")
                 .disabled(currentStep == 0 && selectedLanguage.isEmpty)
             } else {
                 Button {
+                    // Haptic feedback - success
+                    let notificationFeedback = UINotificationFeedbackGenerator()
+                    notificationFeedback.notificationOccurred(.success)
+                    
+                    // Button animation
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                        buttonScale = 0.95
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            buttonScale = 1.0
+                        }
+                    }
+                    
                     Task { await completeOnboarding() }
                 } label: {
                     HStack {
@@ -572,6 +609,7 @@ struct OnboardingView: View {
                     .cornerRadius(14)
                     .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
                 }
+                .scaleEffect(buttonScale)
                 .accessibilityLabel(isSaving ? L.loading.localized : L.done.localized)
                 .accessibilityHint("Schließt das Onboarding ab und speichert die Einstellungen")
                 .disabled(isSaving)

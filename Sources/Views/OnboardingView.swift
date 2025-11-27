@@ -7,6 +7,8 @@ struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentStep = 0
+    @State private var buttonScale: CGFloat = 1.0
+    @State private var showSuccessAnimation = false
     @State private var selectedLanguage: String = ""
     @State private var allergies: [String] = []
     @State private var newAllergyText = ""
@@ -297,7 +299,11 @@ struct OnboardingView: View {
                         Button {
                             let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !trimmed.isEmpty {
-                                withAnimation(.spring(response: 0.3)) {
+                                // Haptic feedback
+                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                impactFeedback.impactOccurred()
+                                
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                     allergies.append(trimmed)
                                     newAllergyText = ""
                                 }
@@ -476,7 +482,11 @@ struct OnboardingView: View {
                         Button {
                             let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !trimmed.isEmpty {
-                                withAnimation(.spring(response: 0.3)) {
+                                // Haptic feedback
+                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                impactFeedback.impactOccurred()
+                                
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                     dislikes.append(trimmed)
                                     newDislikeText = ""
                                 }
@@ -569,6 +579,10 @@ struct OnboardingView: View {
             
             if currentStep > 0 {
                 Button {
+                    // Light haptic feedback for back button
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                    
                     withAnimation(.spring(response: 0.3)) {
                         currentStep -= 1
                     }
@@ -635,7 +649,11 @@ struct OnboardingView: View {
     
     private func tastePreferenceToggle(key: String) -> some View {
         Button {
-            withAnimation(.spring(response: 0.3)) {
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+            
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 tastePreferences[key]?.toggle()
             }
         } label: {

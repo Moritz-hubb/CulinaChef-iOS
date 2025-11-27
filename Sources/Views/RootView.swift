@@ -139,7 +139,20 @@ struct RootView: View {
     private var contentView: some View {
         if app.isAuthenticated {
             if app.isInitialDataLoaded {
-                authenticatedContentView
+                // Check onboarding status before showing main view
+                if shouldShowOnboarding() {
+                    OnboardingView()
+                        .onAppear {
+                            // Set flag so we know onboarding is showing
+                            showOnboarding = true
+                        }
+                        .onDisappear {
+                            showOnboarding = false
+                            checkSubscriptionStatus()
+                        }
+                } else {
+                    authenticatedContentView
+                }
             } else {
                 LoadingView()
             }
@@ -160,7 +173,6 @@ struct RootView: View {
                     .interactiveDismissDisabled(true)
             }
             .onAppear {
-                checkOnboardingStatus()
                 checkSubscriptionStatus()
             }
             .onChange(of: showOnboarding) { _, nowShown in
@@ -168,6 +180,12 @@ struct RootView: View {
                     checkSubscriptionStatus()
                 }
             }
+    }
+    
+    private func shouldShowOnboarding() -> Bool {
+        guard let userId = KeychainManager.get(key: "user_id") else { return false }
+        let key = "onboarding_completed_\(userId)"
+        return !UserDefaults.standard.bool(forKey: key)
     }
     
     private func paywallDismissed() {

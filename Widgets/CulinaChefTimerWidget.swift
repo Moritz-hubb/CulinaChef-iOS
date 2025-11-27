@@ -134,7 +134,7 @@ struct TimerWidgetEntryView: View {
     private static let log = OSLog(subsystem: "com.moritzserrin.culinachef.widget", category: "TimerWidgetEntryView")
     
     var body: some View {
-        let _ = Self.logWidgetRender()
+        let _ = logWidgetRender()
         
         if entry.timers.isEmpty {
             emptyStateView
@@ -391,5 +391,6 @@ struct TimerWidgetEntryView: View {
         TimerInfo(label: "Brot aufbacken", remaining: 120, running: false)
     ])
 }
+
 
 

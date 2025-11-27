@@ -564,6 +564,7 @@ private struct DietarySettingsSheet: View {
         .onAppear {
             loadFromApp()
         }
+        .onChange(of: app.dietary) { _, _ in loadFromApp() }
     }
     
     private func localizedTasteName(_ key: String) -> String {

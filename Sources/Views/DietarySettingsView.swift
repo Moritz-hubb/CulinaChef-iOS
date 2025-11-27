@@ -215,6 +215,7 @@ struct DietarySettingsView: View {
             }
         }
         .onAppear { loadFromApp() }
+        .onChange(of: app.dietary) { _, _ in loadFromApp() }
     }
 
     private func loadFromApp() {

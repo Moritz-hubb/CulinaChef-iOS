@@ -90,8 +90,8 @@ final class AppState: ObservableObject {
     @Published var pendingSelectMenuId: String? = nil
 
     // User dietary preferences (persisted)
-    // Start with empty, will be loaded from Supabase (or UserDefaults as fallback)
-    @Published var dietary: DietaryPreferences = DietaryPreferences() {
+    // Start by loading from UserDefaults immediately, then sync from Supabase
+    @Published var dietary: DietaryPreferences = DietaryPreferences.load() {
         didSet { dietary.save() }
     }
     
@@ -265,17 +265,24 @@ final class AppState: ObservableObject {
         
         // Load preferences from Supabase on startup (takes priority over UserDefaults)
         // MUST run after checkSession() has set accessToken
+        // First load from UserDefaults immediately so views have data, then sync from Supabase
         Task { [weak self] in
             guard let self else { return }
             // Small delay to ensure checkSession() has completed
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 sec
+            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 sec to ensure session is ready
             do {
                 try await self.loadPreferencesFromSupabase()
+                Logger.info("[AppState] Successfully loaded preferences from Supabase on startup", category: .data)
             } catch {
                 // Fallback to UserDefaults if Supabase load fails (e.g., offline)
                 Logger.info("Failed to load preferences from Supabase, using local cache", category: .data)
                 await MainActor.run {
-                    self.dietary = DietaryPreferences.load()
+                    // Ensure we have the latest from UserDefaults
+                    let loaded = DietaryPreferences.load()
+                    if !loaded.diets.isEmpty || !loaded.allergies.isEmpty || !loaded.dislikes.isEmpty {
+                        self.dietary = loaded
+                        Logger.info("[AppState] Loaded preferences from UserDefaults - diets: \(loaded.diets), allergies: \(loaded.allergies.count)", category: .data)
+                    }
                 }
             }
         }
@@ -1001,11 +1008,15 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
             }
         } else {
             // No preferences in Supabase yet - try UserDefaults as fallback
-            Logger.sensitive("[AppState] No preferences in Supabase, loading from UserDefaults", category: .data)
+            Logger.info("[AppState] No preferences in Supabase, using UserDefaults", category: .data)
             await MainActor.run {
                 let loaded = DietaryPreferences.load()
-                Logger.sensitive("[AppState] Loaded from UserDefaults - diets: \(loaded.diets)", category: .data)
-                self.dietary = loaded
+                if !loaded.diets.isEmpty || !loaded.allergies.isEmpty || !loaded.dislikes.isEmpty {
+                    Logger.info("[AppState] Loaded preferences from UserDefaults - diets: \(loaded.diets), allergies: \(loaded.allergies.count), dislikes: \(loaded.dislikes.count)", category: .data)
+                    self.dietary = loaded
+                } else {
+                    Logger.info("[AppState] No preferences found in UserDefaults either - using defaults", category: .data)
+                }
             }
         }
     }

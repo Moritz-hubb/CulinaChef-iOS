@@ -387,19 +387,44 @@ enum KeychainManager {
     static func save(key: String, value: String) throws {
         let data = value.data(using: .utf8)!
         
-        let query: [String: Any] = [
+        let baseQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly  // ✅ Explizit: Nur wenn entsperrt, nur auf diesem Gerät
+            kSecAttrAccount as String: key
         ]
         
-        SecItemDelete(query as CFDictionary)
-        let status = SecItemAdd(query as CFDictionary, nil)
+        // First, try to update existing item
+        let updateQuery: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        ]
+        
+        var status = SecItemUpdate(baseQuery as CFDictionary, updateQuery as CFDictionary)
+        
+        // If update failed because item doesn't exist, add it
+        if status == errSecItemNotFound {
+            var addQuery = baseQuery
+            addQuery[kSecValueData as String] = data
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            status = SecItemAdd(addQuery as CFDictionary, nil)
+        }
+        
+        // If update failed for other reason, try delete and add
+        if status != errSecSuccess && status != errSecItemNotFound {
+            // Delete existing item (ignore errors)
+            SecItemDelete(baseQuery as CFDictionary)
+            // Try to add
+            var addQuery = baseQuery
+            addQuery[kSecValueData as String] = data
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            status = SecItemAdd(addQuery as CFDictionary, nil)
+        }
         
         guard status == errSecSuccess else {
-            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+            Logger.error("[KeychainManager] Failed to save key '\(key)': OSStatus \(status)", category: .data)
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status), userInfo: [
+                NSLocalizedDescriptionKey: "Keychain save failed with OSStatus \(status)"
+            ])
         }
     }
     

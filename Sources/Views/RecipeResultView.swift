@@ -46,6 +46,10 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 let base = plan.servings ?? 4
                 servings = max(1, base)
             }
+            .onDisappear {
+                // Stop all timers when recipe view is closed
+                timerCenter.stopAllTimers()
+            }
 .toolbar {
 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -839,7 +843,7 @@ private struct FloatingTimerView: View {
             Spacer()
             if timer.remaining == 0 {
                 Button(action: { 
-                    timer.audioPlayer?.stop()
+                    timer.stopSound()
                     center.remove(timer: timer)
                 }) {
                     Image(systemName: "xmark")

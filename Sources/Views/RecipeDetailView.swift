@@ -186,6 +186,10 @@ struct RecipeDetailView: View {
         .onAppear { 
             uploadedImageUrl = recipe.image_url
         }
+        .onDisappear {
+            // Stop all timers when recipe view is closed
+            timerCenter.stopAllTimers()
+        }
         .sheet(isPresented: $showServingSelector) {
             ServingSelectorSheet(
                 servings: $shoppingServings,

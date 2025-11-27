@@ -29,9 +29,18 @@ final class TimerCenter: ObservableObject {
     }
     
     func remove(timer: RunningTimer) {
-        timer.audioPlayer?.stop()
+        timer.stopSound()
         timer.cancelNotification()
         timers.removeAll { $0.id == timer.id }
+        saveTimers()
+    }
+    
+    func stopAllTimers() {
+        for timer in timers {
+            timer.stopSound()
+            timer.cancelNotification()
+        }
+        timers.removeAll()
         saveTimers()
     }
     
@@ -191,10 +200,14 @@ final class RunningTimer: ObservableObject, Identifiable {
                     timerCenter?.saveTimers()
                     
                     if remaining == 0 {
-                        playSound()
-                        running = false
-                        cancelNotification()
-                        timerCenter?.saveTimers()
+                        if !running {
+                            // Timer was paused, don't play sound
+                        } else {
+                            playSound()
+                            running = false
+                            cancelNotification()
+                            timerCenter?.saveTimers()
+                        }
                     }
                 }
             }
@@ -225,21 +238,26 @@ final class RunningTimer: ObservableObject, Identifiable {
     }
     
     private func playSound() {
-        // Try to play a system sound for timer completion
-        guard let soundURL = Bundle.main.url(forResource: "timer_complete", withExtension: "mp3") ??
-                             Bundle.main.url(forResource: "timer_complete", withExtension: "wav") else {
-            // Fallback to system sound if no custom sound available
-            AudioServicesPlaySystemSound(1005) // System beep
-            return
-        }
+        // Use a pleasant ringtone-like system sound
+        // System Sound IDs: 1013, 1014, 1016 are more pleasant than alarm sounds
+        // 1016 is a nice ringtone-like sound
+        AudioServicesPlaySystemSound(1016) // Pleasant ringtone sound
         
-        do {
-            audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
-            audioPlayer?.numberOfLoops = 3 // Repeat 3 times
-            audioPlayer?.play()
-        } catch {
-            // Fallback to system sound
-            AudioServicesPlaySystemSound(1005)
+        // Also try to play custom sound if available, but loop it indefinitely
+        if let soundURL = Bundle.main.url(forResource: "timer_complete", withExtension: "mp3") ??
+                          Bundle.main.url(forResource: "timer_complete", withExtension: "wav") {
+            do {
+                audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
+                audioPlayer?.numberOfLoops = -1 // Loop indefinitely until stopped
+                audioPlayer?.play()
+            } catch {
+                // Custom sound failed, system sound already played
+            }
         }
+    }
+    
+    func stopSound() {
+        audioPlayer?.stop()
+        audioPlayer = nil
     }
 }

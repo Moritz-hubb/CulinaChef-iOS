@@ -27,6 +27,9 @@ final class BackendClient {
     private func request(path: String, method: String = "GET", token: String?, jsonBody: Data? = nil) async throws -> (Data, HTTPURLResponse) {
         var url = baseURL
         url.append(path: path)
+        #if DEBUG
+        Logger.debug("[BackendClient] Request: \(method) \(url.absoluteString)", category: .network)
+        #endif
         var req = URLRequest(url: url)
         req.httpMethod = method
         if let token = token { req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
@@ -37,19 +40,31 @@ final class BackendClient {
         // Add Accept-Language header for backend language detection
         let preferredLanguages = Locale.preferredLanguages.prefix(3).joined(separator: ", ")
         req.addValue(preferredLanguages, forHTTPHeaderField: "Accept-Language")
-        let (data, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        if !(200...299).contains(http.statusCode) {
-            struct ServerError: Decodable { let detail: String? }
-            if let err = try? JSONDecoder().decode(ServerError.self, from: data), let msg = err.detail, !msg.isEmpty {
-                throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+        do {
+            let (data, resp) = try await SecureURLSession.shared.data(for: req)
+            #if DEBUG
+            if let http = resp as? HTTPURLResponse {
+                Logger.debug("[BackendClient] Response: \(http.statusCode) for \(url.absoluteString)", category: .network)
             }
-            if let msg = String(data: data, encoding: .utf8), !msg.isEmpty {
-                throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+            #endif
+            guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+            if !(200...299).contains(http.statusCode) {
+                struct ServerError: Decodable { let detail: String? }
+                if let err = try? JSONDecoder().decode(ServerError.self, from: data), let msg = err.detail, !msg.isEmpty {
+                    throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+                }
+                if let msg = String(data: data, encoding: .utf8), !msg.isEmpty {
+                    throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+                }
+                throw URLError(.badServerResponse)
             }
-            throw URLError(.badServerResponse)
+            return (data, http)
+        } catch {
+            #if DEBUG
+            Logger.error("[BackendClient] Request failed: \(method) \(url.absoluteString) - \(error.localizedDescription)", category: .network)
+            #endif
+            throw error
         }
-        return (data, http)
     }
 
     /// Health-Check-Endpunkt des Backends.

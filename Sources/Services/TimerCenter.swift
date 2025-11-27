@@ -46,7 +46,10 @@ final class TimerCenter: ObservableObject {
     
     func saveTimers() {
         // Save timer data to App Group for widget access
-        guard let defaults = appGroupDefaults else { return }
+        guard let defaults = appGroupDefaults else {
+            Logger.error("[TimerCenter] saveTimers() failed: Could not access App Group UserDefaults", category: .data)
+            return
+        }
         let timerData = timers.map { timer in
             [
                 "id": timer.id.uuidString,
@@ -57,8 +60,10 @@ final class TimerCenter: ObservableObject {
                 "endTime": timer.endTime?.timeIntervalSince1970 ?? 0
             ]
         }
+        Logger.debug("[TimerCenter] saveTimers() saving \(timerData.count) timers to App Group", category: .data)
         defaults.set(timerData, forKey: "active_timers")
-        defaults.synchronize()
+        let syncResult = defaults.synchronize()
+        Logger.debug("[TimerCenter] saveTimers() synchronize result: \(syncResult), timers: \(timers.map { "\($0.label): \($0.remaining)s (\($0.running ? "running" : "paused"))" }.joined(separator: ", "))", category: .data)
     }
     
     private func restoreTimers() {

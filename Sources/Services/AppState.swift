@@ -283,6 +283,8 @@ final class AppState: ObservableObject {
                         self.dietary = loaded
                         Logger.info("[AppState] Loaded preferences from UserDefaults - diets: \(loaded.diets), allergies: \(loaded.allergies.count)", category: .data)
                     }
+                    // Ensure taste preferences are loaded from Keychain
+                    _ = TastePreferencesManager.load()
                 }
             }
         }

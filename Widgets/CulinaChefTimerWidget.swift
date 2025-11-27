@@ -135,6 +135,7 @@ struct TimerWidgetEntryView: View {
     }
     
     // MARK: - Small Widget (1 Timer)
+    @ViewBuilder
     private var smallWidgetView: some View {
         if let firstTimer = entry.timers.first {
             VStack(alignment: .leading, spacing: 8) {

@@ -562,8 +562,14 @@ und schreibe sonst nichts weiter.
 WICHTIG: Wenn nach Rezepten oder Rezeptideen gefragt wird, gib NUR kurze Rezeptvorschläge (Name + 1-2 Sätze Beschreibung).
 Gib KEINE kompletten Rezepte mit Zutaten und Anleitungen.
 
+ANZAHL DER REZEPT-IDEEN:
+- STANDARD: Gib immer 5 Rezept-Ideen, wenn der User keine spezifische Anzahl angibt
+- MAXIMUM: Wenn der User explizit nach mehr fragt (z. B. "10 Rezepte", "mehr Ideen", "gib mir 8"), kannst du bis zu MAXIMAL 10 Rezept-Ideen geben
+- NIEMALS mehr als 10 Rezept-Ideen, auch wenn der User nach mehr fragt (z. B. "100 Rezept-Ideen" → MAXIMAL 10)
+- NIEMALS weniger als 5 Rezept-Ideen, es sei denn der User fragt explizit nach weniger
+
 KRITISCHE LIMITS (NIEMALS ÜBERSCHREITEN):
-- MAXIMAL 10 Rezept-Ideen pro Antwort, auch wenn der User nach mehr fragt (z. B. "100 Rezept-Ideen" → MAXIMAL 10)
+- MAXIMAL 10 Rezept-Ideen pro Antwort
 - MAXIMAL 12 Gänge für Menüs, auch wenn der User nach mehr fragt (z. B. "20-Gänge-Menü" → MAXIMAL 12 Gänge)
 - Diese Limits sind HART und dürfen NIEMALS überschritten werden, unabhängig von der User-Anfrage.
 

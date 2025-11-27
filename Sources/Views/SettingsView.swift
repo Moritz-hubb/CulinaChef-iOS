@@ -1820,6 +1820,85 @@ private struct WrapDietChipsInline: View {
     }
 }
 
+// MARK: - Allergy and Dislike Chip Views
+private struct AllergyChipView: View {
+    let item: String
+    @Binding var allergies: [String]
+    let onRemove: () -> Void
+    @State private var isHovered = false
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(item)
+                .font(.callout)
+                .foregroundStyle(.white)
+            if isHovered {
+                Button(action: { 
+                    allergies.removeAll { $0 == item }
+                    onRemove()
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(
+                            LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                }
+                .accessibilityLabel("\(item) entfernen")
+                .accessibilityHint("Entfernt diese Allergie aus der Liste")
+                .transition(.opacity.combined(with: .scale))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
+            }
+        }
+    }
+}
+
+private struct DislikeChipView: View {
+    let item: String
+    @Binding var dislikes: [String]
+    let onRemove: () -> Void
+    @State private var isHovered = false
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(item)
+                .font(.callout)
+                .foregroundStyle(.white)
+            if isHovered {
+                Button(action: { 
+                    dislikes.removeAll { $0 == item }
+                    onRemove()
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(
+                            LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                }
+                .accessibilityLabel("\(item) entfernen")
+                .accessibilityHint("Entfernt diese Abneigung aus der Liste")
+                .transition(.opacity.combined(with: .scale))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
+            }
+        }
+    }
+}
+
 // MARK: - FlowLayout for Allergies and Dislikes
 private struct FlowLayout<T: Hashable, V: View>: View {
     let items: [T]

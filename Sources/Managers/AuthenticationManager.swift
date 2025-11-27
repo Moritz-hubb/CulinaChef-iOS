@@ -321,7 +321,7 @@ final class AuthenticationManager {
     
     // MARK: - Onboarding Status
     
-    private func loadOnboardingStatusFromBackend(userId: String, accessToken: String) async {
+    internal func loadOnboardingStatusFromBackend(userId: String, accessToken: String) async {
         do {
             // Fetch user preferences from backend
             if let preferences = try await preferencesClient.fetchPreferences(userId: userId, accessToken: accessToken) {

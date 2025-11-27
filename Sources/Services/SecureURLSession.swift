@@ -73,11 +73,12 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
         if let backendCert = SecureURLSession.loadCertificate(named: "backend") {
             if let host = backendHost {
                 pins[host] = [backendCert]
+                Logger.info("SSL Pinning: Backend certificate loaded for host: \(host)", category: .config)
             }
         } else {
-            #if DEBUG
             Logger.error("Backend SSL certificate not found in bundle - SSL pinning disabled for backend", category: .config)
-            #else
+            Logger.error("Backend host: \(backendHost ?? "nil")", category: .config)
+            #if !DEBUG
             fatalError("SSL Pinning: Backend certificate (backend.cer) not found in bundle - required for production builds")
             #endif
         }
@@ -115,9 +116,7 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
 
         // If we have no pins for this host, let the system handle it
         guard let pinnedForHost = pinnedCertificates[host], !pinnedForHost.isEmpty else {
-            #if DEBUG
-            Logger.debug("No SSL pinning for host: \(host) - using system validation", category: .network)
-            #endif
+            Logger.info("No SSL pinning for host: \(host) - using system validation", category: .network)
             completionHandler(.performDefaultHandling, nil)
             return
         }

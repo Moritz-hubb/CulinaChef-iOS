@@ -551,7 +551,7 @@ final class AppState: ObservableObject {
     }
     
     func chatSystemContext() -> String {
-        // Build a compact dietary context (only essential info to stay under 2000 char limit)
+        // Build a compact dietary context (only essential info to stay under 2500 char limit)
         var essentialDietary: [String] = []
         if !dietary.allergies.isEmpty {
             essentialDietary.append("Allergien: " + dietary.allergies.joined(separator: ", "))
@@ -569,7 +569,7 @@ final class AppState: ObservableObject {
         
         let lang = languageSystemPrompt()
         
-        // Compact chat prompt (under 1500 chars to leave room for dietary context)
+        // Compact chat prompt (under 2000 chars to leave room for dietary context)
         let chatPrompt = """
 DOMAIN: Küche/Kochen. Behandle alle kochbezogenen Anfragen als relevant.
 
@@ -596,8 +596,8 @@ Klassifizierung: Am Ende "⟦kind: menu⟧" für Menüs, "⟦kind: ideas⟧" fü
         let full = parts.filter { !$0.isEmpty }.joined(separator: "\n\n")
         
         // Truncate if still too long (shouldn't happen, but safety check)
-        if full.count > 1900 {
-            return String(full.prefix(1900))
+        if full.count > 2400 {
+            return String(full.prefix(2400))
         }
         
         return full

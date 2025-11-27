@@ -37,7 +37,16 @@ struct DietarySettingsView: View {
             }
         }
         .onAppear { loadFromApp() }
-        .onChange(of: app.dietary) { _, _ in loadFromApp() }
+        .onDisappear { 
+            // Save taste preferences when view disappears to ensure they're persisted
+            saveBack() 
+        }
+        .onChange(of: app.dietary) { oldValue, newValue in
+            // Only reload if dietary actually changed (not just a reference update)
+            if oldValue != newValue {
+                loadFromApp()
+            }
+        }
     }
     
     private var backgroundGradient: some View {

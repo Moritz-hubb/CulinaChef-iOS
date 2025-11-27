@@ -675,11 +675,14 @@ struct OnboardingView: View {
         dietary.dislikes = dislikes
         app.dietary = dietary
         
-        // Prepare taste preferences dictionary
+        // Prepare taste preferences dictionary for Supabase sync
+        // Use English keys as expected by Supabase schema
         var tastePrefsDict: [String: Any] = ["spicy_level": spicyLevel]
-        for (key, value) in tastePreferences {
-            tastePrefsDict[key] = value
-        }
+        // Map localized keys to English keys for Supabase
+        tastePrefsDict["sweet"] = tastePreferences[L.taste_sweet.localized] ?? false
+        tastePrefsDict["sour"] = tastePreferences[L.taste_sour.localized] ?? false
+        tastePrefsDict["bitter"] = tastePreferences[L.taste_bitter.localized] ?? false
+        tastePrefsDict["umami"] = tastePreferences[L.taste_umami.localized] ?? false
         
         // Save to UserDefaults
         if let data = try? JSONSerialization.data(withJSONObject: tastePrefsDict) {

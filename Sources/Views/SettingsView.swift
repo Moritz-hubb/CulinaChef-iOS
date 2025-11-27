@@ -616,10 +616,12 @@ private struct DietarySettingsSheet: View {
         }
         
         // Convert to dictionary for Supabase sync
+        // Use English keys as expected by Supabase schema
         var tastePrefsDict: [String: Any] = ["spicy_level": spicyLevel]
-        for (key, value) in tastePreferences {
-            tastePrefsDict[key] = value
-        }
+        tastePrefsDict["sweet"] = tastePreferences["süß"] ?? false
+        tastePrefsDict["sour"] = tastePreferences["sauer"] ?? false
+        tastePrefsDict["bitter"] = tastePreferences["bitter"] ?? false
+        tastePrefsDict["umami"] = tastePreferences["umami"] ?? false
         
         // Sync to Supabase in background
         Task {

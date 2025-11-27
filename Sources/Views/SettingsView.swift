@@ -503,9 +503,16 @@ private struct DietarySettingsSheet: View {
                             Button {
                                 let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if !trimmed.isEmpty {
-                                    allergies.append(trimmed)
-                                    newAllergyText = ""
-                                    saveBack()
+                                    // Check if allergy already exists (case-insensitive)
+                                    let alreadyExists = allergies.contains { $0.lowercased() == trimmed.lowercased() }
+                                    if !alreadyExists {
+                                        allergies.append(trimmed)
+                                        newAllergyText = ""
+                                        saveBack()
+                                    } else {
+                                        // Clear the text field to indicate it's already added
+                                        newAllergyText = ""
+                                    }
                                 }
                             } label: {
                                 Image(systemName: "plus.circle.fill")
@@ -538,9 +545,16 @@ private struct DietarySettingsSheet: View {
                             Button {
                                 let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if !trimmed.isEmpty {
-                                    dislikes.append(trimmed)
-                                    newDislikeText = ""
-                                    saveBack()
+                                    // Check if dislike already exists (case-insensitive)
+                                    let alreadyExists = dislikes.contains { $0.lowercased() == trimmed.lowercased() }
+                                    if !alreadyExists {
+                                        dislikes.append(trimmed)
+                                        newDislikeText = ""
+                                        saveBack()
+                                    } else {
+                                        // Clear the text field to indicate it's already added
+                                        newDislikeText = ""
+                                    }
                                 }
                             } label: {
                                 Image(systemName: "plus.circle.fill")

@@ -341,6 +341,18 @@ struct OnboardingView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
+        .mask(
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black, location: 0.05),
+                    .init(color: .black, location: 0.95),
+                    .init(color: .clear, location: 1)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
     
     // MARK: - Step 2: Dietary Types
@@ -375,6 +387,18 @@ struct OnboardingView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
+        .mask(
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black, location: 0.05),
+                    .init(color: .black, location: 0.95),
+                    .init(color: .clear, location: 1)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
     
     // MARK: - Step 3: Taste Preferences
@@ -475,6 +499,18 @@ struct OnboardingView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
+        .mask(
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black, location: 0.05),
+                    .init(color: .black, location: 0.95),
+                    .init(color: .clear, location: 1)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
     
     // MARK: - Step 4: Dislikes
@@ -543,6 +579,18 @@ struct OnboardingView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
+        .mask(
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black, location: 0.05),
+                    .init(color: .black, location: 0.95),
+                    .init(color: .clear, location: 1)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
     
     // MARK: - Navigation Buttons

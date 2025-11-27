@@ -1028,7 +1028,8 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                     Logger.info("[AppState] No preferences found in UserDefaults either - using defaults", category: .data)
                 }
                 // Ensure taste preferences are loaded from Keychain (or migrated from UserDefaults)
-                _ = TastePreferencesManager.load()
+                let tastePrefs = TastePreferencesManager.load()
+                Logger.info("[AppState] Loaded taste preferences from Keychain - spicyLevel: \(tastePrefs.spicyLevel), sweet: \(tastePrefs.sweet), sour: \(tastePrefs.sour), bitter: \(tastePrefs.bitter), umami: \(tastePrefs.umami)", category: .data)
             }
         }
     }

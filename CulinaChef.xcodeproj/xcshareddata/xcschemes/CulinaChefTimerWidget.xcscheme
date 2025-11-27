@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "1430"
-   version = "1.3">
+   wasCreatedForAppExtension = "YES"
+   version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES">
+      buildImplicitDependencies = "YES"
+      runPostActionsOnFailure = "NO">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -14,9 +16,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "FFADC5FD5D5C094834C6F95E"
-               BuildableName = "CulinaChef.app"
-               BlueprintName = "CulinaChef"
+               BlueprintIdentifier = "CC1691148AD5DAFF0660DAA0"
+               BuildableName = "CulinaChefTimerWidget.appex"
+               BlueprintName = "CulinaChefTimerWidget"
                ReferencedContainer = "container:CulinaChef.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -27,50 +29,44 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      codeCoverageEnabled = "YES">
+      onlyGenerateCoverageForSpecifiedTargets = "NO">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "FFADC5FD5D5C094834C6F95E"
-            BuildableName = "CulinaChef.app"
-            BlueprintName = "CulinaChef"
+            BlueprintIdentifier = "CC1691148AD5DAFF0660DAA0"
+            BuildableName = "CulinaChefTimerWidget.appex"
+            BlueprintName = "CulinaChefTimerWidget"
             ReferencedContainer = "container:CulinaChef.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "04E5CB28410783D7A485F9BF"
-               BuildableName = ".xctest"
-               BlueprintName = "CulinaChefTests"
-               ReferencedContainer = "container:CulinaChef.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      selectedDebuggerIdentifier = ""
+      selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES">
+      allowLocationSimulation = "YES"
+      launchAutomaticallySubstyle = "2">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "FFADC5FD5D5C094834C6F95E"
-            BuildableName = "CulinaChef.app"
-            BlueprintName = "CulinaChef"
+            BlueprintIdentifier = "CC1691148AD5DAFF0660DAA0"
+            BuildableName = "CulinaChefTimerWidget.appex"
+            BlueprintName = "CulinaChefTimerWidget"
             ReferencedContainer = "container:CulinaChef.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -82,12 +78,14 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "FFADC5FD5D5C094834C6F95E"
-            BuildableName = "CulinaChef.app"
-            BlueprintName = "CulinaChef"
+            BlueprintIdentifier = "CC1691148AD5DAFF0660DAA0"
+            BuildableName = "CulinaChefTimerWidget.appex"
+            BlueprintName = "CulinaChefTimerWidget"
             ReferencedContainer = "container:CulinaChef.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

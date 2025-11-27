@@ -98,3 +98,24 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.moritzserrin.culinachef.tests
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
+
+  CulinaChefTimerWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Widgets
+    dependencies:
+      - target: CulinaChef
+    entitlements:
+      path: Configs/CulinaChefWidget.entitlements
+    settings:
+      base:
+        PRODUCT_NAME: CulinaChefTimerWidget
+        PRODUCT_BUNDLE_IDENTIFIER: com.moritzserrin.culinachef.widget
+        CODE_SIGN_STYLE: Automatic
+        INFOPLIST_KEY_CFBundleDisplayName: "Koch-Timer"
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    scheme:
+      testTargets: []

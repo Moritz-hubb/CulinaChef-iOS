@@ -125,7 +125,7 @@ struct OnboardingView: View {
                     step4Dislikes.tag(4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut, value: currentStep)
+                .animation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2), value: currentStep)
                 .id(localizationManager.currentLanguage) // Force re-render when language changes
                 
                 // Navigation buttons
@@ -160,10 +160,9 @@ struct OnboardingView: View {
                               LinearGradient(colors: [Color.white.opacity(0.3)], startPoint: .leading, endPoint: .trailing))
                         .frame(height: 4)
                         .shadow(color: index <= currentStep ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .clear, radius: 4)
-                        .scaleEffect(index == currentStep && showSuccessAnimation ? 1.2 : 1.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: currentStep)
-                        .scaleEffect(index == currentStep && showSuccessAnimation ? 1.2 : 1.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: currentStep)
+                        .scaleEffect(index == currentStep && showSuccessAnimation ? 1.15 : 1.0)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15), value: currentStep)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: showSuccessAnimation)
                 }
             }
             .padding(.horizontal, 20)
@@ -203,7 +202,7 @@ struct OnboardingView: View {
                             isSelected: selectedLanguage == langCode,
                             systemLanguage: systemLang
                         ) {
-                            withAnimation(.spring(response: 0.3)) {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                                 selectedLanguage = langCode
                                 // Set language immediately when selected
                                 localizationManager.setLanguage(langCode)
@@ -307,7 +306,7 @@ struct OnboardingView: View {
                                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                                 impactFeedback.impactOccurred()
                                 
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                                     allergies.append(trimmed)
                                     newAllergyText = ""
                                 }
@@ -490,7 +489,7 @@ struct OnboardingView: View {
                                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                                 impactFeedback.impactOccurred()
                                 
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                                     dislikes.append(trimmed)
                                     newDislikeText = ""
                                 }
@@ -545,15 +544,23 @@ struct OnboardingView: View {
                     }
                     
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2)) {
                             buttonScale = 1.0
                             currentStep += 1
-                            showSuccessAnimation = true
+                        }
+                        
+                        // Trigger success animation with slight delay for smoother transition
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                showSuccessAnimation = true
+                            }
                         }
                         
                         // Reset success animation
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            showSuccessAnimation = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                showSuccessAnimation = false
+                            }
                         }
                     }
                 } label: {
@@ -585,7 +592,7 @@ struct OnboardingView: View {
                     }
                     
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2)) {
                             buttonScale = 1.0
                         }
                     }
@@ -623,7 +630,7 @@ struct OnboardingView: View {
                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                     impactFeedback.impactOccurred()
                     
-                    withAnimation(.spring(response: 0.3)) {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2)) {
                         currentStep -= 1
                     }
                 } label: {
@@ -646,7 +653,7 @@ struct OnboardingView: View {
             Text(item)
                 .font(.system(size: 15, weight: .medium))
             Button {
-                withAnimation(.spring(response: 0.3)) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                     allergies.removeAll { $0 == item }
                 }
             } label: {
@@ -669,7 +676,7 @@ struct OnboardingView: View {
             Text(item)
                 .font(.system(size: 15, weight: .medium))
                     Button {
-                        withAnimation(.spring(response: 0.3)) {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             dislikes.removeAll { $0 == item }
                         }
                     } label: {
@@ -693,7 +700,7 @@ struct OnboardingView: View {
             let impactFeedback = UIImpactFeedbackGenerator(style: .light)
             impactFeedback.impactOccurred()
             
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                 tastePreferences[key]?.toggle()
             }
         } label: {
@@ -856,7 +863,7 @@ private struct WrapDietChips: View {
             .clipShape(Capsule())
             .shadow(color: isOn ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .black.opacity(0.08), radius: isOn ? 8 : 4, y: 2)
             .onTapGesture {
-                withAnimation(.spring(response: 0.3)) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                     if isOn { selection.remove(text) } else { selection.insert(text) }
                 }
             }

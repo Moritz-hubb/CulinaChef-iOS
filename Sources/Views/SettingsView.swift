@@ -519,24 +519,7 @@ private struct DietarySettingsSheet: View {
                         }
                         if !allergies.isEmpty {
                             FlowLayout(items: allergies) { item in
-                                HStack(spacing: 4) {
-                                    Text(item)
-                                        .font(.callout)
-                                        .foregroundStyle(.white)
-                                    Button(action: { 
-                                        allergies.removeAll { $0 == item }
-                                        saveBack()
-                                    }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.caption)
-                                    }
-                                    .accessibilityLabel("\(item) entfernen")
-                                    .accessibilityHint("Entfernt diese Allergie aus der Liste")
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.ultraThinMaterial, in: Capsule())
-                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                                AllergyChipView(item: item, allergies: $allergies, onRemove: { saveBack() })
                             }
                         }
 
@@ -571,24 +554,7 @@ private struct DietarySettingsSheet: View {
                         }
                         if !dislikes.isEmpty {
                             FlowLayout(items: dislikes) { item in
-                                HStack(spacing: 4) {
-                                    Text(item)
-                                        .font(.callout)
-                                        .foregroundStyle(.white)
-                                    Button(action: { 
-                                        dislikes.removeAll { $0 == item }
-                                        saveBack()
-                                    }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.caption)
-                                    }
-                                    .accessibilityLabel("\(item) entfernen")
-                                    .accessibilityHint("Entfernt diese Abneigung aus der Liste")
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.ultraThinMaterial, in: Capsule())
-                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                                DislikeChipView(item: item, dislikes: $dislikes, onRemove: { saveBack() })
                             }
                         }
 

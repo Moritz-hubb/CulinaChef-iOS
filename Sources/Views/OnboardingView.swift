@@ -396,9 +396,31 @@ struct OnboardingView: View {
                 
                 VStack(spacing: 20) {
                     // Current selection display
-                    VStack(spacing: 8) {
-                        Text(String(repeating: "🌶️", count: Int(spicyLevel) + 1))
-                            .font(.system(size: 28))
+                    VStack(spacing: 12) {
+                        HStack(spacing: 8) {
+                            ForEach(0..<4) { index in
+                                Image(systemName: index <= Int(spicyLevel) ? "flame.fill" : "flame")
+                                    .font(.system(size: 24, weight: .medium))
+                                    .foregroundStyle(
+                                        index <= Int(spicyLevel) ?
+                                        LinearGradient(
+                                            colors: [
+                                                Color(red: 0.95, green: 0.5, blue: 0.3),
+                                                Color(red: 0.85, green: 0.4, blue: 0.2)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ) :
+                                        LinearGradient(
+                                            colors: [Color.gray.opacity(0.3)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .scaleEffect(index <= Int(spicyLevel) ? 1.0 : 0.7)
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: spicyLevel)
+                            }
+                        }
                         Text(spicyLabels[Int(spicyLevel)])
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))

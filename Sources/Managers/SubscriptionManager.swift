@@ -114,9 +114,7 @@ final class SubscriptionManager {
         // - Development/TestFlight: StoreKit is primary (backend validation doesn't work in sandbox)
         // - Production: Backend is primary (validates with Apple Server-to-Server API)
         let useStoreKitAsPrimary = Config.shouldUseStoreKitAsPrimary
-        #if DEBUG
-        print("🔍 [DEBUG] useStoreKitAsPrimary: \(useStoreKitAsPrimary), currentEnvironment: \(Config.currentEnvironment)")
-        #endif
+        Logger.info("[SubscriptionManager] useStoreKitAsPrimary: \(useStoreKitAsPrimary), currentEnvironment: \(Config.currentEnvironment)", category: .data)
         
         if useStoreKitAsPrimary {
             // Development/TestFlight: Check StoreKit first
@@ -170,14 +168,10 @@ final class SubscriptionManager {
             // StoreKit is only used as fallback when backend is unreachable
             if let token = accessToken {
                 // Try backend first (validates with Apple)
-                #if DEBUG
-                print("🔄 [DEBUG] Attempting backend.subscriptionStatus() call...")
-                #endif
+                Logger.info("[SubscriptionManager] Attempting backend.subscriptionStatus() call...", category: .data)
                 do {
                     let dto = try await backend.subscriptionStatus(accessToken: token)
-                    #if DEBUG
-                    print("✅ [DEBUG] backend.subscriptionStatus() succeeded")
-                    #endif
+                    Logger.info("[SubscriptionManager] ✅ backend.subscriptionStatus() succeeded", category: .data)
                     let iso = ISO8601DateFormatter()
                     let lastPayment = dto.last_payment_at.flatMap { iso.date(from: $0) }
                     let periodEnd = dto.current_period_end.flatMap { iso.date(from: $0) }
@@ -206,12 +200,10 @@ final class SubscriptionManager {
                     
                     return SubscriptionStatus(isSubscribed: isActive, periodEnd: periodEnd ?? getSubscriptionPeriodEnd(), lastPayment: lastPayment, autoRenew: dto.auto_renew)
                 } catch {
-                    #if DEBUG
-                    print("❌ [DEBUG] backend.subscriptionStatus() failed: \(error.localizedDescription)")
+                    Logger.error("[SubscriptionManager] ❌ backend.subscriptionStatus() failed: \(error.localizedDescription)", category: .data)
                     if let urlError = error as? URLError {
-                        print("❌ [DEBUG] URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+                        Logger.error("[SubscriptionManager] URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)", category: .data)
                     }
-                    #endif
                 }
                 
                 // Backend call failed - try Supabase as fallback

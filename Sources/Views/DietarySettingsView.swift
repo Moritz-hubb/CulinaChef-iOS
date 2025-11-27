@@ -37,20 +37,37 @@ struct DietarySettingsView: View {
                 .padding(16)
             }
         }
-        .onAppear { loadFromApp() }
+        .onAppear { 
+            Logger.debug("[DietarySettingsView] onAppear called", category: .data)
+            loadFromApp() 
+        }
         .onDisappear { 
+            Logger.debug("[DietarySettingsView] onDisappear called", category: .data)
             // Save taste preferences when view disappears to ensure they're persisted
             saveBack() 
         }
         .onChange(of: app.dietary) { oldValue, newValue in
+            Logger.debug("[DietarySettingsView] onChange(of: app.dietary) triggered - oldValue: \(oldValue), newValue: \(newValue), isSaving: \(isSaving), valuesEqual: \(oldValue == newValue)", category: .data)
             // Only reload if dietary actually changed (not just a reference update)
             // But skip reloading if we're currently saving (to prevent overwriting taste preferences)
             if oldValue != newValue && !isSaving {
+                Logger.debug("[DietarySettingsView] onChange: dietary changed and not saving, scheduling loadFromApp()", category: .data)
                 // Small delay to ensure saveBack() has completed
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    Logger.debug("[DietarySettingsView] onChange: delayed loadFromApp() check - isSaving: \(isSaving)", category: .data)
                     if !isSaving {
+                        Logger.debug("[DietarySettingsView] onChange: calling loadFromApp()", category: .data)
                         loadFromApp()
+                    } else {
+                        Logger.debug("[DietarySettingsView] onChange: skipping loadFromApp() because isSaving is true", category: .data)
                     }
+                }
+            } else {
+                if oldValue == newValue {
+                    Logger.debug("[DietarySettingsView] onChange: skipping because oldValue == newValue", category: .data)
+                }
+                if isSaving {
+                    Logger.debug("[DietarySettingsView] onChange: skipping because isSaving is true", category: .data)
                 }
             }
         }
@@ -280,6 +297,7 @@ struct DietarySettingsView: View {
     }
 
     private func loadFromApp() {
+        Logger.debug("[DietarySettingsView] loadFromApp() called, isSaving: \(isSaving)", category: .data)
         let d = app.dietary
         diets = d.diets
         allergies = d.allergies
@@ -288,18 +306,36 @@ struct DietarySettingsView: View {
         
         // Load taste preferences from Keychain (secure storage)
         let prefs = TastePreferencesManager.load()
+        Logger.debug("[DietarySettingsView] Loaded taste preferences from Keychain - spicyLevel: \(prefs.spicyLevel), sweet: \(prefs.sweet), sour: \(prefs.sour), bitter: \(prefs.bitter), umami: \(prefs.umami)", category: .data)
+        
+        let oldSpicyLevel = spicyLevel
+        let oldSweet = tastePreferences["süß"] ?? false
+        let oldSour = tastePreferences["sauer"] ?? false
+        let oldBitter = tastePreferences["bitter"] ?? false
+        let oldUmami = tastePreferences["umami"] ?? false
+        
         spicyLevel = prefs.spicyLevel
         tastePreferences["süß"] = prefs.sweet
         tastePreferences["sauer"] = prefs.sour
         tastePreferences["bitter"] = prefs.bitter
         tastePreferences["umami"] = prefs.umami
+        
+        if oldSpicyLevel != spicyLevel || oldSweet != prefs.sweet || oldSour != prefs.sour || oldBitter != prefs.bitter || oldUmami != prefs.umami {
+            Logger.debug("[DietarySettingsView] Taste preferences CHANGED - old: spicyLevel=\(oldSpicyLevel), sweet=\(oldSweet), sour=\(oldSour), bitter=\(oldBitter), umami=\(oldUmami) -> new: spicyLevel=\(spicyLevel), sweet=\(prefs.sweet), sour=\(prefs.sour), bitter=\(prefs.bitter), umami=\(prefs.umami)", category: .data)
+        } else {
+            Logger.debug("[DietarySettingsView] Taste preferences unchanged", category: .data)
+        }
     }
 
     private func saveBack() {
+        Logger.debug("[DietarySettingsView] saveBack() called - spicyLevel: \(spicyLevel), sweet: \(tastePreferences["süß"] ?? false), sour: \(tastePreferences["sauer"] ?? false), bitter: \(tastePreferences["bitter"] ?? false), umami: \(tastePreferences["umami"] ?? false)", category: .data)
+        
         isSaving = true
+        Logger.debug("[DietarySettingsView] isSaving set to true", category: .data)
         defer { 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 isSaving = false
+                Logger.debug("[DietarySettingsView] isSaving set to false (after delay)", category: .data)
             }
         }
         
@@ -312,19 +348,26 @@ struct DietarySettingsView: View {
         prefs.bitter = tastePreferences["bitter"] ?? false
         prefs.umami = tastePreferences["umami"] ?? false
         
+        Logger.debug("[DietarySettingsView] Saving taste preferences to Keychain - spicyLevel: \(prefs.spicyLevel), sweet: \(prefs.sweet), sour: \(prefs.sour), bitter: \(prefs.bitter), umami: \(prefs.umami)", category: .data)
+        
         do {
             try TastePreferencesManager.save(prefs)
+            Logger.debug("[DietarySettingsView] Successfully saved taste preferences to Keychain", category: .data)
         } catch {
             Logger.error("Failed to save taste preferences to Keychain", error: error, category: .data)
         }
         
         // Now update app.dietary (this will trigger onChange, but TastePreferences are already saved)
         var d = app.dietary
+        let oldDietary = d
         d.diets = diets
         d.allergies = allergies
         d.dislikes = dislikes
         d.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        Logger.debug("[DietarySettingsView] Updating app.dietary - old: \(oldDietary), new: \(d)", category: .data)
         app.dietary = d
+        Logger.debug("[DietarySettingsView] app.dietary updated, onChange should trigger", category: .data)
         
         // Convert to dictionary for Supabase sync
         // Use English keys as expected by Supabase schema

@@ -244,6 +244,8 @@ final class RunningTimer: ObservableObject, Identifiable {
         let possibleExtensions = ["mp3", "wav", "m4a", "aiff", "caf", "aac"]
         
         var soundURL: URL?
+        
+        // First, try exact name matches
         for name in possibleNames {
             for ext in possibleExtensions {
                 if let url = Bundle.main.url(forResource: name, withExtension: ext) {
@@ -252,6 +254,26 @@ final class RunningTimer: ObservableObject, Identifiable {
                 }
             }
             if soundURL != nil { break }
+        }
+        
+        // If not found, search for any file containing "ringtone" or "timer" in the name
+        if soundURL == nil {
+            if let resourcePath = Bundle.main.resourcePath {
+                let fileManager = FileManager.default
+                if let files = try? fileManager.contentsOfDirectory(atPath: resourcePath) {
+                    for file in files {
+                        let lowercased = file.lowercased()
+                        if (lowercased.contains("ringtone") || lowercased.contains("timer")) &&
+                           (lowercased.hasSuffix(".mp3") || lowercased.hasSuffix(".wav") ||
+                            lowercased.hasSuffix(".m4a") || lowercased.hasSuffix(".aiff") ||
+                            lowercased.hasSuffix(".caf") || lowercased.hasSuffix(".aac")) {
+                            let fullPath = (resourcePath as NSString).appendingPathComponent(file)
+                            soundURL = URL(fileURLWithPath: fullPath)
+                            break
+                        }
+                    }
+                }
+            }
         }
         
         // If custom sound found, use it (loops indefinitely)

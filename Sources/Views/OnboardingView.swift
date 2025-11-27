@@ -628,7 +628,7 @@ struct OnboardingView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2)) {
                             buttonScale = 1.0
-                            currentStep += 1
+                        currentStep += 1
                         }
                         
                         // Trigger success animation with slight delay for smoother transition

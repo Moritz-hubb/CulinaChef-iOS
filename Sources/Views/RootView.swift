@@ -151,7 +151,7 @@ struct RootView: View {
                             checkSubscriptionStatus()
                         }
                 } else {
-                    authenticatedContentView
+                authenticatedContentView
                 }
             } else {
                 LoadingView()
@@ -330,7 +330,7 @@ struct MainTabView: View {
             .padding(.bottom, -8)
         }
         .background(
-            LinearGradient(
+LinearGradient(
                 colors: [
                     Color(red: 0.96, green: 0.78, blue: 0.68),
                     Color(red: 0.95, green: 0.74, blue: 0.64),

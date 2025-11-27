@@ -118,5 +118,12 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: "Koch-Timer"
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        INFOPLIST_KEY_CFBundlePackageType: XPC!
+        INFOPLIST_KEY_CFBundleVersion: 1
+        INFOPLIST_KEY_CFBundleShortVersionString: 1.0
+        SKIP_INSTALL: NO
     scheme:
       testTargets: []
+      runAction:
+        executable: ""
+        askForAppToLaunch: false

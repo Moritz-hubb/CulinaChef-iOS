@@ -493,13 +493,13 @@ private struct DietarySettingsSheet: View {
                             .foregroundStyle(.white)
                         HStack(spacing: 8) {
                             TextField(L.placeholder_newAllergy.localized, text: $newAllergyText)
-                                .textFieldStyle(.plain)
-                                .foregroundStyle(.white)
-                                .tint(.white)
+                            .textFieldStyle(.plain)
+                            .foregroundStyle(.white)
+                            .tint(.white)
                                 .accessibilityLabel("Allergie eingeben")
                                 .accessibilityHint(L.placeholder_newAllergy.localized)
-                                .padding(10)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(10)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             Button {
                                 let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if !trimmed.isEmpty {
@@ -535,13 +535,13 @@ private struct DietarySettingsSheet: View {
                             .foregroundStyle(.white)
                         HStack(spacing: 8) {
                             TextField(L.placeholder_newDislike.localized, text: $newDislikeText)
-                                .textFieldStyle(.plain)
-                                .foregroundStyle(.white)
-                                .tint(.white)
+                            .textFieldStyle(.plain)
+                            .foregroundStyle(.white)
+                            .tint(.white)
                                 .accessibilityLabel("Abneigung eingeben")
                                 .accessibilityHint(L.placeholder_newDislike.localized)
-                                .padding(10)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(10)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             Button {
                                 let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if !trimmed.isEmpty {

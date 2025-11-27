@@ -1034,7 +1034,7 @@ Klassifizierung: Am Ende "⟦kind: menu⟧" für Menüs, "⟦kind: ideas⟧" fü
                 let loaded = DietaryPreferences.load()
                 if !loaded.diets.isEmpty || !loaded.allergies.isEmpty || !loaded.dislikes.isEmpty {
                     Logger.info("[AppState] Loaded preferences from UserDefaults - diets: \(loaded.diets), allergies: \(loaded.allergies.count), dislikes: \(loaded.dislikes.count)", category: .data)
-                    self.dietary = loaded
+                self.dietary = loaded
                 } else {
                     Logger.info("[AppState] No preferences found in UserDefaults either - using defaults", category: .data)
                 }

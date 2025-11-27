@@ -87,7 +87,7 @@ final class TimerCenter: ObservableObject {
     private func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
             if granted {
-                print("Notification permission granted")
+                // Notification permission granted
             }
         }
     }
@@ -220,7 +220,7 @@ final class RunningTimer: ObservableObject, Identifiable {
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Failed to schedule notification: \(error)")
+                // Failed to schedule notification: \(error)
             }
         }
     }

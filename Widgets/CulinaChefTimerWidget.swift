@@ -34,7 +34,11 @@ struct TimerProvider: TimelineProvider {
         let timers = loadTimers()
         
         // Update every minute
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 1, to: currentDate)!
+        guard let nextUpdate = Calendar.current.date(byAdding: .minute, value: 1, to: currentDate) else {
+            let timeline = Timeline(entries: [entry], policy: .never)
+            completion(timeline)
+            return
+        }
         let entry = TimerEntry(date: currentDate, timers: timers)
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         
@@ -121,9 +125,9 @@ struct TimerWidgetEntryView: View {
     }
     
     private func formatTime(_ seconds: Int) -> String {
-        let m = seconds / 60
-        let s = seconds % 60
-        return String(format: "%02d:%02d", m, s)
+        let minutes = seconds / 60
+        let secs = seconds % 60
+        return String(format: "%02d:%02d", minutes, secs)
     }
 }
 

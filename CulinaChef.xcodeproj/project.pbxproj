@@ -77,15 +77,15 @@
 		B74612E22263F9B53F9A7E78 /* SupabaseAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9C8E97CEA997977B04DFDC /* SupabaseAuthClient.swift */; };
 		B7F7142CE863BED29C2914A7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C4F8F3DE07184AAFB7382E /* AppState.swift */; };
 		BCCE65B26AF0840BE3CACBEE /* StringValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EF4F84771B3193FD68A9F08 /* StringValidationTests.swift */; };
-		BF6BE1AA2ED0FC5B006E383F /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE1A82ED0FC5B006E383F /* fr.json */; };
-		BF6BE1AB2ED0FC5B006E383F /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE1A62ED0FC5B006E383F /* en.json */; };
-		BF6BE1AC2ED0FC5B006E383F /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE1A92ED0FC5B006E383F /* it.json */; };
-		BF6BE1AD2ED0FC5B006E383F /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE1A72ED0FC5B006E383F /* es.json */; };
-		BF6BE1AE2ED0FC5B006E383F /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE1A52ED0FC5B006E383F /* de.json */; };
 		BF6BE1B02ED0FC69006E383F /* StoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = BF6BE1AF2ED0FC69006E383F /* StoreKit.storekit */; };
 		BF6BE1B62ED361B0006E383F /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6BE1B52ED361B0006E383F /* LoadingView.swift */; };
 		BF7595522ED88CB100ED1785 /* backend.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF7595502ED88CB100ED1785 /* backend.cer */; };
 		BF7595532ED88CB100ED1785 /* supabase.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF7595512ED88CB100ED1785 /* supabase.cer */; };
+		BF7595592ED8B65700ED1785 /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BF7595552ED8B65700ED1785 /* en.json */; };
+		BF75955A2ED8B65700ED1785 /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BF7595582ED8B65700ED1785 /* it.json */; };
+		BF75955B2ED8B65700ED1785 /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BF7595542ED8B65700ED1785 /* de.json */; };
+		BF75955C2ED8B65700ED1785 /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BF7595562ED8B65700ED1785 /* es.json */; };
+		BF75955D2ED8B65700ED1785 /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BF7595572ED8B65700ED1785 /* fr.json */; };
 		C03A9DCD41BA6156094F3F11 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF6FA0F10E39BFDD46C6CF5 /* AnalyticsManager.swift */; };
 		C5DA197679F432B7B8AE0B08 /* OpenAIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E3211EFE8C499247FFEE1F8 /* OpenAIClientTests.swift */; };
 		C894F8BE2A01318D4694C497 /* RatingsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5AB35019F11A4B305D520B8 /* RatingsClient.swift */; };
@@ -199,15 +199,15 @@
 		B5AB35019F11A4B305D520B8 /* RatingsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingsClient.swift; sourceTree = "<group>"; };
 		B90E6F0449C15CC5D631DE76 /* AppStoreReviewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReviewManager.swift; sourceTree = "<group>"; };
 		BE0F947BFCEA08029A50CFC7 /* FairUseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairUseView.swift; sourceTree = "<group>"; };
-		BF6BE1A52ED0FC5B006E383F /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
-		BF6BE1A62ED0FC5B006E383F /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
-		BF6BE1A72ED0FC5B006E383F /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
-		BF6BE1A82ED0FC5B006E383F /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
-		BF6BE1A92ED0FC5B006E383F /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
 		BF6BE1AF2ED0FC69006E383F /* StoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = StoreKit.storekit; sourceTree = "<group>"; };
 		BF6BE1B52ED361B0006E383F /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		BF7595502ED88CB100ED1785 /* backend.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = backend.cer; sourceTree = "<group>"; };
 		BF7595512ED88CB100ED1785 /* supabase.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = supabase.cer; sourceTree = "<group>"; };
+		BF7595542ED8B65700ED1785 /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
+		BF7595552ED8B65700ED1785 /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
+		BF7595562ED8B65700ED1785 /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
+		BF7595572ED8B65700ED1785 /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
+		BF7595582ED8B65700ED1785 /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
 		C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		C6374362E3A330D0BA9829E2 /* SecureURLSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureURLSession.swift; sourceTree = "<group>"; };
 		D4F8960B0FF5281ECE12C22E /* String+Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Validation.swift"; sourceTree = "<group>"; };
@@ -279,13 +279,13 @@
 		40728F1A522F5676DA8C2A7A = {
 			isa = PBXGroup;
 			children = (
+				BF7595542ED8B65700ED1785 /* de.json */,
+				BF7595552ED8B65700ED1785 /* en.json */,
+				BF7595562ED8B65700ED1785 /* es.json */,
+				BF7595572ED8B65700ED1785 /* fr.json */,
+				BF7595582ED8B65700ED1785 /* it.json */,
 				BF7595502ED88CB100ED1785 /* backend.cer */,
 				BF7595512ED88CB100ED1785 /* supabase.cer */,
-				BF6BE1A52ED0FC5B006E383F /* de.json */,
-				BF6BE1A62ED0FC5B006E383F /* en.json */,
-				BF6BE1A72ED0FC5B006E383F /* es.json */,
-				BF6BE1A82ED0FC5B006E383F /* fr.json */,
-				BF6BE1A92ED0FC5B006E383F /* it.json */,
 				ED62F7E2D93415139BD2695B /* Configs */,
 				9A787DBC0B50C38AFCD7641B /* Sources */,
 				0B4517B2259DC6F3B5AA8263 /* Tests */,
@@ -537,13 +537,13 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BF7595592ED8B65700ED1785 /* en.json in Resources */,
+				BF75955A2ED8B65700ED1785 /* it.json in Resources */,
+				BF75955B2ED8B65700ED1785 /* de.json in Resources */,
+				BF75955C2ED8B65700ED1785 /* es.json in Resources */,
+				BF75955D2ED8B65700ED1785 /* fr.json in Resources */,
 				7B8C4F644351423A14A74554 /* Assets.xcassets in Resources */,
 				BF6BE1B02ED0FC69006E383F /* StoreKit.storekit in Resources */,
-				BF6BE1AA2ED0FC5B006E383F /* fr.json in Resources */,
-				BF6BE1AB2ED0FC5B006E383F /* en.json in Resources */,
-				BF6BE1AC2ED0FC5B006E383F /* it.json in Resources */,
-				BF6BE1AD2ED0FC5B006E383F /* es.json in Resources */,
-				BF6BE1AE2ED0FC5B006E383F /* de.json in Resources */,
 				BF7595522ED88CB100ED1785 /* backend.cer in Resources */,
 				BF7595532ED88CB100ED1785 /* supabase.cer in Resources */,
 				ABF9438D01967639E9300DA0 /* LaunchScreen.storyboard in Resources */,

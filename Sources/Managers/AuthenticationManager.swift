@@ -66,8 +66,8 @@ final class AuthenticationManager {
             try await upsertProfile(userId: response.user.id, username: uname, accessToken: response.access_token)
         } catch {
             #if DEBUG
-            Logger.debug("[AuthenticationManager] Warning: Profile could not be saved during signup: \(error.localizedDescription)", category: .auth)
-            Logger.debug("[AuthenticationManager] User account was created successfully. Profile can be created/updated later.", category: .auth)
+            print("[AuthenticationManager] Warning: Profile could not be saved during signup: \(error.localizedDescription)")
+            print("[AuthenticationManager] User account was created successfully. Profile can be created/updated later.")
             #endif
             // Don't throw - account is created, profile can be fixed later
             // The user can still use the app, and profile will be created on next login or profile update
@@ -125,8 +125,8 @@ final class AuthenticationManager {
                 try await upsertProfile(userId: response.user.id, username: username, accessToken: response.access_token, fullName: fullName, email: response.user.email)
             } catch {
                 #if DEBUG
-                Logger.debug("[AuthenticationManager] Warning: Profile could not be created during Apple Sign In: \(error.localizedDescription)", category: .auth)
-                Logger.debug("[AuthenticationManager] User account was created successfully. Profile can be created/updated later.", category: .auth)
+                print("[AuthenticationManager] Warning: Profile could not be created during Apple Sign In: \(error.localizedDescription)")
+                print("[AuthenticationManager] User account was created successfully. Profile can be created/updated later.")
                 #endif
                 // Don't throw - account is created, profile can be fixed later
             }
@@ -137,7 +137,7 @@ final class AuthenticationManager {
                 try await upsertProfile(userId: response.user.id, username: existingProfile!.username, accessToken: response.access_token, fullName: name, email: response.user.email)
             } catch {
                 #if DEBUG
-                Logger.debug("[AuthenticationManager] Warning: Could not update profile with name: \(error.localizedDescription)", category: .auth)
+                print("[AuthenticationManager] Warning: Could not update profile with name: \(error.localizedDescription)")
                 #endif
             }
         }
@@ -290,14 +290,14 @@ final class AuthenticationManager {
         if !successCodes.contains(http.statusCode) {
             #if DEBUG
             let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
-            Logger.debug("[AuthenticationManager] Profile upsert response: Status \(http.statusCode)", category: .auth)
-            Logger.debug("[AuthenticationManager] Response body: \(responseBody)", category: .auth)
+            print("[AuthenticationManager] Profile upsert response: Status \(http.statusCode)")
+            print("[AuthenticationManager] Response body: \(responseBody)")
             #endif
             
             if acceptableCodes.contains(http.statusCode) {
                 // 409 Conflict might mean profile already exists - this is actually OK for upsert
                 #if DEBUG
-                Logger.debug("[AuthenticationManager] Profile upsert returned \(http.statusCode) - treating as success (profile may already exist)", category: .auth)
+                print("[AuthenticationManager] Profile upsert returned \(http.statusCode) - treating as success (profile may already exist)")
                 #endif
                 return
             }
@@ -315,13 +315,13 @@ final class AuthenticationManager {
         }
         
         #if DEBUG
-        Logger.debug("[AuthenticationManager] Profile successfully saved/updated (Status: \(http.statusCode))", category: .auth)
+        print("[AuthenticationManager] Profile successfully saved/updated (Status: \(http.statusCode))")
         #endif
     }
     
     // MARK: - Onboarding Status
     
-    func loadOnboardingStatusFromBackend(userId: String, accessToken: String) async {
+    private func loadOnboardingStatusFromBackend(userId: String, accessToken: String) async {
         do {
             // Fetch user preferences from backend
             if let preferences = try await preferencesClient.fetchPreferences(userId: userId, accessToken: accessToken) {

@@ -551,50 +551,56 @@ final class AppState: ObservableObject {
     }
     
     func chatSystemContext() -> String {
-        let base = systemContext()
+        // Build a compact dietary context (only essential info to stay under 2000 char limit)
+        var essentialDietary: [String] = []
+        if !dietary.allergies.isEmpty {
+            essentialDietary.append("Allergien: " + dietary.allergies.joined(separator: ", "))
+        }
+        let importantDiets = ["halal", "vegan", "vegetarisch", "pescetarisch", "koscher"]
+        let userImportantDiets = dietary.diets.filter { importantDiets.contains($0.lowercased()) }
+        if !userImportantDiets.isEmpty {
+            essentialDietary.append("Ernährung: " + userImportantDiets.sorted().joined(separator: ", "))
+        }
+        let prefs = TastePreferencesManager.load()
+        if prefs.spicyLevel > 2.5 {
+            essentialDietary.append("Schärfe: Hoch")
+        }
+        let dietaryStr = essentialDietary.isEmpty ? "" : essentialDietary.joined(separator: " | ")
+        
+        let lang = languageSystemPrompt()
+        
+        // Compact chat prompt (under 1500 chars to leave room for dietary context)
         let chatPrompt = """
-DOMAIN: Küche/Kochen. Behandle ALLE Anfragen, die plausibel damit zusammenhängen, als relevant. Dazu zählen u. a.:
-- Kochen, Backen, Grillen, Zubereitung, Techniken, Garzeiten/Temperaturen
-- Zutaten, Ersatzprodukte, Einkauf/Bezugsquellen (online/offline), Lagerung, Haltbarkeit, Hygiene
-- Küchenwerkzeuge/-geräte, Töpfe/Pfannen/Ofen/Grill, Messmethoden
-- Speiseplanung, Menüs, Diäten/Ernährung, Nährwerte/Allergene, Portionierung
-- Beziehe stets den bisherigen Gesprächskontext mit ein, um Folgefragen korrekt einzuordnen.
+DOMAIN: Küche/Kochen. Behandle alle kochbezogenen Anfragen als relevant.
 
-Nur wenn eine Anfrage EINDUTIG fachfremd ist (z. B. Wetter, Politik, Programmierung, Finanzen, Reisen, Sport, Film/Serie etc.), antworte GENAU mit:
-"Ich kann dir damit leider nicht helfen. Ich kann dir aber gerne deine Fragen übers Kochen beantworten."
-und schreibe sonst nichts weiter.
+Off-Topic: Nur bei eindeutig fachfremden Anfragen (Wetter, Politik, etc.) antworte: "Ich kann dir damit leider nicht helfen. Ich kann dir aber gerne deine Fragen übers Kochen beantworten."
 
-WICHTIG: Wenn nach Rezepten oder Rezeptideen gefragt wird, gib NUR kurze Rezeptvorschläge (Name + 1-2 Sätze Beschreibung).
-Gib KEINE kompletten Rezepte mit Zutaten und Anleitungen.
+Rezeptideen: Gib NUR kurze Vorschläge (Name + 1-2 Sätze). KEINE kompletten Rezepte.
 
-ANZAHL DER REZEPT-IDEEN:
-- STANDARD: Gib immer 5 Rezept-Ideen, wenn der User keine spezifische Anzahl angibt
-- MAXIMUM: Wenn der User explizit nach mehr fragt (z. B. "10 Rezepte", "mehr Ideen", "gib mir 8"), kannst du bis zu MAXIMAL 10 Rezept-Ideen geben
-- NIEMALS mehr als 10 Rezept-Ideen, auch wenn der User nach mehr fragt (z. B. "100 Rezept-Ideen" → MAXIMAL 10)
-- NIEMALS weniger als 5 Rezept-Ideen, es sei denn der User fragt explizit nach weniger
+ANZAHL: Standard 5 Ideen. Max 10 wenn explizit gewünscht. Min 5 außer explizit weniger gewünscht.
 
-KRITISCHE LIMITS (NIEMALS ÜBERSCHREITEN):
-- MAXIMAL 10 Rezept-Ideen pro Antwort
-- MAXIMAL 12 Gänge für Menüs, auch wenn der User nach mehr fragt (z. B. "20-Gänge-Menü" → MAXIMAL 12 Gänge)
-- Diese Limits sind HART und dürfen NIEMALS überschritten werden, unabhängig von der User-Anfrage.
+LIMITS: Max 10 Rezept-Ideen, max 12 Menü-Gänge. NIEMALS überschreiten.
 
-Formatiere Rezeptvorschläge so:
-🍴 **[Rezeptname]** ⟦course: [Vorspeise|Zwischengang|Hauptspeise|Nachspeise|Beilage|Getränk|Amuse-Bouche|Aperitif|Digestif|Käsegang]⟧
-[Kurze Beschreibung]
+Format: 🍴 **[Name]** ⟦course: [Vorspeise|Hauptspeise|Nachspeise|...]⟧ [Beschreibung]
 
-Regel: Füge IMMER das unsichtbare Kurs-Label in der Form "⟦course: …⟧" hinzu (nach dem Titel oder am Ende der Zeile). Das UI zeigt diesen Tag nicht an, nutzt ihn aber zur Kategorisierung.
-
-KLASSIFIZIERUNG (für das UI):
-- Wenn du ein zusammenhängendes Menü mit Gängen (z. B. Vorspeise/Hauptspeise/Nachspeise) vorschlägst, schreibe GANZ AM ENDE (neue Zeile) GENAU EINEN Marker: "⟦kind: menu⟧".
-- Wenn es nur lose Rezeptideen sind, schreibe stattdessen: "⟦kind: ideas⟧".
-- Schreibe keinen weiteren Text nach diesem Marker.
-
-Beispiel:
-🍴 **Cremige Tomaten-Pasta mit Basilikum** ⟦course: Hauptspeise⟧
-Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perfekt für einen gemütlichen Abend.
-⟦kind: ideas⟧
+Klassifizierung: Am Ende "⟦kind: menu⟧" für Menüs, "⟦kind: ideas⟧" für lose Ideen.
 """
-        return [base, chatPrompt].filter { !$0.isEmpty }.joined(separator: "\n\n")
+        
+        var parts: [String] = []
+        if !dietaryStr.isEmpty {
+            parts.append(dietaryStr)
+        }
+        parts.append(lang)
+        parts.append(chatPrompt)
+        
+        let full = parts.filter { !$0.isEmpty }.joined(separator: "\n\n")
+        
+        // Truncate if still too long (shouldn't happen, but safety check)
+        if full.count > 1900 {
+            return String(full.prefix(1900))
+        }
+        
+        return full
     }
 
     /// Führt den E-Mail/Passwort-Login über Supabase aus und aktualisiert Tokens & State.

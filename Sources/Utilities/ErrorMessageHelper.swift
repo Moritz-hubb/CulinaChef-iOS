@@ -74,7 +74,10 @@ enum ErrorMessageHelper {
         if errorDescription.contains("ki-antwort konnte nicht") ||
            errorDescription.contains("openai fehler") ||
            errorDescription.contains("verarbeitet werden") ||
-           errorDescription.contains("could not be processed") {
+           errorDescription.contains("could not be processed") ||
+           errorDescription.contains("string_too_long") ||
+           errorDescription.contains("string should have at most") ||
+           errorDescription.contains("max_length") {
             return L.errorProcessingFailed.localized
         }
         

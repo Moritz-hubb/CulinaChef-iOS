@@ -110,36 +110,132 @@ final class SubscriptionManager {
             return SubscriptionStatus(isSubscribed: false, periodEnd: nil, lastPayment: nil, autoRenew: false)
         }
         
-        // Try backend first if authenticated
-        if let token = accessToken {
-            // Backend DTO
-            if let dto = try? await backend.subscriptionStatus(accessToken: token) {
-                let iso = ISO8601DateFormatter()
-                let lastPayment = dto.last_payment_at.flatMap { iso.date(from: $0) }
-                let periodEnd = dto.current_period_end.flatMap { iso.date(from: $0) }
+        // ✅ ENVIRONMENT-AWARE LOGIC:
+        // - Development/TestFlight: StoreKit is primary (backend validation doesn't work in sandbox)
+        // - Production: Backend is primary (validates with Apple Server-to-Server API)
+        let useStoreKitAsPrimary = Config.shouldUseStoreKitAsPrimary
+        
+        if useStoreKitAsPrimary {
+            // Development/TestFlight: Check StoreKit first
+            Logger.info("[SubscriptionManager] Development/TestFlight mode - using StoreKit as primary source", category: .data)
+            let storeKitActive = await refreshSubscriptionStatusFromStoreKit()
+            let storeKitPeriodEnd = getSubscriptionPeriodEnd()
+            let storeKitAutoRenew = getSubscriptionAutoRenew()
+            
+            if storeKitActive {
+                // StoreKit says active - use it as source of truth
+                // Still try to get additional info from backend if available
+                if let token = accessToken {
+                    if let dto = try? await backend.subscriptionStatus(accessToken: token) {
+                        let iso = ISO8601DateFormatter()
+                        let lastPayment = dto.last_payment_at.flatMap { iso.date(from: $0) }
+                        let periodEnd = dto.current_period_end.flatMap { iso.date(from: $0) } ?? storeKitPeriodEnd
+                        
+                        // Store in Keychain (secure)
+                        if let lp = lastPayment { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
+                        if let pe = periodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
+                        try? KeychainManager.save(key: "subscription_autorenew", bool: dto.auto_renew)
+                        
+                        return SubscriptionStatus(isSubscribed: true, periodEnd: periodEnd, lastPayment: lastPayment, autoRenew: dto.auto_renew)
+                    }
+                }
                 
-                // Store in Keychain (secure)
-                if let lp = lastPayment { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
-                if let pe = periodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
-                try? KeychainManager.save(key: "subscription_autorenew", bool: dto.auto_renew)
-                
-                return SubscriptionStatus(isSubscribed: dto.is_active, periodEnd: periodEnd, lastPayment: lastPayment, autoRenew: dto.auto_renew)
+                // StoreKit is active, use StoreKit data
+                return SubscriptionStatus(isSubscribed: true, periodEnd: storeKitPeriodEnd, lastPayment: nil, autoRenew: storeKitAutoRenew)
+            } else {
+                // StoreKit says inactive - check backend as fallback
+                if let token = accessToken {
+                    if let dto = try? await backend.subscriptionStatus(accessToken: token) {
+                        let iso = ISO8601DateFormatter()
+                        let lastPayment = dto.last_payment_at.flatMap { iso.date(from: $0) }
+                        let periodEnd = dto.current_period_end.flatMap { iso.date(from: $0) }
+                        
+                        // Store in Keychain (secure)
+                        if let lp = lastPayment { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
+                        if let pe = periodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
+                        try? KeychainManager.save(key: "subscription_autorenew", bool: dto.auto_renew)
+                        
+                        return SubscriptionStatus(isSubscribed: dto.is_active, periodEnd: periodEnd, lastPayment: lastPayment, autoRenew: dto.auto_renew)
+                    }
+                }
             }
             
-            // Fallback: direct Supabase (legacy)
-            if let remote = try? await subscriptionsClient.fetchSubscription(userId: userId, accessToken: token) {
-                // Store in Keychain (secure)
-                if let lp = remote.lastPaymentAt { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
-                if let pe = remote.currentPeriodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
-                try? KeychainManager.save(key: "subscription_autorenew", bool: remote.autoRenew)
+            // Fallback to local
+            return loadSubscriptionStatusLocal()
+        } else {
+            // ✅ PRODUCTION: Backend is the source of truth (validates with Apple Server-to-Server API)
+            // StoreKit is only used as fallback when backend is unreachable
+            if let token = accessToken {
+                // Try backend first (validates with Apple)
+                if let dto = try? await backend.subscriptionStatus(accessToken: token) {
+                    let iso = ISO8601DateFormatter()
+                    let lastPayment = dto.last_payment_at.flatMap { iso.date(from: $0) }
+                    let periodEnd = dto.current_period_end.flatMap { iso.date(from: $0) }
+                    
+                    // Store in Keychain (secure)
+                    if let lp = lastPayment { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
+                    if let pe = periodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
+                    try? KeychainManager.save(key: "subscription_autorenew", bool: dto.auto_renew)
+                    
+                    // Backend is source of truth - if it says inactive, respect it
+                    // Only use StoreKit as fallback if backend says inactive AND we suspect a sync issue
+                    var isActive = dto.is_active
+                    if !isActive {
+                        // Check StoreKit as fallback only if backend says inactive
+                        // This handles cases where backend hasn't synced yet but StoreKit has active subscription
+                        let storeKitActive = await refreshSubscriptionStatusFromStoreKit()
+                        if storeKitActive {
+                            Logger.info("[SubscriptionManager] Backend says inactive, but StoreKit says active - using StoreKit as temporary fallback (backend may need sync)", category: .data)
+                            isActive = true
+                            // Update period end from StoreKit if available
+                            if let storeKitPeriodEnd = getSubscriptionPeriodEnd() {
+                                try? KeychainManager.save(key: "subscription_period_end", date: storeKitPeriodEnd)
+                            }
+                        }
+                    }
+                    
+                    return SubscriptionStatus(isSubscribed: isActive, periodEnd: periodEnd ?? getSubscriptionPeriodEnd(), lastPayment: lastPayment, autoRenew: dto.auto_renew)
+                }
                 
-                let isActive = remote.currentPeriodEnd.map { Date() < $0 } ?? false
-                return SubscriptionStatus(isSubscribed: isActive, periodEnd: remote.currentPeriodEnd, lastPayment: remote.lastPaymentAt, autoRenew: remote.autoRenew)
+                // Backend call failed - try Supabase as fallback
+                if let remote = try? await subscriptionsClient.fetchSubscription(userId: userId, accessToken: token) {
+                    // Store in Keychain (secure)
+                    if let lp = remote.lastPaymentAt { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
+                    if let pe = remote.currentPeriodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
+                    try? KeychainManager.save(key: "subscription_autorenew", bool: remote.autoRenew)
+                    
+                    var isActive = remote.currentPeriodEnd.map { Date() < $0 } ?? false
+                    
+                    // If Supabase says inactive, check StoreKit as fallback
+                    if !isActive {
+                        let storeKitActive = await refreshSubscriptionStatusFromStoreKit()
+                        if storeKitActive {
+                            Logger.info("[SubscriptionManager] Supabase says inactive, but StoreKit says active - using StoreKit as temporary fallback", category: .data)
+                            isActive = true
+                        }
+                    }
+                    
+                    return SubscriptionStatus(isSubscribed: isActive, periodEnd: remote.currentPeriodEnd ?? getSubscriptionPeriodEnd(), lastPayment: remote.lastPaymentAt, autoRenew: remote.autoRenew)
+                }
             }
+            
+            // ✅ SECURITY: Backend/Supabase unreachable - use StoreKit as fallback only
+            // This is acceptable for offline scenarios, but backend should be primary source
+            Logger.info("[SubscriptionManager] Backend/Supabase unreachable - using StoreKit as fallback", category: .data)
+            let localStatus = loadSubscriptionStatusLocal()
+            if !localStatus.isSubscribed {
+                // Check StoreKit as fallback when backend is unreachable
+                let storeKitActive = await refreshSubscriptionStatusFromStoreKit()
+                if storeKitActive {
+                    Logger.info("[SubscriptionManager] Backend unreachable, StoreKit says active - using StoreKit as temporary fallback", category: .data)
+                    let periodEnd = getSubscriptionPeriodEnd()
+                    let autoRenew = getSubscriptionAutoRenew()
+                    return SubscriptionStatus(isSubscribed: true, periodEnd: periodEnd, lastPayment: localStatus.lastPayment, autoRenew: autoRenew)
+                }
+            }
+            
+            return localStatus
         }
-        
-        // Local fallback
-        return loadSubscriptionStatusLocal()
     }
     
     private func loadSubscriptionStatusLocal() -> SubscriptionStatus {
@@ -182,13 +278,37 @@ final class SubscriptionManager {
         let auto = getSubscriptionAutoRenew()
         guard auto, var end = periodEnd else { return }
         let now = Date()
+        
+        // ✅ SECURITY FIX: Only extend if period end is in the past AND we're still within
+        // a reasonable grace period (e.g., 1 day). This prevents extending expired subscriptions
+        // that should have been cancelled.
+        // 
+        // If subscription expired more than 1 day ago, don't extend - it's likely cancelled
+        let gracePeriod: TimeInterval = 24 * 60 * 60 // 1 day
+        let timeSinceExpiry = now.timeIntervalSince(end)
+        
+        // Only extend if:
+        // 1. Period end is in the past (needs extension)
+        // 2. But not more than 1 day ago (still in grace period)
+        // 3. This prevents extending subscriptions that were cancelled weeks/months ago
+        guard now >= end && timeSinceExpiry < gracePeriod else {
+            // Subscription expired more than grace period ago - don't extend
+            // This means it's likely cancelled and should stay expired
+            return
+        }
+        
         // Extend in month steps until next period end is in the future
-        while now >= end {
+        // But limit to maximum 1 extension per call to prevent infinite loops
+        var extensionCount = 0
+        let maxExtensions = 1
+        
+        while now >= end && extensionCount < maxExtensions {
             let newLastPayment = end
             let newEnd = addOneMonth(to: end)
             try? KeychainManager.save(key: "subscription_last_payment", date: newLastPayment)
             try? KeychainManager.save(key: "subscription_period_end", date: newEnd)
             end = newEnd
+            extensionCount += 1
         }
     }
     
@@ -257,30 +377,34 @@ final class SubscriptionManager {
         Logger.info("[SubscriptionManager]   - Period End: \(periodEnd)", category: .data)
         Logger.info("[SubscriptionManager]   - Auto Renew: \(autoRenew)", category: .data)
         
-        // Sync to Supabase if authenticated
+        // ✅ SECURITY: Sync to Backend with Apple validation (not direct Supabase)
         if let token = accessToken {
-            Logger.info("[SubscriptionManager] Syncing subscription to Supabase...", category: .data)
+            Logger.info("[SubscriptionManager] Syncing subscription to Backend with Apple validation...", category: .data)
             Task {
-                let params = SubscriptionUpsertParams(
-                    userId: uid,
-                    plan: "unlimited",
+                // Use original transaction ID for subscription updates
+                let transactionId = String(transaction.originalID)
+                Logger.info("[SubscriptionManager] Using transaction ID: \(transactionId)", category: .data)
+                
+                let params = SubscriptionUpdateParams(
+                    transactionId: transactionId,
                     status: "active",
                     autoRenew: autoRenew,
                     cancelAtPeriodEnd: !autoRenew,
                     lastPaymentAt: now,
                     currentPeriodEnd: periodEnd,
+                    plan: "unlimited",
                     priceCents: 599,
                     currency: "EUR"
                 )
                 do {
-                    try await subscriptionsClient.upsertSubscription(params: params, accessToken: token)
-                    Logger.info("[SubscriptionManager] ✅ Subscription synced to Supabase successfully", category: .data)
+                    try await subscriptionsClient.updateSubscriptionViaBackend(params: params, accessToken: token)
+                    Logger.info("[SubscriptionManager] ✅ Subscription synced to Backend with Apple validation successfully", category: .data)
                 } catch {
-                    Logger.error("[SubscriptionManager] ❌ Failed to sync subscription to Supabase", error: error, category: .data)
+                    Logger.error("[SubscriptionManager] ❌ Failed to sync subscription to Backend", error: error, category: .data)
                 }
             }
         } else {
-            Logger.info("[SubscriptionManager] ⚠️ No access token - skipping Supabase sync", category: .data)
+            Logger.info("[SubscriptionManager] ⚠️ No access token - skipping Backend sync", category: .data)
         }
         
         Logger.info("[SubscriptionManager] ========== END purchaseStoreKit() - SUCCESS (isActive: \(isActive)) ==========", category: .data)

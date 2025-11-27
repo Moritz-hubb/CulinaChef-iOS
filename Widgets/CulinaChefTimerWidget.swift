@@ -134,21 +134,24 @@ struct TimerWidgetEntryView: View {
     private static let log = OSLog(subsystem: "com.moritzserrin.culinachef.widget", category: "TimerWidgetEntryView")
     
     var body: some View {
-        _ = logWidgetRender()
-        
-        if entry.timers.isEmpty {
-            emptyStateView
-        } else {
-            switch family {
-            case .systemSmall:
-                smallWidgetView
-            case .systemMedium:
-                mediumWidgetView
-            case .systemLarge:
-                largeWidgetView
-            default:
-                mediumWidgetView
+        Group {
+            if entry.timers.isEmpty {
+                emptyStateView
+            } else {
+                switch family {
+                case .systemSmall:
+                    smallWidgetView
+                case .systemMedium:
+                    mediumWidgetView
+                case .systemLarge:
+                    largeWidgetView
+                default:
+                    mediumWidgetView
+                }
             }
+        }
+        .onAppear {
+            logWidgetRender()
         }
     }
     

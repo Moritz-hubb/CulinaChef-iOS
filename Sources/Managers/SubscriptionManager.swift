@@ -114,6 +114,9 @@ final class SubscriptionManager {
         // - Development/TestFlight: StoreKit is primary (backend validation doesn't work in sandbox)
         // - Production: Backend is primary (validates with Apple Server-to-Server API)
         let useStoreKitAsPrimary = Config.shouldUseStoreKitAsPrimary
+        #if DEBUG
+        print("🔍 [DEBUG] useStoreKitAsPrimary: \(useStoreKitAsPrimary), currentEnvironment: \(Config.currentEnvironment)")
+        #endif
         
         if useStoreKitAsPrimary {
             // Development/TestFlight: Check StoreKit first

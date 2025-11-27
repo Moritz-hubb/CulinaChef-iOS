@@ -351,6 +351,11 @@ final class AppState: ObservableObject {
             return
         }
         
+        // CRITICAL: Load onboarding status FIRST before showing the main view
+        // This ensures onboarding is ready to show immediately if needed
+        Logger.info("[AppState] Loading onboarding status from backend...", category: .data)
+        await authManager.loadOnboardingStatusFromBackend(userId: userId, accessToken: token)
+        
         // CRITICAL: Load subscription status directly from StoreKit (Apple) first
         // This ensures we get the most up-to-date status from Apple, not from database
         Logger.info("[AppState] Loading subscription status from StoreKit (Apple)...", category: .data)

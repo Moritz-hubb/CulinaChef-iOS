@@ -1019,6 +1019,8 @@ Eine schnelle, cremige Pasta mit frischen Tomaten, Knoblauch und Basilikum. Perf
                 } else {
                     Logger.info("[AppState] No preferences found in UserDefaults either - using defaults", category: .data)
                 }
+                // Ensure taste preferences are loaded from Keychain (or migrated from UserDefaults)
+                _ = TastePreferencesManager.load()
             }
         }
     }

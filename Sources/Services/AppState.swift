@@ -154,7 +154,11 @@ final class AppState: ObservableObject {
     /// - Führt einmalige Migration von Abo-Daten aus `UserDefaults` in den Keychain durch.
     /// - Prüft bestehende Sessions und lädt ggf. Nutzerpräferenzen aus Supabase.
     init() {
-        backend = BackendClient(baseURL: Config.backendBaseURL)
+        let backendURL = Config.backendBaseURL
+        #if DEBUG
+        Logger.info("[AppState] Initializing BackendClient with URL: \(backendURL.absoluteString)", category: .config)
+        #endif
+        backend = BackendClient(baseURL: backendURL)
         // OpenAI now proxied through backend for security
         openAI = BackendOpenAIClient(backend: backend, accessTokenProvider: { [weak self] in self?.accessToken })
         recipeAI = BackendOpenAIClient(backend: backend, accessTokenProvider: { [weak self] in self?.accessToken })

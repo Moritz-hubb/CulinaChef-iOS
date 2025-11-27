@@ -145,19 +145,19 @@ final class SubscriptionManager {
                 return SubscriptionStatus(isSubscribed: true, periodEnd: storeKitPeriodEnd, lastPayment: nil, autoRenew: storeKitAutoRenew)
             } else {
                 // StoreKit says inactive - check backend as fallback
-                if let token = accessToken {
-                    if let dto = try? await backend.subscriptionStatus(accessToken: token) {
-                        let iso = ISO8601DateFormatter()
-                        let lastPayment = dto.last_payment_at.flatMap { iso.date(from: $0) }
-                        let periodEnd = dto.current_period_end.flatMap { iso.date(from: $0) }
-                        
-                        // Store in Keychain (secure)
-                        if let lp = lastPayment { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
-                        if let pe = periodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
-                        try? KeychainManager.save(key: "subscription_autorenew", bool: dto.auto_renew)
-                        
-                        return SubscriptionStatus(isSubscribed: dto.is_active, periodEnd: periodEnd, lastPayment: lastPayment, autoRenew: dto.auto_renew)
-                    }
+        if let token = accessToken {
+            if let dto = try? await backend.subscriptionStatus(accessToken: token) {
+                let iso = ISO8601DateFormatter()
+                let lastPayment = dto.last_payment_at.flatMap { iso.date(from: $0) }
+                let periodEnd = dto.current_period_end.flatMap { iso.date(from: $0) }
+                
+                // Store in Keychain (secure)
+                if let lp = lastPayment { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
+                if let pe = periodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
+                try? KeychainManager.save(key: "subscription_autorenew", bool: dto.auto_renew)
+                
+                return SubscriptionStatus(isSubscribed: dto.is_active, periodEnd: periodEnd, lastPayment: lastPayment, autoRenew: dto.auto_renew)
+            }
                 }
             }
             
@@ -213,12 +213,12 @@ final class SubscriptionManager {
                 }
                 
                 // Backend call failed - try Supabase as fallback
-                if let remote = try? await subscriptionsClient.fetchSubscription(userId: userId, accessToken: token) {
-                    // Store in Keychain (secure)
-                    if let lp = remote.lastPaymentAt { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
-                    if let pe = remote.currentPeriodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
-                    try? KeychainManager.save(key: "subscription_autorenew", bool: remote.autoRenew)
-                    
+            if let remote = try? await subscriptionsClient.fetchSubscription(userId: userId, accessToken: token) {
+                // Store in Keychain (secure)
+                if let lp = remote.lastPaymentAt { try? KeychainManager.save(key: "subscription_last_payment", date: lp) }
+                if let pe = remote.currentPeriodEnd { try? KeychainManager.save(key: "subscription_period_end", date: pe) }
+                try? KeychainManager.save(key: "subscription_autorenew", bool: remote.autoRenew)
+                
                     var isActive = remote.currentPeriodEnd.map { Date() < $0 } ?? false
                     
                     // If Supabase says inactive, check StoreKit as fallback
@@ -231,9 +231,9 @@ final class SubscriptionManager {
                     }
                     
                     return SubscriptionStatus(isSubscribed: isActive, periodEnd: remote.currentPeriodEnd ?? getSubscriptionPeriodEnd(), lastPayment: remote.lastPaymentAt, autoRenew: remote.autoRenew)
-                }
             }
-            
+        }
+        
             // ✅ SECURITY: Backend/Supabase unreachable - use StoreKit as fallback only
             // This is acceptable for offline scenarios, but backend should be primary source
             Logger.info("[SubscriptionManager] Backend/Supabase unreachable - using StoreKit as fallback", category: .data)

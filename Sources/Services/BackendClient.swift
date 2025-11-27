@@ -42,24 +42,24 @@ final class BackendClient {
         let preferredLanguages = Locale.preferredLanguages.prefix(3).joined(separator: ", ")
         req.addValue(preferredLanguages, forHTTPHeaderField: "Accept-Language")
         do {
-            let (data, resp) = try await SecureURLSession.shared.data(for: req)
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
             #if DEBUG
             if let http = resp as? HTTPURLResponse {
                 Logger.debug("[BackendClient] Response: \(http.statusCode) for \(url.absoluteString)", category: .network)
             }
             #endif
-            guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-            if !(200...299).contains(http.statusCode) {
-                struct ServerError: Decodable { let detail: String? }
-                if let err = try? JSONDecoder().decode(ServerError.self, from: data), let msg = err.detail, !msg.isEmpty {
-                    throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
-                }
-                if let msg = String(data: data, encoding: .utf8), !msg.isEmpty {
-                    throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
-                }
-                throw URLError(.badServerResponse)
+        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        if !(200...299).contains(http.statusCode) {
+            struct ServerError: Decodable { let detail: String? }
+            if let err = try? JSONDecoder().decode(ServerError.self, from: data), let msg = err.detail, !msg.isEmpty {
+                throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
             }
-            return (data, http)
+            if let msg = String(data: data, encoding: .utf8), !msg.isEmpty {
+                throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+            }
+            throw URLError(.badServerResponse)
+        }
+        return (data, http)
         } catch {
             Logger.error("[BackendClient] Request failed: \(method) \(url.absoluteString) - \(error.localizedDescription)", category: .network)
             if let urlError = error as? URLError {

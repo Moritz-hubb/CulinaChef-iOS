@@ -653,6 +653,7 @@
   "error.exportFailed": "Esportazione dati fallita. Riprova più tardi.",
   "error.rateLimitExceeded": "Hai raggiunto il limite di utilizzo. Riprova più tardi o passa a Unlimited.",
   "error.genericUserFriendly": "Qualcosa è andato storto. Riprova. Se il problema persiste, contatta il supporto.",
+  "error.processingFailed": "Si è verificato un errore durante l'elaborazione. Riprova.",
   "error.accountExists": "Esiste già un account con questo indirizzo email.",
   "error.accountExistsLoginLink": "Accedi qui",
   "error.apiClientNotConfigured": "L'applicazione non è configurata correttamente. Riavvia l'app o contatta il supporto.",

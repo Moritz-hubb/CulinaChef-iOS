@@ -816,6 +816,7 @@ enum L {
     static let errorAccountExists = "error.accountExists"
     static let errorAccountExistsLoginLink = "error.accountExistsLoginLink"
     static let errorApiClientNotConfigured = "error.apiClientNotConfigured"
+    static let errorProcessingFailed = "error.processingFailed"
     
     // MARK: - Empty States
     static let emptyRecipes = "empty.recipes"

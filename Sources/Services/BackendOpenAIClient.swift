@@ -85,11 +85,43 @@ final class BackendOpenAIClient {
         guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         
         if !(200...299).contains(http.statusCode) {
-            struct ServerError: Decodable { let detail: String? }
-            if let err = try? JSONDecoder().decode(ServerError.self, from: data),
+            // Try to decode error response - handle both simple string and nested object structures
+            struct ServerErrorDetail: Decodable {
+                let error_code: String?
+                let message: String?
+            }
+            struct ServerError: Decodable {
+                let detail: String?
+                let error: ServerErrorDetail?
+            }
+            
+            // First try to decode as nested structure
+            if let err = try? JSONDecoder().decode(ServerError.self, from: data) {
+                if let nestedError = err.error, let msg = nestedError.message, !msg.isEmpty {
+                    Logger.error("[BackendOpenAI] Chat error: \(msg)", category: .network)
+                    throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+                }
+                if let msg = err.detail, !msg.isEmpty {
+                    Logger.error("[BackendOpenAI] Chat error: \(msg)", category: .network)
+                    throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+                }
+            }
+            
+            // Fallback: try to decode as simple string detail
+            struct SimpleServerError: Decodable { let detail: String? }
+            if let err = try? JSONDecoder().decode(SimpleServerError.self, from: data),
                let msg = err.detail, !msg.isEmpty {
+                Logger.error("[BackendOpenAI] Chat error: \(msg)", category: .network)
                 throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
             }
+            
+            // Last resort: try to read as plain text
+            if let msg = String(data: data, encoding: .utf8), !msg.isEmpty {
+                Logger.error("[BackendOpenAI] Chat error (plain text): \(msg)", category: .network)
+                throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+            }
+            
+            Logger.error("[BackendOpenAI] Chat failed with status \(http.statusCode), no error message available", category: .network)
             throw URLError(.badServerResponse)
         }
         
@@ -250,11 +282,43 @@ final class BackendOpenAIClient {
         guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         
         if !(200...299).contains(http.statusCode) {
-            struct ServerError: Decodable { let detail: String? }
-            if let err = try? JSONDecoder().decode(ServerError.self, from: data),
+            // Try to decode error response - handle both simple string and nested object structures
+            struct ServerErrorDetail: Decodable {
+                let error_code: String?
+                let message: String?
+            }
+            struct ServerError: Decodable {
+                let detail: String?
+                let error: ServerErrorDetail?
+            }
+            
+            // First try to decode as nested structure
+            if let err = try? JSONDecoder().decode(ServerError.self, from: data) {
+                if let nestedError = err.error, let msg = nestedError.message, !msg.isEmpty {
+                    Logger.error("[BackendOpenAI] Recipe generation error: \(msg)", category: .network)
+                    throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+                }
+                if let msg = err.detail, !msg.isEmpty {
+                    Logger.error("[BackendOpenAI] Recipe generation error: \(msg)", category: .network)
+                    throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+                }
+            }
+            
+            // Fallback: try to decode as simple string detail
+            struct SimpleServerError: Decodable { let detail: String? }
+            if let err = try? JSONDecoder().decode(SimpleServerError.self, from: data),
                let msg = err.detail, !msg.isEmpty {
+                Logger.error("[BackendOpenAI] Recipe generation error: \(msg)", category: .network)
                 throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
             }
+            
+            // Last resort: try to read as plain text
+            if let msg = String(data: data, encoding: .utf8), !msg.isEmpty {
+                Logger.error("[BackendOpenAI] Recipe generation error (plain text): \(msg)", category: .network)
+                throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+            }
+            
+            Logger.error("[BackendOpenAI] Recipe generation failed with status \(http.statusCode), no error message available", category: .network)
             throw URLError(.badServerResponse)
         }
         

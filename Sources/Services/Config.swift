@@ -61,7 +61,7 @@ enum Config {
             // #else
             // return URL(string: "http://192.168.178.170:8000")!
             // #endif
-            return URL(string: "https://culinachef-backend-production.up.railway.app")!
+                return URL(string: "https://culinachef-backend-production.up.railway.app")!
             
         case .staging:
             // Staging environment (optional - for testing before production)

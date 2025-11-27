@@ -70,6 +70,19 @@ enum ErrorMessageHelper {
             return L.errorApiClientNotConfigured.localized
         }
         
+        // Backend AI processing errors
+        if errorDescription.contains("ki-antwort konnte nicht") ||
+           errorDescription.contains("openai fehler") ||
+           errorDescription.contains("verarbeitet werden") ||
+           errorDescription.contains("could not be processed") {
+            return L.errorProcessingFailed.localized
+        }
+        
+        // Backend errors (check for specific backend error messages)
+        if errorDescription.contains("backend") && errorDescription.contains("error") {
+            return L.errorProcessingFailed.localized
+        }
+        
         // Generic fallback
         return L.errorGenericUserFriendly.localized
     }

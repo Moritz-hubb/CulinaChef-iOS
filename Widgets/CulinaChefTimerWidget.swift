@@ -140,5 +140,3 @@ struct TimerWidgetEntryView: View {
     TimerEntry(date: .now, timers: [])
 }
 
-
-

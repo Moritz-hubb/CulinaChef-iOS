@@ -309,7 +309,7 @@ struct MainTabView: View {
             }
             .id(localizationManager.currentLanguage)
             .padding(.horizontal)
-            .padding(.bottom, 0)
+            .padding(.bottom, -8)
         }
         .background(
             LinearGradient(

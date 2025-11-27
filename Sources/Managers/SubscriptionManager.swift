@@ -167,7 +167,14 @@ final class SubscriptionManager {
             // StoreKit is only used as fallback when backend is unreachable
             if let token = accessToken {
                 // Try backend first (validates with Apple)
-                if let dto = try? await backend.subscriptionStatus(accessToken: token) {
+                #if DEBUG
+                print("🔄 [DEBUG] Attempting backend.subscriptionStatus() call...")
+                #endif
+                do {
+                    let dto = try await backend.subscriptionStatus(accessToken: token)
+                    #if DEBUG
+                    print("✅ [DEBUG] backend.subscriptionStatus() succeeded")
+                    #endif
                     let iso = ISO8601DateFormatter()
                     let lastPayment = dto.last_payment_at.flatMap { iso.date(from: $0) }
                     let periodEnd = dto.current_period_end.flatMap { iso.date(from: $0) }
@@ -195,6 +202,13 @@ final class SubscriptionManager {
                     }
                     
                     return SubscriptionStatus(isSubscribed: isActive, periodEnd: periodEnd ?? getSubscriptionPeriodEnd(), lastPayment: lastPayment, autoRenew: dto.auto_renew)
+                } catch {
+                    #if DEBUG
+                    print("❌ [DEBUG] backend.subscriptionStatus() failed: \(error.localizedDescription)")
+                    if let urlError = error as? URLError {
+                        print("❌ [DEBUG] URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+                    }
+                    #endif
                 }
                 
                 // Backend call failed - try Supabase as fallback

@@ -450,23 +450,27 @@ struct PersonalRecipesView: View {
     @State private var menuPlaceholders: [AppState.MenuSuggestion] = []
     @State private var menuCourseMap: [String: String] = [:]
     @State private var showManualRecipeBuilder = false
+    @State private var deletedRecipeIds: Set<String> = [] // Track locally deleted recipes
     
     private var visibleRecipes: [Recipe] {
+        // Filter out deleted recipes
+        let filteredRecipes = recipes.filter { !deletedRecipeIds.contains($0.id) }
+        
         // Special case: Liked recipes menu
         if selectedMenu?.id == "__liked__" {
             let likedIds = app.likedRecipesManager.likedRecipeIds
-            return recipes.filter { likedIds.contains($0.id) }
+            return filteredRecipes.filter { likedIds.contains($0.id) }
         }
         
         if let _ = selectedMenu {
             // Until IDs sind geladen, zeige alle Rezepte statt leer
             if selectedMenuLoaded {
-                return recipes.filter { selectedMenuRecipeIds.contains($0.id) }
+                return filteredRecipes.filter { selectedMenuRecipeIds.contains($0.id) }
             } else {
-                return recipes
+                return filteredRecipes
             }
         }
-        return recipes
+        return filteredRecipes
     }
     
     private var loadingView: some View {
@@ -796,7 +800,15 @@ struct PersonalRecipesView: View {
     private var mainContentWithModifiers: some View {
         mainContent
             .navigationBarHidden(true)
-            .task { await loadRecipes() }
+            .task { 
+                // OPTIMIZATION: Lade zuerst gecachte Rezepte für sofortige Anzeige
+                await loadCachedRecipesIfAvailable()
+                // Dann im Hintergrund aktualisieren (nur wenn Cache älter als 5 Minuten)
+                if app.recipesCacheTimestamp == nil || 
+                   Date().timeIntervalSince(app.recipesCacheTimestamp ?? Date.distantPast) > 300 {
+                    await loadRecipes(keepVisible: true)
+                }
+            }
             .refreshable { await loadRecipes(keepVisible: true) }
             .sheet(isPresented: $showNewMenuSheet) {
             NewMenuSheet(title: $newMenuTitle, onCreate: { t in Task { await createMenu(title: t) } })
@@ -917,16 +929,63 @@ struct PersonalRecipesView: View {
         guard let recipe = recipe else { return }
         deleting = true
         defer { deleting = false }
-        // Optimistisches Entfernen aus der UI
+        
+        let recipeId = recipe.id
+        
+        // Markiere als gelöscht, damit es nicht wieder erscheint
         await MainActor.run {
-            recipes.removeAll { $0.id == recipe.id }
-            selectedMenuRecipeIds.remove(recipe.id)
+            deletedRecipeIds.insert(recipeId)
+            recipes.removeAll { $0.id == recipeId }
+            selectedMenuRecipeIds.remove(recipeId)
             toDelete = nil
             showDeleteAlert = false
         }
-        await app.deleteRecipeOrQueue(recipeId: recipe.id)
-        // Versuche, die Liste im Hintergrund zu aktualisieren (falls online)
-        await loadRecipes(keepVisible: true)
+        
+        // Entferne auch aus dem Cache
+        await MainActor.run {
+            app.cachedRecipes.removeAll { $0.id == recipeId }
+            app.saveCachedRecipesToDisk(recipes: app.cachedRecipes, menus: app.cachedMenus)
+            Logger.info("[PersonalRecipesView] Removed recipe \(recipeId) from cache", category: .data)
+        }
+        
+        // Versuche das Rezept zu löschen
+        await app.deleteRecipeOrQueue(recipeId: recipeId)
+        
+        // Lade die Liste im Hintergrund neu (nur wenn online), um sicherzustellen, dass alles synchron ist
+        // Das gelöschte Rezept wird durch deletedRecipeIds gefiltert und erscheint nicht wieder
+        if selectedMenu == nil {
+            await loadRecipes(keepVisible: true)
+        } else {
+            // Bei Menü-Filter: Nur die Menü-Rezepte neu laden
+            await reloadSelectedMenuRecipes()
+        }
+        
+        // Entferne aus deletedRecipeIds nach erfolgreichem Neuladen (wenn Server bestätigt, dass es gelöscht ist)
+        // Das passiert automatisch, wenn loadRecipes die aktualisierte Liste lädt
+        await MainActor.run {
+            // Prüfe ob das Rezept noch in der geladenen Liste ist
+            if !recipes.contains(where: { $0.id == recipeId }) {
+                // Rezept wurde erfolgreich gelöscht, entferne aus deletedRecipeIds
+                deletedRecipeIds.remove(recipeId)
+            }
+        }
+    }
+    
+    /// Lädt gecachte Rezepte sofort, falls verfügbar
+    func loadCachedRecipesIfAvailable() async {
+        // Lade gecachte Rezepte und Menüs sofort für instant display
+        await MainActor.run {
+            if !app.cachedRecipes.isEmpty {
+                // Zeige sofort an, auch wenn nur 1 Rezept im Cache ist
+                self.recipes = app.cachedRecipes
+                self.menus = app.cachedMenus
+                self.loading = false
+                Logger.info("[PersonalRecipesView] Loaded \(app.cachedRecipes.count) cached recipes for instant display", category: .data)
+            } else {
+                // Cache ist leer - starte sofortiges Laden vom Netzwerk
+                Logger.info("[PersonalRecipesView] No cached recipes available, will load from network", category: .data)
+            }
+        }
     }
     
     func loadRecipes(keepVisible: Bool = false) async {
@@ -938,34 +997,76 @@ struct PersonalRecipesView: View {
             }
             return
         }
+        
+        // OPTIMIZATION: Wenn Cache vorhanden ist und nicht zu alt (max 5 Minuten), zeige Cache sofort
+        if !keepVisible {
+            if !app.cachedRecipes.isEmpty, 
+               let timestamp = app.recipesCacheTimestamp,
+               Date().timeIntervalSince(timestamp) < 300 { // 5 Minuten
+                await MainActor.run {
+                    self.recipes = app.cachedRecipes
+                    self.menus = app.cachedMenus
+                    self.loading = false // Seite sofort anzeigen!
+                    Logger.info("[PersonalRecipesView] Using fresh cache (\(app.cachedRecipes.count) recipes)", category: .data)
+                }
+                // Lade im Hintergrund aktualisiert (nur wenn Cache älter als 1 Minute)
+                let cacheAge = Date().timeIntervalSince(timestamp)
+                if cacheAge > 60 {
+                    Task.detached(priority: .utility) {
+                        await self.loadRecipesFromNetwork(userId: userId, token: token, keepVisible: true)
+                    }
+                }
+                return
+            }
+        }
+        
+        // Kein Cache oder Cache zu alt: Lade sofort das erste Rezept für instant display
+        // loading bleibt true bis erstes Rezept geladen ist
         if !keepVisible { loading = true }
-        defer { if !keepVisible { loading = false } }
+        
+        await loadRecipesFromNetwork(userId: userId, token: token, keepVisible: keepVisible)
+    }
+    
+    private func loadRecipesFromNetwork(userId: String, token: String, keepVisible: Bool) async {
         do {
-            // Load directly from Supabase
             // Wenn ein Menü aktiv ist, markiere als nicht geladen bis IDs neu geladen wurden
             if selectedMenu != nil { await MainActor.run { self.selectedMenuLoaded = false } }
-            var url = Config.supabaseURL
-            url.append(path: "/rest/v1/recipes")
-            url.append(queryItems: [
-                URLQueryItem(name: "user_id", value: "eq.\(userId)"),
-                URLQueryItem(name: "select", value: "*"),
-                URLQueryItem(name: "order", value: "created_at.desc")
-            ])
             
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            // OPTIMIZATION: Lade zuerst das erste Rezept sofort für instant display
+            // Dann lade den Rest im Hintergrund
+            async let firstRecipeTask = loadFirstRecipeFromSupabase(userId: userId, token: token)
+            async let menusTask = app.fetchMenus(accessToken: token, userId: userId)
             
-            let (data, response) = try await SecureURLSession.shared.data(for: request)
+            // Warte auf erstes Rezept und Menüs
+            let (firstRecipe, menusResult) = try await (firstRecipeTask, menusTask)
             
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                throw URLError(.badServerResponse)
+            // Zeige sofort an, wenn wir mindestens 1 Rezept haben
+            if let first = firstRecipe {
+                await MainActor.run {
+                    // Ersetze die Liste mit dem ersten Rezept, wenn noch keine Rezepte vorhanden sind
+                    // Oder füge es hinzu, wenn es noch nicht vorhanden ist
+                    if self.recipes.isEmpty {
+                        self.recipes = [first]
+                    } else if !self.recipes.contains(where: { $0.id == first.id }) {
+                        self.recipes.insert(first, at: 0)
+                    }
+                    self.menus = menusResult
+                    self.loading = false // Seite sofort anzeigen!
+                    Logger.info("[PersonalRecipesView] Displaying first recipe immediately", category: .data)
+                }
+            } else {
+                // Kein erstes Rezept gefunden, lade Menüs trotzdem
+                await MainActor.run {
+                    self.menus = menusResult
+                    self.loading = false // Zeige Seite auch wenn keine Rezepte
+                    Logger.info("[PersonalRecipesView] No recipes found, displaying empty state", category: .data)
+                }
             }
             
-            var list = try JSONDecoder().decode([Recipe].self, from: data)
+            // Lade jetzt alle Rezepte im Hintergrund und ersetze die Liste
+            let allRecipes = try await loadRecipesFromSupabase(userId: userId, token: token)
+            
+            var list = allRecipes
             
             // If liked menu is selected, also load liked community recipes
             if selectedMenu?.id == "__liked__" {
@@ -974,25 +1075,9 @@ struct PersonalRecipesView: View {
                 let ownRecipeIds = Set(list.map { $0.id })
                 let communityLikedIds = likedIds.subtracting(ownRecipeIds)
                 
-                // Load community recipes that are liked
+                // Load community recipes that are liked (parallel zu anderen Tasks)
                 if !communityLikedIds.isEmpty {
-                    var communityUrl = Config.supabaseURL
-                    communityUrl.append(path: "/rest/v1/recipes")
-                    let idList = "(" + communityLikedIds.map { "\"\($0)\"" }.joined(separator: ",") + ")"
-                    communityUrl.append(queryItems: [
-                        URLQueryItem(name: "id", value: "in.\(idList)"),
-                        URLQueryItem(name: "is_public", value: "eq.true"),
-                        URLQueryItem(name: "select", value: "*")
-                    ])
-                    
-                    var communityRequest = URLRequest(url: communityUrl)
-                    communityRequest.httpMethod = "GET"
-                    communityRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                    communityRequest.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-                    communityRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                    
-                    if let (communityData, _) = try? await SecureURLSession.shared.data(for: communityRequest),
-                       let communityRecipes = try? JSONDecoder().decode([Recipe].self, from: communityData) {
+                    if let communityRecipes = try? await loadLikedCommunityRecipes(ids: Array(communityLikedIds), token: token) {
                         list.append(contentsOf: communityRecipes)
                     }
                 }
@@ -1001,18 +1086,30 @@ struct PersonalRecipesView: View {
             await MainActor.run { 
                 self.recipes = list
                 self.error = nil
+                self.menus = menusResult
+                // Entferne gelöschte Rezepte aus deletedRecipeIds, die nicht mehr in der Liste sind
+                // (d.h. die erfolgreich vom Server gelöscht wurden)
+                self.deletedRecipeIds = self.deletedRecipeIds.filter { recipeId in
+                    list.contains(where: { $0.id == recipeId })
+                }
+                if let cur = self.selectedMenu, let updated = menusResult.first(where: { $0.id == cur.id }) {
+                    self.selectedMenu = updated
+                }
             }
-            // Load menus as well
-            if let ms = try? await app.fetchMenus(accessToken: token, userId: userId) {
-                await MainActor.run {
-                    self.menus = ms
-                    if let cur = self.selectedMenu, let updated = ms.first(where: { $0.id == cur.id }) {
-                        self.selectedMenu = updated
-                    }
-                }
-                if self.selectedMenu != nil {
-                    await reloadSelectedMenuRecipes()
-                }
+            
+            // OPTIMIZATION: Update cache with fresh data for next time
+            await MainActor.run {
+                app.cachedRecipes = list
+                app.cachedMenus = menusResult
+                app.recipesCacheTimestamp = Date()
+            }
+            
+            // Speichere auch auf Disk für Persistenz
+            app.saveCachedRecipesToDisk(recipes: list, menus: menusResult)
+            
+            // Lade Menü-Rezept-IDs parallel (nicht sequenziell)
+            if selectedMenu != nil {
+                await reloadSelectedMenuRecipes()
             }
         } catch {
             Logger.error("Failed to load personal recipes", error: error, category: .data)
@@ -1032,6 +1129,87 @@ struct PersonalRecipesView: View {
                 }
             }
         }
+    }
+    
+    // Helper function to load the first recipe immediately
+    private func loadFirstRecipeFromSupabase(userId: String, token: String) async throws -> Recipe? {
+        var url = Config.supabaseURL
+        url.append(path: "/rest/v1/recipes")
+        url.append(queryItems: [
+            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "order", value: "created_at.desc"),
+            URLQueryItem(name: "limit", value: "1")
+        ])
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await SecureURLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+        return recipes.first
+    }
+    
+    // Helper function to load all recipes from Supabase
+    private func loadRecipesFromSupabase(userId: String, token: String) async throws -> [Recipe] {
+        var url = Config.supabaseURL
+        url.append(path: "/rest/v1/recipes")
+        url.append(queryItems: [
+            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "order", value: "created_at.desc")
+        ])
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await SecureURLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
+        return try JSONDecoder().decode([Recipe].self, from: data)
+    }
+    
+    // Helper function to load liked community recipes
+    private func loadLikedCommunityRecipes(ids: [String], token: String) async throws -> [Recipe] {
+        var communityUrl = Config.supabaseURL
+        communityUrl.append(path: "/rest/v1/recipes")
+        let idList = "(" + ids.map { "\"\($0)\"" }.joined(separator: ",") + ")"
+        communityUrl.append(queryItems: [
+            URLQueryItem(name: "id", value: "in.\(idList)"),
+            URLQueryItem(name: "is_public", value: "eq.true"),
+            URLQueryItem(name: "select", value: "*")
+        ])
+        
+        var communityRequest = URLRequest(url: communityUrl)
+        communityRequest.httpMethod = "GET"
+        communityRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        communityRequest.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        communityRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (communityData, communityResponse) = try await SecureURLSession.shared.data(for: communityRequest)
+        
+        guard let httpResponse = communityResponse as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
+        return try JSONDecoder().decode([Recipe].self, from: communityData)
     }
 }
 
@@ -1377,6 +1555,12 @@ struct CommunityRecipesView: View {
     @State private var showLanguageDropdown = false  // Language dropdown state
     @State private var showMyContributions = false
     
+    // Pagination state
+    @State private var currentPage = 0
+    @State private var hasMore = true
+    @State private var loadingMore = false
+    private let pageSize = 20 // Anzahl Rezepte pro Seite
+    
     private var availableLanguages: [(code: String, name: String)] {
         [
             ("de", L.tag_german.localized),
@@ -1585,7 +1769,26 @@ struct CommunityRecipesView: View {
                                     if !nextImageUrls.isEmpty {
                                         ImageCache.shared.preload(urls: Array(nextImageUrls))
                                     }
+                                    
+                                    // OPTIMIZATION: Lade weitere Rezepte, wenn Benutzer nahe am Ende scrollt
+                                    // Lade nächste Seite, wenn wir 5 Rezepte vor dem Ende sind
+                                    if index >= filteredRecipes.count - 5 && hasMore && !loadingMore && query.isEmpty && selectedFilters.isEmpty && selectedLanguages.isEmpty {
+                                        Task {
+                                            await loadMoreCommunityRecipes()
+                                        }
+                                    }
                                 }
+                            }
+                            
+                            // Loading indicator am Ende, wenn weitere Rezepte geladen werden
+                            if loadingMore {
+                                HStack {
+                                    Spacer()
+                                    ProgressView()
+                                        .tint(Color(red: 0.85, green: 0.4, blue: 0.2))
+                                    Spacer()
+                                }
+                                .padding(.vertical, 16)
                             }
                         }
                         
@@ -1646,7 +1849,14 @@ struct CommunityRecipesView: View {
         }
         .navigationBarHidden(true)
         .task { await loadCommunityRecipes() }
-        .refreshable { await loadCommunityRecipes() }
+        .refreshable { 
+            // Reset und neu laden beim Pull-to-Refresh
+            await MainActor.run {
+                currentPage = 0
+                hasMore = true
+            }
+            await loadCommunityRecipes() 
+        }
     }
     
     func loadCommunityRecipes() async {
@@ -1658,49 +1868,38 @@ struct CommunityRecipesView: View {
             return
         }
         
-        await MainActor.run { loading = true }
+        // Reset pagination when loading fresh
+        await MainActor.run {
+            loading = true
+            currentPage = 0
+            hasMore = true
+            recipes = []
+        }
         
         do {
-            // Load public recipes from Supabase
-            var url = Config.supabaseURL
-            url.append(path: "/rest/v1/recipes")
-            url.append(queryItems: [
-                URLQueryItem(name: "is_public", value: "eq.true"),
-                URLQueryItem(name: "select", value: "*"),
-                URLQueryItem(name: "order", value: "created_at.desc")
-            ])
+            // OPTIMIZATION: Lade zuerst das erste Rezept sofort für instant display
+            async let firstRecipeTask = loadFirstCommunityRecipe(token: token)
             
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                throw URLError(.badServerResponse)
+            // Warte auf erstes Rezept
+            if let first = try await firstRecipeTask {
+                await MainActor.run {
+                    self.recipes = [first]
+                    self.loading = false // Seite sofort anzeigen!
+                    Logger.info("[CommunityRecipesView] Displaying first recipe immediately", category: .data)
+                }
+            } else {
+                // Kein erstes Rezept gefunden
+                await MainActor.run {
+                    self.loading = false
+                    Logger.info("[CommunityRecipesView] No recipes found, displaying empty state", category: .data)
+                }
             }
             
-            let list = try JSONDecoder().decode([Recipe].self, from: data)
-            
-            // Preload images for faster display
-            let imageUrls = list.compactMap { recipe -> URL? in
-                guard let imageUrl = recipe.image_url else { return nil }
-                return URL(string: imageUrl)
-            }
-            ImageCache.shared.preload(urls: imageUrls)
-            
-            await MainActor.run { 
-                self.recipes = list
-                self.error = nil
-                self.loading = false
-            }
+            // Lade erste Seite im Hintergrund (20 Rezepte)
+            await loadMoreCommunityRecipes()
         } catch {
             Logger.error("Failed to load community recipes", error: error, category: .data)
             await MainActor.run {
-                // Don't clear existing recipes on error - keep showing what we have
                 if let urlError = error as? URLError {
                     switch urlError.code {
                     case .notConnectedToInternet:
@@ -1708,7 +1907,6 @@ struct CommunityRecipesView: View {
                     case .timedOut:
                         self.error = "Zeitüberschreitung"
                     default:
-                        // Keep existing recipes, just don't show error
                         if self.recipes.isEmpty {
                             self.error = "Rezepte konnten nicht geladen werden"
                         }
@@ -1721,6 +1919,115 @@ struct CommunityRecipesView: View {
                 self.loading = false
             }
         }
+    }
+    
+    // OPTIMIZATION: Lade weitere Rezepte mit Pagination
+    func loadMoreCommunityRecipes() async {
+        guard let token = app.accessToken,
+              hasMore,
+              !loadingMore else { return }
+        
+        await MainActor.run { loadingMore = true }
+        
+        do {
+            let newRecipes = try await loadCommunityRecipesPage(page: currentPage, pageSize: pageSize, token: token)
+            
+            await MainActor.run {
+                if newRecipes.count < pageSize {
+                    hasMore = false // Keine weiteren Rezepte verfügbar
+                }
+                
+                // Füge neue Rezepte hinzu (vermeide Duplikate)
+                let existingIds = Set(recipes.map { $0.id })
+                let uniqueNewRecipes = newRecipes.filter { !existingIds.contains($0.id) }
+                recipes.append(contentsOf: uniqueNewRecipes)
+                
+                currentPage += 1
+                loadingMore = false
+                
+                Logger.info("[CommunityRecipesView] Loaded page \(currentPage) with \(newRecipes.count) recipes. Total: \(recipes.count)", category: .data)
+                
+                // Preload images for new recipes
+                let imageUrls = uniqueNewRecipes.compactMap { recipe -> URL? in
+                    guard let imageUrl = recipe.image_url, !imageUrl.isEmpty else { return nil }
+                    return URL(string: imageUrl)
+                }
+                if !imageUrls.isEmpty {
+                    Task { @MainActor in
+                        ImageCache.shared.preload(urls: imageUrls)
+                    }
+                }
+            }
+        } catch {
+            Logger.error("Failed to load more community recipes", error: error, category: .data)
+            await MainActor.run {
+                loadingMore = false
+                // Bei Fehler: Markiere als keine weiteren Rezepte, um endlose Retries zu vermeiden
+                if currentPage == 0 {
+                    hasMore = false
+                }
+            }
+        }
+    }
+    
+    // Helper function to load the first community recipe immediately
+    private func loadFirstCommunityRecipe(token: String) async throws -> Recipe? {
+        var url = Config.supabaseURL
+        url.append(path: "/rest/v1/recipes")
+        url.append(queryItems: [
+            URLQueryItem(name: "is_public", value: "eq.true"),
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "order", value: "created_at.desc"),
+            URLQueryItem(name: "limit", value: "1")
+        ])
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await SecureURLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+        return recipes.first
+    }
+    
+    // Helper function to load a page of community recipes with pagination
+    private func loadCommunityRecipesPage(page: Int, pageSize: Int, token: String) async throws -> [Recipe] {
+        var url = Config.supabaseURL
+        url.append(path: "/rest/v1/recipes")
+        
+        // Calculate offset for pagination
+        let offset = page * pageSize
+        
+        url.append(queryItems: [
+            URLQueryItem(name: "is_public", value: "eq.true"),
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "order", value: "created_at.desc"),
+            URLQueryItem(name: "limit", value: "\(pageSize)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ])
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await SecureURLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
+        return try JSONDecoder().decode([Recipe].self, from: data)
     }
 }
 

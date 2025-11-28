@@ -91,29 +91,26 @@ struct CommunityUploadSheet: View {
                                     // Existing recipe images
                                     ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, urlString in
                                         if let url = URL(string: urlString) {
-                                            AsyncImage(url: url) { phase in
-                                                switch phase {
-                                                case .success(let image):
-                                                    image
-                                                        .resizable()
-                                                        .scaledToFill()
-                                                        .frame(width: 100, height: 100)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                        .overlay(alignment: .topTrailing) {
-                                            Button(action: { imageUrls.remove(at: index) }) {
-                                                Image(systemName: "xmark.circle.fill")
-                                                    .foregroundStyle(.white)
-                                                    .background(Circle().fill(.black.opacity(0.5)))
-                                            }
-                                            .accessibilityLabel("Bild entfernen")
-                                            .accessibilityHint("Entfernt dieses Bild")
-                                            .padding(4)
+                                            CachedAsyncImage(url: url) { image in
+                                                image
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 100, height: 100)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                    .overlay(alignment: .topTrailing) {
+                                                        Button(action: { imageUrls.remove(at: index) }) {
+                                                            Image(systemName: "xmark.circle.fill")
+                                                                .foregroundStyle(.white)
+                                                                .background(Circle().fill(.black.opacity(0.5)))
                                                         }
-                                                default:
-                                                    RoundedRectangle(cornerRadius: 10)
-                                                        .fill(.ultraThinMaterial.opacity(0.4))
-                                                        .frame(width: 100, height: 100)
-                                                }
+                                                        .accessibilityLabel("Bild entfernen")
+                                                        .accessibilityHint("Entfernt dieses Bild")
+                                                        .padding(4)
+                                                    }
+                                            } placeholder: {
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .fill(.ultraThinMaterial.opacity(0.4))
+                                                    .frame(width: 100, height: 100)
                                             }
                                         }
                                     }
@@ -352,16 +349,35 @@ struct CommunityUploadSheet: View {
             
             Logger.debug("Community upload response status: \(httpResponse.statusCode)", category: .network)
             
-            if httpResponse.statusCode == 403 {
-                // Moderation failed
+            // Extract error message from response if available
+            let serverErrorMessage: String? = {
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let detail = json["detail"] as? String {
-                    await MainActor.run {
-                        moderationStatus = "Denied"
-                        moderationReason = detail
-                    }
-                } else {
-                    throw URLError(.badServerResponse)
+                    return detail
+                } else if let responseString = String(data: data, encoding: .utf8), !responseString.isEmpty {
+                    return responseString
+                }
+                return nil
+            }()
+            
+            if httpResponse.statusCode == 403 {
+                // Moderation failed
+                await MainActor.run {
+                    moderationStatus = "Denied"
+                    moderationReason = serverErrorMessage ?? "Moderation fehlgeschlagen"
+                }
+            } else if httpResponse.statusCode == 429 {
+                // Rate limit exceeded
+                await MainActor.run {
+                    errorMessage = serverErrorMessage ?? "Upload-Limit erreicht. Bitte versuche es später erneut."
+                    showError = true
+                }
+            } else if httpResponse.statusCode >= 500 {
+                // Server error
+                Logger.error("Community upload server error \(httpResponse.statusCode): \(serverErrorMessage ?? "Unknown")", category: .network)
+                await MainActor.run {
+                    errorMessage = serverErrorMessage ?? "Server-Fehler. Bitte versuche es später erneut."
+                    showError = true
                 }
             } else if (200...299).contains(httpResponse.statusCode) {
                 // Success
@@ -377,7 +393,12 @@ struct CommunityUploadSheet: View {
                     dismiss()
                 }
             } else {
-                throw URLError(.badServerResponse)
+                // Other client errors (400-499)
+                Logger.error("Community upload client error \(httpResponse.statusCode): \(serverErrorMessage ?? "Unknown")", category: .network)
+                await MainActor.run {
+                    errorMessage = serverErrorMessage ?? "Upload fehlgeschlagen. Bitte versuche es erneut."
+                    showError = true
+                }
             }
             
         } catch {

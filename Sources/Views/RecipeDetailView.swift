@@ -385,19 +385,14 @@ struct RecipeDetailView: View {
         ZStack(alignment: .bottom) {
             // Background Image or Placeholder
             if let imageUrl = uploadedImageUrl ?? recipe.image_url {
-                AsyncImage(url: URL(string: imageUrl)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: UIScreen.main.bounds.width - 32, height: 250)
-                            .clipped()
-                    case .failure(_), .empty:
-                        placeholderHeaderImageWithButton
-                    @unknown default:
-                        placeholderHeaderImageWithButton
-                    }
+                CachedAsyncImage(url: URL(string: imageUrl)) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: UIScreen.main.bounds.width - 32, height: 250)
+                        .clipped()
+                } placeholder: {
+                    placeholderHeaderImageWithButton
                 }
                 .frame(height: 250)
             } else {
@@ -547,24 +542,17 @@ struct RecipeDetailView: View {
             } else if let imageUrl = uploadedImageUrl {
                 // Show existing or uploaded recipe photo with delete button
                 ZStack(alignment: .topTrailing) {
-                    AsyncImage(url: URL(string: imageUrl)) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxHeight: 200)
-                                .frame(maxWidth: .infinity)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        case .failure(_):
-                            emptyPhotoPlaceholder
-                        case .empty:
-                            ProgressView()
-                                .frame(height: 200)
-                                .frame(maxWidth: .infinity)
-                        @unknown default:
-                            emptyPhotoPlaceholder
-                        }
+                    CachedAsyncImage(url: URL(string: imageUrl)) { image in
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 200)
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    } placeholder: {
+                        ProgressView()
+                            .frame(height: 200)
+                            .frame(maxWidth: .infinity)
                     }
                     
                     // Delete button for uploaded photo

@@ -75,10 +75,16 @@ final class ImageCache {
     }
     
     /// Preload images in background (for recipe lists, etc.)
+    /// Uses concurrent loading for better performance
     func preload(urls: [URL]) {
         Task {
-            for url in urls {
-                _ = await image(for: url)
+            // Load images concurrently (up to 5 at a time)
+            await withTaskGroup(of: Void.self) { group in
+                for url in urls.prefix(20) { // Limit to first 20 images to avoid overwhelming
+                    group.addTask {
+                        _ = await self.image(for: url)
+                    }
+                }
             }
         }
     }
@@ -163,17 +169,24 @@ final class ImageCache {
     
     private func downloadAndCache(url: URL, cacheKey: String) async -> UIImage? {
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            // Use URLSession with optimized configuration for faster downloads
+            let configuration = URLSessionConfiguration.default
+            configuration.timeoutIntervalForRequest = 10
+            configuration.timeoutIntervalForResource = 30
+            configuration.requestCachePolicy = .returnCacheDataElseLoad
+            let session = URLSession(configuration: configuration)
+            
+            let (data, _) = try await session.data(from: url)
             guard let image = UIImage(data: data) else {
                 Logger.error("[ImageCache] Invalid image data from: \(url.lastPathComponent)", category: .data)
                 return nil
             }
             
-            // Cache in memory
+            // Cache in memory immediately
             memoryCache.setObject(image, forKey: cacheKey as NSString, cost: image.memoryCost)
             
-            // Cache on disk (background)
-            Task.detached {
+            // Cache on disk (background, non-blocking)
+            Task.detached(priority: .utility) {
                 await self.saveToDisk(image: image, cacheKey: cacheKey)
             }
             

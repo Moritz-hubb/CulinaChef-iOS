@@ -1130,7 +1130,7 @@ struct MyContributionsView: View {
                         }
                         
                         LazyVStack(spacing: 12) {
-                            ForEach(recipes) { recipe in
+                            ForEach(Array(recipes.enumerated()), id: \.element.id) { index, recipe in
                                 RecipeCard(
                                     recipe: recipe,
                                     isPersonal: false,
@@ -1139,6 +1139,17 @@ struct MyContributionsView: View {
                                 .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 .onTapGesture {
                                     // Navigate to detail
+                                }
+                                .onAppear {
+                                    // Preload images for next 5 recipes when this one appears
+                                    let nextRecipes = recipes.suffix(from: min(index + 1, recipes.count)).prefix(5)
+                                    let nextImageUrls = nextRecipes.compactMap { r -> URL? in
+                                        guard let imageUrl = r.image_url else { return nil }
+                                        return URL(string: imageUrl)
+                                    }
+                                    if !nextImageUrls.isEmpty {
+                                        ImageCache.shared.preload(urls: Array(nextImageUrls))
+                                    }
                                 }
                             }
                         }
@@ -1559,11 +1570,22 @@ struct CommunityRecipesView: View {
                         )
                         
                         LazyVStack(spacing: 12) {
-                            ForEach(filteredRecipes) { recipe in
+                            ForEach(Array(filteredRecipes.enumerated()), id: \.element.id) { index, recipe in
                                 NavigationLink(destination: RecipeDetailView(recipe: recipe)) {
                                     RecipeCard(recipe: recipe, isPersonal: false)
                                 }
                                 .buttonStyle(PlainButtonStyle())
+                                .onAppear {
+                                    // Preload images for next 5 recipes when this one appears
+                                    let nextRecipes = filteredRecipes.suffix(from: min(index + 1, filteredRecipes.count)).prefix(5)
+                                    let nextImageUrls = nextRecipes.compactMap { r -> URL? in
+                                        guard let imageUrl = r.image_url else { return nil }
+                                        return URL(string: imageUrl)
+                                    }
+                                    if !nextImageUrls.isEmpty {
+                                        ImageCache.shared.preload(urls: Array(nextImageUrls))
+                                    }
+                                }
                             }
                         }
                         
@@ -1662,6 +1684,13 @@ struct CommunityRecipesView: View {
             }
             
             let list = try JSONDecoder().decode([Recipe].self, from: data)
+            
+            // Preload images for faster display
+            let imageUrls = list.compactMap { recipe -> URL? in
+                guard let imageUrl = recipe.image_url else { return nil }
+                return URL(string: imageUrl)
+            }
+            ImageCache.shared.preload(urls: imageUrls)
             
             await MainActor.run { 
                 self.recipes = list
@@ -1947,22 +1976,15 @@ struct RecipeCard: View {
                     }()
                     TabView {
                         ForEach(urls, id: \.self) { url in
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .empty:
-                                    placeholderImage
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 180)
-                                        .clipped()
-                                case .failure(_):
-                                    placeholderImage
-                                @unknown default:
-                                    placeholderImage
-                                }
+                            CachedAsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 180)
+                                    .clipped()
+                            } placeholder: {
+                                placeholderImage
                             }
                         }
                     }

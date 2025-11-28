@@ -354,23 +354,27 @@ struct RecipeDetailView: View {
                 }
                 
                 if let tags = recipe.tags, !tags.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(L.label_tags.localized)
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                        RecipeDetailFlowLayout(spacing: 8) {
-                            ForEach(tags, id: \.self) { tag in
-                                Text(tag)
-                                    .font(.caption)
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.white.opacity(0.2), in: Capsule())
+                    // Filter out invisible tags (those starting with _filter:)
+                    let visibleTags = tags.filter { !$0.hasPrefix("_filter:") }
+                    if !visibleTags.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L.label_tags.localized)
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                            RecipeDetailFlowLayout(spacing: 8) {
+                                ForEach(visibleTags, id: \.self) { tag in
+                                    Text(tag)
+                                        .font(.caption)
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.white.opacity(0.2), in: Capsule())
+                                }
                             }
                         }
+                        .padding(16)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
-                    .padding(16)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
             }
             .padding(16)

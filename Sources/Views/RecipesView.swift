@@ -96,7 +96,8 @@ private struct TagChips: View {
     let tags: [String]
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(tags, id: \.self) { tag in
+            // Filter out invisible tags (those starting with _filter:)
+            ForEach(tags.filter { !$0.hasPrefix("_filter:") }, id: \.self) { tag in
                 Text(tag)
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
@@ -1470,7 +1471,12 @@ struct CommunityRecipesView: View {
         if selectedFilters.isEmpty { return languageFiltered }
         let wanted = selectedFilters.map { norm($0) }
         return languageFiltered.filter { r in
-            let tagsNorm = Set((r.tags ?? []).map { norm($0) })
+            // Normalize tags, removing _filter: prefix for comparison but keeping original for display
+            let tagsNorm = Set((r.tags ?? []).map { tag in
+                // Remove _filter: prefix if present for filtering comparison
+                let cleaned = tag.hasPrefix("_filter:") ? String(tag.dropFirst(8)) : tag
+                return norm(cleaned)
+            })
             var matched = false
             for f in wanted {
                 if f == "highprotein" {
@@ -1829,10 +1835,14 @@ private struct ShareRecipeSheet: View {
                                                 .lineLimit(2)
                                                 .multilineTextAlignment(.leading)
                                             if let tags = recipe.tags, !tags.isEmpty {
-                                                Text(tags.prefix(2).joined(separator: ", "))
-                                                    .font(.caption)
-                                                    .foregroundStyle(.white.opacity(0.7))
-                                                    .lineLimit(1)
+                                                // Filter out invisible tags (those starting with _filter:)
+                                                let visibleTags = tags.filter { !$0.hasPrefix("_filter:") }
+                                                if !visibleTags.isEmpty {
+                                                    Text(visibleTags.prefix(2).joined(separator: ", "))
+                                                        .font(.caption)
+                                                        .foregroundStyle(.white.opacity(0.7))
+                                                        .lineLimit(1)
+                                                }
                                             }
                                         }
                                         
@@ -2020,7 +2030,11 @@ struct RecipeCard: View {
             // Recipe Info
             VStack(alignment: .leading, spacing: 8) {
                 if let tags = recipe.tags, !tags.isEmpty {
-                    TagChips(tags: Array(tags.prefix(3)))
+                    // Filter out invisible tags (those starting with _filter:)
+                    let visibleTags = tags.filter { !$0.hasPrefix("_filter:") }
+                    if !visibleTags.isEmpty {
+                        TagChips(tags: Array(visibleTags.prefix(3)))
+                    }
                 }
                 
                 HStack(spacing: 12) {

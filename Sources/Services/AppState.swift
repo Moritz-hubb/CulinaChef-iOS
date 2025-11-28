@@ -552,30 +552,149 @@ final class AppState: ObservableObject {
     
     func chatSystemContext() -> String {
         // Build a compact dietary context (only essential info to stay under 2500 char limit)
+        let code = currentLanguageCode()
         var essentialDietary: [String] = []
+        
+        // Language-specific dietary labels
+        let (allergiesLabel, dietLabel, spicyLabel): (String, String, String) = {
+            switch code {
+            case "en": return ("Allergies", "Diet", "Spiciness: High")
+            case "es": return ("Alergias", "Dieta", "Picante: Alto")
+            case "fr": return ("Allergies", "Régime", "Épicé: Élevé")
+            case "it": return ("Allergie", "Dieta", "Piccante: Alto")
+            default: return ("Allergien", "Ernährung", "Schärfe: Hoch")
+            }
+        }()
+        
         if !dietary.allergies.isEmpty {
-            essentialDietary.append("Allergien: " + dietary.allergies.joined(separator: ", "))
+            essentialDietary.append("\(allergiesLabel): " + dietary.allergies.joined(separator: ", "))
         }
         let importantDiets = ["halal", "vegan", "vegetarisch", "pescetarisch", "koscher"]
         let userImportantDiets = dietary.diets.filter { importantDiets.contains($0.lowercased()) }
         if !userImportantDiets.isEmpty {
-            essentialDietary.append("Ernährung: " + userImportantDiets.sorted().joined(separator: ", "))
+            essentialDietary.append("\(dietLabel): " + userImportantDiets.sorted().joined(separator: ", "))
         }
         let prefs = TastePreferencesManager.load()
         if prefs.spicyLevel > 2.5 {
-            essentialDietary.append("Schärfe: Hoch")
+            essentialDietary.append(spicyLabel)
         }
         let dietaryStr = essentialDietary.isEmpty ? "" : essentialDietary.joined(separator: " | ")
         
-        let lang = languageSystemPrompt()
-        
         // Compact chat prompt (under 2000 chars to leave room for dietary context)
-        let chatPrompt = """
+        // Add variety prompts to encourage different recipe suggestions each time
+        // All prompts are now language-aware
+        let (varietyHints, chatPrompt): ([String], String) = {
+            switch code {
+            case "en":
+                let hints = [
+                    "Vary your recipe suggestions - show different cuisines, cooking methods, and flavor profiles.",
+                    "Be creative and surprising - avoid repeating similar recipes.",
+                    "Show diversity: different cultures, preparation methods, and ingredient combinations."
+                ]
+                let prompt = """
+DOMAIN: Kitchen/Cooking. Treat all cooking-related requests as relevant.
+
+Off-Topic: Only for clearly unrelated requests (weather, politics, etc.) respond: "I'm sorry, I can't help you with that. But I'd be happy to answer your cooking questions."
+
+Recipe Ideas: Give ONLY short suggestions (Name + 1-2 sentences). NO complete recipes.
+
+IMPORTANT - Variety: \(hints.randomElement() ?? hints[0]) Each request should provide different and varied recipe suggestions.
+
+COUNT: Standard 5 ideas. Max 10 if explicitly requested. Min 5 unless explicitly fewer requested.
+
+LIMITS: Max 10 recipe ideas, max 12 menu courses. NEVER exceed.
+
+Format: 🍴 **[Name]** ⟦course: [Appetizer|Main Course|Dessert|...]⟧ [Description]
+
+Classification: At the end "⟦kind: menu⟧" for menus, "⟦kind: ideas⟧" for loose ideas.
+"""
+                return (hints, prompt)
+            case "es":
+                let hints = [
+                    "Varía tus sugerencias de recetas - muestra diferentes cocinas, métodos de cocción y perfiles de sabor.",
+                    "Sé creativo y sorprendente - evita repetir recetas similares.",
+                    "Muestra diversidad: diferentes culturas, métodos de preparación y combinaciones de ingredientes."
+                ]
+                let prompt = """
+DOMINIO: Cocina/Cocinar. Trata todas las solicitudes relacionadas con la cocina como relevantes.
+
+Fuera de tema: Solo para solicitudes claramente no relacionadas (clima, política, etc.) responde: "Lo siento, no puedo ayudarte con eso. Pero estaré encantado de responder tus preguntas sobre cocina."
+
+Ideas de Recetas: Da SOLO sugerencias cortas (Nombre + 1-2 frases). NO recetas completas.
+
+IMPORTANTE - Variedad: \(hints.randomElement() ?? hints[0]) Cada solicitud debe proporcionar sugerencias de recetas diferentes y variadas.
+
+CANTIDAD: Estándar 5 ideas. Máx 10 si se solicita explícitamente. Mín 5 a menos que se solicite explícitamente menos.
+
+LÍMITES: Máx 10 ideas de recetas, máx 12 platos de menú. NUNCA exceder.
+
+Formato: 🍴 **[Nombre]** ⟦course: [Entrante|Plato Principal|Postre|...]⟧ [Descripción]
+
+Clasificación: Al final "⟦kind: menu⟧" para menús, "⟦kind: ideas⟧" para ideas sueltas.
+"""
+                return (hints, prompt)
+            case "fr":
+                let hints = [
+                    "Variez vos suggestions de recettes - montrez différentes cuisines, méthodes de cuisson et profils de saveurs.",
+                    "Soyez créatif et surprenant - évitez de répéter des recettes similaires.",
+                    "Montrez la diversité: différentes cultures, méthodes de préparation et combinaisons d'ingrédients."
+                ]
+                let prompt = """
+DOMAINE: Cuisine/Cuisiner. Traitez toutes les demandes liées à la cuisine comme pertinentes.
+
+Hors sujet: Seulement pour les demandes clairement non liées (météo, politique, etc.) répondez: "Je suis désolé, je ne peux pas vous aider avec cela. Mais je serais ravi de répondre à vos questions sur la cuisine."
+
+Idées de Recettes: Donnez UNIQUEMENT des suggestions courtes (Nom + 1-2 phrases). AUCUNE recette complète.
+
+IMPORTANT - Variété: \(hints.randomElement() ?? hints[0]) Chaque demande doit fournir des suggestions de recettes différentes et variées.
+
+NOMBRE: Standard 5 idées. Max 10 si explicitement demandé. Min 5 sauf si explicitement moins demandé.
+
+LIMITES: Max 10 idées de recettes, max 12 plats de menu. NE JAMAIS dépasser.
+
+Format: 🍴 **[Nom]** ⟦course: [Entrée|Plat Principal|Dessert|...]⟧ [Description]
+
+Classification: À la fin "⟦kind: menu⟧" pour les menus, "⟦kind: ideas⟧" pour les idées libres.
+"""
+                return (hints, prompt)
+            case "it":
+                let hints = [
+                    "Varia le tue suggerimenti di ricette - mostra diverse cucine, metodi di cottura e profili di sapore.",
+                    "Sii creativo e sorprendente - evita di ripetere ricette simili.",
+                    "Mostra diversità: diverse culture, metodi di preparazione e combinazioni di ingredienti."
+                ]
+                let prompt = """
+DOMINIO: Cucina/Cucinare. Tratta tutte le richieste relative alla cucina come rilevanti.
+
+Fuori tema: Solo per richieste chiaramente non correlate (meteo, politica, ecc.) rispondi: "Mi dispiace, non posso aiutarti con questo. Ma sarò felice di rispondere alle tue domande sulla cucina."
+
+Idee di Ricette: Dai SOLO suggerimenti brevi (Nome + 1-2 frasi). NESSUNA ricetta completa.
+
+IMPORTANTE - Varietà: \(hints.randomElement() ?? hints[0]) Ogni richiesta dovrebbe fornire suggerimenti di ricette diverse e varie.
+
+CONTE: Standard 5 idee. Max 10 se esplicitamente richiesto. Min 5 a meno che non sia esplicitamente richiesto meno.
+
+LIMITI: Max 10 idee di ricette, max 12 portate di menu. MAI superare.
+
+Formato: 🍴 **[Nome]** ⟦course: [Antipasto|Primo|Secondo|Dolce|...]⟧ [Descrizione]
+
+Classificazione: Alla fine "⟦kind: menu⟧" per i menu, "⟦kind: ideas⟧" per le idee libere.
+"""
+                return (hints, prompt)
+            default: // German
+                let hints = [
+                    "Variiere deine Rezeptvorschläge - zeige unterschiedliche Küchen, Zubereitungsarten und Geschmacksrichtungen.",
+                    "Sei kreativ und überraschend - vermeide Wiederholungen von ähnlichen Rezepten.",
+                    "Zeige Vielfalt: verschiedene Kulturen, Zubereitungsmethoden und Zutatenkombinationen."
+                ]
+                let prompt = """
 DOMAIN: Küche/Kochen. Behandle alle kochbezogenen Anfragen als relevant.
 
 Off-Topic: Nur bei eindeutig fachfremden Anfragen (Wetter, Politik, etc.) antworte: "Ich kann dir damit leider nicht helfen. Ich kann dir aber gerne deine Fragen übers Kochen beantworten."
 
 Rezeptideen: Gib NUR kurze Vorschläge (Name + 1-2 Sätze). KEINE kompletten Rezepte.
+
+WICHTIG - Vielfalt: \(hints.randomElement() ?? hints[0]) Jede Anfrage sollte unterschiedliche und abwechslungsreiche Rezeptvorschläge liefern.
 
 ANZAHL: Standard 5 Ideen. Max 10 wenn explizit gewünscht. Min 5 außer explizit weniger gewünscht.
 
@@ -585,13 +704,19 @@ Format: 🍴 **[Name]** ⟦course: [Vorspeise|Hauptspeise|Nachspeise|...]⟧ [Be
 
 Klassifizierung: Am Ende "⟦kind: menu⟧" für Menüs, "⟦kind: ideas⟧" für lose Ideen.
 """
+                return (hints, prompt)
+            }
+        }()
+        
+        let randomVarietyHint = varietyHints.randomElement() ?? varietyHints[0]
+        let finalChatPrompt = chatPrompt.replacingOccurrences(of: "\(varietyHints.randomElement() ?? varietyHints[0])", with: randomVarietyHint)
         
         var parts: [String] = []
         if !dietaryStr.isEmpty {
             parts.append(dietaryStr)
         }
-        parts.append(lang)
-        parts.append(chatPrompt)
+        // Language instruction is already included in finalChatPrompt, so we don't need lang separately
+        parts.append(finalChatPrompt)
         
         let full = parts.filter { !$0.isEmpty }.joined(separator: "\n\n")
         
@@ -1181,6 +1306,11 @@ Klassifizierung: Am Ende "⟦kind: menu⟧" für Menüs, "⟦kind: ideas⟧" fü
         var tagsArray: [String] = []
         if let categories = plan.categories, !categories.isEmpty {
             tagsArray.append(contentsOf: categories)
+        }
+        // Add filter tags with _filter: prefix (these are invisible but used for filtering)
+        if let filterTags = plan.filter_tags, !filterTags.isEmpty {
+            let hiddenFilterTags = filterTags.map { "_filter:\($0.lowercased())" }
+            tagsArray.append(contentsOf: hiddenFilterTags)
         }
         let langTag = recipeLanguageTag()
         if !tagsArray.contains(langTag) {

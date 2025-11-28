@@ -53,6 +53,7 @@ struct RecipePlan: Codable {
     var servings: Int?
     var total_time_minutes: Int?
     var categories: [String]?
+    var filter_tags: [String]?  // Auto-detected filter tags (vegan, vegetarian, etc.)
     var nutrition: NutritionInfo?
     var ingredients: [IngredientItem]
     var equipment: [String]?
@@ -60,14 +61,15 @@ struct RecipePlan: Codable {
     var notes: String?
 
     enum CodingKeys: String, CodingKey {
-        case title, servings, total_time_minutes, categories, nutrition, ingredients, equipment, steps, notes
+        case title, servings, total_time_minutes, categories, filter_tags, nutrition, ingredients, equipment, steps, notes
     }
 
-    init(title: String = "", servings: Int? = nil, total_time_minutes: Int? = nil, categories: [String]? = nil, nutrition: NutritionInfo? = nil, ingredients: [IngredientItem] = [], equipment: [String]? = nil, steps: [RecipeStep] = [], notes: String? = nil) {
+    init(title: String = "", servings: Int? = nil, total_time_minutes: Int? = nil, categories: [String]? = nil, filter_tags: [String]? = nil, nutrition: NutritionInfo? = nil, ingredients: [IngredientItem] = [], equipment: [String]? = nil, steps: [RecipeStep] = [], notes: String? = nil) {
         self.title = title
         self.servings = servings
         self.total_time_minutes = total_time_minutes
         self.categories = categories
+        self.filter_tags = filter_tags
         self.nutrition = nutrition
         self.ingredients = ingredients
         self.equipment = equipment
@@ -81,6 +83,7 @@ struct RecipePlan: Codable {
         self.servings = try? c.decode(Int.self, forKey: .servings)
         self.total_time_minutes = try? c.decode(Int.self, forKey: .total_time_minutes)
         self.categories = try? c.decode([String].self, forKey: .categories)
+        self.filter_tags = try? c.decode([String].self, forKey: .filter_tags)
         self.nutrition = try? c.decode(NutritionInfo.self, forKey: .nutrition)
         self.ingredients = (try? c.decode([IngredientItem].self, forKey: .ingredients)) ?? []
         self.equipment = try? c.decode([String].self, forKey: .equipment)

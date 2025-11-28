@@ -186,6 +186,11 @@ ToolbarItem(placement: .navigationBarTrailing) {
 
         // Start with AI categories (capitalized) and ALWAYS add a language tag for this recipe.
         var tags: [String] = plan.categories?.map { $0.capitalized } ?? []
+        // Add filter tags with _filter: prefix (these are invisible but used for filtering)
+        if let filterTags = plan.filter_tags, !filterTags.isEmpty {
+            let hiddenFilterTags = filterTags.map { "_filter:\($0.lowercased())" }
+            tags.append(contentsOf: hiddenFilterTags)
+        }
         let langTag = app.recipeLanguageTag()
         if !tags.contains(langTag) {
             tags.append(langTag)

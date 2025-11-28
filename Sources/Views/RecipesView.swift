@@ -1554,12 +1554,13 @@ struct CommunityRecipesView: View {
     @State private var selectedLanguages: Set<String> = []  // Separate language selection
     @State private var showLanguageDropdown = false  // Language dropdown state
     @State private var showMyContributions = false
+    @State private var filterByDietaryPreferences = false  // Toggle für Filter nach Ernährungspräferenzen
     
     // Pagination state
     @State private var currentPage = 0
     @State private var hasMore = true
     @State private var loadingMore = false
-    private let pageSize = 20 // Anzahl Rezepte pro Seite
+    private let pageSize = 50 // Anzahl Rezepte pro Seite (erhöht für schnellere Ladezeiten)
     
     private var availableLanguages: [(code: String, name: String)] {
         [
@@ -1575,17 +1576,20 @@ struct CommunityRecipesView: View {
         [
             L.tag_vegan.localized,
             L.tag_vegetarian.localized,
+            L.tag_pescetarian.localized,
             L.tag_glutenFree.localized,
             L.tag_lactoseFree.localized,
             L.tag_lowCarb.localized,
             L.tag_highProtein.localized,
+            L.tag_halal.localized,
+            L.tag_kosher.localized,
             L.tag_budget.localized,
             L.tag_spicy.localized,
             L.tag_quick.localized
         ]
     }
     private let lowCarbThreshold: Double = 25 // g Kohlenhydrate pro Portion
-    private let quickThresholdMinutes: Int = 30 // Minuten für "Schnell"
+    private let quickThresholdMinutes: Int = 20 // Minuten für "Schnell" (<= 20 Minuten)
     
     private var filteredRecipes: [Recipe] {
         func norm(_ s: String) -> String {
@@ -1636,9 +1640,9 @@ struct CommunityRecipesView: View {
             // Special cases: text queries
             switch norm(q) {
             case "highprotein":
-                if (r.nutrition.protein_g ?? 0) >= 30 { return true }
+                if let nutrition = r.nutrition, (nutrition.protein_g ?? 0) >= 30 { return true }
             case "lowcarb":
-                if let c = r.nutrition.carbs_g, c < lowCarbThreshold { return true }
+                if let nutrition = r.nutrition, let c = nutrition.carbs_g, c < lowCarbThreshold { return true }
             case "schnell":
                 if let mins = parseMinutes(r.cooking_time), mins < quickThresholdMinutes { return true }
             default:
@@ -1662,29 +1666,167 @@ struct CommunityRecipesView: View {
             Logger.debug("Language filter resulted in \(languageFiltered.count) recipes", category: .ui)
         }
         
+        // Apply dietary preferences filter (allergies and diets check) if enabled
+        var dietaryFiltered = languageFiltered
+        if filterByDietaryPreferences {
+            let allergies = app.dietary.allergies.map { norm($0) }
+            let diets = app.dietary.diets.map { norm($0) }
+            
+            // Helper function to check if recipe matches dietary restrictions
+            func recipeMatchesDietaryPreferences(_ r: Recipe) -> Bool {
+                // Normalize recipe tags for comparison
+                // Include both tags and filter_tags (filter_tags are the hidden tags from AI)
+                let allTags = (r.tags ?? []) + (r.filter_tags ?? [])
+                let tagsNorm = Set(allTags.map { (tag: String) -> String in
+                    let cleaned = tag.hasPrefix("_filter:") ? String(tag.dropFirst(8)) : tag
+                    return norm(cleaned)
+                })
+                
+                // Check allergies first (strict exclusion)
+                if !allergies.isEmpty {
+                    guard let ingredients = r.ingredients, !ingredients.isEmpty else {
+                        // If no ingredients, we can't check - but if recipe has tags indicating it's safe, allow it
+                        // Otherwise, be conservative and exclude if we have allergies set
+                        return false  // Exclude recipes without ingredients if allergies are set
+                    }
+                    
+                    let normalizedIngredients = ingredients.map { norm($0) }
+                    for allergy in allergies {
+                        if normalizedIngredients.contains(where: { ingredient in
+                            ingredient.contains(allergy) || allergy.contains(ingredient)
+                        }) {
+                            Logger.debug("Recipe '\(r.title)' excluded due to allergy: \(allergy)", category: .ui)
+                            return false
+                        }
+                    }
+                }
+                
+                // Check dietary restrictions (diets)
+                if !diets.isEmpty {
+                    // Map localized diet names to tag names
+                    let dietToTagMap: [String: String] = [
+                        "vegan": "vegan",
+                        "vegetarisch": "vegetarian",
+                        "vegetarian": "vegetarian",
+                        "pescetarisch": "pescetarian",
+                        "pescetarian": "pescetarian",
+                        "pescatarian": "pescetarian"
+                    ]
+                    
+                    // Check if recipe matches any of the selected diets
+                    var matchesAnyDiet = false
+                    for diet in diets {
+                        let dietTag = dietToTagMap[diet] ?? diet
+                        
+                        // Check if recipe has the matching tag
+                        if tagsNorm.contains(dietTag) {
+                            matchesAnyDiet = true
+                            break
+                        }
+                    }
+                    
+                    // If user has selected diets, recipe MUST match at least one diet tag
+                    // KI should add appropriate tags to all recipes, so we only check tags
+                    if !matchesAnyDiet {
+                        Logger.debug("Recipe '\(r.title)' excluded - does not match any selected diet tags", category: .ui)
+                        return false
+                    }
+                }
+                
+                return true  // Recipe matches dietary preferences
+            }
+            
+            dietaryFiltered = languageFiltered.filter { recipeMatchesDietaryPreferences($0) }
+            Logger.debug("Dietary filter applied: \(dietaryFiltered.count) recipes remaining (from \(languageFiltered.count))", category: .ui)
+        }
+        
         // Then apply other filters
-        if selectedFilters.isEmpty { return languageFiltered }
+        if selectedFilters.isEmpty { return dietaryFiltered }
         let wanted = selectedFilters.map { norm($0) }
-        return languageFiltered.filter { r in
+        return dietaryFiltered.filter { r in
             // Normalize tags, removing _filter: prefix for comparison but keeping original for display
-            let tagsNorm = Set((r.tags ?? []).map { tag in
+            // Include both tags and filter_tags (filter_tags are the hidden tags from AI)
+            let allTags = (r.tags ?? []) + (r.filter_tags ?? [])
+            let tagsNorm = Set(allTags.map { (tag: String) -> String in
                 // Remove _filter: prefix if present for filtering comparison
                 let cleaned = tag.hasPrefix("_filter:") ? String(tag.dropFirst(8)) : tag
                 return norm(cleaned)
             })
             var matched = false
             for f in wanted {
-                if f == "highprotein" {
-                    if (r.nutrition.protein_g ?? 0) >= 30 { matched = true; break }
-                    if tagsNorm.contains("highprotein") { matched = true; break }
-                } else if f == "lowcarb" {
-                    if let c = r.nutrition.carbs_g, c < lowCarbThreshold { matched = true; break }
-                    if tagsNorm.contains("lowcarb") { matched = true; break }
-                } else if f == "schnell" {
+                // Normalize filter name to match tag format
+                let filterNorm = norm(f)
+                
+                // Map localized filter names to tag names
+                let filterToTagMap: [String: String] = [
+                    "vegan": "vegan",
+                    "vegetarian": "vegetarian",
+                    "pescetarian": "pescetarian",
+                    "pescatarian": "pescetarian",
+                    "pescetarisch": "pescetarian",
+                    "glutenfrei": "gluten-free",
+                    "glutenfree": "gluten-free",
+                    "laktosefrei": "lactose-free",
+                    "lactosefree": "lactose-free",
+                    "kohlenhydratarm": "low-carb",
+                    "lowcarb": "low-carb",
+                    "proteinreich": "high-protein",
+                    "highprotein": "high-protein",
+                    "halal": "halal",
+                    "kosher": "kosher",
+                    "koscher": "kosher",
+                    "günstig": "budget",
+                    "budget": "budget",
+                    "scharf": "spicy",
+                    "spicy": "spicy",
+                    "schnell": "quick",
+                    "quick": "quick"
+                ]
+                
+                let tagName = filterToTagMap[filterNorm] ?? filterNorm
+                
+                // Check nutrition-based filters
+                if tagName == "high-protein" {
+                    if let nutrition = r.nutrition, (nutrition.protein_g ?? 0) >= 30 { matched = true; break }
+                    if tagsNorm.contains("high-protein") || tagsNorm.contains("highprotein") { matched = true; break }
+                } else if tagName == "low-carb" {
+                    if let nutrition = r.nutrition, let c = nutrition.carbs_g, c < lowCarbThreshold { matched = true; break }
+                    if tagsNorm.contains("low-carb") || tagsNorm.contains("lowcarb") { matched = true; break }
+                } else if tagName == "quick" {
                     if let mins = parseMinutes(r.cooking_time), mins < quickThresholdMinutes { matched = true; break }
-                    if tagsNorm.contains("schnell") { matched = true; break }
+                    if tagsNorm.contains("quick") || tagsNorm.contains("schnell") { matched = true; break }
+                } else if tagName == "vegetarian" {
+                    // Only show recipes with vegetarian tag (KI should add this tag to all vegetarian recipes)
+                    if tagsNorm.contains("vegetarian") || tagsNorm.contains("vegetarisch") {
+                        matched = true
+                        break
+                    }
+                } else if tagName == "vegan" {
+                    // Only show recipes with vegan tag (KI should add this tag to all vegan recipes)
+                    // Check both normalized tag name and filter name to handle variations
+                    // The norm() function already normalizes tags (removes _filter: prefix and normalizes), so we check both
+                    let hasVeganTag = tagsNorm.contains("vegan") || tagsNorm.contains(filterNorm)
+                    if hasVeganTag {
+                        matched = true
+                        break
+                    } else {
+                        // Debug: Log if recipe has tags but not vegan tag
+                        if let tags = r.tags, !tags.isEmpty {
+                            Logger.debug("Recipe '\(r.title)' has tags: \(tags.joined(separator: ", ")), normalized: \(tagsNorm), but no vegan tag", category: .ui)
+                        }
+                    }
                 } else {
-                    if tagsNorm.contains(f) { matched = true; break }
+                    // Check if tag matches (with variations)
+                    if tagsNorm.contains(tagName) || 
+                       tagsNorm.contains(filterNorm) ||
+                       (tagName == "gluten-free" && tagsNorm.contains("glutenfree")) ||
+                       (tagName == "lactose-free" && tagsNorm.contains("lactosefree")) ||
+                       (tagName == "low-carb" && tagsNorm.contains("lowcarb")) ||
+                       (tagName == "high-protein" && tagsNorm.contains("highprotein")) ||
+                       (tagName == "pescetarian" && (tagsNorm.contains("pescetarian") || tagsNorm.contains("pescatarian"))) {
+                        matched = true
+                        break
+                    }
                 }
             }
             return matched
@@ -1725,9 +1867,30 @@ struct CommunityRecipesView: View {
             else {
                 ScrollView {
                     VStack(spacing: 12) {
-                        // Header mit Suchbar und Meine Beiträge Button
+                        // Header mit Suchbar, Ernährungspräferenzen-Toggle und Meine Beiträge Button
                         HStack(spacing: 8) {
                             SearchBar(query: $query, placeholder: L.placeholder_searchCommunityLong.localized)
+                            
+                            // Toggle für Filter nach Ernährungspräferenzen
+                            Button(action: {
+                                withAnimation {
+                                    filterByDietaryPreferences.toggle()
+                                }
+                            }) {
+                                VStack(spacing: 2) {
+                                    Image(systemName: filterByDietaryPreferences ? "checkmark.shield.fill" : "shield")
+                                        .font(.system(size: 16))
+                                    Text(L.recipe_filterByDietaryPreferences.localized)
+                                        .font(.caption2)
+                                }
+                                .foregroundColor(filterByDietaryPreferences ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(filterByDietaryPreferences ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                            
                             NavigationLink(destination: MyContributionsView()) {
                                 VStack(spacing: 2) {
                                     Image(systemName: "person.crop.square")
@@ -1771,8 +1934,8 @@ struct CommunityRecipesView: View {
                                     }
                                     
                                     // OPTIMIZATION: Lade weitere Rezepte, wenn Benutzer nahe am Ende scrollt
-                                    // Lade nächste Seite, wenn wir 5 Rezepte vor dem Ende sind
-                                    if index >= filteredRecipes.count - 5 && hasMore && !loadingMore && query.isEmpty && selectedFilters.isEmpty && selectedLanguages.isEmpty {
+                                    // Lade früher (10 Rezepte vor dem Ende) für bessere UX
+                                    if index >= filteredRecipes.count - 10 && hasMore && !loadingMore && query.isEmpty && selectedFilters.isEmpty && selectedLanguages.isEmpty {
                                         Task {
                                             await loadMoreCommunityRecipes()
                                         }
@@ -1877,26 +2040,32 @@ struct CommunityRecipesView: View {
         }
         
         do {
-            // OPTIMIZATION: Lade zuerst das erste Rezept sofort für instant display
-            async let firstRecipeTask = loadFirstCommunityRecipe(token: token)
+            // OPTIMIZATION: Lade sofort die erste volle Seite (50 Rezepte) für schnelle Anzeige
+            let firstPage = try await loadCommunityRecipesPage(page: 0, pageSize: pageSize, token: token)
             
-            // Warte auf erstes Rezept
-            if let first = try await firstRecipeTask {
-                await MainActor.run {
-                    self.recipes = [first]
+            await MainActor.run {
+                if !firstPage.isEmpty {
+                    self.recipes = firstPage
                     self.loading = false // Seite sofort anzeigen!
-                    Logger.info("[CommunityRecipesView] Displaying first recipe immediately", category: .data)
-                }
-            } else {
-                // Kein erstes Rezept gefunden
-                await MainActor.run {
+                    self.currentPage = 1 // Nächste Seite ist 1
+                    self.hasMore = firstPage.count >= pageSize
+                    Logger.info("[CommunityRecipesView] Displaying \(firstPage.count) recipes immediately", category: .data)
+                } else {
                     self.loading = false
                     Logger.info("[CommunityRecipesView] No recipes found, displaying empty state", category: .data)
                 }
             }
             
-            // Lade erste Seite im Hintergrund (20 Rezepte)
-            await loadMoreCommunityRecipes()
+            // Preload images for first page in background
+            let imageUrls = firstPage.compactMap { recipe -> URL? in
+                guard let imageUrl = recipe.image_url, !imageUrl.isEmpty else { return nil }
+                return URL(string: imageUrl)
+            }
+            if !imageUrls.isEmpty {
+                Task { @MainActor in
+                    ImageCache.shared.preload(urls: imageUrls)
+                }
+            }
         } catch {
             Logger.error("Failed to load community recipes", error: error, category: .data)
             await MainActor.run {
@@ -1930,24 +2099,29 @@ struct CommunityRecipesView: View {
         await MainActor.run { loadingMore = true }
         
         do {
-            let newRecipes = try await loadCommunityRecipesPage(page: currentPage, pageSize: pageSize, token: token)
+            // OPTIMIZATION: Lade 2 Seiten parallel für schnellere Ladezeiten (100 Rezepte auf einmal)
+            async let page1Task = loadCommunityRecipesPage(page: currentPage, pageSize: pageSize, token: token)
+            async let page2Task = loadCommunityRecipesPage(page: currentPage + 1, pageSize: pageSize, token: token)
+            
+            let (page1Recipes, page2Recipes) = try await (page1Task, page2Task)
+            let allNewRecipes = page1Recipes + page2Recipes
             
             await MainActor.run {
-                if newRecipes.count < pageSize {
+                if allNewRecipes.count < pageSize * 2 {
                     hasMore = false // Keine weiteren Rezepte verfügbar
                 }
                 
                 // Füge neue Rezepte hinzu (vermeide Duplikate)
                 let existingIds = Set(recipes.map { $0.id })
-                let uniqueNewRecipes = newRecipes.filter { !existingIds.contains($0.id) }
+                let uniqueNewRecipes = allNewRecipes.filter { !existingIds.contains($0.id) }
                 recipes.append(contentsOf: uniqueNewRecipes)
                 
-                currentPage += 1
+                currentPage += 2 // 2 Seiten geladen
                 loadingMore = false
                 
-                Logger.info("[CommunityRecipesView] Loaded page \(currentPage) with \(newRecipes.count) recipes. Total: \(recipes.count)", category: .data)
+                Logger.info("[CommunityRecipesView] Loaded pages \(currentPage - 1)-\(currentPage) with \(allNewRecipes.count) recipes. Total: \(recipes.count)", category: .data)
                 
-                // Preload images for new recipes
+                // Preload images for new recipes in background
                 let imageUrls = uniqueNewRecipes.compactMap { recipe -> URL? in
                     guard let imageUrl = recipe.image_url, !imageUrl.isEmpty else { return nil }
                     return URL(string: imageUrl)
@@ -1968,34 +2142,6 @@ struct CommunityRecipesView: View {
                 }
             }
         }
-    }
-    
-    // Helper function to load the first community recipe immediately
-    private func loadFirstCommunityRecipe(token: String) async throws -> Recipe? {
-        var url = Config.supabaseURL
-        url.append(path: "/rest/v1/recipes")
-        url.append(queryItems: [
-            URLQueryItem(name: "is_public", value: "eq.true"),
-            URLQueryItem(name: "select", value: "*"),
-            URLQueryItem(name: "order", value: "created_at.desc"),
-            URLQueryItem(name: "limit", value: "1")
-        ])
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        let (data, response) = try await SecureURLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
-        
-        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
-        return recipes.first
     }
     
     // Helper function to load a page of community recipes with pagination

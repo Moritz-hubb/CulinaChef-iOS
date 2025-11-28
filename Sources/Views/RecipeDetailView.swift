@@ -454,7 +454,10 @@ struct RecipeDetailView: View {
             placeholderHeaderImage
             
             // Plus button to add photo
-            if !isUploadingPhoto && photoData == nil {
+            // Don't allow adding photos to public recipes that don't have images (no moderation)
+            let canAddPhoto = !(recipe.is_public == true && recipe.image_url == nil || recipe.image_url?.isEmpty == true)
+            
+            if !isUploadingPhoto && photoData == nil && canAddPhoto {
                 PhotosPicker(selection: Binding(
                     get: { selectedPhoto.map { [$0] } ?? [] },
                     set: { selectedPhoto = $0.first }
@@ -486,7 +489,10 @@ struct RecipeDetailView: View {
                     .font(.headline)
                     .foregroundStyle(.white)
                 Spacer()
-                if !isUploadingPhoto && photoData == nil && uploadedImageUrl == nil {
+                // Don't allow adding photos to public recipes that don't have images (no moderation)
+                let canAddPhoto = !(recipe.is_public == true && recipe.image_url == nil || recipe.image_url?.isEmpty == true)
+                
+                if !isUploadingPhoto && photoData == nil && uploadedImageUrl == nil && canAddPhoto {
                     PhotosPicker(selection: Binding(
                         get: { selectedPhoto.map { [$0] } ?? [] },
                         set: { selectedPhoto = $0.first }
@@ -728,6 +734,12 @@ struct RecipeDetailView: View {
         guard let data = photoData,
               let userId = KeychainManager.get(key: "user_id"),
               let token = app.accessToken else { return }
+        
+        // Prevent adding photos to public recipes that don't have images (no moderation)
+        if recipe.is_public == true && (recipe.image_url == nil || recipe.image_url?.isEmpty == true) {
+            Logger.warning("Cannot add photo to public recipe without existing image (no moderation)", category: .data)
+            return
+        }
         
         isUploadingPhoto = true
         defer { isUploadingPhoto = false }

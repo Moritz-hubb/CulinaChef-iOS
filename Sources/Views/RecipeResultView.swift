@@ -256,6 +256,12 @@ ToolbarItem(placement: .navigationBarTrailing) {
                                 LabeledRow(L.label_fat.localized, formatGrams(n.fat_g))
                                 LabeledRow(L.label_carbs.localized, formatGrams(n.carbs_g))
                             }
+                            
+                            // Nutrition disclaimer
+                            Text(L.recipe_nährwerte_hinweis.localized)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.6))
+                                .padding(.top, 4)
                         }
                     }
                     if let notes = plan.notes, !notes.isEmpty {

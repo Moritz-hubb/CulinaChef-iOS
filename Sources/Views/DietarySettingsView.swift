@@ -22,9 +22,20 @@ struct DietarySettingsView: View {
     @State private var isSyncing = false
     @State private var isSaving = false
 
-    private let dietOptions: [String] = [
-        "vegetarisch", "vegan", "pescetarisch", "low-carb", "high-protein", "glutenfrei", "laktosefrei", "halal", "koscher"
-    ]
+    private var dietOptions: [String] {
+        let _ = localizationManager.currentLanguage // Force recomputation when language changes
+        return [
+            L.category_vegetarian.localized,
+            L.category_vegan.localized,
+            L.category_pescetarian.localized,
+            L.category_lowCarb.localized,
+            L.category_highProtein.localized,
+            L.category_glutenFree.localized,
+            L.category_lactoseFree.localized,
+            L.category_halal.localized,
+            L.category_kosher.localized
+        ]
+    }
 
     var body: some View {
         ZStack {
@@ -296,10 +307,105 @@ struct DietarySettingsView: View {
                     }
     }
 
+    // Mapping of all possible localized diet strings to their localization keys
+    // This allows us to map stored dietary types (in any language) to current localized strings
+    private static let dietLocalizationMap: [String: String] = {
+        var map: [String: String] = [:]
+        
+        // Get all localized versions from JSON files
+        // German (de)
+        map["vegetarisch"] = L.category_vegetarian
+        map["vegan"] = L.category_vegan
+        map["pescetarisch"] = L.category_pescetarian
+        map["kohlenhydratarm"] = L.category_lowCarb
+        map["proteinreich"] = L.category_highProtein
+        map["glutenfrei"] = L.category_glutenFree
+        map["laktosefrei"] = L.category_lactoseFree
+        map["halal"] = L.category_halal
+        map["koscher"] = L.category_kosher
+        
+        // English (en)
+        map["vegetarian"] = L.category_vegetarian
+        map["pescetarian"] = L.category_pescetarian
+        map["pescatarian"] = L.category_pescetarian
+        map["low-carb"] = L.category_lowCarb
+        map["low carb"] = L.category_lowCarb
+        map["high-protein"] = L.category_highProtein
+        map["high protein"] = L.category_highProtein
+        map["gluten-free"] = L.category_glutenFree
+        map["gluten free"] = L.category_glutenFree
+        map["lactose-free"] = L.category_lactoseFree
+        map["lactose free"] = L.category_lactoseFree
+        map["kosher"] = L.category_kosher
+        
+        // Spanish (es)
+        map["vegetariano"] = L.category_vegetarian
+        map["vegano"] = L.category_vegan
+        map["pescetariano"] = L.category_pescetarian
+        map["bajo en carbohidratos"] = L.category_lowCarb
+        map["alto en proteínas"] = L.category_highProtein
+        map["sin gluten"] = L.category_glutenFree
+        map["sin lactosa"] = L.category_lactoseFree
+        map["cosher"] = L.category_kosher
+        
+        // French (fr)
+        map["végétarien"] = L.category_vegetarian
+        map["végétalien"] = L.category_vegan
+        map["pescétarien"] = L.category_pescetarian
+        map["faible en glucides"] = L.category_lowCarb
+        map["riche en protéines"] = L.category_highProtein
+        map["sans gluten"] = L.category_glutenFree
+        map["sans lactose"] = L.category_lactoseFree
+        map["cacher"] = L.category_kosher
+        
+        // Italian (it)
+        map["pescetariano"] = L.category_pescetarian
+        map["basso contenuto di carboidrati"] = L.category_lowCarb
+        map["ricco di proteine"] = L.category_highProtein
+        map["senza glutine"] = L.category_glutenFree
+        map["senza lattosio"] = L.category_lactoseFree
+        map["casher"] = L.category_kosher
+        
+        return map
+    }()
+    
     private func loadFromApp() {
         Logger.debug("[DietarySettingsView] loadFromApp() called, isSaving: \(isSaving)", category: .data)
         let d = app.dietary
-        diets = d.diets
+        
+        // Map stored dietary types to current localized strings
+        // This handles cases where dietary types were saved in a different language
+        let currentOptions = dietOptions
+        let storedDiets = d.diets
+        
+        var mappedDiets: Set<String> = []
+        
+        // Map each stored diet to the current localized equivalent
+        for storedDiet in storedDiets {
+            // Check if it already matches a current option
+            if currentOptions.contains(storedDiet) {
+                mappedDiets.insert(storedDiet)
+            } else if let key = Self.dietLocalizationMap[storedDiet.lowercased()] {
+                // Found a match in the map - use the current localized version
+                let currentLocalized = key.localized
+                mappedDiets.insert(currentLocalized)
+                Logger.debug("[DietarySettingsView] Mapped stored diet '\(storedDiet)' to current localized '\(currentLocalized)'", category: .data)
+            } else {
+                // Try case-insensitive match
+                let lowercased = storedDiet.lowercased()
+                if let key = Self.dietLocalizationMap[lowercased] {
+                    let currentLocalized = key.localized
+                    mappedDiets.insert(currentLocalized)
+                    Logger.debug("[DietarySettingsView] Mapped stored diet '\(storedDiet)' (case-insensitive) to current localized '\(currentLocalized)'", category: .data)
+                } else {
+                    // No match found - keep the original (might be a custom value or legacy)
+                    mappedDiets.insert(storedDiet)
+                    Logger.debug("[DietarySettingsView] Could not map stored diet '\(storedDiet)', keeping original", category: .data)
+                }
+            }
+        }
+        
+        diets = mappedDiets
         allergies = d.allergies
         dislikes = d.dislikes
         notesText = d.notes ?? ""

@@ -1046,9 +1046,8 @@ private struct RecipeSuggestionsView: View {
             essentialParts.append("Ernährungsweisen: " + userImportantDiets.sorted().joined(separator: ", "))
         }
         
-        // WICHTIG: Ernährungsweisen sind nur als FILTER - wenn der Benutzer ein normales Rezept anfordert, erstelle es normal
-        // Nur Allergien müssen strikt beachtet werden, Ernährungsweisen dienen nur als Orientierung
-        let essentialContext = essentialParts.isEmpty ? "" : "WICHTIG: Allergien müssen IMMER vermieden werden. Ernährungsweisen dienen nur als Orientierung - wenn der Benutzer ein normales Rezept anfordert (z.B. 'Beef Stroganoff'), erstelle es mit den angeforderten Zutaten, nicht automatisch vegan/vegetarisch. " + essentialParts.joined(separator: " | ")
+        // WICHTIG: Ernährungsweisen müssen IMMER respektiert werden - Rezepte entsprechend anpassen
+        let essentialContext = essentialParts.isEmpty ? "" : "WICHTIG: Allergien müssen IMMER vermieden werden. Ernährungsweisen müssen IMMER respektiert werden - wenn der Benutzer z.B. vegetarisch ist und 'Beef Stroganoff' anfordert, erstelle eine vegetarische Variante (z.B. mit Pilzen oder Seitan statt Rindfleisch). " + essentialParts.joined(separator: " | ")
         let languageContext = app.languageSystemPrompt()
         let fullContext = [essentialContext, languageContext].filter { !$0.isEmpty }.joined(separator: "\n")
         

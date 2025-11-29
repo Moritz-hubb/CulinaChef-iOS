@@ -357,7 +357,7 @@ final class AuthenticationManager {
             // If fetch fails, preserve local status
             // Don't reset onboarding if user already completed it
             if localStatus {
-                Logger.debug("Failed to load onboarding status from backend, but local status is true - preserving it", error: error, category: .auth)
+                Logger.debug("Failed to load onboarding status from backend, but local status is true - preserving it. Error: \(error.localizedDescription)", category: .auth)
             } else {
                 Logger.error("Failed to load onboarding status from backend, local status is false", error: error, category: .auth)
             }

@@ -467,10 +467,9 @@ final class AppState: ObservableObject {
         var preferencesParts: [String] = []  // Geschmack - nur als Vorschlag
         
         // STRIKTE Anforderungen (Allergien & Ernährungsweisen)
-        // WICHTIG: Ernährungsweisen sind nur als FILTER - nicht als Anweisung, das Rezept zu ändern
-        // Wenn der Benutzer ein normales Rezept anfordert, erstelle es normal (nicht automatisch vegan/vegetarisch)
+        // WICHTIG: Ernährungsweisen müssen IMMER respektiert werden - Rezepte entsprechend anpassen
         if !dietary.diets.isEmpty {
-            strictParts.append("Ernährungsweisen (nur als Filter, nicht als Rezeptänderung): " + dietary.diets.sorted().joined(separator: ", "))
+            strictParts.append("Ernährungsweisen (IMMER respektieren, Rezepte entsprechend anpassen): " + dietary.diets.sorted().joined(separator: ", "))
         }
         if !dietary.allergies.isEmpty {
             strictParts.append("Allergien/Unverträglichkeiten (IMMER vermeiden): " + dietary.allergies.joined(separator: ", "))
@@ -520,9 +519,8 @@ final class AppState: ObservableObject {
         
         var result: [String] = []
         if !strictParts.isEmpty {
-            // WICHTIG: Ernährungsweisen sind nur als FILTER - wenn der Benutzer ein normales Rezept anfordert, erstelle es normal
-            // Nur Allergien müssen strikt beachtet werden
-            result.append("STRIKTE Anforderungen (IMMER beachten): " + strictParts.joined(separator: " | ") + " | WICHTIG: Ernährungsweisen dienen nur als Orientierung - wenn der Benutzer ein normales Rezept anfordert (z.B. 'Beef Stroganoff'), erstelle es mit den angeforderten Zutaten, nicht automatisch vegan/vegetarisch.")
+            // WICHTIG: Ernährungsweisen müssen IMMER respektiert werden - Rezepte entsprechend anpassen
+            result.append("STRIKTE Anforderungen (IMMER beachten): " + strictParts.joined(separator: " | ") + " | WICHTIG: Ernährungsweisen müssen IMMER respektiert werden - wenn der Benutzer z.B. vegetarisch ist und 'Beef Stroganoff' anfordert, erstelle eine vegetarische Variante (z.B. mit Pilzen oder Seitan statt Rindfleisch).")
         }
         if !preferencesParts.isEmpty {
             result.append("Geschmackspräferenzen (nur wenn sinnvoll anwenden, NICHT zwingend in jedes Rezept einbauen): " + preferencesParts.joined(separator: " | "))

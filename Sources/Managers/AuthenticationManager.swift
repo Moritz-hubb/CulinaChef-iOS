@@ -322,24 +322,46 @@ final class AuthenticationManager {
     // MARK: - Onboarding Status
     
     internal func loadOnboardingStatusFromBackend(userId: String, accessToken: String) async {
+        let key = "onboarding_completed_\(userId)"
+        let localStatus = UserDefaults.standard.bool(forKey: key)
+        
         do {
             // Fetch user preferences from backend
             if let preferences = try await preferencesClient.fetchPreferences(userId: userId, accessToken: accessToken) {
-                // User has preferences in backend - set local flag based on backend value
-                let key = "onboarding_completed_\(userId)"
-                UserDefaults.standard.set(preferences.onboardingCompleted, forKey: key)
-                Logger.debug("Loaded onboarding status from backend: \(preferences.onboardingCompleted)", category: .auth)
+                // User has preferences in backend - update local flag based on backend value
+                // CRITICAL: If local status is already true, only update if backend explicitly says false
+                // This prevents overwriting a completed onboarding if backend hasn't synced yet
+                if preferences.onboardingCompleted {
+                    UserDefaults.standard.set(true, forKey: key)
+                    Logger.debug("Loaded onboarding status from backend: true", category: .auth)
+                } else if localStatus {
+                    // Local says completed, but backend says not completed
+                    // Keep local status (user completed onboarding, backend might not have synced)
+                    Logger.debug("Local onboarding status is true, keeping it (backend may not have synced yet)", category: .auth)
+                } else {
+                    // Both local and backend say false - user hasn't completed onboarding
+                    UserDefaults.standard.set(false, forKey: key)
+                    Logger.debug("Onboarding not completed (local and backend both false)", category: .auth)
+                }
             } else {
-                // No preferences in backend - user hasn't completed onboarding
-                let key = "onboarding_completed_\(userId)"
-                UserDefaults.standard.set(false, forKey: key)
-                Logger.debug("No preferences found in backend - onboarding not completed", category: .auth)
+                // No preferences in backend - preserve local status
+                // If user already completed onboarding locally, don't reset it
+                if localStatus {
+                    Logger.debug("No preferences in backend, but local onboarding is completed - preserving local status", category: .auth)
+                } else {
+                    Logger.debug("No preferences in backend and local onboarding not completed", category: .auth)
+                }
+                // Don't overwrite local status - preserve what user has done
             }
         } catch {
-            // If fetch fails, default to false (show onboarding)
-            let key = "onboarding_completed_\(userId)"
-            UserDefaults.standard.set(false, forKey: key)
-            Logger.error("Failed to load onboarding status from backend, defaulting to false", error: error, category: .auth)
+            // If fetch fails, preserve local status
+            // Don't reset onboarding if user already completed it
+            if localStatus {
+                Logger.debug("Failed to load onboarding status from backend, but local status is true - preserving it", error: error, category: .auth)
+            } else {
+                Logger.error("Failed to load onboarding status from backend, local status is false", error: error, category: .auth)
+            }
+            // Don't overwrite local status on error - preserve user's progress
         }
     }
 }

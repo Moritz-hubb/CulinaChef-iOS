@@ -108,6 +108,15 @@ final class AppState: ObservableObject {
     // Deep link recipe navigation
     @Published var deepLinkRecipe: Recipe? = nil
     
+    // Recipe state preservation (for app backgrounding)
+    @Published var preservedRecipeId: String? = nil
+    @Published var preservedRecipePage: Int = 0
+    
+    // Cached recipes for instant display in recipe book tab
+    @Published var cachedRecipes: [Recipe] = []
+    @Published var cachedMenus: [Menu] = []
+    @Published var recipesCacheTimestamp: Date? = nil
+    
     // Initial data loading state
     @Published var isInitialDataLoaded: Bool = false
     
@@ -301,6 +310,9 @@ final class AppState: ObservableObject {
             }
         }
         
+        // OPTIMIZATION: Load cached recipes from disk immediately for instant display
+        loadCachedRecipesFromDisk()
+        
         // Load initial data after a short delay to ensure everything is initialized
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -374,9 +386,15 @@ final class AppState: ObservableObject {
             }
         }
         
-        // Load menus in parallel (they're loaded lazily in RecipesView, but we can preload)
-        // This is optional - menus will be loaded when RecipesView appears anyway
-        // But preloading gives a smoother experience
+        // OPTIMIZATION: Load recipes and menus in background for instant display
+        // This allows the recipe book tab to show cached data immediately
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self,
+                  let userId = KeychainManager.get(key: "user_id"),
+                  let token = await self.accessToken else { return }
+            
+            await self.preloadRecipesAndMenus(userId: userId, token: token)
+        }
         
         // Mark as loaded after a minimum time to ensure smooth transition
         // This prevents the loading screen from flashing too quickly
@@ -449,8 +467,10 @@ final class AppState: ObservableObject {
         var preferencesParts: [String] = []  // Geschmack - nur als Vorschlag
         
         // STRIKTE Anforderungen (Allergien & Ernährungsweisen)
+        // WICHTIG: Ernährungsweisen sind nur als FILTER - nicht als Anweisung, das Rezept zu ändern
+        // Wenn der Benutzer ein normales Rezept anfordert, erstelle es normal (nicht automatisch vegan/vegetarisch)
         if !dietary.diets.isEmpty {
-            strictParts.append("Ernährungsweisen: " + dietary.diets.sorted().joined(separator: ", "))
+            strictParts.append("Ernährungsweisen (nur als Filter, nicht als Rezeptänderung): " + dietary.diets.sorted().joined(separator: ", "))
         }
         if !dietary.allergies.isEmpty {
             strictParts.append("Allergien/Unverträglichkeiten (IMMER vermeiden): " + dietary.allergies.joined(separator: ", "))
@@ -500,7 +520,9 @@ final class AppState: ObservableObject {
         
         var result: [String] = []
         if !strictParts.isEmpty {
-            result.append("STRIKTE Anforderungen (IMMER beachten): " + strictParts.joined(separator: " | "))
+            // WICHTIG: Ernährungsweisen sind nur als FILTER - wenn der Benutzer ein normales Rezept anfordert, erstelle es normal
+            // Nur Allergien müssen strikt beachtet werden
+            result.append("STRIKTE Anforderungen (IMMER beachten): " + strictParts.joined(separator: " | ") + " | WICHTIG: Ernährungsweisen dienen nur als Orientierung - wenn der Benutzer ein normales Rezept anfordert (z.B. 'Beef Stroganoff'), erstelle es mit den angeforderten Zutaten, nicht automatisch vegan/vegetarisch.")
         }
         if !preferencesParts.isEmpty {
             result.append("Geschmackspräferenzen (nur wenn sinnvoll anwenden, NICHT zwingend in jedes Rezept einbauen): " + preferencesParts.joined(separator: " | "))
@@ -1099,12 +1121,72 @@ Klassifizierung: Am Ende "⟦kind: menu⟧" für Menüs, "⟦kind: ideas⟧" fü
     #if canImport(UIKit)
     @objc private func onDidBecomeActive() {
         startSubscriptionPolling()
+        restoreRecipeStateIfNeeded()
     }
 
     @objc private func onWillResignActive() {
         stopSubscriptionPolling()
     }
     #endif
+    
+    // MARK: - Recipe State Preservation
+    /// Stellt den Rezeptzustand wieder her, wenn die App zurückkommt
+    private func restoreRecipeStateIfNeeded() {
+        guard let recipeId = preservedRecipeId else { return }
+        
+        // Kleine Verzögerung, damit die UI bereit ist
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+            
+            // Lade das Rezept und navigiere dorthin
+            guard let token = accessToken else {
+                // Reset preserved state if not authenticated
+                preservedRecipeId = nil
+                preservedRecipePage = 0
+                return
+            }
+            
+            do {
+                let recipe = try await fetchRecipeForStateRestore(id: recipeId, token: token)
+                deepLinkRecipe = recipe
+                // Die preservedRecipePage wird in RecipeDetailView verwendet
+            } catch {
+                Logger.error("Failed to restore recipe state", error: error, category: .data)
+                // Reset on error
+                preservedRecipeId = nil
+                preservedRecipePage = 0
+            }
+        }
+    }
+    
+    private func fetchRecipeForStateRestore(id: String, token: String) async throws -> Recipe {
+        var url = Config.supabaseURL
+        url.append(path: "/rest/v1/recipes")
+        url.append(queryItems: [
+            URLQueryItem(name: "id", value: "eq.\(id)"),
+            URLQueryItem(name: "select", value: "*")
+        ])
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await SecureURLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+        guard let recipe = recipes.first else {
+            throw URLError(.fileDoesNotExist)
+        }
+        
+        return recipe
+    }
     
     /// Lädt Ernährungspräferenzen aus Supabase (falls eingeloggt) oder fällt auf UserDefaults zurück.
     ///
@@ -1168,6 +1250,108 @@ Klassifizierung: Am Ende "⟦kind: menu⟧" für Menüs, "⟦kind: ideas⟧" fü
                 Logger.info("[AppState] Loaded taste preferences from Keychain - spicyLevel: \(tastePrefs.spicyLevel), sweet: \(tastePrefs.sweet), sour: \(tastePrefs.sour), bitter: \(tastePrefs.bitter), umami: \(tastePrefs.umami)", category: .data)
             }
         }
+    }
+    
+    // MARK: - Recipe Caching
+    /// Lädt gecachte Rezepte aus UserDefaults (für sofortige Anzeige nach App-Neustart)
+    private func loadCachedRecipesFromDisk() {
+        guard let userId = KeychainManager.get(key: "user_id") else { return }
+        
+        let cacheKey = "cached_recipes_\(userId)"
+        let menusKey = "cached_menus_\(userId)"
+        let timestampKey = "recipes_cache_timestamp_\(userId)"
+        
+        // Lade Rezepte
+        if let recipesData = UserDefaults.standard.data(forKey: cacheKey),
+           let recipes = try? JSONDecoder().decode([Recipe].self, from: recipesData) {
+            self.cachedRecipes = recipes
+            Logger.info("[AppState] Loaded \(recipes.count) cached recipes from disk", category: .data)
+        }
+        
+        // Lade Menüs
+        if let menusData = UserDefaults.standard.data(forKey: menusKey),
+           let menus = try? JSONDecoder().decode([Menu].self, from: menusData) {
+            self.cachedMenus = menus
+            Logger.info("[AppState] Loaded \(menus.count) cached menus from disk", category: .data)
+        }
+        
+        // Lade Timestamp
+        if let timestamp = UserDefaults.standard.object(forKey: timestampKey) as? Date {
+            self.recipesCacheTimestamp = timestamp
+        }
+    }
+    
+    /// Speichert Rezepte und Menüs in UserDefaults für Persistenz
+    func saveCachedRecipesToDisk(recipes: [Recipe], menus: [Menu]) {
+        guard let userId = KeychainManager.get(key: "user_id") else { return }
+        
+        let cacheKey = "cached_recipes_\(userId)"
+        let menusKey = "cached_menus_\(userId)"
+        let timestampKey = "recipes_cache_timestamp_\(userId)"
+        
+        // Speichere Rezepte
+        if let recipesData = try? JSONEncoder().encode(recipes) {
+            UserDefaults.standard.set(recipesData, forKey: cacheKey)
+        }
+        
+        // Speichere Menüs
+        if let menusData = try? JSONEncoder().encode(menus) {
+            UserDefaults.standard.set(menusData, forKey: menusKey)
+        }
+        
+        // Speichere Timestamp
+        UserDefaults.standard.set(Date(), forKey: timestampKey)
+        
+        Logger.info("[AppState] Saved \(recipes.count) recipes and \(menus.count) menus to disk cache", category: .data)
+    }
+    
+    /// Lädt Rezepte und Menüs im Hintergrund und speichert sie im Cache für sofortige Anzeige
+    private func preloadRecipesAndMenus(userId: String, token: String) async {
+        do {
+            // Lade Rezepte und Menüs parallel
+            async let recipesTask = loadRecipesForCache(userId: userId, token: token)
+            async let menusTask = menuManager.fetchMenus(accessToken: token, userId: userId)
+            
+            let (recipes, menus) = try await (recipesTask, menusTask)
+            
+            await MainActor.run {
+                self.cachedRecipes = recipes
+                self.cachedMenus = menus
+                self.recipesCacheTimestamp = Date()
+                Logger.info("[AppState] Preloaded \(recipes.count) recipes and \(menus.count) menus to cache", category: .data)
+            }
+            
+            // Speichere auch auf Disk für Persistenz
+            saveCachedRecipesToDisk(recipes: recipes, menus: menus)
+        } catch {
+            Logger.error("[AppState] Failed to preload recipes and menus", error: error, category: .data)
+        }
+    }
+    
+    /// Lädt Rezepte für den Cache
+    private func loadRecipesForCache(userId: String, token: String) async throws -> [Recipe] {
+        var url = Config.supabaseURL
+        url.append(path: "/rest/v1/recipes")
+        url.append(queryItems: [
+            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "order", value: "created_at.desc")
+        ])
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await SecureURLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
+        return try JSONDecoder().decode([Recipe].self, from: data)
     }
     
     // MARK: - Menus (Supabase)

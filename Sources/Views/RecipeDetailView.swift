@@ -52,10 +52,10 @@ struct RecipeDetailView: View {
         TabView(selection: $currentPage) {
             overviewPage.tag(0)
             
-            if recipe.instructions.isEmpty {
-                emptyInstructionsView
-            } else {
+            if let instructions = recipe.instructions, !instructions.isEmpty {
                 instructionPages
+            } else {
+                emptyInstructionsView
             }
         }
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
@@ -77,12 +77,14 @@ struct RecipeDetailView: View {
     
     @ViewBuilder
     private var instructionPages: some View {
-        ForEach(recipe.instructions.indices, id: \.self) { idx in
-            stepPage(index: idx + 1, instruction: recipe.instructions[idx])
+        if let instructions = recipe.instructions {
+            ForEach(instructions.indices, id: \.self) { idx in
+                stepPage(index: idx + 1, instruction: instructions[idx])
                 .tag(idx + 1)
         }
         if recipe.is_public ?? false {
-            ratingPage.tag(recipe.instructions.count + 1)
+                ratingPage.tag(instructions.count + 1)
+            }
         }
     }
     
@@ -185,10 +187,40 @@ struct RecipeDetailView: View {
         }
         .onAppear { 
             uploadedImageUrl = recipe.image_url
+            
+            // Stelle gespeicherten Seitenzustand wieder her
+            if app.preservedRecipeId == recipe.id && app.preservedRecipePage > 0 {
+                currentPage = app.preservedRecipePage
+                // Reset preserved state after restore
+                app.preservedRecipeId = nil
+                app.preservedRecipePage = 0
+            }
+            
+            // Speichere aktuellen Zustand für State Preservation
+            app.preservedRecipeId = recipe.id
+            app.preservedRecipePage = currentPage
         }
         .onDisappear {
             // Stop all timers when recipe view is closed
             timerCenter.stopAllTimers()
+            
+            // Lösche preserved state wenn View geschlossen wird (nicht nur App-Wechsel)
+            // Nur löschen wenn es nicht durch App-Wechsel passiert
+            if app.preservedRecipeId == recipe.id {
+                // Prüfe ob App im Hintergrund ist - wenn nicht, dann wurde View manuell geschlossen
+                #if canImport(UIKit)
+                if UIApplication.shared.applicationState == .active {
+                    app.preservedRecipeId = nil
+                    app.preservedRecipePage = 0
+                }
+                #endif
+            }
+        }
+        .onChange(of: currentPage) { _, newPage in
+            // Aktualisiere preserved page wenn sich die Seite ändert
+            if app.preservedRecipeId == recipe.id {
+                app.preservedRecipePage = newPage
+            }
         }
         .sheet(isPresented: $showServingSelector) {
             ServingSelectorSheet(
@@ -270,7 +302,7 @@ struct RecipeDetailView: View {
                         }
                     }
                     
-                    ForEach(recipe.ingredients, id: \.self) { ing in
+                    ForEach(recipe.ingredients ?? [], id: \.self) { ing in
                         HStack {
                             Text(parseIngredientName(ing))
                                 .font(.body)
@@ -322,11 +354,17 @@ struct RecipeDetailView: View {
                         .foregroundStyle(.white)
                     
                     HStack(spacing: 20) {
-                        NutritionItem(label: L.label_calories.localized, value: "\(recipe.nutrition.calories ?? 0)")
-                        NutritionItem(label: L.label_protein.localized, value: String(format: "%.1fg", recipe.nutrition.protein_g ?? 0))
-                        NutritionItem(label: L.label_carbs.localized, value: String(format: "%.1fg", recipe.nutrition.carbs_g ?? 0))
-                        NutritionItem(label: L.label_fat.localized, value: String(format: "%.1fg", recipe.nutrition.fat_g ?? 0))
+                        NutritionItem(label: L.label_calories.localized, value: "\(recipe.nutrition?.calories ?? 0)")
+                        NutritionItem(label: L.label_protein.localized, value: String(format: "%.1fg", recipe.nutrition?.protein_g ?? 0))
+                        NutritionItem(label: L.label_carbs.localized, value: String(format: "%.1fg", recipe.nutrition?.carbs_g ?? 0))
+                        NutritionItem(label: L.label_fat.localized, value: String(format: "%.1fg", recipe.nutrition?.fat_g ?? 0))
                     }
+                    
+                    // Nutrition disclaimer
+                    Text(L.recipe_nährwerte_hinweis.localized)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.6))
+                        .padding(.top, 4)
                 }
                 .padding(16)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -589,7 +627,7 @@ struct RecipeDetailView: View {
     }
     
     private func stepPage(index: Int, instruction: String) -> some View {
-        let isLastStep = index == recipe.instructions.count
+        let isLastStep = index == (recipe.instructions?.count ?? 0)
         return ScrollView {
             let split = splitInstruction(instruction)
             let bodyText = split.body
@@ -617,7 +655,7 @@ struct RecipeDetailView: View {
                     if (recipe.is_public ?? false) {
                         Button(action: { 
                             withAnimation(.spring(response: 0.3)) {
-                                currentPage = recipe.instructions.count + 1
+                                currentPage = (recipe.instructions?.count ?? 0) + 1
                             }
                         }) {
                             HStack {
@@ -725,7 +763,7 @@ struct RecipeDetailView: View {
         
         // Prevent adding photos to public recipes that don't have images (no moderation)
         if recipe.is_public == true && (recipe.image_url == nil || recipe.image_url?.isEmpty == true) {
-            Logger.warning("Cannot add photo to public recipe without existing image (no moderation)", category: .data)
+            Logger.warning("Cannot add photo to public recipe without existing image (no moderation)", category: Logger.Category.data)
             return
         }
         
@@ -1090,14 +1128,14 @@ struct RecipeDetailView: View {
         
         // Ingredients
         md += "## Zutaten\n\n"
-        for ingredient in recipe.ingredients {
+        for ingredient in recipe.ingredients ?? [] {
             md += "- \(ingredient)\n"
         }
         md += "\n"
         
         // Instructions
         md += "## Zubereitung\n\n"
-        for (index, instruction) in recipe.instructions.enumerated() {
+        for (index, instruction) in (recipe.instructions ?? []).enumerated() {
             let split = splitInstruction(instruction)
             let cleanText = split.body
             md += "**Schritt \(index + 1)**\n\n"
@@ -1106,17 +1144,19 @@ struct RecipeDetailView: View {
         
         // Nutrition
         md += "## Nährwerte (pro Portion)\n\n"
-        if let calories = recipe.nutrition.calories {
+        if let nutrition = recipe.nutrition {
+            if let calories = nutrition.calories {
             md += "- **Kalorien:** \(calories) kcal\n"
         }
-        if let protein = recipe.nutrition.protein_g {
+            if let protein = nutrition.protein_g {
             md += "- **Protein:** \(String(format: "%.1f", protein))g\n"
         }
-        if let carbs = recipe.nutrition.carbs_g {
+            if let carbs = nutrition.carbs_g {
             md += "- **Kohlenhydrate:** \(String(format: "%.1f", carbs))g\n"
         }
-        if let fat = recipe.nutrition.fat_g {
+            if let fat = nutrition.fat_g {
             md += "- **Fett:** \(String(format: "%.1f", fat))g\n"
+            }
         }
         
         md += "\n---\n"
@@ -1127,7 +1167,7 @@ struct RecipeDetailView: View {
     
     // Add ingredients to shopping list
     private func addIngredientsToShoppingList(servings: Int) {
-        let items = recipe.ingredients.map { ingredient -> ShoppingListItem in
+        let items = (recipe.ingredients ?? []).map { ingredient -> ShoppingListItem in
             let name = parseIngredientName(ingredient)
             let quantity: String?
             
@@ -1601,41 +1641,12 @@ private struct SharedTimerControl: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            let has = myTimer != nil
-            HStack(spacing: 8) {
-                Image(systemName: "timer")
-                Text(has ? "Timer läuft" : "Timer")
-                Spacer()
-                Text(formatted(myTimer?.remaining ?? minutes * 60))
-                    .monospacedDigit()
-                    .font(.headline)
-            }
-            .foregroundStyle(.white)
-            HStack {
-                Button(action: {
-                    if let cur = myTimer { cur.running.toggle() }
-                    else { center.start(minutes: minutes, label: label) }
-                }) {
-                    Label(myTimer == nil ? "Start" : ((myTimer?.running ?? false) ? "Pause" : "Start"), systemImage: (myTimer == nil) ? "play.fill" : ((myTimer?.running ?? false) ? "pause.fill" : "play.fill"))
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
-                .foregroundStyle(.white)
-                
-                Button(action: { myTimer?.reset() }) {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
-                }
-                .buttonStyle(.bordered)
-                .tint(.white)
-                .foregroundStyle(.white)
-                
-                Spacer()
-                
-                Stepper("", value: Binding(get: { myTimer?.baseMinutes ?? minutes }, set: { newVal in
-                    let v = max(1, newVal)
-                    if let cur = myTimer { cur.baseMinutes = v; cur.remaining = v * 60 }
-                }), in: 1...720)
-                .labelsHidden()
+            if let timer = myTimer {
+                // Timer ist aktiv - beobachte ihn direkt für Updates
+                TimerControlActive(timer: timer, center: center, defaultMinutes: minutes)
+            } else {
+                // Timer ist nicht aktiv - zeige Start-Button
+                TimerControlInactive(minutes: minutes, label: label, center: center)
             }
         }
         .padding(12)
@@ -1647,6 +1658,104 @@ private struct SharedTimerControl: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 1)
         )
+    }
+}
+
+// Separate View für aktiven Timer (wird direkt beobachtet)
+private struct TimerControlActive: View {
+    @ObservedObject var timer: RunningTimer
+    @ObservedObject var center: TimerCenter
+    let defaultMinutes: Int
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "timer")
+                Text("Timer läuft")
+                Spacer()
+                Text(formatted(timer.remaining))
+                    .monospacedDigit()
+                    .font(.headline)
+            }
+            .foregroundStyle(.white)
+            HStack {
+                Button(action: {
+                    timer.running.toggle()
+                }) {
+                    Label(timer.running ? "Pause" : "Start", systemImage: timer.running ? "pause.fill" : "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
+                .foregroundStyle(.white)
+                
+                Button(action: { timer.reset() }) {
+                    Label("Reset", systemImage: "arrow.counterclockwise")
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+                .foregroundStyle(.white)
+                
+                Spacer()
+                
+                Stepper("", value: Binding(get: { timer.baseMinutes }, set: { newVal in
+                    let v = max(1, newVal)
+                    timer.baseMinutes = v
+                    timer.remaining = v * 60
+                }), in: 1...720)
+                .labelsHidden()
+            }
+        }
+    }
+    
+    private func formatted(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        return String(format: "%02d:%02d", m, s)
+    }
+}
+
+// Separate View für inaktiven Timer
+private struct TimerControlInactive: View {
+    let minutes: Int
+    let label: String
+    @ObservedObject var center: TimerCenter
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "timer")
+                Text("Timer")
+                Spacer()
+                Text(formatted(minutes * 60))
+                    .monospacedDigit()
+                    .font(.headline)
+            }
+            .foregroundStyle(.white)
+            HStack {
+                Button(action: {
+                    center.start(minutes: minutes, label: label)
+                }) {
+                    Label("Start", systemImage: "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
+                .foregroundStyle(.white)
+                
+                Button(action: {}) {
+                    Label("Reset", systemImage: "arrow.counterclockwise")
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+                .foregroundStyle(.white)
+                .disabled(true)
+                
+                Spacer()
+                
+                Stepper("", value: Binding(get: { minutes }, set: { _ in }), in: 1...720)
+                .labelsHidden()
+                .disabled(true)
+            }
+        }
     }
     
     private func formatted(_ seconds: Int) -> String {

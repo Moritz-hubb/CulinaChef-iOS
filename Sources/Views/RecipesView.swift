@@ -1957,7 +1957,7 @@ struct CommunityRecipesView: View {
                                             }
                                             if !nextImageUrls.isEmpty {
                                                 Task.detached(priority: .utility) {
-                                                    ImageCache.shared.preload(urls: Array(nextImageUrls))
+                                                    await ImageCache.shared.preload(urls: Array(nextImageUrls))
                                                 }
                                             }
                                         }

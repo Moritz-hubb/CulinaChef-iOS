@@ -1563,6 +1563,9 @@ struct CommunityRecipesView: View {
     @State private var lastLoadMoreTime: Date = Date()
     @State private var lastPreloadTime: Date = Date()
     
+    // Prevent multiple simultaneous load requests
+    @State private var loadTask: Task<Void, Never>?
+    
     private var availableLanguages: [(code: String, name: String)] {
         [
             ("de", L.tag_german.localized),
@@ -2079,6 +2082,9 @@ struct CommunityRecipesView: View {
     }
     
     func loadCommunityRecipes() async {
+        // Cancel any existing load task
+        loadTask?.cancel()
+        
         guard let token = app.accessToken else {
             await MainActor.run { 
                 self.error = "Nicht angemeldet"
@@ -2095,9 +2101,23 @@ struct CommunityRecipesView: View {
             recipes = []
         }
         
+        // Create new load task
+        loadTask = Task {
+            await performLoadCommunityRecipes(token: token)
+        }
+        await loadTask?.value
+    }
+    
+    private func performLoadCommunityRecipes(token: String) async {
         do {
+            // Check if task was cancelled
+            try Task.checkCancellation()
+            
             // OPTIMIZATION: Lade sofort die erste volle Seite (50 Rezepte) für schnelle Anzeige
             let firstPage = try await loadCommunityRecipesPage(page: 0, pageSize: pageSize, token: token)
+            
+            // Check again after load
+            try Task.checkCancellation()
             
             await MainActor.run {
                 if !firstPage.isEmpty {
@@ -2133,6 +2153,10 @@ struct CommunityRecipesView: View {
                     await app.loadBatchRatings(recipeIds: recipeIds, accessToken: token)
                 }
             }
+        } catch is CancellationError {
+            // Task was cancelled - don't show error, just return
+            Logger.info("[CommunityRecipesView] Load task cancelled", category: .data)
+            return
         } catch {
             Logger.error("Failed to load community recipes", error: error, category: .data)
             Logger.error("Error details: \(error.localizedDescription)", category: .data)
@@ -2275,9 +2299,9 @@ struct CommunityRecipesView: View {
                 let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
                 Logger.error("[CommunityRecipesView] HTTP \(httpResponse.statusCode): \(errorBody)", category: .network)
                 
-                // If error mentions filter_tags column, try fallback without it
-                if httpResponse.statusCode == 500 && (errorBody.contains("filter_tags") || errorBody.contains("column")) {
-                    Logger.warning("[CommunityRecipesView] filter_tags column issue detected, trying fallback without it", category: .network)
+                // If error mentions filter_tags column (400 or 500), try fallback without it
+                if (httpResponse.statusCode == 400 || httpResponse.statusCode == 500) && (errorBody.contains("filter_tags") || errorBody.contains("column")) {
+                    Logger.warning("[CommunityRecipesView] filter_tags column issue detected (HTTP \(httpResponse.statusCode)), trying fallback without it", category: .network)
                     return try await loadCommunityRecipesPageFallback(page: page, pageSize: pageSize, token: token, selectFields: selectFieldsWithoutFilterTags)
                 }
                 
@@ -2285,8 +2309,12 @@ struct CommunityRecipesView: View {
             }
             
             return try JSONDecoder().decode([Recipe].self, from: data)
+        } catch let error as URLError where error.code == .cancelled {
+            // Request was cancelled - don't try fallback, just rethrow
+            Logger.warning("[CommunityRecipesView] Request cancelled", category: .network)
+            throw error
         } catch {
-            // If any error occurs, try fallback without filter_tags
+            // If any other error occurs, try fallback without filter_tags
             Logger.warning("[CommunityRecipesView] Error loading with filter_tags, trying fallback: \(error.localizedDescription)", category: .network)
             return try await loadCommunityRecipesPageFallback(page: page, pageSize: pageSize, token: token, selectFields: selectFieldsWithoutFilterTags)
         }

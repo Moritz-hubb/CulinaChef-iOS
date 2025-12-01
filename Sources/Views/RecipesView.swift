@@ -2274,7 +2274,8 @@ struct CommunityRecipesView: View {
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
             let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
-            Logger.error("[CommunityRecipesView] Fallback also failed: HTTP \(httpResponse?.statusCode ?? -1), \(errorBody)", category: .network)
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            Logger.error("[CommunityRecipesView] Fallback also failed: HTTP \(statusCode), \(errorBody)", category: .network)
             throw URLError(.badServerResponse)
         }
         

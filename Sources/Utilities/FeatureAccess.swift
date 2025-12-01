@@ -18,16 +18,22 @@ extension AppState {
     /// Check if the current user has access to a specific feature
     /// - Parameter feature: The feature to check access for
     /// - Returns: True if user has access, false otherwise
+    /// 
+    /// DEVELOPMENT MODE: All features are enabled. Before launch, restore subscription check.
     func hasAccess(to feature: Feature) -> Bool {
-        switch feature {
-        // AI features require active subscription
-        case .aiChat, .aiRecipeGenerator, .aiRecipeAnalysis:
-            return isSubscribed
-            
-        // Free features are always available
-        case .manualRecipes, .shoppingList, .communityLibrary, .recipeManagement:
-            return true
-        }
+        // DEVELOPMENT: All features enabled
+        return true
+        
+        // PRODUCTION (uncomment before launch):
+        // switch feature {
+        // // AI features require active subscription
+        // case .aiChat, .aiRecipeGenerator, .aiRecipeAnalysis:
+        //     return isSubscribed
+        //     
+        // // Free features are always available
+        // case .manualRecipes, .shoppingList, .communityLibrary, .recipeManagement:
+        //     return true
+        // }
     }
     
     /// Get a user-friendly description of why access is restricted

@@ -515,17 +515,19 @@ struct RecipeCompletionView: View {
             }
             
             // Build request body with all fields
+            let nutritionDict: [String: Any] = [
+                "calories": recipe.nutrition?.calories ?? 0,
+                "protein_g": recipe.nutrition?.protein_g ?? 0,
+                "carbs_g": recipe.nutrition?.carbs_g ?? 0,
+                "fat_g": recipe.nutrition?.fat_g ?? 0
+            ]
+            
             var body: [String: Any] = [
                 "user_id": userId,
                 "title": recipe.title,
-                "ingredients": recipe.ingredients,
-                "instructions": recipe.instructions,
-                "nutrition": [
-                    "calories": recipe.nutrition.calories ?? 0,
-                    "protein_g": recipe.nutrition.protein_g ?? 0,
-                    "carbs_g": recipe.nutrition.carbs_g ?? 0,
-                    "fat_g": recipe.nutrition.fat_g ?? 0
-                ],
+                "ingredients": recipe.ingredients ?? [],
+                "instructions": recipe.instructions ?? [],
+                "nutrition": nutritionDict,
                 "is_public": false  // ALWAYS private initially
             ]
             
@@ -672,9 +674,26 @@ struct RecipeCompletionView: View {
             throw NSError(domain: "moderation", code: 403, userInfo: [NSLocalizedDescriptionKey: "Moderation fehlgeschlagen"])
         }
         
+        // Extract error message from response if available
+        let errorMessage: String? = {
+            if let errorDict = try? JSONSerialization.jsonObject(with: respData) as? [String: Any],
+               let detail = errorDict["detail"] as? String {
+                return detail
+            } else if let responseString = String(data: respData, encoding: .utf8), !responseString.isEmpty {
+                return responseString
+            }
+            return nil
+        }()
+        
         guard (200...299).contains(httpResponse.statusCode) else {
-            Logger.error("Community publish failed with status \(httpResponse.statusCode)", category: .network)
-            throw URLError(.badServerResponse)
+            Logger.error("Community publish failed with status \(httpResponse.statusCode): \(errorMessage ?? "Unknown")", category: .network)
+            
+            // Provide more specific error messages
+            if httpResponse.statusCode >= 500 {
+                throw NSError(domain: "server_error", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage ?? "Server-Fehler. Bitte versuche es später erneut."])
+            } else {
+                throw NSError(domain: "client_error", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage ?? "Upload fehlgeschlagen. Bitte versuche es erneut."])
+            }
         }
     }
     

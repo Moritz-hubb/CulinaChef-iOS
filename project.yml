@@ -8,16 +8,24 @@ options:
     - es
     - fr
     - it
+  usesTabs: false
+  groupSortPosition: top
+  createIntermediateGroups: true
 packages:
   Sentry:
     url: https://github.com/getsentry/sentry-cocoa.git
     from: 8.57.0
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios-spm.git
+    from: 5.49.2
 settings:
   base:
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     SWIFT_VERSION: 5.9
     DEVELOPMENT_TEAM: "4Q33QP9G7Z"
     ALWAYS_SEARCH_USER_PATHS: NO
+    SWIFT_ENABLE_EXPLICIT_MODULES: YES
+    SWIFT_EMIT_MODULE_SEPARATELY: NO
 targets:
   CulinaChef:
     type: application
@@ -30,21 +38,15 @@ targets:
         type: folder
       - path: Configs/StoreKit.storekit
         optional: false
-      - path: Certificates
-        type: folder
-        optional: false
-      - path: supabase.cer
-        optional: false
-      - path: backend.cer
-        optional: false
-      - de.json
-      - en.json
-      - es.json
-      - fr.json
-      - it.json
     dependencies:
       - package: Sentry
         product: Sentry
+      - package: RevenueCat
+        product: RevenueCat
+      - target: CulinaChefTimerWidget
+        embed: true
+        codeSignOnCopy: true
+        removeHeadersOnCopy: true
     configFiles:
       Debug: Configs/Secrets.xcconfig
       Release: Configs/Secrets.xcconfig
@@ -64,6 +66,7 @@ targets:
         SupabaseAnonKey: $(SUPABASE_ANON_KEY)
         OpenAIAPIKey: $(OPENAI_API_KEY)
         SentryDSN: $(SENTRY_DSN)
+        RevenueCatAPIKey: $(REVENUECAT_API_KEY)
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - culinachef
@@ -105,8 +108,10 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Widgets
-    dependencies:
-      - target: CulinaChef
+        excludes:
+          - "**/Info.plist"  # Info.plist wird über info: path referenziert
+          - "**/*.sh"  # Exclude shell scripts from widget bundle
+          - "**/*.md"  # Exclude markdown documentation files
     entitlements:
       path: Configs/CulinaChefWidget.entitlements
     info:
@@ -116,15 +121,20 @@ targets:
         PRODUCT_NAME: CulinaChefTimerWidget
         PRODUCT_BUNDLE_IDENTIFIER: com.moritzserrin.culinachef.widget
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION: YES  # Allow entitlements to be modified if needed
         INFOPLIST_KEY_CFBundleDisplayName: "Koch-Timer"
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
         INFOPLIST_KEY_CFBundlePackageType: XPC!
         INFOPLIST_KEY_CFBundleVersion: 1
         INFOPLIST_KEY_CFBundleShortVersionString: 1.0
+        GENERATE_INFOPLIST_FILE: NO  # Use manual Info.plist, don't generate
         SKIP_INSTALL: NO
     scheme:
       testTargets: []
+      buildAction:
+        targets:
+          - CulinaChefTimerWidget
       runAction:
         executable: ""
         askForAppToLaunch: false

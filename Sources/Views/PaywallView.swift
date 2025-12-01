@@ -54,25 +54,25 @@ struct PaywallView: View {
                         
                         // Features
                         VStack(spacing: 20) {
-                            FeatureRow(
+                            PaywallFeatureRow(
                                 icon: "bubble.left.and.bubble.right.fill",
                                 title: L.subscriptionAIChatUnlimited.localized,
                                 description: L.subscriptionAINutritionAnalysis.localized
                             )
                             
-                            FeatureRow(
+                            PaywallFeatureRow(
                                 icon: "wand.and.stars",
                                 title: L.subscriptionAIRecipeGenerator.localized,
                                 description: L.subscriptionNoLimits.localized
                             )
                             
-                            FeatureRow(
+                            PaywallFeatureRow(
                                 icon: "chart.bar.fill",
                                 title: L.subscriptionAINutritionAnalysis.localized,
                                 description: L.paywallFeatureSecure.localized
                             )
                             
-                            FeatureRow(
+                            PaywallFeatureRow(
                                 icon: "infinity",
                                 title: L.subscriptionNoLimits.localized,
                                 description: L.subscriptionNoLimits.localized
@@ -347,7 +347,7 @@ struct PaywallView: View {
 }
 
 // MARK: - Feature Row Component
-private struct FeatureRow: View {
+private struct PaywallFeatureRow: View {
     let icon: String
     let title: String
     let description: String

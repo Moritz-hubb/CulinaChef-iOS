@@ -52,10 +52,47 @@ struct TimerProvider: TimelineProvider {
         let timers = loadTimers()
         os_log("[Widget] getTimeline() loaded %d timers", log: Self.log, type: .info, timers.count)
         
-        // Update every 10 seconds for running timers, every minute for paused timers
+        // Real-time updates: every 1 second for running timers, every 30 seconds for paused timers
         let hasRunningTimers = timers.contains { $0.running }
-        let updateInterval: TimeInterval = hasRunningTimers ? 10 : 60
+        let updateInterval: TimeInterval = hasRunningTimers ? 1 : 30
         os_log("[Widget] getTimeline() hasRunningTimers: %{public}@, updateInterval: %.0f seconds", log: Self.log, type: .info, String(hasRunningTimers), updateInterval)
+        
+        // Load raw timer data to get endTime for future entries
+        let appGroupID = "group.com.moritzserrin.culinachef"
+        let timerData = (UserDefaults(suiteName: appGroupID)?.array(forKey: "active_timers") as? [[String: Any]]) ?? []
+        
+        // Create multiple timeline entries for smooth updates (next 60 seconds)
+        var entries: [TimerEntry] = []
+        if hasRunningTimers {
+            // For running timers, create entries for the next 60 seconds
+            for i in 0..<60 {
+                if let entryDate = Calendar.current.date(byAdding: .second, value: i, to: currentDate) {
+                    // Recalculate remaining time for each entry using endTime from UserDefaults
+                    let updatedTimers = timerData.compactMap { data -> TimerInfo? in
+                        guard let label = data["label"] as? String,
+                              let running = data["running"] as? Bool else {
+                            return nil
+                        }
+                        
+                        var remaining: Int
+                        if running, let endTimeInterval = data["endTime"] as? TimeInterval, endTimeInterval > 0 {
+                            let endTime = Date(timeIntervalSince1970: endTimeInterval)
+                            remaining = max(0, Int(endTime.timeIntervalSince(entryDate)))
+                        } else if let storedRemaining = data["remaining"] as? Int {
+                            remaining = storedRemaining
+                        } else {
+                            return nil
+                        }
+                        
+                        return TimerInfo(label: label, remaining: remaining, running: running)
+                    }
+                    entries.append(TimerEntry(date: entryDate, timers: updatedTimers))
+                }
+            }
+        } else {
+            // For paused timers, just create one entry
+            entries.append(TimerEntry(date: currentDate, timers: timers))
+        }
         
         guard let nextUpdate = Calendar.current.date(byAdding: .second, value: Int(updateInterval), to: currentDate) else {
             os_log("[Widget] getTimeline() ERROR: Could not calculate nextUpdate", log: Self.log, type: .error)
@@ -65,9 +102,8 @@ struct TimerProvider: TimelineProvider {
             return
         }
         
-        os_log("[Widget] getTimeline() nextUpdate: %{public}@", log: Self.log, type: .info, nextUpdate.description)
-        let entry = TimerEntry(date: currentDate, timers: timers)
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+        os_log("[Widget] getTimeline() nextUpdate: %{public}@, created %d entries", log: Self.log, type: .info, nextUpdate.description, entries.count)
+        let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
         os_log("[Widget] getTimeline() completing with %d timers, next update in %.0f seconds", log: Self.log, type: .info, timers.count, updateInterval)
         completion(timeline)
     }

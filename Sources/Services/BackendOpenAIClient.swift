@@ -64,10 +64,14 @@ final class BackendOpenAIClient {
             )
         }
         
+        // Higher temperature for recipe ideas to get more variety
+        // Use 0.8-0.9 for creative recipe suggestions, 0.7 for general chat
+        let temperature: Double = 0.85
+        
         let request = Request(
             messages: requestMessages,
             max_tokens: 500,
-            temperature: 0.7,
+            temperature: temperature,
             model: model
         )
         
@@ -255,7 +259,14 @@ final class BackendOpenAIClient {
         if let min = timeMinutesMin { requestDict["time_minutes_min"] = min }
         if let max = timeMinutesMax { requestDict["time_minutes_max"] = max }
         if let s = servings { requestDict["servings"] = s }
-        if let ctx = dietaryContext { requestDict["dietary_context"] = ctx }
+        if let ctx = dietaryContext {
+            requestDict["dietary_context"] = ctx
+            Logger.info("[DEBUG Dietary] Sending dietary_context to backend: \(ctx)", category: .data)
+            print("🔍 [DEBUG Dietary] Sending dietary_context to backend: \(ctx)")
+        } else {
+            Logger.info("[DEBUG Dietary] NO dietary_context sent to backend (nil)", category: .data)
+            print("🔍 [DEBUG Dietary] NO dietary_context sent to backend (nil)")
+        }
         
         requestDict["nutrition_constraints"] = [
             "calories_min": nutrition.calories_min,

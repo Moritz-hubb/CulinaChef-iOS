@@ -22,6 +22,11 @@
 	<dict>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
+		<key>NSExtensionAttributes</key>
+		<dict>
+			<key>WidgetKind</key>
+			<string>CulinaChefTimerWidget</string>
+		</dict>
 	</dict>
 </dict>
 </plist>

@@ -232,7 +232,7 @@ struct RecipeDetailView: View {
             ShareSheet(items: shareItems)
         }
         .sheet(isPresented: $showPaywallSheet) {
-            PaywallView()
+            RevenueCatPaywallView()
                 .environmentObject(app)
         }
         .onChange(of: selectedPhoto) { _, newValue in
@@ -1230,13 +1230,17 @@ private struct RecipeAISheetForSavedRecipe: View {
     @State private var showPaywallSheet = false
 
     var body: some View {
-        Group {
-            if app.hasAccess(to: .aiRecipeAnalysis) {
-                chatContent
-            } else {
-                paywallContent
-            }
-        }
+        // DEVELOPMENT MODE: Paywall disabled - always show chat content
+        chatContent
+        
+        // PRODUCTION (uncomment before launch):
+        // Group {
+        //     if app.hasAccess(to: .aiRecipeAnalysis) {
+        //         chatContent
+        //     } else {
+        //         paywallContent
+        //     }
+        // }
         .sheet(isPresented: $showConsentDialog) {
             OpenAIConsentDialog(
                 onAccept: {
@@ -1246,7 +1250,7 @@ private struct RecipeAISheetForSavedRecipe: View {
             )
         }
         .sheet(isPresented: $showPaywallSheet) {
-            PaywallView()
+            RevenueCatPaywallView()
                 .environmentObject(app)
         }
     }
@@ -1500,7 +1504,7 @@ private struct RecipeAISheetForSavedRecipe: View {
             .padding()
         }
         .sheet(isPresented: $showPaywallSheet) {
-            PaywallView()
+            RevenueCatPaywallView()
                 .environmentObject(app)
         }
     }

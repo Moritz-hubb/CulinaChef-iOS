@@ -5,6 +5,7 @@ import SwiftUI
 struct CulinaChefTimerWidgetBundle: WidgetBundle {
     var body: some Widget {
         CulinaChefTimerWidget()
+        CulinaChefShoppingListWidget()
     }
 }
 

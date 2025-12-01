@@ -103,6 +103,29 @@ enum Config {
         #endif
     }
     
+    // MARK: - RevenueCat Configuration
+    
+    /// RevenueCat API Key - loaded from Info.plist or environment
+    static let revenueCatAPIKey: String = {
+        // First try Info.plist (from Secrets.xcconfig)
+        if let key = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
+           !key.isEmpty,
+           !key.hasPrefix("$") {
+            return key
+        }
+        
+        // Fallback to test key for development only
+        #if DEBUG
+        Logger.warning("RevenueCatAPIKey not configured in Info.plist. Using test key for development.", category: .config)
+        return "test_nYAqGXmJwAhLGWnwCXWzRyQjWsk"
+        #else
+        Logger.error("RevenueCatAPIKey not configured in Info.plist. RevenueCat will not work in production!", category: .config)
+        // In production, we should fail if key is missing
+        // But for now, return empty string to prevent crashes
+        return ""
+        #endif
+    }()
+    
     // MARK: - API Timeouts
     
     static let apiTimeout: TimeInterval = 30.0

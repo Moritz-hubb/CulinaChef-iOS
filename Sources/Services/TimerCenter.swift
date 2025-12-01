@@ -4,6 +4,7 @@ import AVFoundation
 import Combine
 import UserNotifications
 import AudioToolbox
+import WidgetKit
 
 /// Manages multiple cooking timers with background support
 final class TimerCenter: ObservableObject {
@@ -64,6 +65,17 @@ final class TimerCenter: ObservableObject {
         defaults.set(timerData, forKey: "active_timers")
         let syncResult = defaults.synchronize()
         Logger.debug("[TimerCenter] saveTimers() synchronize result: \(syncResult), timers: \(timers.map { "\($0.label): \($0.remaining)s (\($0.running ? "running" : "paused"))" }.joined(separator: ", "))", category: .data)
+        
+        // Verify data was saved
+        if let savedData = defaults.array(forKey: "active_timers") as? [[String: Any]] {
+            Logger.debug("[TimerCenter] saveTimers() VERIFIED: \(savedData.count) timers saved to App Group", category: .data)
+        } else {
+            Logger.error("[TimerCenter] saveTimers() ERROR: Data not found after saving!", category: .data)
+        }
+        
+        // Reload widget timeline to show updated timers
+        WidgetCenter.shared.reloadTimelines(ofKind: "CulinaChefTimerWidget")
+        Logger.debug("[TimerCenter] saveTimers() Widget timeline reload requested", category: .data)
     }
     
     private func restoreTimers() {
@@ -201,7 +213,7 @@ final class RunningTimer: ObservableObject, Identifiable {
                         endTime = Date().addingTimeInterval(TimeInterval(remaining))
                     }
                     
-                    // Save timer state periodically
+                    // Save timer state periodically (this also reloads widget)
                     timerCenter?.saveTimers()
                     
                     if remaining == 0 {

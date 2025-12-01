@@ -182,6 +182,14 @@ final class AppState: ObservableObject {
         authManager = AuthenticationManager(auth: auth, preferencesClient: preferencesClient)
         subscriptionManager = SubscriptionManager(backend: backend, subscriptionsClient: subscriptionsClient, storeKit: storeKit)
         menuManager = MenuManager()
+        
+        // DEVELOPMENT MODE: RevenueCat initialization disabled
+        // Initialize RevenueCat (uncomment before launch):
+        // if let userId = KeychainManager.get(key: "user_id") {
+        //     RevenueCatManager.shared.configure(userId: userId)
+        // } else {
+        //     RevenueCatManager.shared.configure()
+        // }
         recipeManager = RecipeManager()
         
         // Prime StoreKit - delay to ensure app is fully initialized
@@ -247,6 +255,14 @@ final class AppState: ObservableObject {
         
         // Check for existing session
         checkSession()
+        
+        // DEVELOPMENT MODE: RevenueCat identify disabled
+        // Update RevenueCat user ID when user logs in (uncomment before launch):
+        // Task {
+        //     if let userId = KeychainManager.get(key: "user_id") {
+        //         try? await RevenueCatManager.shared.identify(userId: userId)
+        //     }
+        // }
         // Load subscription status directly from StoreKit (Apple) first, not from database
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -333,6 +349,14 @@ final class AppState: ObservableObject {
            let email = KeychainManager.get(key: "user_email") {
             self.accessToken = token
             self.userEmail = email
+            
+            // DEVELOPMENT MODE: RevenueCat identify disabled
+            // Identify user in RevenueCat when session is restored (uncomment before launch):
+            // if let userId = KeychainManager.get(key: "user_id") {
+            //     Task {
+            //         try? await RevenueCatManager.shared.identify(userId: userId)
+            //     }
+            // }
             self.isAuthenticated = true
             
             // Try to refresh token in background to ensure session is valid
@@ -466,16 +490,36 @@ final class AppState: ObservableObject {
         var strictParts: [String] = []  // Allergien & Ernährungsweisen - IMMER beachten
         var preferencesParts: [String] = []  // Geschmack - nur als Vorschlag
         
+        // DEBUG: Log all dietary preferences
+        Logger.info("[DEBUG Dietary] ========== DIETARY PREFERENCES DEBUG ==========", category: .data)
+        Logger.info("[DEBUG Dietary] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")", category: .data)
+        Logger.info("[DEBUG Dietary] Dietary.diets: \(dietary.diets)", category: .data)
+        Logger.info("[DEBUG Dietary] Dietary.allergies: \(dietary.allergies)", category: .data)
+        Logger.info("[DEBUG Dietary] Dietary.dislikes: \(dietary.dislikes)", category: .data)
+        Logger.info("[DEBUG Dietary] Dietary.notes: \(dietary.notes ?? "nil")", category: .data)
+        print("🔍 [DEBUG Dietary] ========== DIETARY PREFERENCES DEBUG ==========")
+        print("🔍 [DEBUG Dietary] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")")
+        print("🔍 [DEBUG Dietary] Dietary.diets: \(dietary.diets)")
+        print("🔍 [DEBUG Dietary] Dietary.allergies: \(dietary.allergies)")
+        print("🔍 [DEBUG Dietary] Dietary.dislikes: \(dietary.dislikes)")
+        print("🔍 [DEBUG Dietary] Dietary.notes: \(dietary.notes ?? "nil")")
+        
         // STRIKTE Anforderungen (Allergien & Ernährungsweisen)
         // WICHTIG: Ernährungsweisen müssen IMMER respektiert werden - Rezepte entsprechend anpassen
         if !dietary.diets.isEmpty {
             strictParts.append("Ernährungsweisen (IMMER respektieren, Rezepte entsprechend anpassen): " + dietary.diets.sorted().joined(separator: ", "))
+            Logger.info("[DEBUG Dietary] Added diets to strictParts: \(dietary.diets)", category: .data)
+            print("🔍 [DEBUG Dietary] Added diets to strictParts: \(dietary.diets)")
         }
         if !dietary.allergies.isEmpty {
             strictParts.append("Allergien/Unverträglichkeiten (IMMER vermeiden): " + dietary.allergies.joined(separator: ", "))
+            Logger.info("[DEBUG Dietary] Added allergies to strictParts: \(dietary.allergies)", category: .data)
+            print("🔍 [DEBUG Dietary] Added allergies to strictParts: \(dietary.allergies)")
         }
         if !dietary.dislikes.isEmpty {
             strictParts.append("Bitte meiden: " + dietary.dislikes.joined(separator: ", "))
+            Logger.info("[DEBUG Dietary] Added dislikes to strictParts: \(dietary.dislikes)", category: .data)
+            print("🔍 [DEBUG Dietary] Added dislikes to strictParts: \(dietary.dislikes)")
         }
         
         // OPTIONALE Geschmackspräferenzen
@@ -526,8 +570,17 @@ final class AppState: ObservableObject {
             result.append("Geschmackspräferenzen (nur wenn sinnvoll anwenden, NICHT zwingend in jedes Rezept einbauen): " + preferencesParts.joined(separator: " | "))
         }
         
-        if result.isEmpty { return "" }
-        return result.joined(separator: "\n")
+        if result.isEmpty {
+            Logger.info("[DEBUG Dietary] Result is EMPTY - no dietary preferences", category: .data)
+            print("🔍 [DEBUG Dietary] Result is EMPTY - no dietary preferences")
+            return ""
+        }
+        let finalPrompt = result.joined(separator: "\n")
+        Logger.info("[DEBUG Dietary] Final dietary prompt: \(finalPrompt)", category: .data)
+        print("🔍 [DEBUG Dietary] Final dietary prompt: \(finalPrompt)")
+        Logger.info("[DEBUG Dietary] ========== END DIETARY PREFERENCES DEBUG ==========", category: .data)
+        print("🔍 [DEBUG Dietary] ========== END DIETARY PREFERENCES DEBUG ==========")
+        return finalPrompt
     }
 
     func languageSystemPrompt() -> String {
@@ -961,7 +1014,17 @@ Klassifizierung: Am Ende "⟦kind: menu⟧" für Menüs, "⟦kind: ideas⟧" fü
 
     // MARK: - Account deletion & subscription management
     func openManageSubscriptions() async {
+        // DEVELOPMENT MODE: Use StoreKit only
         await subscriptionManager.openManageSubscriptions()
+        
+        // PRODUCTION (uncomment before launch):
+        // // Use RevenueCat Customer Center if available
+        // if RevenueCatManager.shared.canShowCustomerCenter {
+        //     RevenueCatManager.shared.showCustomerCenter()
+        // } else {
+        //     // Fallback to StoreKit
+        //     await subscriptionManager.openManageSubscriptions()
+        // }
     }
 
     func deleteAccountAndData() async {
@@ -1001,11 +1064,31 @@ Klassifizierung: Am Ende "⟦kind: menu⟧" für Menüs, "⟦kind: ideas⟧" fü
     func loadSubscriptionStatus() {
         Task { [weak self] in
             guard let self else { return }
-            let status = await self.subscriptionManager.loadSubscriptionStatus(accessToken: self.accessToken)
+            
+            // DEVELOPMENT MODE: Always set as subscribed
             await MainActor.run {
-                self.isSubscribed = status.isSubscribed
+                self.isSubscribed = true
                 self.subscriptionStatusInitialized = true
             }
+            
+            // PRODUCTION (uncomment before launch):
+            // // Use RevenueCat as primary source
+            // await RevenueCatManager.shared.loadCustomerInfo()
+            // let isSubscribed = RevenueCatManager.shared.isSubscribed
+            // 
+            // // Fallback to SubscriptionManager if RevenueCat not available
+            // if !isSubscribed {
+            // let status = await self.subscriptionManager.loadSubscriptionStatus(accessToken: self.accessToken)
+            // await MainActor.run {
+            //         self.isSubscribed = status.isSubscribed || isSubscribed
+            //     self.subscriptionStatusInitialized = true
+            //     }
+            // } else {
+            //     await MainActor.run {
+            //         self.isSubscribed = isSubscribed
+            //         self.subscriptionStatusInitialized = true
+            //     }
+            // }
         }
     }
     

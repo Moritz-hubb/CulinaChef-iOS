@@ -167,11 +167,12 @@ struct RootView: View {
             .fullScreenCover(isPresented: $showOnboarding) {
                 OnboardingView()
             }
-            .fullScreenCover(isPresented: $showSubscriptionPaywall, onDismiss: paywallDismissed) {
-                PaywallView()
-                    .environmentObject(app)
-                    .interactiveDismissDisabled(true)
-            }
+            // DEVELOPMENT MODE: Paywall disabled
+            // .fullScreenCover(isPresented: $showSubscriptionPaywall, onDismiss: paywallDismissed) {
+            //     RevenueCatPaywallView()
+            //         .environmentObject(app)
+            //         .interactiveDismissDisabled(true)
+            // }
             .onAppear {
                 checkSubscriptionStatus()
             }
@@ -221,23 +222,12 @@ struct RootView: View {
     }
     
     private func checkSubscriptionStatus() {
-        // Only enforce paywall after onboarding is completed
-        guard app.isAuthenticated else { return }
-        guard onboardingCompletedForCurrentUser() else { return }
-        
+        // DEVELOPMENT MODE: Paywall disabled
         // Always trigger a refresh in the background
         app.loadSubscriptionStatus()
         
-        // Avoid flashing the paywall before we have any subscription info
-        guard app.subscriptionStatusInitialized else { return }
-        
-        if !app.isSubscribed && !paywallDismissedForCurrentUser() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                showSubscriptionPaywall = true
-            }
-        } else {
-            showSubscriptionPaywall = false
-        }
+        // Don't show paywall in development
+        showSubscriptionPaywall = false
     }
 }
 

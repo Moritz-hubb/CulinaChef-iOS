@@ -81,18 +81,26 @@ download_cert() {
 
 # Download Supabase certificate
 if download_cert "$SUPABASE_HOST" "$CERT_DIR/supabase.cer"; then
-    # Also copy to root for backward compatibility
+    # Copy to root for backward compatibility
     cp "$CERT_DIR/supabase.cer" "$IOS_DIR/supabase.cer"
     echo "   Also copied to: $IOS_DIR/supabase.cer"
+    # Copy to Resources/Certificates for Xcode project (automatic inclusion)
+    mkdir -p "$IOS_DIR/Resources/Certificates"
+    cp "$CERT_DIR/supabase.cer" "$IOS_DIR/Resources/Certificates/supabase.cer"
+    echo "   Also copied to: $IOS_DIR/Resources/Certificates/supabase.cer"
 fi
 
 echo ""
 
 # Download Backend certificate
 if download_cert "$BACKEND_HOST" "$CERT_DIR/backend.cer"; then
-    # Also copy to root for backward compatibility
+    # Copy to root for backward compatibility
     cp "$CERT_DIR/backend.cer" "$IOS_DIR/backend.cer"
     echo "   Also copied to: $IOS_DIR/backend.cer"
+    # Copy to Resources/Certificates for Xcode project (automatic inclusion)
+    mkdir -p "$IOS_DIR/Resources/Certificates"
+    cp "$CERT_DIR/backend.cer" "$IOS_DIR/Resources/Certificates/backend.cer"
+    echo "   Also copied to: $IOS_DIR/Resources/Certificates/backend.cer"
 fi
 
 echo ""

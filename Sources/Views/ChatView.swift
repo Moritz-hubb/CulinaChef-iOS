@@ -19,14 +19,19 @@ struct ChatView: View {
     @State private var hasConsent: Bool = OpenAIConsentManager.hasConsent
 
     var body: some View {
-        Group {
-            if app.hasAccess(to: .aiChat) {
-                chatContent
-            } else {
-                paywallContent
-            }
-        }
-        .id(localizationManager.currentLanguage) // Force re-render on language change
+        // DEVELOPMENT MODE: Paywall disabled - always show chat content
+        chatContent
+            .id(localizationManager.currentLanguage) // Force re-render on language change
+        
+        // PRODUCTION (uncomment before launch):
+        // Group {
+        //     if app.hasAccess(to: .aiChat) {
+        //         chatContent
+        //     } else {
+        //         paywallContent
+        //     }
+        // }
+        // .id(localizationManager.currentLanguage)
     }
     
     private var chatContent: some View {
@@ -252,7 +257,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             .padding()
         }
         .sheet(isPresented: $showPaywallSheet) {
-            PaywallView()
+            RevenueCatPaywallView()
                 .environmentObject(app)
         }
     }
@@ -1031,12 +1036,24 @@ private struct RecipeSuggestionsView: View {
         
         guard let openai = app.openAI else { return }
         
+        // DEBUG: Log dietary preferences in ChatView
+        Logger.info("[DEBUG Dietary ChatView] ========== CHATVIEW DIETARY PREFERENCES DEBUG ==========", category: .data)
+        Logger.info("[DEBUG Dietary ChatView] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")", category: .data)
+        Logger.info("[DEBUG Dietary ChatView] app.dietary.diets: \(app.dietary.diets)", category: .data)
+        Logger.info("[DEBUG Dietary ChatView] app.dietary.allergies: \(app.dietary.allergies)", category: .data)
+        print("🔍 [DEBUG Dietary ChatView] ========== CHATVIEW DIETARY PREFERENCES DEBUG ==========")
+        print("🔍 [DEBUG Dietary ChatView] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")")
+        print("🔍 [DEBUG Dietary ChatView] app.dietary.diets: \(app.dietary.diets)")
+        print("🔍 [DEBUG Dietary ChatView] app.dietary.allergies: \(app.dietary.allergies)")
+        
         // Build essential dietary context: allergies, intolerances, and important diets only
         var essentialParts: [String] = []
         
         // ALWAYS include allergies and intolerances
         if !app.dietary.allergies.isEmpty {
             essentialParts.append("Allergien/Unverträglichkeiten: " + app.dietary.allergies.joined(separator: ", "))
+            Logger.info("[DEBUG Dietary ChatView] Added allergies: \(app.dietary.allergies)", category: .data)
+            print("🔍 [DEBUG Dietary ChatView] Added allergies: \(app.dietary.allergies)")
         }
         
         // Include ONLY important dietary preferences (halal, vegan, vegetarian, etc.)
@@ -1044,12 +1061,24 @@ private struct RecipeSuggestionsView: View {
         let userImportantDiets = app.dietary.diets.filter { importantDiets.contains($0.lowercased()) }
         if !userImportantDiets.isEmpty {
             essentialParts.append("Ernährungsweisen: " + userImportantDiets.sorted().joined(separator: ", "))
+            Logger.info("[DEBUG Dietary ChatView] Added important diets: \(userImportantDiets)", category: .data)
+            print("🔍 [DEBUG Dietary ChatView] Added important diets: \(userImportantDiets)")
+        } else {
+            Logger.info("[DEBUG Dietary ChatView] NO important diets found (all diets: \(app.dietary.diets))", category: .data)
+            print("🔍 [DEBUG Dietary ChatView] NO important diets found (all diets: \(app.dietary.diets))")
         }
         
         // WICHTIG: Ernährungsweisen müssen IMMER respektiert werden - Rezepte entsprechend anpassen
         let essentialContext = essentialParts.isEmpty ? "" : "WICHTIG: Allergien müssen IMMER vermieden werden. Ernährungsweisen müssen IMMER respektiert werden - wenn der Benutzer z.B. vegetarisch ist und 'Beef Stroganoff' anfordert, erstelle eine vegetarische Variante (z.B. mit Pilzen oder Seitan statt Rindfleisch). " + essentialParts.joined(separator: " | ")
         let languageContext = app.languageSystemPrompt()
         let fullContext = [essentialContext, languageContext].filter { !$0.isEmpty }.joined(separator: "\n")
+        
+        Logger.info("[DEBUG Dietary ChatView] Essential context: \(essentialContext)", category: .data)
+        Logger.info("[DEBUG Dietary ChatView] Full context: \(fullContext)", category: .data)
+        Logger.info("[DEBUG Dietary ChatView] ========== END CHATVIEW DIETARY PREFERENCES DEBUG ==========", category: .data)
+        print("🔍 [DEBUG Dietary ChatView] Essential context: \(essentialContext)")
+        print("🔍 [DEBUG Dietary ChatView] Full context: \(fullContext)")
+        print("🔍 [DEBUG Dietary ChatView] ========== END CHATVIEW DIETARY PREFERENCES DEBUG ==========")
         
         // Combine recipe name with description for better context
         let recipeGoal = recipeDescription.isEmpty ? recipeName : "\(recipeName): \(recipeDescription)"

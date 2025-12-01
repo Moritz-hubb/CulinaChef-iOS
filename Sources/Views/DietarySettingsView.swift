@@ -368,7 +368,7 @@ struct DietarySettingsView: View {
         
         return map
     }()
-    
+
     private func loadFromApp() {
         Logger.debug("[DietarySettingsView] loadFromApp() called, isSaving: \(isSaving)", category: .data)
         let d = app.dietary

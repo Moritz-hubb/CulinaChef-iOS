@@ -47,6 +47,15 @@ enum Logger {
         #endif
     }
     
+    /// Log warning message
+    static func warning(_ message: String, category: Category = .general) {
+        #if DEBUG
+        print("[WARNING][\(categoryName(category))] \(message)")
+        #else
+        os_log(.default, log: category.log, "%{public}@", message)
+        #endif
+    }
+    
     /// Log error message (always logged)
     static func error(_ message: String, error: Error? = nil, category: Category = .general) {
         let fullMessage = error != nil ? "\(message): \(error!.localizedDescription)" : message

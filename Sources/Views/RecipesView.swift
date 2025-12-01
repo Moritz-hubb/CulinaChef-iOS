@@ -954,7 +954,7 @@ struct PersonalRecipesView: View {
         // Lade die Liste im Hintergrund neu (nur wenn online), um sicherzustellen, dass alles synchron ist
         // Das gelöschte Rezept wird durch deletedRecipeIds gefiltert und erscheint nicht wieder
         if selectedMenu == nil {
-            await loadRecipes(keepVisible: true)
+        await loadRecipes(keepVisible: true)
         } else {
             // Bei Menü-Filter: Nur die Menü-Rezepte neu laden
             await reloadSelectedMenuRecipes()
@@ -1060,7 +1060,7 @@ struct PersonalRecipesView: View {
                     self.menus = menusResult
                     self.loading = false // Zeige Seite auch wenn keine Rezepte
                     Logger.info("[PersonalRecipesView] No recipes found, displaying empty state", category: .data)
-                }
+            }
             }
             
             // Lade jetzt alle Rezepte im Hintergrund und ersetze die Liste
@@ -1093,9 +1093,9 @@ struct PersonalRecipesView: View {
                     list.contains(where: { $0.id == recipeId })
                 }
                 if let cur = self.selectedMenu, let updated = menusResult.first(where: { $0.id == cur.id }) {
-                    self.selectedMenu = updated
+                        self.selectedMenu = updated
+                    }
                 }
-            }
             
             // OPTIMIZATION: Update cache with fresh data for next time
             await MainActor.run {
@@ -1109,7 +1109,7 @@ struct PersonalRecipesView: View {
             
             // Lade Menü-Rezept-IDs parallel (nicht sequenziell)
             if selectedMenu != nil {
-                await reloadSelectedMenuRecipes()
+                    await reloadSelectedMenuRecipes()
             }
         } catch {
             Logger.error("Failed to load personal recipes", error: error, category: .data)
@@ -1809,7 +1809,7 @@ struct CommunityRecipesView: View {
                     if hasVeganTag {
                         matched = true
                         break
-                    } else {
+                } else {
                         // Debug: Log if recipe has tags but not vegan tag
                         if let tags = r.tags, !tags.isEmpty {
                             Logger.debug("Recipe '\(r.title)' has tags: \(tags.joined(separator: ", ")), normalized: \(tagsNorm), but no vegan tag", category: .ui)
@@ -2063,7 +2063,7 @@ struct CommunityRecipesView: View {
             }
             if !imageUrls.isEmpty {
                 Task { @MainActor in
-                    ImageCache.shared.preload(urls: imageUrls)
+            ImageCache.shared.preload(urls: imageUrls)
                 }
             }
         } catch {

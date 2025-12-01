@@ -60,7 +60,7 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                         NavigationLink(destination: RecipeDetailView(recipe: r)) {
                             VStack(alignment: .leading) {
                                 Text(r.title).font(.headline)
-                                Text("\(r.ingredients.count) \(L.generate_ingredientsCount.localized)").font(.subheadline).foregroundColor(.secondary)
+                                Text("\((r.ingredients?.count ?? 0)) \(L.generate_ingredientsCount.localized)").font(.subheadline).foregroundColor(.secondary)
                             }
                         }
                     }
@@ -69,7 +69,7 @@ TextField("z.B. Tomaten", text: $newIngredientText)
             }
             .navigationTitle("KI Kochen")
             .sheet(isPresented: $showPaywall) {
-                PaywallView()
+                RevenueCatPaywallView()
                     .environmentObject(app)
             }
             .sheet(isPresented: $showConsentDialog) {
@@ -95,13 +95,13 @@ TextField("z.B. Tomaten", text: $newIngredientText)
             return
         }
         
-        // Check feature access first
-        guard app.hasAccess(to: .aiRecipeGenerator) else {
-            await MainActor.run {
-                showPaywall = true
-            }
-            return
-        }
+        // DEVELOPMENT MODE: Feature access check disabled
+        // guard app.hasAccess(to: .aiRecipeGenerator) else {
+        //     await MainActor.run {
+        //         showPaywall = true
+        //     }
+        //     return
+        // }
         
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {

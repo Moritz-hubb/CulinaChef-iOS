@@ -2199,9 +2199,10 @@ struct CommunityRecipesView: View {
         
         // OPTIMIZATION: Only load required fields for recipe cards (not full recipe data)
         // This significantly reduces payload size and improves loading speed
+        // Note: user_email is not a database column, it's optional and not displayed in cards
         // Try with filter_tags first, fallback to without if column doesn't exist
-        let selectFieldsWithFilterTags = "id,title,image_url,cooking_time,difficulty,tags,filter_tags,language,user_email,created_at"
-        let selectFieldsWithoutFilterTags = "id,title,image_url,cooking_time,difficulty,tags,language,user_email,created_at"
+        let selectFieldsWithFilterTags = "id,title,image_url,cooking_time,difficulty,tags,filter_tags,language,created_at"
+        let selectFieldsWithoutFilterTags = "id,title,image_url,cooking_time,difficulty,tags,language,created_at"
         
         // First try with filter_tags
         var urlWithFilterTags = url

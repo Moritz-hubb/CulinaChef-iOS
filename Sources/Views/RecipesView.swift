@@ -354,12 +354,16 @@ private struct NewMenuSheet: View {
 private struct AverageRatingView: View {
     @EnvironmentObject var app: AppState
     let recipeId: String
-    @State private var average: Double? = nil
-    @State private var count: Int? = nil
+    
+    // Get rating from cache (no API call needed)
+    private var ratingStats: (average: Double?, count: Int)? {
+        app.getCachedRatingStats(recipeId: recipeId)
+    }
 
     var body: some View {
         HStack(spacing: 6) {
-            let avg = average
+            let avg = ratingStats?.average
+            let count = ratingStats?.count
             let full = Int(floor(avg ?? 0))
             let hasHalf = ((avg ?? 0) - Double(full)) >= 0.5
             ForEach(1...5, id: \.self) { i in
@@ -386,20 +390,6 @@ private struct AverageRatingView: View {
             }
         }
         .fixedSize(horizontal: true, vertical: false)
-        .task(id: recipeId) {
-            guard let token = app.accessToken else { return }
-            if let stats = try? await app.fetchRatingStats(recipeId: recipeId, accessToken: token) {
-                await MainActor.run {
-                    self.average = stats.average
-                    self.count = stats.count
-                }
-            } else {
-                await MainActor.run {
-                    self.average = nil
-                    self.count = nil
-                }
-            }
-        }
     }
 }
 
@@ -1562,6 +1552,10 @@ struct CommunityRecipesView: View {
     @State private var loadingMore = false
     private let pageSize = 50 // Anzahl Rezepte pro Seite (erhöht für schnellere Ladezeiten)
     
+    // Filtered recipes (memoized with debouncing for performance)
+    @State private var filteredRecipes: [Recipe] = []
+    @State private var filterTask: Task<Void, Never>?
+    
     private var availableLanguages: [(code: String, name: String)] {
         [
             ("de", L.tag_german.localized),
@@ -1591,7 +1585,8 @@ struct CommunityRecipesView: View {
     private let lowCarbThreshold: Double = 25 // g Kohlenhydrate pro Portion
     private let quickThresholdMinutes: Int = 20 // Minuten für "Schnell" (<= 20 Minuten)
     
-    private var filteredRecipes: [Recipe] {
+    // Apply filters to recipes (extracted for reuse)
+    private func applyFilters(to recipes: [Recipe]) -> [Recipe] {
         func norm(_ s: String) -> String {
             s.lowercased().replacingOccurrences(of: "[^a-z0-9]", with: "", options: .regularExpression)
         }
@@ -1833,6 +1828,20 @@ struct CommunityRecipesView: View {
         }
     }
     
+    // Update filtered recipes with debouncing (150ms delay)
+    private func updateFilteredRecipes() {
+        filterTask?.cancel()
+        filterTask = Task { @MainActor in
+            // Debounce: Wait 150ms before applying filters
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            
+            guard !Task.isCancelled else { return }
+            
+            let filtered = applyFilters(to: recipes)
+            self.filteredRecipes = filtered
+        }
+    }
+    
     var body: some View {
         Group {
             if loading && recipes.isEmpty { 
@@ -2020,6 +2029,11 @@ struct CommunityRecipesView: View {
             }
             await loadCommunityRecipes() 
         }
+        .onChange(of: query) { _ in updateFilteredRecipes() }
+        .onChange(of: selectedFilters) { _ in updateFilteredRecipes() }
+        .onChange(of: selectedLanguages) { _ in updateFilteredRecipes() }
+        .onChange(of: filterByDietaryPreferences) { _ in updateFilteredRecipes() }
+        .onChange(of: recipes) { _ in updateFilteredRecipes() }
     }
     
     func loadCommunityRecipes() async {
@@ -2049,9 +2063,12 @@ struct CommunityRecipesView: View {
                     self.loading = false // Seite sofort anzeigen!
                     self.currentPage = 1 // Nächste Seite ist 1
                     self.hasMore = firstPage.count >= pageSize
+                    // Initialize filtered recipes immediately (no debounce on initial load)
+                    self.filteredRecipes = self.applyFilters(to: firstPage)
                     Logger.info("[CommunityRecipesView] Displaying \(firstPage.count) recipes immediately", category: .data)
                 } else {
                     self.loading = false
+                    self.filteredRecipes = []
                     Logger.info("[CommunityRecipesView] No recipes found, displaying empty state", category: .data)
                 }
             }
@@ -2063,11 +2080,23 @@ struct CommunityRecipesView: View {
             }
             if !imageUrls.isEmpty {
                 Task { @MainActor in
-            ImageCache.shared.preload(urls: imageUrls)
+                    ImageCache.shared.preload(urls: imageUrls)
+                }
+            }
+            
+            // Load batch ratings for first page in background
+            let recipeIds = firstPage.map { $0.id }
+            if let token = app.accessToken {
+                Task {
+                    await app.loadBatchRatings(recipeIds: recipeIds, accessToken: token)
                 }
             }
         } catch {
             Logger.error("Failed to load community recipes", error: error, category: .data)
+            Logger.error("Error details: \(error.localizedDescription)", category: .data)
+            if let nsError = error as NSError? {
+                Logger.error("NSError domain: \(nsError.domain), code: \(nsError.code), userInfo: \(nsError.userInfo)", category: .data)
+            }
             await MainActor.run {
                 if let urlError = error as? URLError {
                     switch urlError.code {
@@ -2075,10 +2104,17 @@ struct CommunityRecipesView: View {
                         self.error = "Keine Internetverbindung"
                     case .timedOut:
                         self.error = "Zeitüberschreitung"
+                    case .badServerResponse:
+                        self.error = "Server-Fehler beim Laden der Rezepte. Bitte versuche es später erneut."
                     default:
                         if self.recipes.isEmpty {
-                            self.error = "Rezepte konnten nicht geladen werden"
+                            self.error = "Rezepte konnten nicht geladen werden: \(urlError.localizedDescription)"
                         }
+                    }
+                } else if let nsError = error as NSError? {
+                    if self.recipes.isEmpty {
+                        let errorMsg = nsError.userInfo[NSLocalizedDescriptionKey] as? String ?? error.localizedDescription
+                        self.error = "Fehler: \(errorMsg)"
                     }
                 } else {
                     if self.recipes.isEmpty {
@@ -2119,6 +2155,9 @@ struct CommunityRecipesView: View {
                 currentPage += 2 // 2 Seiten geladen
                 loadingMore = false
                 
+                // Update filtered recipes after adding new ones
+                updateFilteredRecipes()
+                
                 Logger.info("[CommunityRecipesView] Loaded pages \(currentPage - 1)-\(currentPage) with \(allNewRecipes.count) recipes. Total: \(recipes.count)", category: .data)
                 
                 // Preload images for new recipes in background
@@ -2130,6 +2169,12 @@ struct CommunityRecipesView: View {
                     Task { @MainActor in
                         ImageCache.shared.preload(urls: imageUrls)
                     }
+                }
+                
+                // Load batch ratings for new recipes in background
+                let newRecipeIds = uniqueNewRecipes.map { $0.id }
+                Task {
+                    await app.loadBatchRatings(recipeIds: newRecipeIds, accessToken: token)
                 }
             }
         } catch {
@@ -2152,9 +2197,67 @@ struct CommunityRecipesView: View {
         // Calculate offset for pagination
         let offset = page * pageSize
         
+        // OPTIMIZATION: Only load required fields for recipe cards (not full recipe data)
+        // This significantly reduces payload size and improves loading speed
+        // Try with filter_tags first, fallback to without if column doesn't exist
+        let selectFieldsWithFilterTags = "id,title,image_url,cooking_time,difficulty,tags,filter_tags,language,user_email,created_at"
+        let selectFieldsWithoutFilterTags = "id,title,image_url,cooking_time,difficulty,tags,language,user_email,created_at"
+        
+        // First try with filter_tags
+        var urlWithFilterTags = url
+        urlWithFilterTags.append(queryItems: [
+            URLQueryItem(name: "is_public", value: "eq.true"),
+            URLQueryItem(name: "select", value: selectFieldsWithFilterTags),
+            URLQueryItem(name: "order", value: "created_at.desc"),
+            URLQueryItem(name: "limit", value: "\(pageSize)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ])
+        
+        var request = URLRequest(url: urlWithFilterTags)
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        do {
+            let (data, response) = try await SecureURLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                Logger.error("[CommunityRecipesView] Invalid response type", category: .network)
+                throw URLError(.badServerResponse)
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
+                Logger.error("[CommunityRecipesView] HTTP \(httpResponse.statusCode): \(errorBody)", category: .network)
+                
+                // If error mentions filter_tags column, try fallback without it
+                if httpResponse.statusCode == 500 && (errorBody.contains("filter_tags") || errorBody.contains("column")) {
+                    Logger.warning("[CommunityRecipesView] filter_tags column issue detected, trying fallback without it", category: .network)
+                    return try await loadCommunityRecipesPageFallback(page: page, pageSize: pageSize, token: token, selectFields: selectFieldsWithoutFilterTags)
+                }
+                
+                throw URLError(.badServerResponse)
+            }
+            
+            return try JSONDecoder().decode([Recipe].self, from: data)
+        } catch {
+            // If any error occurs, try fallback without filter_tags
+            Logger.warning("[CommunityRecipesView] Error loading with filter_tags, trying fallback: \(error.localizedDescription)", category: .network)
+            return try await loadCommunityRecipesPageFallback(page: page, pageSize: pageSize, token: token, selectFields: selectFieldsWithoutFilterTags)
+        }
+    }
+    
+    // Fallback function without filter_tags (in case column doesn't exist)
+    private func loadCommunityRecipesPageFallback(page: Int, pageSize: Int, token: String, selectFields: String) async throws -> [Recipe] {
+        var url = Config.supabaseURL
+        url.append(path: "/rest/v1/recipes")
+        
+        let offset = page * pageSize
+        
         url.append(queryItems: [
             URLQueryItem(name: "is_public", value: "eq.true"),
-            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "select", value: selectFields),
             URLQueryItem(name: "order", value: "created_at.desc"),
             URLQueryItem(name: "limit", value: "\(pageSize)"),
             URLQueryItem(name: "offset", value: "\(offset)")
@@ -2170,6 +2273,8 @@ struct CommunityRecipesView: View {
         
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
+            Logger.error("[CommunityRecipesView] Fallback also failed: HTTP \(httpResponse?.statusCode ?? -1), \(errorBody)", category: .network)
             throw URLError(.badServerResponse)
         }
         

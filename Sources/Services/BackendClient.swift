@@ -195,6 +195,18 @@ final class BackendClient {
         let user_rating: Int?
         let ratings: [RatingResponse]
     }
+    
+    /// DTO für Bewertungsstatistiken eines einzelnen Rezepts (für Batch-Requests).
+    struct RecipeRatingStats: Decodable {
+        let recipe_id: String
+        let average_rating: Double?
+        let total_ratings: Int
+    }
+    
+    /// DTO für Batch-Ratings-Response.
+    struct BatchRatingsResponse: Decodable {
+        let ratings: [RecipeRatingStats]
+    }
 
     /// Sendet eine Bewertung für ein Rezept an das Backend.
     ///
@@ -228,5 +240,21 @@ final class BackendClient {
     ///   - accessToken: Supabase-Access-Token.
     func deleteRating(recipeId: String, accessToken: String) async throws {
         _ = try await request(path: "/recipes/\(recipeId)/rating", method: "DELETE", token: accessToken)
+    }
+    
+    /// Lädt Bewertungsstatistiken für mehrere Rezepte auf einmal (Batch-Request).
+    /// Optimiert für Performance beim Laden von Rezeptlisten.
+    ///
+    /// - Parameters:
+    ///   - recipeIds: Liste der Rezept-IDs (max 100).
+    ///   - accessToken: Supabase-Access-Token.
+    /// - Returns: Bewertungsstatistiken für alle angeforderten Rezepte.
+    func getBatchRatings(recipeIds: [String], accessToken: String) async throws -> BatchRatingsResponse {
+        struct Body: Encodable {
+            let recipe_ids: [String]
+        }
+        let data = try JSONEncoder().encode(Body(recipe_ids: recipeIds))
+        let (respData, _) = try await request(path: "/recipes/ratings/batch", method: "POST", token: accessToken, jsonBody: data)
+        return try JSONDecoder().decode(BatchRatingsResponse.self, from: respData)
     }
 }

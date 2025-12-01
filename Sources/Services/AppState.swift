@@ -117,6 +117,10 @@ final class AppState: ObservableObject {
     @Published var cachedMenus: [Menu] = []
     @Published var recipesCacheTimestamp: Date? = nil
     
+    // Rating cache: recipeId -> (average: Double?, count: Int)
+    // Used to avoid individual API calls for each recipe card
+    var ratingCache: [String: (average: Double?, count: Int)] = [:]
+    
     // Initial data loading state
     @Published var isInitialDataLoaded: Bool = false
     
@@ -1810,8 +1814,51 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         return (avg, response.total_ratings)
     }
     
+    /// Loads rating statistics for multiple recipes in a single batch request.
+    /// Results are cached in ratingCache for fast access.
+    ///
+    /// - Parameters:
+    ///   - recipeIds: List of recipe IDs to fetch ratings for (max 100)
+    ///   - accessToken: Supabase access token
+    func loadBatchRatings(recipeIds: [String], accessToken: String) async {
+        guard !recipeIds.isEmpty else { return }
+        
+        // Filter out recipes that are already cached
+        let uncachedIds = recipeIds.filter { ratingCache[$0] == nil }
+        guard !uncachedIds.isEmpty else { return }
+        
+        // Split into batches of 100 (API limit)
+        let batchSize = 100
+        for i in stride(from: 0, to: uncachedIds.count, by: batchSize) {
+            let batch = Array(uncachedIds[i..<min(i + batchSize, uncachedIds.count)])
+            
+            do {
+                let response = try await backend.getBatchRatings(recipeIds: batch, accessToken: accessToken)
+                
+                // Update cache with results
+                for rating in response.ratings {
+                    ratingCache[rating.recipe_id] = (rating.average_rating, rating.total_ratings)
+                }
+            } catch {
+                Logger.error("Failed to load batch ratings: \(error.localizedDescription)", category: .network)
+            }
+        }
+    }
+    
+    /// Gets rating statistics from cache. Returns nil if not cached.
+    func getCachedRatingStats(recipeId: String) -> (average: Double?, count: Int)? {
+        return ratingCache[recipeId]
+    }
+    
+    /// Clears the rating cache (e.g., after user rates a recipe)
+    func clearRatingCache() {
+        ratingCache.removeAll()
+    }
+    
     func upsertRating(recipeId: String, rating: Int, accessToken: String, userId: String) async throws {
         _ = try await backend.rateRecipe(recipeId: recipeId, rating: rating, accessToken: accessToken)
+        // Clear cache for this recipe so it gets refreshed
+        ratingCache.removeValue(forKey: recipeId)
     }
 }
 

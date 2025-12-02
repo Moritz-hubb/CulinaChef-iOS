@@ -2265,67 +2265,10 @@ struct CommunityRecipesView: View {
         
         // OPTIMIZATION: Only load required fields for recipe cards (not full recipe data)
         // This significantly reduces payload size and improves loading speed
-        // Note: user_email is not a database column, it's optional and not displayed in cards
+        // Note: filter_tags column doesn't exist in database, so we don't load it
+        // user_email is not a database column, it's optional and not displayed in cards
         // user_id is required by Recipe model, so it must be included
-        // Try with filter_tags first, fallback to without if column doesn't exist
-        let selectFieldsWithFilterTags = "id,user_id,title,image_url,cooking_time,difficulty,tags,filter_tags,language,created_at"
-        let selectFieldsWithoutFilterTags = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
-        
-        // First try with filter_tags
-        var urlWithFilterTags = url
-        urlWithFilterTags.append(queryItems: [
-            URLQueryItem(name: "is_public", value: "eq.true"),
-            URLQueryItem(name: "select", value: selectFieldsWithFilterTags),
-            URLQueryItem(name: "order", value: "created_at.desc"),
-            URLQueryItem(name: "limit", value: "\(pageSize)"),
-            URLQueryItem(name: "offset", value: "\(offset)")
-        ])
-        
-        var request = URLRequest(url: urlWithFilterTags)
-        request.httpMethod = "GET"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        do {
-            let (data, response) = try await SecureURLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                Logger.error("[CommunityRecipesView] Invalid response type", category: .network)
-                throw URLError(.badServerResponse)
-            }
-            
-            guard (200...299).contains(httpResponse.statusCode) else {
-                let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
-                Logger.error("[CommunityRecipesView] HTTP \(httpResponse.statusCode): \(errorBody)", category: .network)
-                
-                // If error mentions filter_tags column (400 or 500), try fallback without it
-                if (httpResponse.statusCode == 400 || httpResponse.statusCode == 500) && (errorBody.contains("filter_tags") || errorBody.contains("column")) {
-                    Logger.warning("[CommunityRecipesView] filter_tags column issue detected (HTTP \(httpResponse.statusCode)), trying fallback without it", category: .network)
-                    return try await loadCommunityRecipesPageFallback(page: page, pageSize: pageSize, token: token, selectFields: selectFieldsWithoutFilterTags)
-                }
-                
-                throw URLError(.badServerResponse)
-            }
-            
-            return try JSONDecoder().decode([Recipe].self, from: data)
-        } catch let error as URLError where error.code == .cancelled {
-            // Request was cancelled - don't try fallback, just rethrow
-            Logger.warning("[CommunityRecipesView] Request cancelled", category: .network)
-            throw error
-        } catch {
-            // If any other error occurs, try fallback without filter_tags
-            Logger.warning("[CommunityRecipesView] Error loading with filter_tags, trying fallback: \(error.localizedDescription)", category: .network)
-            return try await loadCommunityRecipesPageFallback(page: page, pageSize: pageSize, token: token, selectFields: selectFieldsWithoutFilterTags)
-        }
-    }
-    
-    // Fallback function without filter_tags (in case column doesn't exist)
-    private func loadCommunityRecipesPageFallback(page: Int, pageSize: Int, token: String, selectFields: String) async throws -> [Recipe] {
-        var url = Config.supabaseURL
-        url.append(path: "/rest/v1/recipes")
-        
-        let offset = page * pageSize
+        let selectFields = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
         
         url.append(queryItems: [
             URLQueryItem(name: "is_public", value: "eq.true"),
@@ -2343,11 +2286,14 @@ struct CommunityRecipesView: View {
         
         let (data, response) = try await SecureURLSession.shared.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            Logger.error("[CommunityRecipesView] Invalid response type", category: .network)
+            throw URLError(.badServerResponse)
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
             let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            Logger.error("[CommunityRecipesView] Fallback also failed: HTTP \(statusCode), \(errorBody)", category: .network)
+            Logger.error("[CommunityRecipesView] HTTP \(httpResponse.statusCode): \(errorBody)", category: .network)
             throw URLError(.badServerResponse)
         }
         

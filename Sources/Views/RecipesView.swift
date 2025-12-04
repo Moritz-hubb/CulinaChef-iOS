@@ -435,6 +435,7 @@ struct PersonalRecipesView: View {
     @State private var newMenuTitle: String = ""
     @State private var assigningRecipe: Recipe? = nil
     @State private var pushRecipe: Recipe? = nil
+    @State private var navigationRecipeId: String? = nil
     @State private var selectedMenuLoaded: Bool = true
     @State private var showDeleteMenuAlert: Bool = false
     @State private var menuPlaceholders: [AppState.MenuSuggestion] = []
@@ -753,7 +754,7 @@ struct PersonalRecipesView: View {
                                                     onAssign: { assigningRecipe = recipe }
                                                 )
                                                 .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                                .onTapGesture { pushRecipe = recipe }
+                                                .onTapGesture { navigationRecipeId = recipe.id }
                                             }
                                         }
                                     }
@@ -766,20 +767,29 @@ struct PersonalRecipesView: View {
                                             onAssign: { assigningRecipe = recipe }
                                         )
                                         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                        .onTapGesture { pushRecipe = recipe }
+                                        .onTapGesture { navigationRecipeId = recipe.id }
                                     }
                                 }
                             }
                             .id(app.likedRecipesManager.likedRecipeIds)
-                            // Hidden NavigationLink to trigger push
-                            if let r = pushRecipe {
-                                NavigationLink(destination: RecipeDetailView(recipe: r), isActive: Binding(
-                                    get: { pushRecipe != nil },
-                                    set: { if !$0 { pushRecipe = nil } }
-                                )) {
-                                    EmptyView()
+                            // NavigationLink using tag/selection pattern
+                            if let recipeId = navigationRecipeId {
+                                let allRecipes = selectedMenu?.id != "__liked__" 
+                                    ? groupedByCourse(menuId: selectedMenu?.id ?? "").flatMap { $0.recipes }
+                                    : visibleRecipes
+                                if let recipe = allRecipes.first(where: { $0.id == recipeId }) {
+                                    NavigationLink(
+                                        destination: RecipeDetailView(recipe: recipe),
+                                        tag: recipeId,
+                                        selection: Binding(
+                                            get: { navigationRecipeId },
+                                            set: { navigationRecipeId = $0 }
+                                        )
+                                    ) {
+                                        EmptyView()
+                                    }
+                                    .hidden()
                                 }
-                                .hidden()
                             }
                         }
                         .padding(16)
@@ -1550,7 +1560,7 @@ struct CommunityRecipesView: View {
     @State private var currentPage = 0
     @State private var hasMore = true
     @State private var loadingMore = false
-    private let pageSize = 50 // Anzahl Rezepte pro Seite (erhöht für schnellere Ladezeiten)
+    private let pageSize = 20 // Anzahl Rezepte pro Seite (reduziert für schnellere erste Ladezeit, besonders ohne Index)
     
     // Filtered recipes (memoized with debouncing for performance)
     @State private var filteredRecipes: [Recipe] = []
@@ -1558,6 +1568,7 @@ struct CommunityRecipesView: View {
     
     // Navigation state for smooth scrolling
     @State private var selectedRecipe: Recipe?
+    @State private var navigationRecipeId: String? = nil
     
     // Throttling for onAppear events
     @State private var lastLoadMoreTime: Date = Date()
@@ -1849,6 +1860,7 @@ struct CommunityRecipesView: View {
             
             let filtered = applyFilters(to: recipes)
             self.filteredRecipes = filtered
+            Logger.info("[CommunityRecipesView] Updated filtered recipes: \(filtered.count) from \(recipes.count) total", category: .data)
         }
     }
     
@@ -1883,7 +1895,8 @@ struct CommunityRecipesView: View {
                 }
                 .padding()
             }
-            else {
+            else if !recipes.isEmpty {
+                // Show ScrollView if we have recipes (even if filteredRecipes is empty, we'll show the empty filter message inside)
                 ScrollView {
                     VStack(spacing: 12) {
                         // Header mit Suchbar, Ernährungspräferenzen-Toggle und Meine Beiträge Button
@@ -1938,13 +1951,16 @@ struct CommunityRecipesView: View {
                         // OPTIMIZATION: Use List instead of ScrollView+LazyVStack for better view recycling
                         // List has native view recycling and better scroll performance
                         List {
+                            // Debug: Log when List is rendered
+                            let _ = Logger.debug("[CommunityRecipesView] Rendering List with \(filteredRecipes.count) filtered recipes (total: \(recipes.count))", category: .ui)
+                            
                             ForEach(Array(filteredRecipes.enumerated()), id: \.element.id) { index, recipe in
                                 RecipeCard(recipe: recipe, isPersonal: false)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
                                     .listRowBackground(Color.clear)
                                     .contentShape(Rectangle())
                                     .onTapGesture {
-                                        selectedRecipe = recipe
+                                        navigationRecipeId = recipe.id
                                     }
                                     .onAppear {
                                         // Throttle preloading: Only preload every 200ms to avoid lag
@@ -2052,12 +2068,13 @@ struct CommunityRecipesView: View {
         .background(
             // Hidden NavigationLink for smooth navigation (outside list for better performance)
             Group {
-                if let recipe = selectedRecipe {
+                if let recipeId = navigationRecipeId, let recipe = filteredRecipes.first(where: { $0.id == recipeId }) {
                     NavigationLink(
                         destination: RecipeDetailView(recipe: recipe),
-                        isActive: Binding(
-                            get: { selectedRecipe != nil },
-                            set: { if !$0 { selectedRecipe = nil } }
+                        tag: recipeId,
+                        selection: Binding(
+                            get: { navigationRecipeId },
+                            set: { navigationRecipeId = $0 }
                         )
                     ) {
                         EmptyView()
@@ -2068,22 +2085,37 @@ struct CommunityRecipesView: View {
         )
         .refreshable { 
             // Reset und neu laden beim Pull-to-Refresh
+            // Beim Refresh wollen wir den alten Task abbrechen und neu laden
             await MainActor.run {
                 currentPage = 0
                 hasMore = true
             }
-            await loadCommunityRecipes() 
+            await loadCommunityRecipes(forceRefresh: true) 
         }
-        .onChange(of: query) { _ in updateFilteredRecipes() }
-        .onChange(of: selectedFilters) { _ in updateFilteredRecipes() }
-        .onChange(of: selectedLanguages) { _ in updateFilteredRecipes() }
-        .onChange(of: filterByDietaryPreferences) { _ in updateFilteredRecipes() }
-        .onChange(of: recipes) { _ in updateFilteredRecipes() }
+        .onChange(of: query) { _, _ in updateFilteredRecipes() }
+        .onChange(of: selectedFilters) { _, _ in updateFilteredRecipes() }
+        .onChange(of: selectedLanguages) { _, _ in updateFilteredRecipes() }
+        .onChange(of: filterByDietaryPreferences) { _, _ in updateFilteredRecipes() }
+        .onChange(of: recipes) { oldValue, newValue in
+            // Only update filtered recipes if recipes actually changed
+            // This prevents unnecessary updates when recipes are set to the same value
+            if oldValue.count != newValue.count || oldValue.map(\.id) != newValue.map(\.id) {
+                updateFilteredRecipes()
+            }
+        }
     }
     
-    func loadCommunityRecipes() async {
-        // Cancel any existing load task
-        loadTask?.cancel()
+    func loadCommunityRecipes(forceRefresh: Bool = false) async {
+        // If forceRefresh is true (e.g., from pull-to-refresh), cancel existing task
+        // Otherwise, if already loading, wait for it to finish to prevent race conditions
+        if forceRefresh {
+            loadTask?.cancel()
+        } else if let existingTask = loadTask, !existingTask.isCancelled {
+            // Wait for existing task to complete instead of cancelling
+            // This prevents race conditions where multiple calls cancel each other
+            await existingTask.value
+            return
+        }
         
         guard let token = app.accessToken else {
             await MainActor.run { 
@@ -2113,7 +2145,8 @@ struct CommunityRecipesView: View {
             // Check if task was cancelled
             try Task.checkCancellation()
             
-            // OPTIMIZATION: Lade sofort die erste volle Seite (50 Rezepte) für schnelle Anzeige
+            // OPTIMIZATION: Lade sofort die erste Seite (20 Rezepte) für schnelle Anzeige
+            // Reduced from 50 to 20 for faster initial load, especially without database index
             let firstPage = try await loadCommunityRecipesPage(page: 0, pageSize: pageSize, token: token)
             
             // Check again after load
@@ -2121,13 +2154,15 @@ struct CommunityRecipesView: View {
             
             await MainActor.run {
                 if !firstPage.isEmpty {
+                    // Set recipes first
                     self.recipes = firstPage
+                    // Initialize filtered recipes immediately (no debounce on initial load)
+                    // This must happen BEFORE setting loading = false to ensure UI updates correctly
+                    self.filteredRecipes = self.applyFilters(to: firstPage)
                     self.loading = false // Seite sofort anzeigen!
                     self.currentPage = 1 // Nächste Seite ist 1
                     self.hasMore = firstPage.count >= pageSize
-                    // Initialize filtered recipes immediately (no debounce on initial load)
-                    self.filteredRecipes = self.applyFilters(to: firstPage)
-                    Logger.info("[CommunityRecipesView] Displaying \(firstPage.count) recipes immediately", category: .data)
+                    Logger.info("[CommunityRecipesView] Displaying \(firstPage.count) recipes immediately (filtered: \(self.filteredRecipes.count))", category: .data)
                 } else {
                     self.loading = false
                     self.filteredRecipes = []
@@ -2157,6 +2192,13 @@ struct CommunityRecipesView: View {
             // Task was cancelled - don't show error, just return
             Logger.info("[CommunityRecipesView] Load task cancelled", category: .data)
             return
+        } catch let error as URLError where error.code == .timedOut {
+            // Timeout error - likely due to missing database index
+            Logger.error("Failed to load community recipes: Timeout (likely missing database index)", error: error, category: .data)
+            await MainActor.run {
+                self.error = "Die Community-Rezepte laden zu langsam. Bitte führe die Datenbank-Migration aus (siehe README_INDEX_MIGRATION.md)"
+                self.loading = false
+            }
         } catch {
             Logger.error("Failed to load community recipes", error: error, category: .data)
             Logger.error("Error details: \(error.localizedDescription)", category: .data)
@@ -2283,6 +2325,10 @@ struct CommunityRecipesView: View {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        // Increase timeout for community recipes query (can be slow without database index)
+        // Default is 30s, but we allow up to 60s for this query
+        request.timeoutInterval = 60.0
         
         let (data, response) = try await SecureURLSession.shared.data(for: request)
         
@@ -2584,26 +2630,26 @@ struct RecipeCard: View {
                         } else {
                             placeholderImage
                         }
+                    }
+                
+                    // Gradient overlay for better text readability
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.7)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 180)
+                    
+                    // Recipe title overlay
+                    Text(recipe.title)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
                 }
-                
-                // Gradient overlay for better text readability
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.7)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 180)
-                
-                // Recipe title overlay
-                Text(recipe.title)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-            }
                 
                 // Buttons overlay (top right)
                 HStack(spacing: 8) {

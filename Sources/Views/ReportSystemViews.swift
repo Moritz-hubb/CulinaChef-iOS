@@ -60,134 +60,299 @@ struct ReportReasonSheet: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(UIColor.systemGroupedBackground)
-                    .ignoresSafeArea()
+                // Background gradient matching app design
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.96, green: 0.78, blue: 0.68),
+                        Color(red: 0.95, green: 0.74, blue: 0.64),
+                        Color(red: 0.93, green: 0.66, blue: 0.55)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
                 
                 if reportSuccess {
-                    VStack(spacing: 20) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.green)
+                    VStack(spacing: 24) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 0.95, green: 0.5, blue: 0.3),
+                                            Color(red: 0.85, green: 0.4, blue: 0.2)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 100, height: 100)
+                                .shadow(color: Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.4), radius: 20, x: 0, y: 10)
+                            
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 50, weight: .bold))
+                                .foregroundColor(.white)
+                        }
                         
                         Text(L.report_reported.localized)
-                            .font(.title2.bold())
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.white)
                         
                         Text(L.ui_danke_für_deine_meldung.localized)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 16))
+                            .foregroundColor(.white.opacity(0.9))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
                     }
                 } else {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
-                            // Rezept Info
-                            VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 24) {
+                            // Rezept Info Card
+                            VStack(alignment: .leading, spacing: 12) {
                                 Text(L.report_reportRecipe.localized)
-                                    .font(.headline)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.7))
+                                    .textCase(.uppercase)
+                                    .tracking(0.5)
+                                
                                 Text(recipe.title)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .lineLimit(2)
                             }
-                            .padding(.horizontal)
-                            .padding(.top)
+                            .padding(20)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 1.5
+                                            )
+                                    )
+                            )
+                            .shadow(color: .black.opacity(0.1), radius: 12, y: 4)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
                             
                             // Grund auswählen
-                            VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 16) {
                                 Text(L.ui_grund_der_meldung.localized)
-                                    .font(.subheadline.bold())
-                                    .padding(.horizontal)
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 20)
                                 
                                 ForEach(ReportReason.allCases) { reason in
                                     Button(action: {
-                                        selectedReason = reason
+                                        withAnimation(.spring(response: 0.3)) {
+                                            selectedReason = reason
+                                        }
                                     }) {
-                                        HStack(spacing: 12) {
-                                            Image(systemName: reason.icon)
-                                                .font(.title3)
-                                                .foregroundColor(selectedReason == reason ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
-                                                .frame(width: 40)
+                                        HStack(spacing: 16) {
+                                            ZStack {
+                                                Circle()
+                                                    .fill(
+                                                        selectedReason == reason ?
+                                                        LinearGradient(
+                                                            colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        ) :
+                                                        LinearGradient(
+                                                            colors: [
+                                                                Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.2),
+                                                                Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.2)
+                                                            ],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        )
+                                                    )
+                                                    .frame(width: 48, height: 48)
+                                                
+                                                Image(systemName: reason.icon)
+                                                    .font(.system(size: 20, weight: .semibold))
+                                                    .foregroundColor(
+                                                        selectedReason == reason ?
+                                                        .white :
+                                                        Color(red: 0.85, green: 0.4, blue: 0.2)
+                                                    )
+                                            }
                                             
                                             Text(reason.localizedTitle)
-                                                .font(.body)
-                                                .foregroundColor(selectedReason == reason ? .white : .primary)
+                                                .font(.system(size: 16, weight: selectedReason == reason ? .semibold : .regular))
+                                                .foregroundColor(selectedReason == reason ? .white : .white.opacity(0.9))
                                             
                                             Spacer()
                                             
                                             if selectedReason == reason {
-                                                Image(systemName: "checkmark")
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .font(.system(size: 24))
                                                     .foregroundColor(.white)
+                                                    .transition(.scale.combined(with: .opacity))
                                             }
                                         }
-                                        .padding()
+                                        .padding(16)
                                         .background(
-                                            selectedReason == reason ?
-                                            Color(red: 0.85, green: 0.4, blue: 0.2) :
-                                            Color(UIColor.secondarySystemGroupedBackground)
+                                            Group {
+                                                if selectedReason == reason {
+                                                    LinearGradient(
+                                                        colors: [
+                                                            Color(red: 0.95, green: 0.5, blue: 0.3),
+                                                            Color(red: 0.85, green: 0.4, blue: 0.2)
+                                                        ],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                } else {
+                                                    LinearGradient(
+                                                        colors: [
+                                                            Color.white.opacity(0.15),
+                                                            Color.white.opacity(0.05)
+                                                        ],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                }
+                                            }
                                         )
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                                .stroke(
+                                                    selectedReason == reason ?
+                                                    LinearGradient(
+                                                        colors: [.white.opacity(0.4), .white.opacity(0.1)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    ) :
+                                                    LinearGradient(
+                                                        colors: [.white.opacity(0.2), .white.opacity(0.05)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    ),
+                                                    lineWidth: selectedReason == reason ? 1.5 : 1
+                                                )
+                                        )
+                                        .shadow(
+                                            color: selectedReason == reason ?
+                                            Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.3) :
+                                            .black.opacity(0.1),
+                                            radius: selectedReason == reason ? 12 : 8,
+                                            y: selectedReason == reason ? 6 : 4
+                                        )
                                     }
                                     .accessibilityLabel(reason.localizedTitle)
                                     .accessibilityHint(selectedReason == reason ? "Aktuell ausgewählt" : "Wählt diesen Grund aus")
                                     .accessibilityAddTraits(selectedReason == reason ? .isSelected : [])
                                     .buttonStyle(.plain)
+                                    .padding(.horizontal, 20)
                                 }
                             }
-                            .padding(.horizontal)
+                            .padding(.vertical, 8)
                             
                             // Optionale Details
                             if selectedReason != nil {
-                                VStack(alignment: .leading, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 12) {
                                     Text(L.ui_zusätzliche_details_optional.localized)
-                                        .font(.subheadline.bold())
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.white)
                                     
                                     TextEditor(text: $details)
-                                        .frame(height: 100)
-                                        .padding(8)
-                                        .background(Color(UIColor.secondarySystemGroupedBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        .frame(height: 120)
+                                        .padding(12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                .fill(.ultraThinMaterial)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                        .stroke(
+                                                            LinearGradient(
+                                                                colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                                                startPoint: .topLeading,
+                                                                endPoint: .bottomTrailing
+                                                            ),
+                                                            lineWidth: 1.5
+                                                        )
+                                                )
+                                        )
+                                        .scrollContentBackground(.hidden)
+                                        .foregroundColor(.white)
+                                        .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
                                         .accessibilityLabel("Zusätzliche Details")
                                         .accessibilityHint("Optionale zusätzliche Informationen zur Meldung")
                                 }
-                                .padding(.horizontal)
+                                .padding(.horizontal, 20)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                             }
                             
                             // Submit Button
-                            if let reason = selectedReason {
+                            if selectedReason != nil {
                                 Button(action: submitReport) {
-                                    HStack {
+                                    HStack(spacing: 12) {
                                         if isSubmitting {
                                             ProgressView()
                                                 .tint(.white)
                                         } else {
+                                            Image(systemName: "exclamationmark.triangle.fill")
+                                                .font(.system(size: 18, weight: .semibold))
                                             Text(L.report_reportButton.localized)
+                                                .font(.system(size: 18, weight: .semibold))
                                         }
                                     }
-                                    .font(.headline)
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color(red: 0.85, green: 0.4, blue: 0.2))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [
+                                                Color(red: 0.95, green: 0.5, blue: 0.3),
+                                                Color(red: 0.85, green: 0.4, blue: 0.2)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [.white.opacity(0.4), .white.opacity(0.1)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 1.5
+                                            )
+                                    )
+                                    .shadow(color: Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.4), radius: 16, y: 8)
                                 }
                                 .accessibilityLabel(isSubmitting ? L.loading.localized : L.report_reportButton.localized)
                                 .accessibilityHint("Sendet die Meldung ab")
                                 .disabled(isSubmitting)
-                                .padding(.horizontal)
-                                .padding(.top, 10)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 8)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
                             }
                         }
-                        .padding(.bottom, 20)
+                        .padding(.bottom, 32)
                     }
                 }
             }
             .navigationTitle(L.report_reportRecipe.localized)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(L.cancel.localized) {
                         dismiss()
                     }
+                    .foregroundColor(.white)
                 }
             }
         }

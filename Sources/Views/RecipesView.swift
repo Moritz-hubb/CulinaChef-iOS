@@ -2386,20 +2386,23 @@ struct CommunityRecipesView: View {
         // PERFORMANCE OPTIMIZATION: Nur benötigte Felder für Recipe-Cards laden
         // Reduziert die Payload-Größe erheblich und verbessert die Ladegeschwindigkeit
         // Mit optimierten Datenbank-Indizes sollte die Query <500ms dauern
-        // WICHTIG: select muss zuerst kommen, damit Supabase PostgREST es richtig interpretiert
+        // KRITISCH: Manuelle URL-Konstruktion, um sicherzustellen, dass select richtig formatiert ist
         let selectFields = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
         
-        // KRITISCH: Reihenfolge der Query-Parameter ist wichtig für PostgREST
-        // select muss zuerst kommen, dann filter, dann order, dann limit/offset
-        url.append(queryItems: [
-            URLQueryItem(name: "select", value: selectFields),  // ZUERST: select
-            URLQueryItem(name: "is_public", value: "eq.true"),  // Dann: filter
-            URLQueryItem(name: "order", value: "created_at.desc"),  // Dann: order
-            URLQueryItem(name: "limit", value: "\(pageSize)"),  // Dann: limit
-            URLQueryItem(name: "offset", value: "\(offset)")  // Zuletzt: offset
-        ])
+        // Manuelle URL-Konstruktion mit korrekter Encoding
+        var urlString = url.absoluteString
+        urlString += "?select=\(selectFields.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? selectFields)"
+        urlString += "&is_public=eq.true"
+        urlString += "&order=created_at.desc"
+        urlString += "&limit=\(pageSize)"
+        urlString += "&offset=\(offset)"
         
-        Logger.info("[CommunityRecipesView] ⏱️ Request URL: \(url.absoluteString)", category: .data)
+        guard let finalURL = URL(string: urlString) else {
+            Logger.error("[CommunityRecipesView] Failed to construct URL", category: .network)
+            throw URLError(.badURL)
+        }
+        
+        Logger.info("[CommunityRecipesView] ⏱️ Request URL: \(finalURL.absoluteString)", category: .data)
         Logger.info("[CommunityRecipesView] ⏱️ Select fields: \(selectFields)", category: .data)
         
         var request = URLRequest(url: url)
@@ -2431,15 +2434,33 @@ struct CommunityRecipesView: View {
         
         // DEBUGGING: Prüfe, ob die Response wirklich nur die angeforderten Felder enthält
         if dataSizeKB > 100 { // Wenn größer als 100 KB, ist etwas falsch
-            if let jsonString = String(data: data, encoding: .utf8)?.prefix(500) {
-                Logger.warning("[CommunityRecipesView] ⚠️ Large response detected! First 500 chars: \(jsonString)", category: .data)
-            }
-            // Prüfe, ob ingredients oder instructions enthalten sind (sollten nicht sein)
+            Logger.error("[CommunityRecipesView] ⚠️ CRITICAL: Response is \(String(format: "%.2f", dataSizeKB)) KB for only \(recipes.count) recipes! Should be <10 KB!", category: .data)
+            
+            // Analysiere die tatsächliche Response
             if let jsonString = String(data: data, encoding: .utf8) {
-                if jsonString.contains("\"ingredients\"") || jsonString.contains("\"instructions\"") {
-                    Logger.error("[CommunityRecipesView] ⚠️ CRITICAL: Response contains ingredients/instructions despite select query! Supabase is ignoring select parameter!", category: .data)
+                // Prüfe, welche Felder tatsächlich enthalten sind
+                let fieldsToCheck = ["ingredients", "instructions", "nutrition", "steps", "description"]
+                var foundFields: [String] = []
+                for field in fieldsToCheck {
+                    if jsonString.contains("\"\(field)\"") {
+                        foundFields.append(field)
+                    }
+                }
+                
+                if !foundFields.isEmpty {
+                    Logger.error("[CommunityRecipesView] ⚠️ CRITICAL: Response contains unwanted fields: \(foundFields.joined(separator: ", "))", category: .data)
+                }
+                
+                // Zeige ersten Recipe-Objekt als Beispiel
+                if let firstRecipeStart = jsonString.range(of: "\"id\""),
+                   let firstRecipeEnd = jsonString.range(of: "}", range: firstRecipeStart.upperBound..<jsonString.endIndex) {
+                    let firstRecipe = String(jsonString[firstRecipeStart.lowerBound..<firstRecipeEnd.upperBound])
+                    Logger.error("[CommunityRecipesView] ⚠️ First recipe fields: \(firstRecipe.prefix(1000))", category: .data)
                 }
             }
+            
+            // Zeige die tatsächliche URL, die verwendet wurde
+            Logger.error("[CommunityRecipesView] ⚠️ Request URL was: \(url.absoluteString)", category: .data)
         }
         
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -2889,20 +2910,6 @@ struct RecipeCard: View {
             ReportReasonSheet(recipe: recipe, onReported: {})
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
-        }
-        .onAppear {
-            let now = Date()
-            if let startTime = renderStartTime {
-                let renderDuration = now.timeIntervalSince(startTime)
-                let recipeIdPrefix = String(recipe.id.prefix(8))
-                if renderDuration > 0.016 { // More than 1 frame (60fps = 16.67ms per frame)
-                    Logger.warning("[RecipeCard] ⚠️ Slow render: \(String(format: "%.3f", renderDuration))s for recipe \(recipeIdPrefix)", category: .ui)
-                } else {
-                    Logger.debug("[RecipeCard] ✅ Fast render: \(String(format: "%.3f", renderDuration))s for recipe \(recipeIdPrefix)", category: .ui)
-                }
-            } else {
-                renderStartTime = now
-            }
         }
     }
     

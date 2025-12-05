@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import SwiftUI
+import CryptoKit
 
 /// Singleton image cache with memory and disk persistence
 /// Provides efficient image loading and caching for recipe photos and other images
@@ -89,6 +90,38 @@ final class ImageCache {
         }
     }
     
+    /// Preload images with priority (for immediate display)
+    /// Loads first N images immediately, rest in background
+    func preloadPriority(urls: [URL], immediateCount: Int = 8) async {
+        guard !urls.isEmpty else { return }
+        
+        // Split into immediate and background
+        let immediateUrls = Array(urls.prefix(immediateCount))
+        let backgroundUrls = Array(urls.dropFirst(immediateCount))
+        
+        // Load immediate images with high priority (concurrent, but wait for completion)
+        await withTaskGroup(of: Void.self) { group in
+            for url in immediateUrls {
+                group.addTask(priority: .userInitiated) {
+                    _ = await self.image(for: url)
+                }
+            }
+        }
+        
+        // Load remaining images in background (don't wait)
+        if !backgroundUrls.isEmpty {
+            Task.detached(priority: .utility) {
+                await withTaskGroup(of: Void.self) { group in
+                    for url in backgroundUrls.prefix(20) {
+                        group.addTask {
+                            _ = await ImageCache.shared.image(for: url)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     /// Clear all cached images (memory + disk)
     func clearAll() {
         memoryCache.removeAllObjects()
@@ -106,10 +139,13 @@ final class ImageCache {
             return
         }
         
+        // Convert enumerator to array to avoid async context issues
+        let fileURLs = Array(enumerator.compactMap { $0 as? URL })
+        
         var deletedCount = 0
         var deletedSize = 0
         
-        for case let fileURL as URL in enumerator {
+        for fileURL in fileURLs {
             guard let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
                   let modificationDate = attributes[.modificationDate] as? Date else {
                 continue
@@ -202,10 +238,13 @@ final class ImageCache {
             return
         }
         
+        // Convert enumerator to array to avoid async context issues
+        let fileURLs = Array(enumerator.compactMap { $0 as? URL })
+        
         var files: [(url: URL, modificationDate: Date, size: Int)] = []
         var totalSize = 0
         
-        for case let fileURL as URL in enumerator {
+        for fileURL in fileURLs {
             guard let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
                   let modificationDate = attributes[.modificationDate] as? Date,
                   let size = attributes[.size] as? Int else {
@@ -246,23 +285,16 @@ private extension UIImage {
     }
 }
 
-// MARK: - String MD5 Extension
+// MARK: - String SHA256 Extension
 
 private extension String {
-    /// Simple MD5 hash for cache keys (using built-in crypto)
+    /// Simple SHA256 hash for cache keys (using CryptoKit)
     var md5: String {
         guard let data = self.data(using: .utf8) else { return self }
-        let hash = data.withUnsafeBytes { bytes -> String in
-            var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
-            CC_MD5(bytes.baseAddress, CC_LONG(data.count), &digest)
-            return digest.map { String(format: "%02hhx", $0) }.joined()
-        }
-        return hash
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02hhx", $0) }.joined()
     }
 }
-
-// MARK: - CommonCrypto Import
-import CommonCrypto
 
 // MARK: - SwiftUI AsyncImage Wrapper with Caching
 
@@ -302,7 +334,8 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         guard let url = url, !isLoading else { return }
         isLoading = true
         
-        Task {
+        // Use userInitiated priority for visible images to load faster
+        Task(priority: .userInitiated) {
             if let cachedImage = await ImageCache.shared.image(for: url) {
                 await MainActor.run {
                     self.image = cachedImage

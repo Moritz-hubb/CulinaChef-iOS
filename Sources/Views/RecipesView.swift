@@ -1992,20 +1992,22 @@ struct CommunityRecipesView: View {
                                         navigationRecipeId = recipe.id
                                     }
                                     .onAppear {
+                                        // OPTIMIZATION: Preload images for next recipes while scrolling
                                         // Throttle preloading: Only preload every 200ms to avoid lag
                                         let now = Date()
                                         if now.timeIntervalSince(lastPreloadTime) > 0.2 {
                                             lastPreloadTime = now
                                             
-                                            // Preload images for next 3 recipes (reduced from 5)
-                                            let nextRecipes = filteredRecipes.suffix(from: min(index + 1, filteredRecipes.count)).prefix(3)
+                                            // Preload images for next 5 recipes (increased from 3 for smoother scrolling)
+                                            let nextRecipes = filteredRecipes.suffix(from: min(index + 1, filteredRecipes.count)).prefix(5)
                                             let nextImageUrls = nextRecipes.compactMap { r -> URL? in
                                                 guard let imageUrl = r.image_url else { return nil }
                                                 return URL(string: imageUrl)
                                             }
                                             if !nextImageUrls.isEmpty {
+                                                // Use utility priority to not block scrolling
                                                 Task.detached(priority: .utility) {
-                                                    await ImageCache.shared.preload(urls: Array(nextImageUrls))
+                                                    await ImageCache.shared.preloadPriority(urls: Array(nextImageUrls), immediateCount: 2)
                                                 }
                                             }
                                         }
@@ -2212,7 +2214,8 @@ struct CommunityRecipesView: View {
             Logger.info("[CommunityRecipesView] ⏱️ ⏱️ ⏱️ TOTAL LOAD TIME: \(String(format: "%.3f", totalDuration))s ⏱️ ⏱️ ⏱️", category: .data)
             Logger.info("[CommunityRecipesView] ⏱️ Breakdown: Network=\(String(format: "%.3f", networkDuration))s, UI=\(String(format: "%.3f", Date().timeIntervalSince(uiUpdateStartTime)))s", category: .data)
             
-            // Preload images for first page in background
+            // OPTIMIZATION: Preload images with priority - first 8 immediately, rest in background
+            // This prevents lag when scrolling immediately after load
             let imagePreloadStartTime = Date()
             let imageUrls = firstPage.compactMap { recipe -> URL? in
                 guard let imageUrl = recipe.image_url, !imageUrl.isEmpty else { return nil }
@@ -2220,11 +2223,11 @@ struct CommunityRecipesView: View {
             }
             Logger.info("[CommunityRecipesView] ⏱️ Found \(imageUrls.count) images to preload", category: .data)
             if !imageUrls.isEmpty {
-                Task { @MainActor in
-                    ImageCache.shared.preload(urls: imageUrls)
-                    let imagePreloadDuration = Date().timeIntervalSince(imagePreloadStartTime)
-                    Logger.info("[CommunityRecipesView] ⏱️ Image preload initiated (async, duration: \(String(format: "%.3f", imagePreloadDuration))s)", category: .data)
-                }
+                // Load first 8 images immediately (visible on screen) with high priority
+                // This ensures smooth scrolling right after load
+                await ImageCache.shared.preloadPriority(urls: imageUrls, immediateCount: 8)
+                let imagePreloadDuration = Date().timeIntervalSince(imagePreloadStartTime)
+                Logger.info("[CommunityRecipesView] ⏱️ Image preload completed (immediate: 8, total: \(imageUrls.count), duration: \(String(format: "%.3f", imagePreloadDuration))s)", category: .data)
             }
             
             // Load batch ratings for first page in background

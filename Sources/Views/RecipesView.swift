@@ -2405,7 +2405,7 @@ struct CommunityRecipesView: View {
         Logger.info("[CommunityRecipesView] ⏱️ Request URL: \(finalURL.absoluteString)", category: .data)
         Logger.info("[CommunityRecipesView] ⏱️ Select fields: \(selectFields)", category: .data)
         
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: finalURL)
         request.httpMethod = "GET"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")

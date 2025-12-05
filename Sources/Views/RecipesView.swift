@@ -2057,6 +2057,8 @@ struct CommunityRecipesView: View {
                         .listStyle(.plain)
                         .scrollContentBackground(.hidden)
                         .background(Color.white)
+                        // OPTIMIZATION: Disable default List animations for smoother scrolling
+                        .animation(nil, value: filteredRecipes.count)
                     }
                 }
             }
@@ -2700,6 +2702,7 @@ struct RecipeCard: View {
     var onAssign: (() -> Void)? = nil
     
     @State private var showReportSheet = false
+    @State private var renderStartTime: Date?
     
     // OPTIMIZATION: Cache computed values to avoid recalculation on every render
     private var isLiked: Bool {
@@ -2727,7 +2730,6 @@ struct RecipeCard: View {
     }
     
     var body: some View {
-        let bodyStartTime = Date()
         
         return VStack(alignment: .leading, spacing: 0) {
             // Recipe Image(s) with swipe

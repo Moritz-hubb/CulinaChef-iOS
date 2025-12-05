@@ -1610,6 +1610,9 @@ struct CommunityRecipesView: View {
     
     // Apply filters to recipes (extracted for reuse)
     private func applyFilters(to recipes: [Recipe]) -> [Recipe] {
+        let filterStartTime = Date()
+        Logger.debug("[CommunityRecipesView] ⏱️ Starting filter (input: \(recipes.count) recipes, query: '\(query)', languages: \(selectedLanguages.count), filters: \(selectedFilters.count))", category: .data)
+        
         func norm(_ s: String) -> String {
             s.lowercased().replacingOccurrences(of: "[^a-z0-9]", with: "", options: .regularExpression)
         }
@@ -1759,9 +1762,12 @@ struct CommunityRecipesView: View {
         }
         
         // Then apply other filters
-        if selectedFilters.isEmpty { return dietaryFiltered }
-        let wanted = selectedFilters.map { norm($0) }
-        return dietaryFiltered.filter { r in
+        let finalFiltered: [Recipe]
+        if selectedFilters.isEmpty {
+            finalFiltered = dietaryFiltered
+        } else {
+            let wanted = selectedFilters.map { norm($0) }
+            finalFiltered = dietaryFiltered.filter { r in
             // Normalize tags, removing _filter: prefix for comparison but keeping original for display
             // Include both tags and filter_tags (filter_tags are the hidden tags from AI)
             let allTags = (r.tags ?? []) + (r.filter_tags ?? [])
@@ -1847,8 +1853,14 @@ struct CommunityRecipesView: View {
                     }
                 }
             }
-            return matched
+                return matched
+            }
         }
+        
+        let filterDuration = Date().timeIntervalSince(filterStartTime)
+        Logger.info("[CommunityRecipesView] ⏱️ Filter completed in \(String(format: "%.3f", filterDuration))s (\(recipes.count) -> \(finalFiltered.count) recipes)", category: .data)
+        
+        return finalFiltered
     }
     
     // Update filtered recipes with debouncing (150ms delay)
@@ -2145,51 +2157,84 @@ struct CommunityRecipesView: View {
     }
     
     private func performLoadCommunityRecipes(token: String) async {
+        // PERFORMANCE DEBUGGING: Start-Zeitpunkt
+        let totalStartTime = Date()
+        Logger.info("[CommunityRecipesView] ⏱️ Starting to load community recipes", category: .data)
+        
         do {
             // Check if task was cancelled
             try Task.checkCancellation()
             
             // PERFORMANCE OPTIMIZATION: Lade sofort die erste Seite (15 Rezepte) für schnelle Anzeige
             // Mit optimierten Datenbank-Indizes sollte dies <2 Sekunden dauern
+            let networkStartTime = Date()
+            Logger.info("[CommunityRecipesView] ⏱️ Starting network request...", category: .data)
+            
             let firstPage = try await loadCommunityRecipesPage(page: 0, pageSize: pageSize, token: token)
+            
+            let networkDuration = Date().timeIntervalSince(networkStartTime)
+            Logger.info("[CommunityRecipesView] ⏱️ Network request completed in \(String(format: "%.3f", networkDuration))s (received \(firstPage.count) recipes)", category: .data)
             
             // Check again after load
             try Task.checkCancellation()
             
+            let uiUpdateStartTime = Date()
+            Logger.info("[CommunityRecipesView] ⏱️ Starting UI update...", category: .data)
+            
             await MainActor.run {
                 if !firstPage.isEmpty {
+                    let filterStartTime = Date()
                     // Set recipes first
                     self.recipes = firstPage
                     // Initialize filtered recipes immediately (no debounce on initial load)
                     // This must happen BEFORE setting loading = false to ensure UI updates correctly
                     self.filteredRecipes = self.applyFilters(to: firstPage)
+                    let filterDuration = Date().timeIntervalSince(filterStartTime)
+                    Logger.info("[CommunityRecipesView] ⏱️ Filtering completed in \(String(format: "%.3f", filterDuration))s (\(firstPage.count) -> \(self.filteredRecipes.count))", category: .data)
+                    
                     self.loading = false // Seite sofort anzeigen!
                     self.currentPage = 1 // Nächste Seite ist 1
                     self.hasMore = firstPage.count >= pageSize
-                    Logger.info("[CommunityRecipesView] Displaying \(firstPage.count) recipes immediately (filtered: \(self.filteredRecipes.count))", category: .data)
+                    
+                    let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
+                    Logger.info("[CommunityRecipesView] ⏱️ UI update completed in \(String(format: "%.3f", uiUpdateDuration))s", category: .data)
+                    Logger.info("[CommunityRecipesView] ✅ Displaying \(firstPage.count) recipes immediately (filtered: \(self.filteredRecipes.count))", category: .data)
                 } else {
                     self.loading = false
                     self.filteredRecipes = []
+                    let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
+                    Logger.info("[CommunityRecipesView] ⏱️ UI update completed in \(String(format: "%.3f", uiUpdateDuration))s", category: .data)
                     Logger.info("[CommunityRecipesView] No recipes found, displaying empty state", category: .data)
                 }
             }
             
+            let totalDuration = Date().timeIntervalSince(totalStartTime)
+            Logger.info("[CommunityRecipesView] ⏱️ ⏱️ ⏱️ TOTAL LOAD TIME: \(String(format: "%.3f", totalDuration))s ⏱️ ⏱️ ⏱️", category: .data)
+            Logger.info("[CommunityRecipesView] ⏱️ Breakdown: Network=\(String(format: "%.3f", networkDuration))s, UI=\(String(format: "%.3f", Date().timeIntervalSince(uiUpdateStartTime)))s", category: .data)
+            
             // Preload images for first page in background
+            let imagePreloadStartTime = Date()
             let imageUrls = firstPage.compactMap { recipe -> URL? in
                 guard let imageUrl = recipe.image_url, !imageUrl.isEmpty else { return nil }
                 return URL(string: imageUrl)
             }
+            Logger.info("[CommunityRecipesView] ⏱️ Found \(imageUrls.count) images to preload", category: .data)
             if !imageUrls.isEmpty {
                 Task { @MainActor in
                     ImageCache.shared.preload(urls: imageUrls)
+                    let imagePreloadDuration = Date().timeIntervalSince(imagePreloadStartTime)
+                    Logger.info("[CommunityRecipesView] ⏱️ Image preload initiated (async, duration: \(String(format: "%.3f", imagePreloadDuration))s)", category: .data)
                 }
             }
             
             // Load batch ratings for first page in background
+            let ratingsStartTime = Date()
             let recipeIds = firstPage.map { $0.id }
             if let token = app.accessToken {
                 Task {
                     await app.loadBatchRatings(recipeIds: recipeIds, accessToken: token)
+                    let ratingsDuration = Date().timeIntervalSince(ratingsStartTime)
+                    Logger.info("[CommunityRecipesView] ⏱️ Batch ratings loaded in \(String(format: "%.3f", ratingsDuration))s", category: .data)
                 }
             }
         } catch is CancellationError {
@@ -2244,14 +2289,21 @@ struct CommunityRecipesView: View {
               hasMore,
               !loadingMore else { return }
         
+        let loadMoreStartTime = Date()
+        Logger.info("[CommunityRecipesView] ⏱️ Starting to load more recipes (page \(currentPage))", category: .data)
+        
         await MainActor.run { loadingMore = true }
         
         do {
             // OPTIMIZATION: Lade 2 Seiten parallel für schnellere Ladezeiten (100 Rezepte auf einmal)
+            let parallelStartTime = Date()
             async let page1Task = loadCommunityRecipesPage(page: currentPage, pageSize: pageSize, token: token)
             async let page2Task = loadCommunityRecipesPage(page: currentPage + 1, pageSize: pageSize, token: token)
             
             let (page1Recipes, page2Recipes) = try await (page1Task, page2Task)
+            let parallelDuration = Date().timeIntervalSince(parallelStartTime)
+            Logger.info("[CommunityRecipesView] ⏱️ Parallel page loading completed in \(String(format: "%.3f", parallelDuration))s (page1: \(page1Recipes.count), page2: \(page2Recipes.count))", category: .data)
+            
             let allNewRecipes = page1Recipes + page2Recipes
             
             await MainActor.run {
@@ -2270,6 +2322,8 @@ struct CommunityRecipesView: View {
                 // Update filtered recipes after adding new ones
                 updateFilteredRecipes()
                 
+                let loadMoreDuration = Date().timeIntervalSince(loadMoreStartTime)
+                Logger.info("[CommunityRecipesView] ⏱️ Load more completed in \(String(format: "%.3f", loadMoreDuration))s", category: .data)
                 Logger.info("[CommunityRecipesView] Loaded pages \(currentPage - 1)-\(currentPage) with \(allNewRecipes.count) recipes. Total: \(recipes.count)", category: .data)
                 
                 // Preload images for new recipes in background
@@ -2303,6 +2357,7 @@ struct CommunityRecipesView: View {
     
     // Helper function to load a page of community recipes with pagination
     private func loadCommunityRecipesPage(page: Int, pageSize: Int, token: String) async throws -> [Recipe] {
+        let requestStartTime = Date()
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/recipes")
         
@@ -2322,6 +2377,8 @@ struct CommunityRecipesView: View {
             URLQueryItem(name: "offset", value: "\(offset)")
         ])
         
+        Logger.info("[CommunityRecipesView] ⏱️ Request URL: \(url.absoluteString)", category: .data)
+        
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -2336,12 +2393,21 @@ struct CommunityRecipesView: View {
         // Browser/Client kann Antworten cachen, aber wir wollen keine stale Daten
         request.cachePolicy = .reloadIgnoringLocalCacheData // Immer frische Daten laden
         
+        let networkStartTime = Date()
+        Logger.info("[CommunityRecipesView] ⏱️ Starting network request (page \(page), size \(pageSize))...", category: .data)
+        
         let (data, response) = try await SecureURLSession.shared.data(for: request)
+        
+        let networkDuration = Date().timeIntervalSince(networkStartTime)
+        let dataSizeKB = Double(data.count) / 1024.0
+        Logger.info("[CommunityRecipesView] ⏱️ Network response received in \(String(format: "%.3f", networkDuration))s (size: \(String(format: "%.2f", dataSizeKB)) KB)", category: .data)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             Logger.error("[CommunityRecipesView] Invalid response type", category: .network)
             throw URLError(.badServerResponse)
         }
+        
+        Logger.info("[CommunityRecipesView] ⏱️ HTTP Status: \(httpResponse.statusCode)", category: .data)
         
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
@@ -2349,7 +2415,17 @@ struct CommunityRecipesView: View {
             throw URLError(.badServerResponse)
         }
         
-        return try JSONDecoder().decode([Recipe].self, from: data)
+        let decodeStartTime = Date()
+        Logger.info("[CommunityRecipesView] ⏱️ Starting JSON decoding...", category: .data)
+        
+        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+        
+        let decodeDuration = Date().timeIntervalSince(decodeStartTime)
+        let totalDuration = Date().timeIntervalSince(requestStartTime)
+        Logger.info("[CommunityRecipesView] ⏱️ JSON decoding completed in \(String(format: "%.3f", decodeDuration))s (decoded \(recipes.count) recipes)", category: .data)
+        Logger.info("[CommunityRecipesView] ⏱️ Total request time: \(String(format: "%.3f", totalDuration))s (Network: \(String(format: "%.3f", networkDuration))s, Decode: \(String(format: "%.3f", decodeDuration))s)", category: .data)
+        
+        return recipes
     }
 }
 

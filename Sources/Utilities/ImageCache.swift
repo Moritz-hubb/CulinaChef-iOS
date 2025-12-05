@@ -15,10 +15,10 @@ final class ImageCache {
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
     
-    /// Memory cache capacity (100 images max)
-    private let memoryCacheCountLimit = 100
-    /// Total memory cost limit (50 MB)
-    private let memoryCacheTotalCostLimit = 50 * 1024 * 1024
+    /// Memory cache capacity (200 images max - increased for smoother scrolling)
+    private let memoryCacheCountLimit = 200
+    /// Total memory cost limit (100 MB - increased for better performance)
+    private let memoryCacheTotalCostLimit = 100 * 1024 * 1024
     /// Disk cache size limit (200 MB)
     private let diskCacheSizeLimit = 200 * 1024 * 1024
     /// Cache expiration (7 days)
@@ -47,6 +47,14 @@ final class ImageCache {
     }
     
     // MARK: - Public API
+    
+    /// Check if image is in memory cache (synchronous, fast)
+    /// - Parameter url: Image URL to check
+    /// - Returns: Cached UIImage if in memory, nil otherwise
+    func imageFromMemoryCache(for url: URL) -> UIImage? {
+        let cacheKey = cacheKey(for: url)
+        return memoryCache.object(forKey: cacheKey as NSString)
+    }
     
     /// Load image from cache or download if not cached
     /// - Parameters:
@@ -299,13 +307,13 @@ private extension String {
 // MARK: - SwiftUI AsyncImage Wrapper with Caching
 
 /// Cached async image view that uses ImageCache
+/// OPTIMIZATION: Prevents reloading images when views are recycled in Lists
 struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     let url: URL?
     let content: (Image) -> Content
     let placeholder: () -> Placeholder
     
     @State private var image: UIImage?
-    @State private var isLoading = false
     
     init(
         url: URL?,
@@ -315,6 +323,12 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         self.url = url
         self.content = content
         self.placeholder = placeholder
+        
+        // OPTIMIZATION: Check memory cache immediately when view is created
+        // This prevents flickering when views are recycled in Lists
+        if let url = url, let cachedImage = ImageCache.shared.imageFromMemoryCache(for: url) {
+            _image = State(initialValue: cachedImage)
+        }
     }
     
     var body: some View {
@@ -323,29 +337,26 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                 content(Image(uiImage: image))
             } else {
                 placeholder()
-                    .onAppear {
-                        loadImage()
+                    .task(id: url?.absoluteString) {
+                        // OPTIMIZATION: Use task(id:) instead of onAppear
+                        // This prevents reloading when the same URL appears again
+                        // and automatically cancels previous tasks
+                        // Only loads if image wasn't found in memory cache during init
+                        await loadImage()
                     }
             }
         }
     }
     
-    private func loadImage() {
-        guard let url = url, !isLoading else { return }
-        isLoading = true
+    private func loadImage() async {
+        guard let url = url, image == nil else { return }
         
-        // Use userInitiated priority for visible images to load faster
-        Task(priority: .userInitiated) {
-            if let cachedImage = await ImageCache.shared.image(for: url) {
-                await MainActor.run {
-                    self.image = cachedImage
-                    self.isLoading = false
-                }
-            } else {
-                await MainActor.run {
-                    self.isLoading = false
-                }
-            }
+        // OPTIMIZATION: ImageCache.shared.image() already checks memory cache first,
+        // then disk cache, then downloads if needed. This single call handles everything.
+        // The task(id:) modifier ensures this only runs once per URL and cancels
+        // previous tasks if the URL changes.
+        if let cachedImage = await ImageCache.shared.image(for: url) {
+            self.image = cachedImage
         }
     }
 }

@@ -2367,23 +2367,31 @@ struct CommunityRecipesView: View {
         // PERFORMANCE OPTIMIZATION: Nur benötigte Felder für Recipe-Cards laden
         // Reduziert die Payload-Größe erheblich und verbessert die Ladegeschwindigkeit
         // Mit optimierten Datenbank-Indizes sollte die Query <500ms dauern
+        // WICHTIG: select muss zuerst kommen, damit Supabase PostgREST es richtig interpretiert
         let selectFields = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
         
+        // KRITISCH: Reihenfolge der Query-Parameter ist wichtig für PostgREST
+        // select muss zuerst kommen, dann filter, dann order, dann limit/offset
         url.append(queryItems: [
-            URLQueryItem(name: "is_public", value: "eq.true"),
-            URLQueryItem(name: "select", value: selectFields),
-            URLQueryItem(name: "order", value: "created_at.desc"),
-            URLQueryItem(name: "limit", value: "\(pageSize)"),
-            URLQueryItem(name: "offset", value: "\(offset)")
+            URLQueryItem(name: "select", value: selectFields),  // ZUERST: select
+            URLQueryItem(name: "is_public", value: "eq.true"),  // Dann: filter
+            URLQueryItem(name: "order", value: "created_at.desc"),  // Dann: order
+            URLQueryItem(name: "limit", value: "\(pageSize)"),  // Dann: limit
+            URLQueryItem(name: "offset", value: "\(offset)")  // Zuletzt: offset
         ])
         
         Logger.info("[CommunityRecipesView] ⏱️ Request URL: \(url.absoluteString)", category: .data)
+        Logger.info("[CommunityRecipesView] ⏱️ Select fields: \(selectFields)", category: .data)
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        // KRITISCH: Prefer Header erzwingt, dass Supabase nur die angeforderten Felder zurückgibt
+        // Ohne diesen Header könnte Supabase alle Felder zurückgeben (auch ingredients, instructions, etc.)
+        request.addValue("return=representation", forHTTPHeaderField: "Prefer")
         
         // PERFORMANCE: Timeout reduziert, da mit optimierten Indizes die Query schnell sein sollte
         // Mit optimierten Datenbank-Indizes sollte die Query <2 Sekunden dauern
@@ -2401,6 +2409,19 @@ struct CommunityRecipesView: View {
         let networkDuration = Date().timeIntervalSince(networkStartTime)
         let dataSizeKB = Double(data.count) / 1024.0
         Logger.info("[CommunityRecipesView] ⏱️ Network response received in \(String(format: "%.3f", networkDuration))s (size: \(String(format: "%.2f", dataSizeKB)) KB)", category: .data)
+        
+        // DEBUGGING: Prüfe, ob die Response wirklich nur die angeforderten Felder enthält
+        if dataSizeKB > 100 { // Wenn größer als 100 KB, ist etwas falsch
+            if let jsonString = String(data: data, encoding: .utf8)?.prefix(500) {
+                Logger.warning("[CommunityRecipesView] ⚠️ Large response detected! First 500 chars: \(jsonString)", category: .data)
+            }
+            // Prüfe, ob ingredients oder instructions enthalten sind (sollten nicht sein)
+            if let jsonString = String(data: data, encoding: .utf8) {
+                if jsonString.contains("\"ingredients\"") || jsonString.contains("\"instructions\"") {
+                    Logger.error("[CommunityRecipesView] ⚠️ CRITICAL: Response contains ingredients/instructions despite select query! Supabase is ignoring select parameter!", category: .data)
+                }
+            }
+        }
         
         guard let httpResponse = response as? HTTPURLResponse else {
             Logger.error("[CommunityRecipesView] Invalid response type", category: .network)

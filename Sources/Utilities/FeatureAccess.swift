@@ -40,6 +40,7 @@ extension AppState {
         // case .manualRecipes, .shoppingList, .communityLibrary, .recipeManagement:
         //     return true
         // }
+        */
     }
     
     /// Get a user-friendly description of why access is restricted

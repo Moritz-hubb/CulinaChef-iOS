@@ -1213,6 +1213,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             //     }
             // }
         }
+        */
     }
     
     /// DEV MODE: Subscription checks disabled - always returns active
@@ -1286,7 +1287,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     }
 
     /// DEV MODE: Subscription checks disabled - always returns active
-    private func refreshSubscriptionFromEntitlements() async {
+    func refreshSubscriptionFromEntitlements() async {
         // DEV MODE: Always set as subscribed, no actual checks
         await MainActor.run {
             self.isSubscribed = true
@@ -1315,7 +1316,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     }
     
     /// DEV MODE: Subscription polling disabled
-    private func startAggressiveSubscriptionPolling(durationSeconds: TimeInterval, intervalSeconds: TimeInterval) {
+    func startAggressiveSubscriptionPolling(durationSeconds: TimeInterval, intervalSeconds: TimeInterval) {
         // DEV MODE: No polling needed, subscription always active
         Logger.info("[AppState] DEV MODE: Aggressive subscription polling disabled", category: .data)
     }

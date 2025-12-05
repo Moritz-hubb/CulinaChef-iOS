@@ -1868,10 +1868,8 @@ struct CommunityRecipesView: View {
     @ViewBuilder
     private var recipesListContent: some View {
         List {
-            // OPTIMIZATION: Use ForEach directly without enumerated() to avoid array creation overhead
-            ForEach(filteredRecipes, id: \.id) { recipe in
-                let index = filteredRecipes.firstIndex(where: { $0.id == recipe.id }) ?? 0
-                
+            // OPTIMIZATION: Use ForEach with enumerated for index, but cache it
+            ForEach(Array(filteredRecipes.enumerated()), id: \.element.id) { index, recipe in
                 RecipeCard(recipe: recipe, isPersonal: false)
                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
@@ -1880,47 +1878,40 @@ struct CommunityRecipesView: View {
                         navigationRecipeId = recipe.id
                     }
                     .onAppear {
-                        let appearStartTime = Date()
-                        let recipeIdPrefix = String(recipe.id.prefix(8))
-                        Logger.debug("[CommunityRecipesView] 📱 RecipeCard appeared: index=\(index), id=\(recipeIdPrefix)", category: .ui)
+                        // CRITICAL: Do minimal work synchronously, defer heavy work
+                        // Only log if needed (disabled for performance)
+                        // Logger.debug("[CommunityRecipesView] 📱 Card appeared: \(index)", category: .ui)
                         
-                        // OPTIMIZATION: Preload images for next recipes while scrolling
-                        // Throttle preloading: Only preload every 200ms to avoid lag
-                        let now = Date()
-                        if now.timeIntervalSince(lastPreloadTime) > 0.2 {
-                            lastPreloadTime = now
+                        // Defer all heavy work to async task
+                        Task.detached(priority: .utility) {
+                            let now = Date()
                             
-                            // Preload images for next 5 recipes (increased from 3 for smoother scrolling)
-                            let nextRecipes = filteredRecipes.suffix(from: min(index + 1, filteredRecipes.count)).prefix(5)
-                            let nextImageUrls = nextRecipes.compactMap { r -> URL? in
-                                guard let imageUrl = r.image_url else { return nil }
-                                return URL(string: imageUrl)
-                            }
-                            if !nextImageUrls.isEmpty {
-                                // Use utility priority to not block scrolling
-                                Task.detached(priority: .utility) {
-                                    await ImageCache.shared.preloadPriority(urls: Array(nextImageUrls), immediateCount: 2)
+                            // Throttle preloading: Only preload every 200ms to avoid lag
+                            if now.timeIntervalSince(lastPreloadTime) > 0.2 {
+                                await MainActor.run {
+                                    lastPreloadTime = now
+                                }
+                                
+                                // Preload images for next 3 recipes (reduced from 5)
+                                let nextRecipes = filteredRecipes.suffix(from: min(index + 1, filteredRecipes.count)).prefix(3)
+                                let nextImageUrls = nextRecipes.compactMap { r -> URL? in
+                                    guard let imageUrl = r.image_url else { return nil }
+                                    return URL(string: imageUrl)
+                                }
+                                if !nextImageUrls.isEmpty {
+                                    await ImageCache.shared.preloadPriority(urls: Array(nextImageUrls), immediateCount: 1)
                                 }
                             }
-                        }
-                        
-                        // Throttle load more: Only check every 500ms to avoid multiple simultaneous loads
-                        let timeSinceLastLoad = now.timeIntervalSince(lastLoadMoreTime)
-                        if timeSinceLastLoad > 0.5 && index >= filteredRecipes.count - 10 && hasMore && !loadingMore && query.isEmpty && selectedFilters.isEmpty && selectedLanguages.isEmpty {
-                            lastLoadMoreTime = now
-                            Task {
+                            
+                            // Throttle load more: Only check every 500ms
+                            let timeSinceLastLoad = now.timeIntervalSince(lastLoadMoreTime)
+                            if timeSinceLastLoad > 0.5 && index >= filteredRecipes.count - 10 && hasMore && !loadingMore && query.isEmpty && selectedFilters.isEmpty && selectedLanguages.isEmpty {
+                                await MainActor.run {
+                                    lastLoadMoreTime = now
+                                }
                                 await loadMoreCommunityRecipes()
                             }
                         }
-                        
-                        let appearDuration = Date().timeIntervalSince(appearStartTime)
-                        if appearDuration > 0.01 {
-                            Logger.warning("[CommunityRecipesView] ⚠️ onAppear took \(String(format: "%.3f", appearDuration))s for index \(index)", category: .ui)
-                        }
-                    }
-                    .onDisappear {
-                        let recipeIdPrefix = String(recipe.id.prefix(8))
-                        Logger.debug("[CommunityRecipesView] 📱 RecipeCard disappeared: index=\(index), id=\(recipeIdPrefix)", category: .ui)
                     }
             }
             
@@ -2706,14 +2697,13 @@ struct RecipeCard: View {
     var onAssign: (() -> Void)? = nil
     
     @State private var showReportSheet = false
-    @State private var renderStartTime: Date?
     
     // OPTIMIZATION: Cache computed values to avoid recalculation on every render
     private var isLiked: Bool {
         app.likedRecipesManager.isLiked(recipeId: recipe.id)
     }
     
-    // OPTIMIZATION: Pre-compute image URLs once
+    // OPTIMIZATION: Pre-compute image URLs once (lazy evaluation)
     private var imageURLs: [URL] {
         guard let imageUrl = recipe.image_url, let first = URL(string: imageUrl) else {
             return []

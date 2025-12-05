@@ -115,7 +115,7 @@ final class RecipeManager {
         
         var processedIndices: [Int] = []
         
-        for (index, deletion) in queue.enumerated() {
+        for (index, _) in queue.enumerated() {
             // Skip processing if we don't have auth
             // This will be handled during integration with AppState
             processedIndices.append(index)

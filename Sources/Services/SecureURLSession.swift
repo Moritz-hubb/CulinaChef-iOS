@@ -51,23 +51,23 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
         guard let supabaseHost = Config.supabaseURL.host else {
             #if DEBUG
             Logger.error("Supabase host not configured", category: .config)
-            #else
-            fatalError("SSL Pinning: Supabase host not configured - this is a build configuration error")
-            #endif
             super.init()
             self.pinnedCertificates = [:]
             return
+            #else
+            fatalError("SSL Pinning: Supabase host not configured - this is a build configuration error")
+            #endif
         }
         
         guard let supabaseCert = SecureURLSession.loadCertificate(named: "supabase") else {
             #if DEBUG
             Logger.error("Supabase SSL certificate not found in bundle - SSL pinning disabled", category: .config)
-            #else
-            fatalError("SSL Pinning: Supabase certificate (supabase.cer) not found in bundle - required for production builds")
-            #endif
             super.init()
             self.pinnedCertificates = [:]
             return
+            #else
+            fatalError("SSL Pinning: Supabase certificate (supabase.cer) not found in bundle - required for production builds")
+            #endif
         }
         pins[supabaseHost] = [supabaseCert]
         
@@ -143,7 +143,15 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
         }
 
         // Compare the server leaf certificate with our pinned certs
-        guard let serverCert = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
+        let serverCert: SecCertificate?
+        if #available(iOS 15.0, *) {
+            let certChain = SecTrustCopyCertificateChain(serverTrust) as? [SecCertificate]
+            serverCert = certChain?.first
+        } else {
+            serverCert = SecTrustGetCertificateAtIndex(serverTrust, 0)
+        }
+        
+        guard let serverCert = serverCert else {
             #if DEBUG
             Logger.error("Could not get server certificate for \(host)", category: .network)
             #endif

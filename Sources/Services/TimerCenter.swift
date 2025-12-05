@@ -243,10 +243,8 @@ final class RunningTimer: ObservableObject, Identifiable {
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(remaining), repeats: false)
         let request = UNNotificationRequest(identifier: id.uuidString, content: content, trigger: trigger)
         
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                // Failed to schedule notification: \(error)
-            }
+        UNUserNotificationCenter.current().add(request) { _ in
+            // Notification scheduled
         }
     }
     

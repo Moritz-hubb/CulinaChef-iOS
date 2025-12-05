@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct OnboardingView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -96,25 +97,26 @@ struct OnboardingView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Penguin illustration at top
+                // Progress indicator at top
+                progressBar
+                    .padding(.top, 20)
+                
+                // Penguin illustration below progress bar
                 if let uiImage = UIImage(named: "penguin-onboarding") {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFit()
                         .frame(width: 120, height: 120)
-                        .padding(.top, 50)
+                        .padding(.top, 60)
                         .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
                         .accessibilityHidden(true)
                 } else {
                     Image(systemName: "list.clipboard")
                         .font(.system(size: 60))
                         .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
-                        .padding(.top, 50)
+                        .padding(.top, 60)
                         .accessibilityHidden(true)
                 }
-                
-                // Progress indicator
-                progressBar
                 
                 // Content
                 TabView(selection: $currentStep) {
@@ -151,28 +153,20 @@ struct OnboardingView: View {
     
     // MARK: - Progress Bar
     private var progressBar: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                ForEach(0..<5) { index in
-                    Capsule()
-                        .fill(index <= currentStep ? 
-                              LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
-                              LinearGradient(colors: [Color.white.opacity(0.3)], startPoint: .leading, endPoint: .trailing))
-                        .frame(height: 4)
-                        .shadow(color: index <= currentStep ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .clear, radius: 4)
-                        .scaleEffect(index == currentStep && showSuccessAnimation ? 1.15 : 1.0)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15), value: currentStep)
-                        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: showSuccessAnimation)
-                }
+        HStack(spacing: 8) {
+            ForEach(0..<5) { index in
+                Capsule()
+                    .fill(index <= currentStep ? 
+                          LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
+                          LinearGradient(colors: [Color.white.opacity(0.3)], startPoint: .leading, endPoint: .trailing))
+                    .frame(height: 4)
+                    .shadow(color: index <= currentStep ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .clear, radius: 4)
+                    .scaleEffect(index == currentStep && showSuccessAnimation ? 1.15 : 1.0)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15), value: currentStep)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.7), value: showSuccessAnimation)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 50)
-            
-            Text(L.onboarding_stepOfTotal.localized.replacingOccurrences(of: "{step}", with: "\(currentStep + 1)").replacingOccurrences(of: "{total}", with: "5"))
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.black.opacity(0.6))
-                .id(localizationManager.currentLanguage) // Force update when language changes
         }
+        .padding(.horizontal, 20)
     }
     
     // MARK: - Step 0: Language Selection
@@ -185,11 +179,11 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(getSystemLocalizedTitle(systemLang: currentLang))
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .id(localizationManager.currentLanguage) // Force re-render on language change
                     Text(getSystemLocalizedSubtitle(systemLang: currentLang))
                         .font(.system(size: 15))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.white.opacity(0.9))
                         .id(localizationManager.currentLanguage) // Force re-render on language change
                 }
                 .padding(.top, 20)
@@ -290,11 +284,11 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.onboarding_allergien_unverträglichkeiten.localized)
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .id(localizationManager.currentLanguage)
                     Text(L.onboarding_damit_wir_deine_rezepte.localized)
                         .font(.system(size: 15))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.white.opacity(0.9))
                         .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
@@ -343,7 +337,7 @@ struct OnboardingView: View {
                     } else {
                         Text(L.onboarding_keine_allergien_perfekt_weiter.localized)
                             .font(.system(size: 14))
-                            .foregroundColor(.black.opacity(0.4))
+                            .foregroundColor(.white.opacity(0.7))
                             .italic()
                             .padding(.top, 8)
                             .id(localizationManager.currentLanguage)
@@ -375,22 +369,22 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.onboarding_ernährungsweise.localized)
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .id(localizationManager.currentLanguage)
                     Text(L.onboarding_wähle_deine_ernährungspräferenzen_a.localized)
                         .font(.system(size: 15))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.white.opacity(0.9))
                         .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
                 
-                WrapDietChips(options: dietOptions, selection: $selectedDiets)
+                DietaryPreferencesList(selection: $selectedDiets)
                     .id(localizationManager.currentLanguage)
                 
                 if selectedDiets.isEmpty {
                     Text(L.onboarding_keine_spezielle_ernährungsweise_kei.localized)
                         .font(.system(size: 14))
-                        .foregroundColor(.black.opacity(0.4))
+                        .foregroundColor(.white.opacity(0.7))
                         .italic()
                         .padding(.top, 8)
                         .id(localizationManager.currentLanguage)
@@ -421,11 +415,11 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.onboarding_geschmackspräferenzen.localized)
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .id(localizationManager.currentLanguage)
                     Text(L.onboarding_howSpicyDoYouLikeIt.localized)
                         .font(.system(size: 15))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.white.opacity(0.9))
                         .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
@@ -459,7 +453,7 @@ struct OnboardingView: View {
                         }
                         Text(spicyLabels[Int(spicyLevel)])
                             .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
+                            .foregroundColor(.black)
                             .id(localizationManager.currentLanguage)
                     }
                     .frame(maxWidth: .infinity)
@@ -492,7 +486,7 @@ struct OnboardingView: View {
                     
                     Text(L.onboarding_additionalPreferencesOptional.localized)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .id(localizationManager.currentLanguage)
                     
                     VStack(spacing: 10) {
@@ -533,11 +527,11 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.onboarding_was_möchtest_du_meiden.localized)
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .id(localizationManager.currentLanguage)
                     Text(L.onboarding_zutaten_die_du_nicht.localized)
                         .font(.system(size: 15))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.white.opacity(0.9))
                         .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
@@ -582,7 +576,7 @@ struct OnboardingView: View {
                     } else {
                         Text(L.onboarding_keine_abneigungen_super_flexibel.localized)
                             .font(.system(size: 14))
-                            .foregroundColor(.black.opacity(0.4))
+                            .foregroundColor(.white.opacity(0.7))
                             .italic()
                             .padding(.top, 8)
                     }
@@ -718,7 +712,7 @@ struct OnboardingView: View {
                 } label: {
                     Text(L.onboarding_zurück.localized)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.white.opacity(0.9))
                         .id(localizationManager.currentLanguage)
                 }
                 .accessibilityLabel(L.onboarding_zurück.localized)
@@ -911,7 +905,118 @@ private struct FlowLayout<T: Hashable, V: View>: View {
     }
 }
 
-// MARK: - WrapDietChips
+// MARK: - Dietary Preferences List
+private struct DietaryPreferencesList: View {
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @Binding var selection: Set<String>
+    
+    private var dietOptions: [(key: String, icon: String)] {
+        let _ = localizationManager.currentLanguage // Force recomputation when language changes
+        return [
+            (L.vegetarian.localized, "leaf.fill"),
+            (L.vegan.localized, "leaf.circle.fill"),
+            (L.pescetarian.localized, "fish.fill"),
+            (L.lowCarb.localized, "chart.bar.fill"),
+            (L.highProtein.localized, "dumbbell.fill"),
+            (L.glutenFree.localized, "shield.checkered"),
+            (L.lactoseFree.localized, "drop.triangle.fill"),
+            (L.halal.localized, "moon.stars.fill"),
+            (L.kosher.localized, "star.fill")
+        ]
+    }
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(dietOptions, id: \.key) { option in
+                DietaryPreferenceRow(
+                    title: option.key,
+                    icon: option.icon,
+                    isSelected: selection.contains(option.key),
+                    onToggle: {
+                        // Simple toggle - if currently selected, remove it; if not, add it
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
+                            if selection.contains(option.key) {
+                                selection.remove(option.key)
+                            } else {
+                                selection.insert(option.key)
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Dietary Preference Row
+private struct DietaryPreferenceRow: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let onToggle: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+            onToggle()
+        }) {
+            HStack(spacing: 16) {
+                // Icon - weiß wenn ausgewählt, orange wenn nicht
+                Image(systemName: icon)
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(isSelected ? .white : Color(red: 0.95, green: 0.5, blue: 0.3))
+                    .frame(width: 32, height: 32)
+                
+                // Title - weiß wenn ausgewählt, schwarz wenn nicht
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(isSelected ? .white : .black)
+                    .multilineTextAlignment(.leading)
+                
+                Spacer()
+                
+                // Checkmark when selected
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(
+                Group {
+                    if isSelected {
+                        // Orange Gradient Hintergrund wenn ausgewählt
+                        LinearGradient(
+                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    } else {
+                        // Grauer Hintergrund wenn nicht ausgewählt
+                        Color(UIColor.systemGray6)
+                    }
+                }
+            )
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.clear : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.2), lineWidth: 1)
+            )
+            .shadow(
+                color: isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4) : .black.opacity(0.08),
+                radius: isSelected ? 8 : 4,
+                y: 2
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - WrapDietChips (kept for backward compatibility if needed)
 private struct WrapDietChips: View {
     let options: [String]
     @Binding var selection: Set<String>

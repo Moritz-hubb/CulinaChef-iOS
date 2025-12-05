@@ -456,7 +456,7 @@ private struct RecipeAISheet: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
                     }
-                    .onChange(of: messages.count) { _ in
+                    .onChange(of: messages.count) { _, _ in
                         withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
                     }
                 }

@@ -289,7 +289,7 @@ final class SubscriptionManager {
     
     private func extendIfAutoRenewNeeded() {
         guard KeychainManager.get(key: "user_id") != nil else { return }
-        var periodEnd = getSubscriptionPeriodEnd()
+        let periodEnd = getSubscriptionPeriodEnd()
         let auto = getSubscriptionAutoRenew()
         guard auto, var end = periodEnd else { return }
         let now = Date()
@@ -351,7 +351,7 @@ final class SubscriptionManager {
         Logger.info("[SubscriptionManager] User ID: \(userId ?? "nil")", category: .data)
         Logger.info("[SubscriptionManager] Has access token: \(accessToken != nil)", category: .data)
         
-        guard let uid = userId else {
+        guard userId != nil else {
             Logger.error("[SubscriptionManager] ❌ No user ID - cannot purchase", category: .data)
             throw NSError(domain: "Subscription", code: -1, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
         }
@@ -504,9 +504,8 @@ final class SubscriptionManager {
     func openManageSubscriptions() async {
         #if canImport(UIKit)
         if #available(iOS 15.0, *) {
-            guard let scene = await UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .first else { return }
+            let scenes = await UIApplication.shared.connectedScenes
+            guard let scene = scenes.compactMap({ $0 as? UIWindowScene }).first else { return }
             try? await AppStore.showManageSubscriptions(in: scene)
         } else {
             if let url = URL(string: "https://apps.apple.com/account/subscriptions") {

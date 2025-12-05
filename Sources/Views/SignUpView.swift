@@ -561,7 +561,6 @@ struct SignUpView: View {
         } catch {
             // Check if it's a 422 error (account already exists) or if error message indicates email exists
             let errorDescription = error.localizedDescription.lowercased()
-            let errorDomain = (error as NSError).domain
             let errorCode = (error as NSError).code
             
             // Check for 422 status code or error messages indicating email already exists

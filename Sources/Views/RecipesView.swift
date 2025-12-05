@@ -1980,10 +1980,14 @@ struct CommunityRecipesView: View {
                         .padding(.vertical, 16)
                     } else {
                         List {
-                            // Debug: Log when List is rendered
-                            let _ = Logger.debug("[CommunityRecipesView] Rendering List with \(filteredRecipes.count) filtered recipes (total: \(recipes.count))", category: .ui)
+                            // DEBUG: Log when List is rendered
+                            let listRenderStart = Date()
+                            let _ = Logger.debug("[CommunityRecipesView] 🎨 Rendering List with \(filteredRecipes.count) filtered recipes (total: \(recipes.count))", category: .ui)
                             
-                            ForEach(Array(filteredRecipes.enumerated()), id: \.element.id) { index, recipe in
+                            // OPTIMIZATION: Use ForEach directly without enumerated() to avoid array creation overhead
+                            ForEach(filteredRecipes, id: \.id) { recipe in
+                                let index = filteredRecipes.firstIndex(where: { $0.id == recipe.id }) ?? 0
+                                
                                 RecipeCard(recipe: recipe, isPersonal: false)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                                     .listRowBackground(Color.clear)
@@ -1992,6 +1996,9 @@ struct CommunityRecipesView: View {
                                         navigationRecipeId = recipe.id
                                     }
                                     .onAppear {
+                                        let appearStartTime = Date()
+                                        Logger.debug("[CommunityRecipesView] 📱 RecipeCard appeared: index=\(index), id=\(recipe.id.uuidString.prefix(8))", category: .ui)
+                                        
                                         // OPTIMIZATION: Preload images for next recipes while scrolling
                                         // Throttle preloading: Only preload every 200ms to avoid lag
                                         let now = Date()
@@ -2020,7 +2027,19 @@ struct CommunityRecipesView: View {
                                                 await loadMoreCommunityRecipes()
                                             }
                                         }
+                                        
+                                        let appearDuration = Date().timeIntervalSince(appearStartTime)
+                                        if appearDuration > 0.01 {
+                                            Logger.warning("[CommunityRecipesView] ⚠️ onAppear took \(String(format: "%.3f", appearDuration))s for index \(index)", category: .ui)
+                                        }
                                     }
+                                    .onDisappear {
+                                        Logger.debug("[CommunityRecipesView] 📱 RecipeCard disappeared: index=\(index), id=\(recipe.id.uuidString.prefix(8))", category: .ui)
+                                    }
+                            }
+                            .onAppear {
+                                let listRenderDuration = Date().timeIntervalSince(listRenderStart)
+                                Logger.info("[CommunityRecipesView] 🎨 List render completed in \(String(format: "%.3f", listRenderDuration))s", category: .ui)
                             }
                             
                             // Loading indicator am Ende, wenn weitere Rezepte geladen werden
@@ -2329,14 +2348,14 @@ struct CommunityRecipesView: View {
                 Logger.info("[CommunityRecipesView] ⏱️ Load more completed in \(String(format: "%.3f", loadMoreDuration))s", category: .data)
                 Logger.info("[CommunityRecipesView] Loaded pages \(currentPage - 1)-\(currentPage) with \(allNewRecipes.count) recipes. Total: \(recipes.count)", category: .data)
                 
-                // Preload images for new recipes in background
+                // Preload images for new recipes with priority (first few immediately)
                 let imageUrls = uniqueNewRecipes.compactMap { recipe -> URL? in
                     guard let imageUrl = recipe.image_url, !imageUrl.isEmpty else { return nil }
                     return URL(string: imageUrl)
                 }
                 if !imageUrls.isEmpty {
                     Task { @MainActor in
-                        ImageCache.shared.preload(urls: imageUrls)
+                        await ImageCache.shared.preloadPriority(urls: imageUrls, immediateCount: 5)
                     }
                 }
                 
@@ -2682,31 +2701,44 @@ struct RecipeCard: View {
     
     @State private var showReportSheet = false
     
+    // OPTIMIZATION: Cache computed values to avoid recalculation on every render
     private var isLiked: Bool {
         app.likedRecipesManager.isLiked(recipeId: recipe.id)
     }
     
+    // OPTIMIZATION: Pre-compute image URLs once
+    private var imageURLs: [URL] {
+        guard let imageUrl = recipe.image_url, let first = URL(string: imageUrl) else {
+            return []
+        }
+        if imageUrl.contains("_0.") {
+            var arr = [first]
+            if let u1 = URL(string: imageUrl.replacingOccurrences(of: "_0.", with: "_1.")) { arr.append(u1) }
+            if let u2 = URL(string: imageUrl.replacingOccurrences(of: "_0.", with: "_2.")) { arr.append(u2) }
+            return arr
+        }
+        return [first]
+    }
+    
+    // OPTIMIZATION: Pre-compute visible tags
+    private var visibleTags: [String] {
+        guard let tags = recipe.tags, !tags.isEmpty else { return [] }
+        return tags.filter { !$0.hasPrefix("_filter:") }
+    }
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let bodyStartTime = Date()
+        
+        return VStack(alignment: .leading, spacing: 0) {
             // Recipe Image(s) with swipe
             ZStack(alignment: .topTrailing) {
                 ZStack(alignment: .bottomLeading) {
                     // Image - OPTIMIZATION: Only use TabView if multiple images exist
                     Group {
-                        if let imageUrl = recipe.image_url, let first = URL(string: imageUrl) {
-                            let urls: [URL] = {
-                                if imageUrl.contains("_0.") {
-                                    var arr = [first]
-                                    if let u1 = URL(string: imageUrl.replacingOccurrences(of: "_0.", with: "_1.")) { arr.append(u1) }
-                                    if let u2 = URL(string: imageUrl.replacingOccurrences(of: "_0.", with: "_2.")) { arr.append(u2) }
-                                    return arr
-                                }
-                                return [first]
-                            }()
-                            
+                        if !imageURLs.isEmpty {
                             // OPTIMIZATION: Single image doesn't need TabView (better performance)
-                            if urls.count == 1 {
-                                CachedAsyncImage(url: urls[0]) { image in
+                            if imageURLs.count == 1 {
+                                CachedAsyncImage(url: imageURLs[0]) { image in
                                     image
                                         .resizable()
                                         .aspectRatio(contentMode: .fill)
@@ -2718,7 +2750,7 @@ struct RecipeCard: View {
                                 }
                             } else {
                                 TabView {
-                                    ForEach(urls, id: \.self) { url in
+                                    ForEach(imageURLs, id: \.self) { url in
                                         CachedAsyncImage(url: url) { image in
                                             image
                                                 .resizable()
@@ -2795,12 +2827,8 @@ struct RecipeCard: View {
             
             // Recipe Info
             VStack(alignment: .leading, spacing: 8) {
-                if let tags = recipe.tags, !tags.isEmpty {
-                    // Filter out invisible tags (those starting with _filter:)
-                    let visibleTags = tags.filter { !$0.hasPrefix("_filter:") }
-                    if !visibleTags.isEmpty {
-                        TagChips(tags: Array(visibleTags.prefix(3)))
-                    }
+                if !visibleTags.isEmpty {
+                    TagChips(tags: Array(visibleTags.prefix(3)))
                 }
                 
                 HStack(spacing: 12) {
@@ -2865,6 +2893,14 @@ struct RecipeCard: View {
             ReportReasonSheet(recipe: recipe, onReported: {})
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .onAppear {
+            let renderDuration = Date().timeIntervalSince(bodyStartTime)
+            if renderDuration > 0.016 { // More than 1 frame (60fps = 16.67ms per frame)
+                Logger.warning("[RecipeCard] ⚠️ Slow render: \(String(format: "%.3f", renderDuration))s for recipe \(recipe.id.uuidString.prefix(8))", category: .ui)
+            } else {
+                Logger.debug("[RecipeCard] ✅ Fast render: \(String(format: "%.3f", renderDuration))s for recipe \(recipe.id.uuidString.prefix(8))", category: .ui)
+            }
         }
     }
     

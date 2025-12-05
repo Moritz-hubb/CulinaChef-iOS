@@ -269,15 +269,13 @@ final class AppState: ObservableObject {
         //         try? await RevenueCatManager.shared.identify(userId: userId)
         //     }
         // }
-        // Load subscription status directly from StoreKit (Apple) first, not from database
+        // DEV MODE: Subscription status always active, no checks needed
         Task { @MainActor [weak self] in
             guard let self else { return }
-            // Small delay to ensure StoreKit is ready
-            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
             await self.refreshSubscriptionStatusFromStoreKit()
         }
-        // Start polling in foreground
-        self.startSubscriptionPolling()
+        // DEV MODE: Subscription polling disabled
+        // self.startSubscriptionPolling()
         // Load OpenAI consent status
         openAIConsentGranted = OpenAIConsentManager.hasConsent
         
@@ -1072,12 +1070,15 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             self.accessToken = nil
             self.userEmail = nil
             self.isAuthenticated = false
-            self.isSubscribed = false
+            // DEV MODE: Keep subscription active even after sign out
+            // self.isSubscribed = false
+            self.isSubscribed = true
             
             // CRITICAL: Clear shopping list to prevent cache bleeding
             self.shoppingListManager.clearShoppingList()
         }
-        stopSubscriptionPolling()
+        // DEV MODE: Subscription polling disabled
+        // stopSubscriptionPolling()
     }
     
     // MARK: - User Preferences
@@ -1326,7 +1327,8 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     }
 
     @objc private func onWillResignActive() {
-        stopSubscriptionPolling()
+        // DEV MODE: Subscription polling disabled
+        // stopSubscriptionPolling()
     }
     #endif
     

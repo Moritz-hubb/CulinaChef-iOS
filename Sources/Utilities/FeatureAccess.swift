@@ -20,7 +20,13 @@ extension AppState {
     /// - Returns: True if user has access, false otherwise
     /// 
     /// DEVELOPMENT MODE: All features are enabled. Before launch, restore subscription check.
+    /// DEV MODE: Always returns true - all features available without subscription
     func hasAccess(to feature: Feature) -> Bool {
+        // DEV MODE: All features available, no subscription checks
+        return true
+        
+        // Original code commented out for DEV MODE:
+        /*
         // DEVELOPMENT: All features enabled
         return true
         

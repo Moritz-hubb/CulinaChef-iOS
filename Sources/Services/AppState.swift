@@ -58,13 +58,15 @@ final class AppState: ObservableObject {
     /// E-Mail-Adresse des angemeldeten Nutzers.
     @Published var userEmail: String?
 
-    // Subscription state (simulated, prepared for StoreKit)
+    // Subscription state (DEV MODE: Always enabled, no subscription checks)
     /// Ob die App aktuell davon ausgeht, dass der Nutzer ein aktives Abo hat.
-    @Published var isSubscribed: Bool = false
+    /// DEV MODE: Immer true, da Abo-Prüfungen während der Entwicklungsphase deaktiviert sind.
+    @Published var isSubscribed: Bool = true
     /// Becomes true once we have loaded the initial subscription status
     /// (from StoreKit, backend, Supabase, or local cache).
     /// Used to avoid briefly showing the paywall before we know the real state.
-    @Published var subscriptionStatusInitialized: Bool = false
+    /// DEV MODE: Immer true, da Abo-Prüfungen während der Entwicklungsphase deaktiviert sind.
+    @Published var subscriptionStatusInitialized: Bool = true
 
     // Tab selection for programmatic navigation
     @Published var selectedTab: Int = 0
@@ -254,8 +256,8 @@ final class AppState: ObservableObject {
         let queue = DispatchQueue(label: "net.monitor")
         monitor.start(queue: queue)
         
-        // Migrate old UserDefaults subscription data to Keychain (one-time)
-        subscriptionManager.migrateSubscriptionDataToKeychain()
+        // DEV MODE: Subscription migration disabled
+        // subscriptionManager.migrateSubscriptionDataToKeychain()
         
         // Check for existing session
         checkSession()
@@ -285,10 +287,12 @@ final class AppState: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            if let newValue = notification.userInfo?["hasConsent"] as? Bool {
-                self?.openAIConsentGranted = newValue
-            } else {
-                self?.openAIConsentGranted = OpenAIConsentManager.hasConsent
+            Task { @MainActor [weak self] in
+                if let newValue = notification.userInfo?["hasConsent"] as? Bool {
+                    self?.openAIConsentGranted = newValue
+                } else {
+                    self?.openAIConsentGranted = OpenAIConsentManager.hasConsent
+                }
             }
         }
         
@@ -1158,19 +1162,28 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     
     /// Lädt den Subscription-Status direkt von StoreKit (Apple), nicht aus der Datenbank.
     /// Dies ist die bevorzugte Methode beim App-Start, um den aktuellsten Status zu erhalten.
+    /// DEV MODE: Immer true, da Abo-Prüfungen während der Entwicklungsphase deaktiviert sind.
     func refreshSubscriptionStatusFromStoreKit() async {
-        Logger.info("[AppState] Refreshing subscription status from StoreKit (Apple)...", category: .data)
-        let active = await subscriptionManager.refreshSubscriptionStatusFromStoreKit()
+        Logger.info("[AppState] DEV MODE: Subscription checks disabled - always returning active", category: .data)
         await MainActor.run {
-            self.isSubscribed = active
+            self.isSubscribed = true
             self.subscriptionStatusInitialized = true
-            Logger.info("[AppState] Subscription status from StoreKit: \(active ? "active" : "inactive")", category: .data)
+            Logger.info("[AppState] Subscription status: active (DEV MODE)", category: .data)
         }
     }
     
     // moved to SubscriptionManager.extendIfAutoRenewNeeded()
     
+    /// DEV MODE: Subscription checks disabled - always returns active
     func loadSubscriptionStatus() {
+        // DEV MODE: Always set as subscribed, no actual checks
+        self.isSubscribed = true
+        self.subscriptionStatusInitialized = true
+        Logger.info("[AppState] DEV MODE: Subscription status set to active (no checks performed)", category: .data)
+        return
+        
+        // Original code commented out for DEV MODE:
+        /*
         Task { [weak self] in
             guard let self else { return }
             
@@ -1201,14 +1214,13 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         }
     }
     
+    /// DEV MODE: Subscription checks disabled - always returns active
     private func loadSubscriptionStatusLocal() {
-        Task { [weak self] in
-            guard let self else { return }
-            let status = await self.subscriptionManager.loadSubscriptionStatus(accessToken: nil as String?)
-            await MainActor.run {
-                self.isSubscribed = status.isSubscribed
-                self.subscriptionStatusInitialized = true
-            }
+        // DEV MODE: Always set as subscribed, no actual checks
+        Task { @MainActor in
+            self.isSubscribed = true
+            self.subscriptionStatusInitialized = true
+            Logger.info("[AppState] DEV MODE: Local subscription status set to active", category: .data)
         }
     }
     
@@ -1262,25 +1274,23 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     }
 
     /// Stellt Käufe über StoreKit wieder her und aktualisiert Subscription-Entitlements.
+    /// DEV MODE: Subscription checks disabled - always returns active
     func restorePurchases() async {
-        do {
-            let active = try await subscriptionManager.restorePurchases()
-            await MainActor.run {
-                self.isSubscribed = active
-                self.subscriptionStatusInitialized = true
-                if active { self.loadSubscriptionStatus() }
-            }
-        } catch {
-            await MainActor.run { self.error = error.localizedDescription }
+        // DEV MODE: Always set as subscribed, no actual restore
+        await MainActor.run {
+            self.isSubscribed = true
+            self.subscriptionStatusInitialized = true
+            Logger.info("[AppState] DEV MODE: Restore purchases - always returning active", category: .data)
         }
     }
 
+    /// DEV MODE: Subscription checks disabled - always returns active
     private func refreshSubscriptionFromEntitlements() async {
-        let active = try? await subscriptionManager.restorePurchases()
+        // DEV MODE: Always set as subscribed, no actual checks
         await MainActor.run {
-            self.isSubscribed = active ?? false
+            self.isSubscribed = true
             self.subscriptionStatusInitialized = true
-            if self.isSubscribed { self.loadSubscriptionStatus() }
+            Logger.info("[AppState] DEV MODE: Subscription status set to active (no entitlement checks)", category: .data)
         }
     }
     
@@ -1292,20 +1302,21 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     }
 
     // MARK: - Subscription polling helpers
+    /// DEV MODE: Subscription polling disabled - all features available
     private func startSubscriptionPolling() {
-        subscriptionManager.startSubscriptionPolling(isAuthenticated: isAuthenticated) { [weak self] in
-            self?.loadSubscriptionStatus()
-        }
+        // DEV MODE: No polling needed, subscription always active
+        Logger.info("[AppState] DEV MODE: Subscription polling disabled", category: .data)
     }
-
+    
+    /// DEV MODE: Subscription polling disabled
     private func stopSubscriptionPolling() {
-        subscriptionManager.stopSubscriptionPolling()
+        // DEV MODE: No polling to stop
     }
-
+    
+    /// DEV MODE: Subscription polling disabled
     private func startAggressiveSubscriptionPolling(durationSeconds: TimeInterval, intervalSeconds: TimeInterval) {
-        subscriptionManager.startAggressiveSubscriptionPolling(durationSeconds: durationSeconds, intervalSeconds: intervalSeconds) { [weak self] in
-            self?.loadSubscriptionStatus()
-        }
+        // DEV MODE: No polling needed, subscription always active
+        Logger.info("[AppState] DEV MODE: Aggressive subscription polling disabled", category: .data)
     }
 
     #if canImport(UIKit)

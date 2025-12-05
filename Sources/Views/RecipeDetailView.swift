@@ -231,10 +231,11 @@ struct RecipeDetailView: View {
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: shareItems)
         }
-        .sheet(isPresented: $showPaywallSheet) {
-            RevenueCatPaywallView()
-                .environmentObject(app)
-        }
+        // DEV MODE: Paywall sheet removed - all features available
+        // .sheet(isPresented: $showPaywallSheet) {
+        //     RevenueCatPaywallView()
+        //         .environmentObject(app)
+        // }
         .onChange(of: selectedPhoto) { _, newValue in
             Task {
                 if let item = newValue,
@@ -1249,10 +1250,11 @@ private struct RecipeAISheetForSavedRecipe: View {
                 onDecline: {}
             )
         }
-        .sheet(isPresented: $showPaywallSheet) {
-            RevenueCatPaywallView()
-                .environmentObject(app)
-        }
+        // DEV MODE: Paywall sheet removed - all features available
+        // .sheet(isPresented: $showPaywallSheet) {
+        //     RevenueCatPaywallView()
+        //         .environmentObject(app)
+        // }
     }
     
     private var chatContent: some View {
@@ -1307,7 +1309,7 @@ private struct RecipeAISheetForSavedRecipe: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
                     }
-                    .onChange(of: messages.count) { _ in
+                    .onChange(of: messages.count) { _, _ in
                         withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
                     }
                 }
@@ -1478,35 +1480,22 @@ private struct RecipeAISheetForSavedRecipe: View {
                             .padding(.horizontal, 40)
                     }
                     
-                    Button(action: { showPaywallSheet = true }) {
-                        Text("Unlimited freischalten")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: 280)
-                        .frame(height: 52)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(red: 0.2, green: 0.6, blue: 0.9), Color(red: 0.1, green: 0.4, blue: 0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        )
-                        .shadow(color: .blue.opacity(0.4), radius: 20, x: 0, y: 10)
-                    }
-                    .accessibilityLabel("Unlimited freischalten")
-                    .accessibilityHint("Öffnet die Abo-Auswahl")
-                    .padding(.top, 8)
+                    // DEV MODE: Paywall button removed - all features available
+                    // Button(action: { showPaywallSheet = true }) {
+                    //     Text("Unlimited freischalten")
+                    //     ...
+                    // }
                 }
                 
                 Spacer()
             }
             .padding()
         }
-        .sheet(isPresented: $showPaywallSheet) {
-            RevenueCatPaywallView()
-                .environmentObject(app)
-        }
+        // DEV MODE: Paywall sheet removed - all features available
+        // .sheet(isPresented: $showPaywallSheet) {
+        //     RevenueCatPaywallView()
+        //         .environmentObject(app)
+        // }
     }
     
     private func userFriendlyErrorMessage(from error: Error) -> String {

@@ -68,10 +68,11 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                 if let error { Text(error).foregroundColor(.red) }
             }
             .navigationTitle("KI Kochen")
-            .sheet(isPresented: $showPaywall) {
-                RevenueCatPaywallView()
-                    .environmentObject(app)
-            }
+            // DEV MODE: Paywall sheet removed - all features available
+            // .sheet(isPresented: $showPaywall) {
+            //     RevenueCatPaywallView()
+            //         .environmentObject(app)
+            // }
             .sheet(isPresented: $showConsentDialog) {
                 OpenAIConsentDialog(
                     onAccept: {

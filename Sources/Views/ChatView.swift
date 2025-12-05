@@ -51,7 +51,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                     } else {
                         VStack(spacing: 12) {
                             ForEach(messages) { msg in
-                                ChatBubble(message: msg)
+                                ChatBubble(message: msg, onRetry: retryLastMessage)
                                     .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             }
                             
@@ -72,7 +72,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 .onTapGesture {
                     isInputFocused = false
                 }
-                .onChange(of: messages.count) { _ in
+                .onChange(of: messages.count) { _, _ in
                     // Only scroll to last message if NOT currently sending
                     if !sending {
                         withAnimation(.easeOut) {
@@ -234,32 +234,19 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                         .padding(.horizontal, 40)
                 }
                 
-                Button(action: { showPaywallSheet = true }) {
-                    Text(L.subscriptionUnlockUnlimited.localized)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: 300)
-                        .frame(height: 56)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(red: 0.2, green: 0.6, blue: 0.9), Color(red: 0.1, green: 0.4, blue: 0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        )
-                        .shadow(color: .blue.opacity(0.4), radius: 20, x: 0, y: 10)
-                }
-                .accessibilityLabel(L.subscriptionUnlockUnlimited.localized)
-                .accessibilityHint("Öffnet die Abo-Auswahl")
-                .padding(.top, 16)
+                // DEV MODE: Paywall button removed - all features available
+                // Button(action: { showPaywallSheet = true }) {
+                //     Text(L.subscriptionUnlockUnlimited.localized)
+                //     ...
+                // }
             }
             .padding()
         }
-        .sheet(isPresented: $showPaywallSheet) {
-            RevenueCatPaywallView()
-                .environmentObject(app)
-        }
+        // DEV MODE: Paywall sheet removed - all features available
+        // .sheet(isPresented: $showPaywallSheet) {
+        //     RevenueCatPaywallView()
+        //         .environmentObject(app)
+        // }
     }
     
     private var inputBar: some View {
@@ -448,7 +435,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
                 await MainActor.run { 
-                    messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error)))
+                    messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error), isError: true))
                 }
                 return
             }
@@ -463,7 +450,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 let errorMsg = error.localizedDescription.contains("cannotFindHost") || error.localizedDescription.contains("cannotConnectToHost") 
                     ? L.errorNetworkConnection.localized 
                     : L.errorChatError.localized
-                messages.append(.init(role: .assistant, text: errorMsg))
+                messages.append(.init(role: .assistant, text: errorMsg, isError: true))
             }
         }
     }
@@ -512,7 +499,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
                 await MainActor.run { 
-                    messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error)))
+                    messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error), isError: true))
                 }
                 return
             }
@@ -539,7 +526,163 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             let reply = try await openai.chatReply(messages: contextMsgs, maxHistory: contextMsgs.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
-            await MainActor.run { messages.append(.init(role: .assistant, text: L.errorImageAnalysisError.localized)) }
+            await MainActor.run { messages.append(.init(role: .assistant, text: L.errorImageAnalysisError.localized, isError: true)) }
+        }
+    }
+    
+    // Retry sending the last user message after an error
+    private func retryLastMessage() {
+        // Find the last user message before the error
+        guard let lastUserMessage = messages.last(where: { $0.role == .user }) else { return }
+        
+        // Remove the error message if it exists
+        if let lastMessage = messages.last, lastMessage.isError {
+            messages.removeLast()
+        }
+        
+        // Retry sending: if it had an image, use sendImage, otherwise sendText
+        if lastUserMessage.imageDataBase64 != nil {
+            // Restore image data and text for retry
+            if let imageData = Data(base64Encoded: lastUserMessage.imageDataBase64 ?? "") {
+                Task {
+                    await retrySendImage(text: lastUserMessage.text, imageData: imageData)
+                }
+            }
+        } else {
+            Task {
+                await retrySendText(text: lastUserMessage.text)
+            }
+        }
+    }
+    
+    // Retry send text without clearing input field
+    private func retrySendText(text: String) async {
+        guard !text.isEmpty else { return }
+        
+        // Block AI features on jailbroken devices
+        if app.isJailbroken {
+            messages.append(.init(role: .assistant, text: L.errorJailbreakDetected.localized))
+            return
+        }
+        
+        // Check DSGVO consent before using OpenAI
+        guard hasConsent else {
+            await MainActor.run { showConsentDialog = true }
+            return
+        }
+        
+        // Don't add user message again - it's already in the list
+        // Update hidden intent summary for subsequent recipe generation
+        let summary = app.summarizeIntent(from: text)
+        if !summary.isEmpty { await MainActor.run { app.intentSummary = summary } }
+        sending = true
+        defer { sending = false }
+        do {
+            // Enforce rate limit before sending AI request
+            guard let token = app.accessToken else {
+                throw NSError(domain: "rate_limit", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
+            }
+            
+            // Get original transaction ID for transaction-based rate limiting (if user has subscription)
+            let transactionId = await app.getOriginalTransactionId()
+            
+            // Try to increment AI usage, but don't fail if backend is unreachable
+            do { 
+                _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: transactionId) 
+            } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
+                Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
+            } catch {
+                await MainActor.run { 
+                    messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error), isError: true))
+                }
+                return
+            }
+
+            guard let openai = app.openAI else { throw NSError(domain: "no_api", code: 0) }
+            let sys = app.chatSystemContext()
+            let prefixed = (sys.isEmpty ? [] : [ChatMessage(role: .system, text: sys)]) + messages
+            let reply = try await openai.chatReply(messages: prefixed, maxHistory: prefixed.count)
+            await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
+        } catch {
+            await MainActor.run { 
+                let errorMsg = error.localizedDescription.contains("cannotFindHost") || error.localizedDescription.contains("cannotConnectToHost") 
+                    ? L.errorNetworkConnection.localized 
+                    : L.errorChatError.localized
+                messages.append(.init(role: .assistant, text: errorMsg, isError: true))
+            }
+        }
+    }
+    
+    // Retry send image without clearing input field
+    private func retrySendImage(text: String, imageData: Data) async {
+        guard !text.isEmpty else { return }
+        
+        // Block AI features on jailbroken devices
+        if app.isJailbroken {
+            messages.append(.init(role: .assistant, text: L.errorJailbreakDetected.localized))
+            return
+        }
+        
+        // Check DSGVO consent before using OpenAI
+        guard hasConsent else {
+            await MainActor.run { showConsentDialog = true }
+            return
+        }
+        
+        // Don't add user message again - it's already in the list
+        sending = true
+        defer { sending = false }
+        do {
+            // Enforce rate limit before sending AI request
+            guard let token = app.accessToken else {
+                throw NSError(domain: "rate_limit", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
+            }
+            
+            // Get original transaction ID for transaction-based rate limiting (if user has subscription)
+            let transactionId = await app.getOriginalTransactionId()
+            
+            // Try to increment AI usage, but don't fail if backend is unreachable
+            do { 
+                _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: transactionId) 
+            } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
+                Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
+            } catch {
+                await MainActor.run { 
+                    messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error), isError: true))
+                }
+                return
+            }
+
+            guard let openai = app.openAI else { throw NSError(domain: "no_api", code: 0) }
+            // First, get a concise ingredient breakdown from the image
+            let analysis = try await openai.analyzeImage(imageData, userPrompt: "Analysiere dieses Bild und liste alle sichtbaren Zutaten/Lebensmittel auf.")
+            
+            // Build context for chat AI: previous messages (without the current image message)
+            var contextMsgs: [ChatMessage] = []
+            let sys = app.chatSystemContext()
+            if !sys.isEmpty { contextMsgs.append(.init(role: .system, text: sys)) }
+            
+            // Add previous conversation history (excluding the last image message which is already in the list)
+            // Find the last user message with image and exclude it from history
+            let historyWithoutLastImage = messages.filter { msg in
+                if msg.role == .user && msg.imageDataBase64 != nil {
+                    // This is likely the message we're retrying, exclude it
+                    return false
+                }
+                return true
+            }
+            contextMsgs.append(contentsOf: historyWithoutLastImage)
+            
+            // Add the image analysis as context
+            contextMsgs.append(.init(role: .system, text: L.recipe_imageAnalysisPrefix.localized + analysis + L.recipe_imageAnalysisSuffix.localized))
+            
+            // Add the user's actual question (without image data, just text)
+            contextMsgs.append(.init(role: .user, text: text))
+            
+            let reply = try await openai.chatReply(messages: contextMsgs, maxHistory: contextMsgs.count)
+            await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
+        } catch {
+            await MainActor.run { messages.append(.init(role: .assistant, text: L.errorImageAnalysisError.localized, isError: true)) }
         }
     }
 }
@@ -547,6 +690,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
 private struct ChatBubble: View {
     @EnvironmentObject var app: AppState
     let message: ChatMessage
+    let onRetry: () -> Void
     var isUser: Bool { message.role == .user }
 
     var body: some View {
@@ -568,6 +712,33 @@ private struct ChatBubble: View {
                 } else {
                     Text(message.text)
                         .foregroundStyle(.white)
+                }
+                
+                // Retry-Button bei Fehlermeldungen
+                if message.isError && !isUser {
+                    Button(action: onRetry) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.clockwise")
+                            Text(L.ui_wiederholen.localized)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 14)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                        .shadow(color: Color.orange.opacity(0.3), radius: 6, x: 0, y: 3)
+                    }
+                    .accessibilityLabel(L.ui_wiederholen.localized)
+                    .accessibilityHint("Sendet die letzte Nachricht erneut")
+                    .padding(.top, 4)
                 }
             }
             .padding(12)
@@ -832,7 +1003,7 @@ private struct RecipeSuggestionsView: View {
                     recipes.append(RecipeSuggestion(name: name, description: currentDesc.trimmingCharacters(in: .whitespacesAndNewlines), course: currentCourse))
                 }
                 // parse new title line with optional course tag
-                var nameLine = trimmed.replacingOccurrences(of: "🍴", with: "").trimmingCharacters(in: .whitespaces)
+                let nameLine = trimmed.replacingOccurrences(of: "🍴", with: "").trimmingCharacters(in: .whitespaces)
                 
                 // Extract course tag first (before processing name/description)
                 let (lineWithoutCourse, foundCourse) = stripCourseTags(nameLine)

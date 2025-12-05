@@ -357,10 +357,10 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
             return
         }
         
-        // Check feature access first
-        guard app.hasAccess(to: .aiRecipeGenerator) else {
-            return
-        }
+        // DEV MODE: Feature access check removed - all features available
+        // guard app.hasAccess(to: .aiRecipeGenerator) else {
+        //     return
+        // }
         
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {

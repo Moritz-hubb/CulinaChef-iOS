@@ -1868,8 +1868,6 @@ struct CommunityRecipesView: View {
     @ViewBuilder
     private var recipesListContent: some View {
         List {
-            Logger.debug("[CommunityRecipesView] 🎨 Rendering List with \(filteredRecipes.count) filtered recipes (total: \(recipes.count))", category: .ui)
-            
             // OPTIMIZATION: Use ForEach directly without enumerated() to avoid array creation overhead
             ForEach(filteredRecipes, id: \.id) { recipe in
                 let index = filteredRecipes.firstIndex(where: { $0.id == recipe.id }) ?? 0
@@ -1943,6 +1941,9 @@ struct CommunityRecipesView: View {
         .background(Color.white)
         // OPTIMIZATION: Disable default List animations for smoother scrolling
         .animation(nil, value: filteredRecipes.count)
+        .onAppear {
+            Logger.debug("[CommunityRecipesView] 🎨 List appeared with \(filteredRecipes.count) filtered recipes (total: \(recipes.count))", category: .ui)
+        }
     }
     
     // Update filtered recipes with debouncing (150ms delay)

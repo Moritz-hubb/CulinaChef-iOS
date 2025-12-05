@@ -1560,7 +1560,9 @@ struct CommunityRecipesView: View {
     @State private var currentPage = 0
     @State private var hasMore = true
     @State private var loadingMore = false
-    private let pageSize = 20 // Anzahl Rezepte pro Seite (reduziert für schnellere erste Ladezeit, besonders ohne Index)
+    // PERFORMANCE: Reduzierte Page-Size für schnellere initiale Ladezeit
+    // Mit optimierten Datenbank-Indizes sollte dies <2 Sekunden dauern
+    private let pageSize = 15 // Optimiert für schnelle erste Anzeige (reduziert von 20)
     
     // Filtered recipes (memoized with debouncing for performance)
     @State private var filteredRecipes: [Recipe] = []
@@ -1896,10 +1898,10 @@ struct CommunityRecipesView: View {
                 .padding()
             }
             else if !recipes.isEmpty {
-                // Show ScrollView if we have recipes (even if filteredRecipes is empty, we'll show the empty filter message inside)
-                ScrollView {
+                // Use VStack with List - List has its own scrolling, so we don't need ScrollView
+                VStack(spacing: 0) {
+                    // Header mit Suchbar, Ernährungspräferenzen-Toggle und Meine Beiträge Button
                     VStack(spacing: 12) {
-                        // Header mit Suchbar, Ernährungspräferenzen-Toggle und Meine Beiträge Button
                         HStack(spacing: 8) {
                             SearchBar(query: $query, placeholder: L.placeholder_searchCommunityLong.localized)
                             
@@ -1947,16 +1949,31 @@ struct CommunityRecipesView: View {
                             selectedFilters: $selectedFilters,
                             showLanguageDropdown: $showLanguageDropdown
                         )
-                        
-                        // OPTIMIZATION: Use List instead of ScrollView+LazyVStack for better view recycling
-                        // List has native view recycling and better scroll performance
+                    }
+                    .padding(16)
+                    .background(Color.white)
+                    
+                    // OPTIMIZATION: Use List instead of ScrollView+LazyVStack for better view recycling
+                    // List has native view recycling and better scroll performance
+                    if filteredRecipes.isEmpty && !loading {
+                        VStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 28))
+                                .foregroundColor(.gray.opacity(0.6))
+                            Text(query.isEmpty ? "Keine Rezepte gefunden" : "Keine Treffer für \"\(query)\"")
+                                .font(.caption)
+                                .foregroundColor(.black.opacity(0.5))
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.vertical, 16)
+                    } else {
                         List {
                             // Debug: Log when List is rendered
                             let _ = Logger.debug("[CommunityRecipesView] Rendering List with \(filteredRecipes.count) filtered recipes (total: \(recipes.count))", category: .ui)
                             
                             ForEach(Array(filteredRecipes.enumerated()), id: \.element.id) { index, recipe in
                                 RecipeCard(recipe: recipe, isPersonal: false)
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                                     .listRowBackground(Color.clear)
                                     .contentShape(Rectangle())
                                     .onTapGesture {
@@ -2006,21 +2023,8 @@ struct CommunityRecipesView: View {
                         }
                         .listStyle(.plain)
                         .scrollContentBackground(.hidden)
-                        .background(Color.clear)
-                        
-                        if filteredRecipes.isEmpty && !loading {
-                            VStack(spacing: 8) {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 28))
-                                    .foregroundColor(.gray.opacity(0.6))
-                                Text(query.isEmpty ? "Keine Rezepte gefunden" : "Keine Treffer für \"\(query)\"")
-                                    .font(.caption)
-                                    .foregroundColor(.black.opacity(0.5))
-                            }
-                            .padding(.vertical, 16)
-                        }
+                        .background(Color.white)
                     }
-                    .padding(16)
                 }
             }
         }
@@ -2145,8 +2149,8 @@ struct CommunityRecipesView: View {
             // Check if task was cancelled
             try Task.checkCancellation()
             
-            // OPTIMIZATION: Lade sofort die erste Seite (20 Rezepte) für schnelle Anzeige
-            // Reduced from 50 to 20 for faster initial load, especially without database index
+            // PERFORMANCE OPTIMIZATION: Lade sofort die erste Seite (15 Rezepte) für schnelle Anzeige
+            // Mit optimierten Datenbank-Indizes sollte dies <2 Sekunden dauern
             let firstPage = try await loadCommunityRecipesPage(page: 0, pageSize: pageSize, token: token)
             
             // Check again after load
@@ -2193,10 +2197,10 @@ struct CommunityRecipesView: View {
             Logger.info("[CommunityRecipesView] Load task cancelled", category: .data)
             return
         } catch let error as URLError where error.code == .timedOut {
-            // Timeout error - likely due to missing database index
-            Logger.error("Failed to load community recipes: Timeout (likely missing database index)", error: error, category: .data)
+            // Timeout error - möglicherweise fehlende Datenbank-Indizes oder langsame Verbindung
+            Logger.error("Failed to load community recipes: Timeout (check database indexes and connection)", error: error, category: .data)
             await MainActor.run {
-                self.error = "Die Community-Rezepte laden zu langsam. Bitte führe die Datenbank-Migration aus (siehe README_INDEX_MIGRATION.md)"
+                self.error = "Die Community-Rezepte laden zu langsam. Bitte führe das Performance-Optimierungs-Script aus (optimize_community_recipes_performance.sql)"
                 self.loading = false
             }
         } catch {
@@ -2305,11 +2309,9 @@ struct CommunityRecipesView: View {
         // Calculate offset for pagination
         let offset = page * pageSize
         
-        // OPTIMIZATION: Only load required fields for recipe cards (not full recipe data)
-        // This significantly reduces payload size and improves loading speed
-        // Note: filter_tags column doesn't exist in database, so we don't load it
-        // user_email is not a database column, it's optional and not displayed in cards
-        // user_id is required by Recipe model, so it must be included
+        // PERFORMANCE OPTIMIZATION: Nur benötigte Felder für Recipe-Cards laden
+        // Reduziert die Payload-Größe erheblich und verbessert die Ladegeschwindigkeit
+        // Mit optimierten Datenbank-Indizes sollte die Query <500ms dauern
         let selectFields = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
         
         url.append(queryItems: [
@@ -2326,9 +2328,13 @@ struct CommunityRecipesView: View {
         request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        // Increase timeout for community recipes query (can be slow without database index)
-        // Default is 30s, but we allow up to 60s for this query
-        request.timeoutInterval = 60.0
+        // PERFORMANCE: Timeout reduziert, da mit optimierten Indizes die Query schnell sein sollte
+        // Mit optimierten Datenbank-Indizes sollte die Query <2 Sekunden dauern
+        request.timeoutInterval = 10.0 // Reduziert von 60s auf 10s (mit Indizes sollte dies ausreichen)
+        
+        // PERFORMANCE: Cache-Control Header für bessere Performance bei wiederholten Requests
+        // Browser/Client kann Antworten cachen, aber wir wollen keine stale Daten
+        request.cachePolicy = .reloadIgnoringLocalCacheData // Immer frische Daten laden
         
         let (data, response) = try await SecureURLSession.shared.data(for: request)
         

@@ -1863,6 +1863,88 @@ struct CommunityRecipesView: View {
         return finalFiltered
     }
     
+    // MARK: - View Components
+    
+    @ViewBuilder
+    private var recipesListContent: some View {
+        List {
+            Logger.debug("[CommunityRecipesView] 🎨 Rendering List with \(filteredRecipes.count) filtered recipes (total: \(recipes.count))", category: .ui)
+            
+            // OPTIMIZATION: Use ForEach directly without enumerated() to avoid array creation overhead
+            ForEach(filteredRecipes, id: \.id) { recipe in
+                let index = filteredRecipes.firstIndex(where: { $0.id == recipe.id }) ?? 0
+                
+                RecipeCard(recipe: recipe, isPersonal: false)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        navigationRecipeId = recipe.id
+                    }
+                    .onAppear {
+                        let appearStartTime = Date()
+                        let recipeIdPrefix = String(recipe.id.prefix(8))
+                        Logger.debug("[CommunityRecipesView] 📱 RecipeCard appeared: index=\(index), id=\(recipeIdPrefix)", category: .ui)
+                        
+                        // OPTIMIZATION: Preload images for next recipes while scrolling
+                        // Throttle preloading: Only preload every 200ms to avoid lag
+                        let now = Date()
+                        if now.timeIntervalSince(lastPreloadTime) > 0.2 {
+                            lastPreloadTime = now
+                            
+                            // Preload images for next 5 recipes (increased from 3 for smoother scrolling)
+                            let nextRecipes = filteredRecipes.suffix(from: min(index + 1, filteredRecipes.count)).prefix(5)
+                            let nextImageUrls = nextRecipes.compactMap { r -> URL? in
+                                guard let imageUrl = r.image_url else { return nil }
+                                return URL(string: imageUrl)
+                            }
+                            if !nextImageUrls.isEmpty {
+                                // Use utility priority to not block scrolling
+                                Task.detached(priority: .utility) {
+                                    await ImageCache.shared.preloadPriority(urls: Array(nextImageUrls), immediateCount: 2)
+                                }
+                            }
+                        }
+                        
+                        // Throttle load more: Only check every 500ms to avoid multiple simultaneous loads
+                        let timeSinceLastLoad = now.timeIntervalSince(lastLoadMoreTime)
+                        if timeSinceLastLoad > 0.5 && index >= filteredRecipes.count - 10 && hasMore && !loadingMore && query.isEmpty && selectedFilters.isEmpty && selectedLanguages.isEmpty {
+                            lastLoadMoreTime = now
+                            Task {
+                                await loadMoreCommunityRecipes()
+                            }
+                        }
+                        
+                        let appearDuration = Date().timeIntervalSince(appearStartTime)
+                        if appearDuration > 0.01 {
+                            Logger.warning("[CommunityRecipesView] ⚠️ onAppear took \(String(format: "%.3f", appearDuration))s for index \(index)", category: .ui)
+                        }
+                    }
+                    .onDisappear {
+                        let recipeIdPrefix = String(recipe.id.prefix(8))
+                        Logger.debug("[CommunityRecipesView] 📱 RecipeCard disappeared: index=\(index), id=\(recipeIdPrefix)", category: .ui)
+                    }
+            }
+            
+            // Loading indicator am Ende, wenn weitere Rezepte geladen werden
+            if loadingMore {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(Color(red: 0.85, green: 0.4, blue: 0.2))
+                    Spacer()
+                }
+                .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 16, trailing: 0))
+                .listRowBackground(Color.clear)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.white)
+        // OPTIMIZATION: Disable default List animations for smoother scrolling
+        .animation(nil, value: filteredRecipes.count)
+    }
+    
     // Update filtered recipes with debouncing (150ms delay)
     private func updateFilteredRecipes() {
         filterTask?.cancel()
@@ -1979,86 +2061,7 @@ struct CommunityRecipesView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(.vertical, 16)
                     } else {
-                        List {
-                            // DEBUG: Log when List is rendered
-                            let listRenderStart = Date()
-                            let _ = Logger.debug("[CommunityRecipesView] 🎨 Rendering List with \(filteredRecipes.count) filtered recipes (total: \(recipes.count))", category: .ui)
-                            
-                            // OPTIMIZATION: Use ForEach directly without enumerated() to avoid array creation overhead
-                            ForEach(filteredRecipes, id: \.id) { recipe in
-                                let index = filteredRecipes.firstIndex(where: { $0.id == recipe.id }) ?? 0
-                                
-                                RecipeCard(recipe: recipe, isPersonal: false)
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                                    .listRowBackground(Color.clear)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        navigationRecipeId = recipe.id
-                                    }
-                                    .onAppear {
-                                        let appearStartTime = Date()
-                                        Logger.debug("[CommunityRecipesView] 📱 RecipeCard appeared: index=\(index), id=\(recipe.id.uuidString.prefix(8))", category: .ui)
-                                        
-                                        // OPTIMIZATION: Preload images for next recipes while scrolling
-                                        // Throttle preloading: Only preload every 200ms to avoid lag
-                                        let now = Date()
-                                        if now.timeIntervalSince(lastPreloadTime) > 0.2 {
-                                            lastPreloadTime = now
-                                            
-                                            // Preload images for next 5 recipes (increased from 3 for smoother scrolling)
-                                            let nextRecipes = filteredRecipes.suffix(from: min(index + 1, filteredRecipes.count)).prefix(5)
-                                            let nextImageUrls = nextRecipes.compactMap { r -> URL? in
-                                                guard let imageUrl = r.image_url else { return nil }
-                                                return URL(string: imageUrl)
-                                            }
-                                            if !nextImageUrls.isEmpty {
-                                                // Use utility priority to not block scrolling
-                                                Task.detached(priority: .utility) {
-                                                    await ImageCache.shared.preloadPriority(urls: Array(nextImageUrls), immediateCount: 2)
-                                                }
-                                            }
-                                        }
-                                        
-                                        // Throttle load more: Only check every 500ms to avoid multiple simultaneous loads
-                                        let timeSinceLastLoad = now.timeIntervalSince(lastLoadMoreTime)
-                                        if timeSinceLastLoad > 0.5 && index >= filteredRecipes.count - 10 && hasMore && !loadingMore && query.isEmpty && selectedFilters.isEmpty && selectedLanguages.isEmpty {
-                                            lastLoadMoreTime = now
-                                            Task {
-                                                await loadMoreCommunityRecipes()
-                                            }
-                                        }
-                                        
-                                        let appearDuration = Date().timeIntervalSince(appearStartTime)
-                                        if appearDuration > 0.01 {
-                                            Logger.warning("[CommunityRecipesView] ⚠️ onAppear took \(String(format: "%.3f", appearDuration))s for index \(index)", category: .ui)
-                                        }
-                                    }
-                                    .onDisappear {
-                                        Logger.debug("[CommunityRecipesView] 📱 RecipeCard disappeared: index=\(index), id=\(recipe.id.uuidString.prefix(8))", category: .ui)
-                                    }
-                            }
-                            .onAppear {
-                                let listRenderDuration = Date().timeIntervalSince(listRenderStart)
-                                Logger.info("[CommunityRecipesView] 🎨 List render completed in \(String(format: "%.3f", listRenderDuration))s", category: .ui)
-                            }
-                            
-                            // Loading indicator am Ende, wenn weitere Rezepte geladen werden
-                            if loadingMore {
-                                HStack {
-                                    Spacer()
-                                    ProgressView()
-                                        .tint(Color(red: 0.85, green: 0.4, blue: 0.2))
-                                    Spacer()
-                                }
-                                .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 16, trailing: 0))
-                                .listRowBackground(Color.clear)
-                            }
-                        }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
-                        .background(Color.white)
-                        // OPTIMIZATION: Disable default List animations for smoother scrolling
-                        .animation(nil, value: filteredRecipes.count)
+                        recipesListContent
                     }
                 }
             }
@@ -2897,11 +2900,17 @@ struct RecipeCard: View {
                 .presentationDragIndicator(.visible)
         }
         .onAppear {
-            let renderDuration = Date().timeIntervalSince(bodyStartTime)
-            if renderDuration > 0.016 { // More than 1 frame (60fps = 16.67ms per frame)
-                Logger.warning("[RecipeCard] ⚠️ Slow render: \(String(format: "%.3f", renderDuration))s for recipe \(recipe.id.uuidString.prefix(8))", category: .ui)
+            let now = Date()
+            if let startTime = renderStartTime {
+                let renderDuration = now.timeIntervalSince(startTime)
+                let recipeIdPrefix = String(recipe.id.prefix(8))
+                if renderDuration > 0.016 { // More than 1 frame (60fps = 16.67ms per frame)
+                    Logger.warning("[RecipeCard] ⚠️ Slow render: \(String(format: "%.3f", renderDuration))s for recipe \(recipeIdPrefix)", category: .ui)
+                } else {
+                    Logger.debug("[RecipeCard] ✅ Fast render: \(String(format: "%.3f", renderDuration))s for recipe \(recipeIdPrefix)", category: .ui)
+                }
             } else {
-                Logger.debug("[RecipeCard] ✅ Fast render: \(String(format: "%.3f", renderDuration))s for recipe \(recipe.id.uuidString.prefix(8))", category: .ui)
+                renderStartTime = now
             }
         }
     }

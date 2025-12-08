@@ -1,14 +1,54 @@
 import SwiftUI
 import Foundation
+import AVFoundation
+import AudioToolbox
 
 struct OnboardingView: View {
-@ObservedObject private var localizationManager = LocalizationManager.shared
+    // Keep @ObservedObject but prevent view recreation by not using .id() modifiers
+    @ObservedObject private var localizationManager = LocalizationManager.shared
 
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
     
-    @State private var currentStep = 0
+    // Track view instance for debugging
+    private let viewId = UUID()
+    
+    init() {
+        let id = UUID()
+        Logger.debug("[OnboardingView] 🆕 VIEW CREATED with ID: \(id)", category: .ui)
+    }
+    
+    @State private var currentStep: Int = {
+        // Try to restore from UserDefaults, otherwise start with welcome screen
+        // Use object(forKey:) to check if key exists (integer(forKey:) returns 0 if not set, which is ambiguous)
+        let saved: Int
+        if let savedValue = UserDefaults.standard.object(forKey: "onboarding_current_step") as? Int {
+            saved = savedValue
+        } else {
+            saved = -999 // Special value meaning "not set"
+        }
+        let initialValue = (saved != -999) ? saved : -1
+        Logger.debug("[OnboardingView] INIT: currentStep @State initialized to \(initialValue) (saved from UserDefaults: \(saved == -999 ? "not set" : String(saved)))", category: .ui)
+        return initialValue
+    }()
     @State private var buttonScale: CGFloat = 1.0
+    @State private var isLanguageChanging = false // Flag to prevent TabView from changing currentStep during language change
+    @State private var username: String = "" // Username entered during onboarding
+    
+    // Helper function to update currentStep and persist it
+    private func updateCurrentStep(_ newStep: Int) {
+        // Don't allow changes during language change unless explicitly restoring
+        if isLanguageChanging && newStep != currentStep {
+            Logger.debug("[OnboardingView] updateCurrentStep: BLOCKED during language change (\(currentStep) -> \(newStep))", category: .ui)
+            return
+        }
+        
+        let oldStep = currentStep
+        Logger.debug("[OnboardingView] updateCurrentStep: \(oldStep) -> \(newStep)", category: .ui)
+        currentStep = newStep
+        UserDefaults.standard.set(newStep, forKey: "onboarding_current_step")
+        Logger.debug("[OnboardingView] updateCurrentStep: Saved to UserDefaults: \(newStep)", category: .ui)
+    }
     @State private var showSuccessAnimation = false
     @State private var selectedLanguage: String = ""
     @State private var allergies: [String] = []
@@ -47,6 +87,30 @@ struct OnboardingView: View {
     @State private var dislikes: [String] = []
     @State private var newDislikeText = ""
     @State private var isSaving = false
+    @State private var isSavingName = false
+    
+    // MARK: - Save Username to Database
+    private func saveUsernameToDatabase(_ name: String) async {
+        guard !isSavingName else { return }
+        guard let accessToken = app.accessToken else {
+            Logger.debug("[OnboardingView] Cannot save username: No access token available", category: .data)
+            return
+        }
+        
+        isSavingName = true
+        
+        do {
+            try await app.saveProfile(fullName: name, email: nil)
+            Logger.debug("[OnboardingView] ✅ Username '\(name)' saved successfully to database", category: .data)
+        } catch {
+            Logger.error("[OnboardingView] ❌ Failed to save username '\(name)': \(error.localizedDescription)", category: .data)
+            #if DEBUG
+            print("[OnboardingView] Error saving username: \(error)")
+            #endif
+        }
+        
+        isSavingName = false
+    }
     
     private var dietOptions: [String] {
         let _ = localizationManager.currentLanguage // Force recomputation when language changes
@@ -84,7 +148,8 @@ struct OnboardingView: View {
     }
     
     var body: some View {
-        ZStack {
+        let _ = Logger.debug("[OnboardingView] body computed (viewId: \(viewId)) - currentStep: \(currentStep)", category: .ui)
+        return ZStack {
             // Background gradient matching the app theme
             LinearGradient(
                 colors: [
@@ -97,64 +162,267 @@ struct OnboardingView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Progress indicator at top
-                progressBar
-                    .padding(.top, 20)
-                
-                // Penguin illustration below progress bar
-                if let uiImage = UIImage(named: "penguin-onboarding") {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 120, height: 120)
-                        .padding(.top, 60)
-                        .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
-                        .accessibilityHidden(true)
-                } else {
-                    Image(systemName: "list.clipboard")
-                        .font(.system(size: 60))
-                        .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
-                        .padding(.top, 60)
-                        .accessibilityHidden(true)
+                // Progress indicator at top - only show for steps >= 0
+                if currentStep >= 0 {
+                    progressBar
+                        .padding(.top, 20)
+                    
+                    // Penguin illustration below progress bar - only show for steps >= 0, but NOT for step 2 (greeting)
+                    if currentStep != 2 {
+                        if let uiImage = UIImage(named: "penguin-onboarding") {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 120, height: 120)
+                                .padding(.top, 60)
+                                .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
+                                .accessibilityHidden(true)
+                        } else {
+                            Image(systemName: "list.clipboard")
+                                .font(.system(size: 60))
+                                .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                .padding(.top, 60)
+                                .accessibilityHidden(true)
+                        }
+                    }
                 }
                 
                 // Content
                 TabView(selection: $currentStep) {
+                    stepWelcome.tag(-1)
                     step0LanguageSelection.tag(0)
-                    step1Allergies.tag(1)
-                    step2DietaryTypes.tag(2)
-                    step3Preferences.tag(3)
-                    step4Dislikes.tag(4)
+                    step1Username.tag(1)
+                    step2Greeting.tag(2)
+                    step3Allergies.tag(3)
+                    step4DietaryTypes.tag(4)
+                    step5Preferences.tag(5)
+                    step6Dislikes.tag(6)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2), value: currentStep)
-                .id(localizationManager.currentLanguage) // Force re-render when language changes
+                .animation(.easeInOut(duration: 0.5), value: currentStep)
+                // CRITICAL: Don't add .id() modifier here - it causes the entire TabView to reset
+                // and currentStep to be reset to -1 when language changes
+                .onChange(of: currentStep) { oldValue, newValue in
+                    if isLanguageChanging {
+                        Logger.debug("[OnboardingView] ⚠️ BLOCKED: TabView tried to change currentStep from \(oldValue) to \(newValue) during language change!", category: .ui)
+                        // Restore the saved step from UserDefaults
+                        let savedStep: Int
+                        if let savedValue = UserDefaults.standard.object(forKey: "onboarding_current_step") as? Int {
+                            savedStep = savedValue
+                        } else {
+                            savedStep = -999
+                        }
+                        if savedStep != -999 && newValue != savedStep {
+                            Logger.debug("[OnboardingView] Restoring currentStep to saved value: \(savedStep)", category: .ui)
+                            DispatchQueue.main.async {
+                                currentStep = savedStep
+                            }
+                        }
+                    } else {
+                        Logger.debug("[OnboardingView] TabView selection changed: \(oldValue) -> \(newValue) (allowed) - Syncing to UserDefaults", category: .ui)
+                        // CRITICAL: Always sync to UserDefaults when user swipes or navigates
+                        UserDefaults.standard.set(newValue, forKey: "onboarding_current_step")
+                        UserDefaults.standard.synchronize()
+                        Logger.debug("[OnboardingView] Synced currentStep \(newValue) to UserDefaults", category: .ui)
+                    }
+                }
                 
                 // Navigation buttons
                 navigationButtons
             }
         }
         .interactiveDismissDisabled()
-        .id(localizationManager.currentLanguage) // Force entire view to re-render when language changes
         .onAppear {
+            Logger.debug("[OnboardingView] onAppear called - currentStep: \(currentStep)", category: .ui)
+            // CRITICAL: Always restore currentStep from UserDefaults if view was recreated
+            // This prevents reset to welcome screen when language changes
+            let savedStep: Int
+            if let savedValue = UserDefaults.standard.object(forKey: "onboarding_current_step") as? Int {
+                savedStep = savedValue
+            } else {
+                savedStep = -999 // Not set
+            }
+            Logger.debug("[OnboardingView] onAppear - savedStep from UserDefaults: \(savedStep == -999 ? "not set" : String(savedStep))", category: .ui)
+            
+            if savedStep != -999 {
+                // We have a saved step, restore it
+                Logger.debug("[OnboardingView] onAppear - Found saved step: \(savedStep), currentStep: \(currentStep)", category: .ui)
+                if currentStep != savedStep {
+                    Logger.debug("[OnboardingView] onAppear - RESTORING currentStep from \(currentStep) to \(savedStep)", category: .ui)
+                    currentStep = savedStep
+                }
+            } else if currentStep == -1 {
+                // First appearance, save initial state
+                Logger.debug("[OnboardingView] onAppear - First appearance, saving initial state -1", category: .ui)
+                updateCurrentStep(-1)
+            }
+            
             // Initialize selectedLanguage with current language (system language) if not already set
             if selectedLanguage.isEmpty {
                 selectedLanguage = localizationManager.currentLanguage
+                Logger.debug("[OnboardingView] onAppear - Initialized selectedLanguage: \(selectedLanguage)", category: .ui)
             }
             initializeTastePreferences()
         }
-        .onChange(of: localizationManager.currentLanguage) { _, _ in
+        .onChange(of: localizationManager.currentLanguage) { oldLanguage, newLanguage in
+            Logger.debug("[OnboardingView] onChange(language): \(oldLanguage) -> \(newLanguage)", category: .ui)
+            Logger.debug("[OnboardingView] onChange(language) - currentStep BEFORE: \(currentStep)", category: .ui)
+            
+            // CRITICAL: Set flag to prevent TabView from changing currentStep
+            isLanguageChanging = true
+            
+            // CRITICAL: Read the CORRECT step from UserDefaults (not currentStep, which might be wrong if view was recreated)
+            let savedInDefaults: Int
+            if let savedValue = UserDefaults.standard.object(forKey: "onboarding_current_step") as? Int {
+                savedInDefaults = savedValue
+            } else {
+                savedInDefaults = -999 // Not set
+            }
+            // Also check currentStep - use the one that's more likely correct
+            let currentStepValue = currentStep
+            // Use UserDefaults value if it exists, otherwise use currentStep if it's valid
+            let savedStep: Int
+            if savedInDefaults != -999 {
+                // UserDefaults has a value (including 0), use it as source of truth
+                savedStep = savedInDefaults
+            } else if currentStepValue >= -1 && currentStepValue <= 4 {
+                // UserDefaults doesn't have a value, but currentStep is valid, use it
+                savedStep = currentStepValue
+                // Also save it
+                UserDefaults.standard.set(savedStep, forKey: "onboarding_current_step")
+                UserDefaults.standard.synchronize()
+            } else {
+                // Both are invalid, default to 0 (language selection)
+                savedStep = 0
+                UserDefaults.standard.set(0, forKey: "onboarding_current_step")
+                UserDefaults.standard.synchronize()
+            }
+            
+            Logger.debug("[OnboardingView] onChange(language) - savedStep (final): \(savedStep), savedInDefaults: \(savedInDefaults == -999 ? "not set" : String(savedInDefaults)), currentStepValue: \(currentStepValue)", category: .ui)
+            
+            // Ensure UserDefaults is up to date IMMEDIATELY with the correct value
+            UserDefaults.standard.set(savedStep, forKey: "onboarding_current_step")
+            UserDefaults.standard.synchronize() // Force immediate write
+            
             // Re-initialize taste preferences when language changes
             initializeTastePreferences()
             // Reset selected diets when language changes (keys are localized)
             selectedDiets = []
+            
+            Logger.debug("[OnboardingView] onChange(language) - currentStep AFTER operations: \(currentStep)", category: .ui)
+            
+            // CRITICAL: Force restore currentStep immediately (bypassing the flag check)
+            if currentStep != savedStep {
+                Logger.debug("[OnboardingView] onChange(language) - FORCE RESTORING currentStep from \(currentStep) to \(savedStep) (immediate)", category: .ui)
+                currentStep = savedStep
+                UserDefaults.standard.set(savedStep, forKey: "onboarding_current_step")
+                UserDefaults.standard.synchronize()
+            } else {
+                Logger.debug("[OnboardingView] onChange(language) - currentStep already correct: \(currentStep)", category: .ui)
+            }
+            
+            // Also restore after a tiny delay as backup (in case view re-renders)
+            DispatchQueue.main.async {
+                let currentStepAfterDelay = currentStep
+                Logger.debug("[OnboardingView] onChange(language) - After delay, currentStep: \(currentStepAfterDelay), savedStep: \(savedStep)", category: .ui)
+                if currentStepAfterDelay != savedStep {
+                    Logger.debug("[OnboardingView] onChange(language) - FORCE RESTORING currentStep from \(currentStepAfterDelay) to \(savedStep) (delayed)", category: .ui)
+                    currentStep = savedStep
+                    UserDefaults.standard.set(savedStep, forKey: "onboarding_current_step")
+                    UserDefaults.standard.synchronize()
+                }
+                
+                // Clear the flag after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isLanguageChanging = false
+                    Logger.debug("[OnboardingView] onChange(language) - Language change flag cleared", category: .ui)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Step -1: Welcome Screen (Duolingo Style)
+    private var stepWelcome: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                Spacer()
+                    .frame(height: 60)
+                
+                // Waving Penguin (from Sign-Up Screen)
+                WavingPenguinView()
+                    .frame(height: 200)
+                    .padding(.horizontal, 40)
+                
+                // Welcome Title
+                VStack(spacing: 16) {
+                    Text(L.welcome.localized)
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                        .id(localizationManager.currentLanguage)
+                    
+                    Text(L.welcomeMessage.localized)
+                        .font(.system(size: 17))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .padding(.horizontal, 40)
+                        .id(localizationManager.currentLanguage)
+                }
+                .padding(.top, 40)
+                
+                Spacer()
+                    .frame(height: 100)
+            }
+        }
+    }
+    
+    // MARK: - Waving Penguin View (from Sign-Up Screen)
+    private struct WavingPenguinView: View {
+        @State private var isFloating = false
+        
+        var body: some View {
+            Group {
+                // Penguin illustration with subtle floating animation (only upward)
+                if let bundlePath = Bundle.main.path(forResource: "penguin-auth", ofType: "png", inDirectory: "Assets.xcassets/penguin-auth.imageset"),
+                   let uiImage = UIImage(contentsOfFile: bundlePath) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 160, height: 160)
+                        .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
+                        .offset(y: isFloating ? -6 : 0)
+                        .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: isFloating)
+                        .accessibilityHidden(true)
+                } else if let uiImage = UIImage(named: "penguin-auth") {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 160, height: 160)
+                        .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
+                        .offset(y: isFloating ? -6 : 0)
+                        .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: isFloating)
+                        .accessibilityHidden(true)
+                } else {
+                    // Fallback: Penguin emoji
+                    Text("🐧")
+                        .font(.system(size: 120))
+                        .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
+                        .offset(y: isFloating ? -6 : 0)
+                        .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: isFloating)
+                }
+            }
+            .onAppear {
+                isFloating = true
+            }
         }
     }
     
     // MARK: - Progress Bar
     private var progressBar: some View {
         HStack(spacing: 8) {
-            ForEach(0..<5) { index in
+            ForEach(0..<7) { index in
                 Capsule()
                     .fill(index <= currentStep ? 
                           LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
@@ -196,10 +464,36 @@ struct OnboardingView: View {
                             isSelected: selectedLanguage == langCode,
                             systemLanguage: systemLang
                         ) {
+                            // Light haptic only (no sound for selections)
+                            OnboardingFeedback.playHaptic(style: .light)
+                            
+                            Logger.debug("[OnboardingView] Language selected: \(langCode), currentStep BEFORE: \(currentStep)", category: .ui)
+                            let stepBeforeLanguageChange = currentStep
+                            
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                                 selectedLanguage = langCode
                                 // Set language immediately when selected
                                 localizationManager.setLanguage(langCode)
+                            }
+                            
+                            // Check if currentStep changed after language change
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                Logger.debug("[OnboardingView] Language changed to \(langCode) - currentStep AFTER: \(currentStep), was: \(stepBeforeLanguageChange)", category: .ui)
+                                let savedInDefaults: Int
+                                if let savedValue = UserDefaults.standard.object(forKey: "onboarding_current_step") as? Int {
+                                    savedInDefaults = savedValue
+                                } else {
+                                    savedInDefaults = -999
+                                }
+                                Logger.debug("[OnboardingView] Language changed - savedInDefaults: \(savedInDefaults == -999 ? "not set" : String(savedInDefaults))", category: .ui)
+                                
+                                if currentStep != stepBeforeLanguageChange {
+                                    Logger.debug("[OnboardingView] ⚠️ BUG DETECTED: currentStep changed from \(stepBeforeLanguageChange) to \(currentStep) after language change! FORCE RESTORING...", category: .ui)
+                                    // Force restore the step (bypassing the flag)
+                                    currentStep = stepBeforeLanguageChange
+                                    UserDefaults.standard.set(stepBeforeLanguageChange, forKey: "onboarding_current_step")
+                                    UserDefaults.standard.synchronize()
+                                }
                             }
                         }
                     }
@@ -276,8 +570,109 @@ struct OnboardingView: View {
         return L.onboarding_selectLanguageSubtitle.localized
     }
     
-    // MARK: - Step 1: Allergies
-    private var step1Allergies: some View {
+    // MARK: - Step 1: Username Input
+    private var step1Username: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.onboarding_username_title.localized)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+                        .id(localizationManager.currentLanguage)
+                        .opacity(currentStep == 1 ? 1 : 0)
+                        .offset(y: currentStep == 1 ? 0 : -10)
+                        .animation(.easeOut(duration: 0.3), value: currentStep)
+                    
+                    Text(L.onboarding_username_subtitle.localized)
+                        .font(.system(size: 15))
+                        .foregroundColor(.white.opacity(0.9))
+                        .id(localizationManager.currentLanguage)
+                        .opacity(currentStep == 1 ? 1 : 0)
+                        .offset(y: currentStep == 1 ? 0 : -10)
+                        .animation(.easeOut(duration: 0.3).delay(0.05), value: currentStep)
+                }
+                .padding(.top, 20)
+                
+                // Username Input Field
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L.onboarding_username_label.localized)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white.opacity(0.9))
+                        .id(localizationManager.currentLanguage)
+                    
+                    TextField(L.onboarding_username_placeholder.localized, text: $username)
+                        .font(.system(size: 17))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .autocapitalization(.none)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .id(localizationManager.currentLanguage)
+                }
+                .padding(.top, 24)
+                .opacity(currentStep == 1 ? 1 : 0)
+                .scaleEffect(currentStep == 1 ? 1 : 0.95)
+                .animation(.easeOut(duration: 0.3).delay(0.1), value: currentStep)
+                
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+        }
+        .opacity(currentStep == 1 ? 1 : 0)
+        .id("username-\(currentStep)") // Force re-render for smooth transition
+    }
+    
+    // MARK: - Step 2: Greeting with Username
+    private var step2Greeting: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            
+            // Waving Penguin (smaller for better fit)
+            WavingPenguinView()
+                .frame(height: 150)
+                .padding(.horizontal, 40)
+                .opacity(currentStep == 2 ? 1 : 0)
+                .scaleEffect(currentStep == 2 ? 1 : 0.8)
+                .offset(y: currentStep == 2 ? 0 : 30)
+                .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.2), value: currentStep)
+            
+            // Greeting Message
+            VStack(spacing: 12) {
+                Text(L.onboarding_greeting_title.localized.replacingOccurrences(of: "{username}", with: username.isEmpty ? L.onboarding_greeting_fallback.localized : username))
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                    .id(localizationManager.currentLanguage)
+                    .opacity(currentStep == 2 ? 1 : 0)
+                    .offset(y: currentStep == 2 ? 0 : 30)
+                    .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.3), value: currentStep)
+                
+                Text(L.onboarding_greeting_message.localized)
+                    .font(.system(size: 16))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                    .padding(.horizontal, 40)
+                    .id(localizationManager.currentLanguage)
+                    .opacity(currentStep == 2 ? 1 : 0)
+                    .offset(y: currentStep == 2 ? 0 : 30)
+                    .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.4), value: currentStep)
+            }
+            .padding(.top, 24)
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .opacity(currentStep == 2 ? 1 : 0)
+        .id("greeting-\(currentStep)") // Force re-render for smooth transition
+    }
+    
+    // MARK: - Step 3: Allergies
+    private var step3Allergies: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 20) {
@@ -308,9 +703,8 @@ struct OnboardingView: View {
                         Button {
                             let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !trimmed.isEmpty {
-                                // Haptic feedback
-                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                impactFeedback.impactOccurred()
+                                // Light haptic only (no sound for adding items)
+                                OnboardingFeedback.playHaptic(style: .light)
                                 
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                                     allergies.append(trimmed)
@@ -361,8 +755,8 @@ struct OnboardingView: View {
         )
     }
     
-    // MARK: - Step 2: Dietary Types
-    private var step2DietaryTypes: some View {
+    // MARK: - Step 4: Dietary Types
+    private var step4DietaryTypes: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 20) {
@@ -407,8 +801,8 @@ struct OnboardingView: View {
         )
     }
     
-    // MARK: - Step 3: Taste Preferences
-    private var step3Preferences: some View {
+    // MARK: - Step 5: Taste Preferences
+    private var step5Preferences: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 24) {
@@ -519,8 +913,8 @@ struct OnboardingView: View {
         )
     }
     
-    // MARK: - Step 4: Dislikes
-    private var step4Dislikes: some View {
+    // MARK: - Step 6: Dislikes
+    private var step6Dislikes: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 20) {
@@ -549,9 +943,8 @@ struct OnboardingView: View {
                         Button {
                             let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !trimmed.isEmpty {
-                                // Haptic feedback
-                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                impactFeedback.impactOccurred()
+                                // Light haptic only (no sound for adding items)
+                                OnboardingFeedback.playHaptic(style: .light)
                                 
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                                     dislikes.append(trimmed)
@@ -602,17 +995,12 @@ struct OnboardingView: View {
     // MARK: - Navigation Buttons
     private var navigationButtons: some View {
         VStack(spacing: 12) {
-            if currentStep < 4 {
+            if currentStep == -1 {
+                // Welcome screen - show "Los geht's!" button
                 Button {
-                    // For language selection step, ensure language is selected
-                    if currentStep == 0 && selectedLanguage.isEmpty {
-                        // Can't proceed without selecting a language
-                        return
-                    }
-                    
-                    // Haptic feedback
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                    impactFeedback.impactOccurred()
+                    // Rewarding sound and haptic for starting
+                    OnboardingFeedback.playStartSound()
+                    OnboardingFeedback.playHaptic(style: .medium)
                     
                     // Button animation
                     withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
@@ -620,9 +1008,78 @@ struct OnboardingView: View {
                     }
                     
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        Logger.debug("[OnboardingView] Welcome button - Moving from step -1 to 0", category: .ui)
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2)) {
                             buttonScale = 1.0
-                        currentStep += 1
+                            updateCurrentStep(0)
+                        }
+                    }
+                } label: {
+                    Text(L.getStarted.localized)
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing)
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(14)
+                        .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
+                        .id(localizationManager.currentLanguage)
+                }
+                .scaleEffect(buttonScale)
+                .accessibilityLabel(L.getStarted.localized)
+                .accessibilityHint("Startet das Onboarding")
+            } else if currentStep < 6 {
+                Button {
+                    // For language selection step, ensure language is selected
+                    if (currentStep == 0 && selectedLanguage.isEmpty) || (currentStep == 1 && username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                        // Can't proceed without selecting a language
+                        return
+                    }
+                    
+                    // Light haptic feedback only (no sound on button press)
+                    OnboardingFeedback.playHaptic(style: .light)
+                    
+                    // Play sound immediately when button is pressed (before step change)
+                    OnboardingFeedback.playStepCompleteSound()
+                    
+                    // Button animation
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                        buttonScale = 0.95
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        let nextStep = currentStep + 1
+                        Logger.debug("[OnboardingView] Next button - Moving from step \(currentStep) to \(nextStep)", category: .ui)
+                        
+                        // Save username to database when moving from step 1 (username input) to step 2 (greeting)
+                        if currentStep == 1 && nextStep == 2 {
+                            let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !trimmedUsername.isEmpty {
+                                Task {
+                                    await saveUsernameToDatabase(trimmedUsername)
+                                }
+                            }
+                        }
+                        
+                        // Special animation for transition from username to greeting
+                        let animation: Animation
+                        if currentStep == 1 && nextStep == 2 {
+                            // Smooth fade transition for username -> greeting
+                            animation = .easeInOut(duration: 0.5)
+                        } else {
+                            animation = .spring(response: 0.6, dampingFraction: 0.85, blendDuration: 0.3)
+                        }
+                        
+                        withAnimation(animation) {
+                            buttonScale = 1.0
+                            updateCurrentStep(nextStep)
+                        }
+                        
+                        // Additional haptic feedback when step transition completes
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            OnboardingFeedback.playHaptic(style: .medium)
                         }
                         
                         // Trigger success animation with slight delay for smoother transition
@@ -655,12 +1112,12 @@ struct OnboardingView: View {
                 .scaleEffect(buttonScale)
                 .accessibilityLabel(L.next.localized)
                 .accessibilityHint("Geht zum nächsten Schritt")
-                .disabled(currentStep == 0 && selectedLanguage.isEmpty)
+                .disabled((currentStep == 0 && selectedLanguage.isEmpty) || (currentStep == 1 && username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
             } else {
                 Button {
-                    // Haptic feedback - success
-                    let notificationFeedback = UINotificationFeedbackGenerator()
-                    notificationFeedback.notificationOccurred(.success)
+                    // Final level completion celebration
+                    OnboardingFeedback.playFinalCompleteSound()
+                    OnboardingFeedback.playHaptic(style: .medium, notificationType: .success)
                     
                     // Button animation
                     withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
@@ -700,14 +1157,15 @@ struct OnboardingView: View {
                 .disabled(isSaving)
             }
             
-            if currentStep > 0 {
+            if currentStep > -1 {
                 Button {
-                    // Light haptic feedback for back button
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                    impactFeedback.impactOccurred()
+                    // Light haptic only for back button (no sound)
+                    OnboardingFeedback.playHaptic(style: .light)
                     
+                    let prevStep = currentStep - 1
+                    Logger.debug("[OnboardingView] Back button - Moving from step \(currentStep) to \(prevStep)", category: .ui)
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2)) {
-                        currentStep -= 1
+                        updateCurrentStep(prevStep)
                     }
                 } label: {
                     Text(L.onboarding_zurück.localized)
@@ -772,9 +1230,8 @@ struct OnboardingView: View {
     
     private func tastePreferenceToggle(key: String) -> some View {
         Button {
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.impactOccurred()
+            // Light haptic only (no sound for toggles)
+            OnboardingFeedback.playHaptic(style: .light)
             
             withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                 tastePreferences[key]?.toggle()
@@ -835,6 +1292,9 @@ struct OnboardingView: View {
             let key = "onboarding_completed_\(userId)"
             UserDefaults.standard.set(true, forKey: key)
         }
+        
+        // Clear saved currentStep so next onboarding starts fresh
+        UserDefaults.standard.removeObject(forKey: "onboarding_current_step")
         
         // Save to Supabase
         do {
@@ -914,12 +1374,12 @@ private struct DietaryPreferencesList: View {
         let _ = localizationManager.currentLanguage // Force recomputation when language changes
         return [
             (L.vegetarian.localized, "leaf.fill"),
-            (L.vegan.localized, "leaf.circle.fill"),
+            (L.vegan.localized, "carrot.fill"),
             (L.pescetarian.localized, "fish.fill"),
-            (L.lowCarb.localized, "chart.bar.fill"),
+            (L.lowCarb.localized, "arrow.down.circle.fill"),
             (L.highProtein.localized, "dumbbell.fill"),
-            (L.glutenFree.localized, "shield.checkered"),
-            (L.lactoseFree.localized, "drop.triangle.fill"),
+            (L.glutenFree.localized, "checkmark.shield.fill"),
+            (L.lactoseFree.localized, "xmark.circle.fill"),
             (L.halal.localized, "moon.stars.fill"),
             (L.kosher.localized, "star.fill")
         ]
@@ -957,9 +1417,8 @@ private struct DietaryPreferenceRow: View {
     
     var body: some View {
         Button(action: {
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.impactOccurred()
+            // Light haptic only (no sound for selections)
+            OnboardingFeedback.playHaptic(style: .light)
             onToggle()
         }) {
             HStack(spacing: 16) {
@@ -1153,6 +1612,50 @@ private struct LanguageOption: View {
             "it": "🇮🇹"
         ]
         return flags[code] ?? "🌐"
+    }
+}
+
+// MARK: - Onboarding Feedback Helper
+private struct OnboardingFeedback {
+    // Game-like success sounds for level completion feeling
+    // These sounds feel like completing a level in a video game
+    private static let startSoundID: SystemSoundID = 1056  // Anticipate - rewarding start sound
+    private static let levelCompleteSoundID: SystemSoundID = 1056  // Anticipate - more rewarding than Peek
+    private static let finalLevelCompleteSoundID: SystemSoundID = 1053  // MailSent - celebration for final step
+    
+    /// Plays a rewarding sound when starting onboarding
+    static func playStartSound() {
+        // Play sound on main thread to ensure it's not blocked
+        DispatchQueue.main.async {
+            AudioServicesPlaySystemSound(startSoundID)
+        }
+    }
+    
+    /// Plays a game-like success sound when completing a step (like level completion)
+    static func playStepCompleteSound() {
+        // Play sound on main thread immediately to ensure it's not blocked
+        DispatchQueue.main.async {
+            AudioServicesPlaySystemSound(levelCompleteSoundID)
+        }
+    }
+    
+    /// Plays a celebration sound for final completion
+    static func playFinalCompleteSound() {
+        // Play sound on main thread to ensure it's not blocked
+        DispatchQueue.main.async {
+            AudioServicesPlaySystemSound(finalLevelCompleteSoundID)
+        }
+    }
+    
+    /// Plays haptic feedback with optional notification type
+    static func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle, notificationType: UINotificationFeedbackGenerator.FeedbackType? = nil) {
+        if let notificationType = notificationType {
+            let notificationFeedback = UINotificationFeedbackGenerator()
+            notificationFeedback.notificationOccurred(notificationType)
+        } else {
+            let impactFeedback = UIImpactFeedbackGenerator(style: style)
+            impactFeedback.impactOccurred()
+        }
     }
 }
 

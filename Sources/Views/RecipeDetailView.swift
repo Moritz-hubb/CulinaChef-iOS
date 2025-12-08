@@ -8,6 +8,8 @@ struct RecipeDetailView: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
     let recipe: Recipe
+    @State private var fullRecipe: Recipe? // Full recipe data loaded from API
+    @State private var isLoadingFullRecipe = false
     @State private var error: String?
     @State private var currentPage = 0
     @State private var showCompletion = false
@@ -15,6 +17,11 @@ struct RecipeDetailView: View {
     @State private var timersExpanded = true
     @StateObject private var timerCenter = TimerCenter()
     @FocusState private var isFocused: Bool
+    
+    // Use full recipe if available, otherwise use preview recipe
+    private var displayRecipe: Recipe {
+        return fullRecipe ?? recipe
+    }
     
     // Photo upload states
     @State private var selectedPhoto: PhotosPickerItem?
@@ -52,7 +59,7 @@ struct RecipeDetailView: View {
         TabView(selection: $currentPage) {
             overviewPage.tag(0)
             
-            if let instructions = recipe.instructions, !instructions.isEmpty {
+            if let instructions = displayRecipe.instructions, !instructions.isEmpty {
                 instructionPages
             } else {
                 emptyInstructionsView
@@ -64,25 +71,33 @@ struct RecipeDetailView: View {
     @ViewBuilder
     private var emptyInstructionsView: some View {
         VStack(spacing: 12) {
-            Text(L.recipe_keine_schritte_gefunden.localized)
-                .foregroundStyle(.white)
+            if isLoadingFullRecipe {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                Text("Rezept wird geladen...")
+                    .foregroundStyle(.white.opacity(0.8))
+                    .font(.system(size: 14))
+            } else {
+                Text(L.recipe_keine_schritte_gefunden.localized)
+                    .foregroundStyle(.white)
+            }
         }
         .padding(24)
         .tag(1)
         
-        if recipe.is_public ?? false {
+        if displayRecipe.is_public ?? false {
             ratingPage.tag(2)
         }
     }
     
     @ViewBuilder
     private var instructionPages: some View {
-        if let instructions = recipe.instructions {
+        if let instructions = displayRecipe.instructions {
             ForEach(instructions.indices, id: \.self) { idx in
                 stepPage(index: idx + 1, instruction: instructions[idx])
                 .tag(idx + 1)
         }
-        if recipe.is_public ?? false {
+        if displayRecipe.is_public ?? false {
                 ratingPage.tag(instructions.count + 1)
             }
         }
@@ -114,7 +129,7 @@ struct RecipeDetailView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 10) {
                     // Like Button
-                    LikeButtonToolbarClean(recipeId: recipe.id, likedManager: app.likedRecipesManager)
+                    LikeButtonToolbarClean(recipeId: displayRecipe.id, likedManager: app.likedRecipesManager)
                     
                     // Share Button
                     Button(action: { shareRecipe() }) {
@@ -179,14 +194,14 @@ struct RecipeDetailView: View {
                 .padding(.bottom, 8)
             }
         }
-.sheet(isPresented: $showAISheet) {
-            RecipeAISheetForSavedRecipe(recipe: recipe, currentStepIndex: max(currentPage - 1, -1))
+        .sheet(isPresented: $showAISheet) {
+            RecipeAISheetForSavedRecipe(recipe: displayRecipe, currentStepIndex: max(currentPage - 1, -1))
                 .environmentObject(app)
                 .presentationDetents([.fraction(0.6), .large])
                 .presentationDragIndicator(.visible)
         }
         .onAppear { 
-            uploadedImageUrl = recipe.image_url
+            uploadedImageUrl = displayRecipe.image_url
             
             // Stelle gespeicherten Seitenzustand wieder her
             if app.preservedRecipeId == recipe.id && app.preservedRecipePage > 0 {
@@ -199,6 +214,13 @@ struct RecipeDetailView: View {
             // Speichere aktuellen Zustand für State Preservation
             app.preservedRecipeId = recipe.id
             app.preservedRecipePage = currentPage
+            
+            // Load full recipe data if this is a preview (missing ingredients, instructions, or nutrition)
+            if recipe.isPreview && fullRecipe == nil && !isLoadingFullRecipe {
+                Task {
+                    await loadFullRecipe()
+                }
+            }
         }
         .onDisappear {
             // Stop all timers when recipe view is closed
@@ -303,7 +325,7 @@ struct RecipeDetailView: View {
                         }
                     }
                     
-                    ForEach(recipe.ingredients ?? [], id: \.self) { ing in
+                    ForEach(displayRecipe.ingredients ?? [], id: \.self) { ing in
                         HStack {
                             Text(parseIngredientName(ing))
                                 .font(.body)
@@ -355,10 +377,10 @@ struct RecipeDetailView: View {
                         .foregroundStyle(.white)
                     
                     HStack(spacing: 20) {
-                        NutritionItem(label: L.label_calories.localized, value: "\(recipe.nutrition?.calories ?? 0)")
-                        NutritionItem(label: L.label_protein.localized, value: String(format: "%.1fg", recipe.nutrition?.protein_g ?? 0))
-                        NutritionItem(label: L.label_carbs.localized, value: String(format: "%.1fg", recipe.nutrition?.carbs_g ?? 0))
-                        NutritionItem(label: L.label_fat.localized, value: String(format: "%.1fg", recipe.nutrition?.fat_g ?? 0))
+                        NutritionItem(label: L.label_calories.localized, value: "\(displayRecipe.nutrition?.calories ?? 0)")
+                        NutritionItem(label: L.label_protein.localized, value: String(format: "%.1fg", displayRecipe.nutrition?.protein_g ?? 0))
+                        NutritionItem(label: L.label_carbs.localized, value: String(format: "%.1fg", displayRecipe.nutrition?.carbs_g ?? 0))
+                        NutritionItem(label: L.label_fat.localized, value: String(format: "%.1fg", displayRecipe.nutrition?.fat_g ?? 0))
                     }
                     
                     // Nutrition disclaimer
@@ -371,7 +393,7 @@ struct RecipeDetailView: View {
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 
                 // Additional Info
-                if let cookTime = recipe.cooking_time, let difficulty = recipe.difficulty {
+                if let cookTime = displayRecipe.cooking_time, let difficulty = displayRecipe.difficulty {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text(L.label_cookingTime.localized)
@@ -392,7 +414,7 @@ struct RecipeDetailView: View {
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
                 
-                if let tags = recipe.tags, !tags.isEmpty {
+                if let tags = displayRecipe.tags, !tags.isEmpty {
                     // Filter out invisible tags (those starting with _filter:)
                     let visibleTags = tags.filter { !$0.hasPrefix("_filter:") }
                     if !visibleTags.isEmpty {
@@ -423,7 +445,7 @@ struct RecipeDetailView: View {
     private var headerImageSection: some View {
         ZStack(alignment: .bottom) {
             // Background Image or Placeholder
-            if let imageUrl = uploadedImageUrl ?? recipe.image_url {
+            if let imageUrl = uploadedImageUrl ?? displayRecipe.image_url {
                 CachedAsyncImage(url: URL(string: imageUrl)) { image in
                     image
                         .resizable()
@@ -449,7 +471,7 @@ struct RecipeDetailView: View {
             
             // Recipe Title
             VStack(alignment: .leading, spacing: 8) {
-                Text(recipe.title)
+                Text(displayRecipe.title)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.5), radius: 8, x: 0, y: 2)
@@ -489,7 +511,7 @@ struct RecipeDetailView: View {
             
             // Plus button to add photo
             // Don't allow adding photos to public recipes that don't have images (no moderation)
-            let canAddPhoto = !(recipe.is_public == true && recipe.image_url == nil || recipe.image_url?.isEmpty == true)
+            let canAddPhoto = !(displayRecipe.is_public == true && displayRecipe.image_url == nil || displayRecipe.image_url?.isEmpty == true)
             
             if !isUploadingPhoto && photoData == nil && canAddPhoto {
                 PhotosPicker(selection: Binding(
@@ -524,7 +546,7 @@ struct RecipeDetailView: View {
                     .foregroundStyle(.white)
                 Spacer()
                 // Don't allow adding photos to public recipes that don't have images (no moderation)
-                let canAddPhoto = !(recipe.is_public == true && recipe.image_url == nil || recipe.image_url?.isEmpty == true)
+                let canAddPhoto = !(displayRecipe.is_public == true && displayRecipe.image_url == nil || displayRecipe.image_url?.isEmpty == true)
                 
                 if !isUploadingPhoto && photoData == nil && uploadedImageUrl == nil && canAddPhoto {
                     PhotosPicker(selection: Binding(
@@ -628,10 +650,12 @@ struct RecipeDetailView: View {
     }
     
     private func stepPage(index: Int, instruction: String) -> some View {
-        let isLastStep = index == (recipe.instructions?.count ?? 0)
+        let isLastStep = index == (displayRecipe.instructions?.count ?? 0)
         return ScrollView {
             let split = splitInstruction(instruction)
-            let bodyText = split.body
+            let scaledText = scaleInstruction(split.body, baseServings: 4, currentServings: servings)
+            // Remove invisible labels before displaying
+            let bodyText = scaledText.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
             let labelText = split.label
             VStack(alignment: .leading, spacing: 16) {
                 Text(bodyText)
@@ -653,10 +677,10 @@ struct RecipeDetailView: View {
                 }
                 
                 if isLastStep {
-                    if (recipe.is_public ?? false) {
+                    if (displayRecipe.is_public ?? false) {
                         Button(action: { 
                             withAnimation(.spring(response: 0.3)) {
-                                currentPage = (recipe.instructions?.count ?? 0) + 1
+                                currentPage = (displayRecipe.instructions?.count ?? 0) + 1
                             }
                         }) {
                             HStack {
@@ -763,7 +787,7 @@ struct RecipeDetailView: View {
               let token = app.accessToken else { return }
         
         // Prevent adding photos to public recipes that don't have images (no moderation)
-        if recipe.is_public == true && (recipe.image_url == nil || recipe.image_url?.isEmpty == true) {
+        if displayRecipe.is_public == true && (displayRecipe.image_url == nil || displayRecipe.image_url?.isEmpty == true) {
             Logger.warning("Cannot add photo to public recipe without existing image (no moderation)", category: Logger.Category.data)
             return
         }
@@ -1090,6 +1114,130 @@ struct RecipeDetailView: View {
         }
     }
     
+    // Scale numeric ingredient quantities inside free-text step instructions based on servings
+    // Only scales ingredient amounts (g, ml, EL, TL, etc.), NOT time or temperature values
+    // Supports both labeled quantities (⟦ingredient_qty:⟧) and automatic detection
+    private func scaleInstruction(_ text: String, baseServings: Int, currentServings: Int) -> String {
+        guard baseServings > 0, baseServings != currentServings else { return text }
+        let scale = Double(currentServings) / Double(baseServings)
+        
+        var result = text
+        
+        // First, handle labeled quantities (⟦ingredient_qty:⟧) - these are explicitly marked by AI
+        // Pattern: number + optional space + unit + ⟦ingredient_qty:⟧
+        let labeledPattern = #"(?i)(\b\d+\/\d+|\b\d+[\.,]\d+|\b\d+)\s*(\p{L}+)\s*⟦ingredient_qty:⟧"#
+        if let labeledRegex = try? NSRegularExpression(pattern: labeledPattern, options: []) {
+            let ns = result as NSString
+            let labeledMatches = labeledRegex.matches(in: result, options: [], range: NSRange(location: 0, length: ns.length))
+            
+            // Replace from end to start to keep ranges valid
+            for m in labeledMatches.reversed() {
+                guard m.numberOfRanges >= 3 else { continue }
+                let numRange = m.range(at: 1)
+                let unitRange = m.range(at: 2)
+                
+                guard let numStr = Range(numRange, in: result).map({ String(result[$0]) }),
+                      let unitStr = Range(unitRange, in: result).map({ String(result[$0]) }) else { continue }
+                
+                // Parse and scale
+                guard let value = parseQuantityNumber(numStr) else { continue }
+                let scaled = value * scale
+                let replacement = formatScaledQuantity(scaled, original: numStr) + " " + unitStr + "⟦ingredient_qty:⟧"
+                
+                // Replace the entire match (number + unit + label)
+                let fullRange = m.range
+                guard let swiftRange = Range(fullRange, in: result) else { continue }
+                result.replaceSubrange(swiftRange, with: replacement)
+            }
+        }
+        
+        // Then, handle unlabeled quantities (fallback for recipes without labels)
+        // Allowed ingredient quantity units (will be scaled)
+        let allowedUnits = ["g", "gramm", "gram", "kg", "kilogramm", "ml", "milliliter", "l", "liter", "dl", "deciliter", "cl", "centiliter", 
+                           "EL", "Esslöffel", "tbsp", "tablespoon", "tablespoons",
+                           "TL", "Teelöffel", "tsp", "teaspoon", "teaspoons",
+                           "Prise", "pinch", "pinches",
+                           "Stück", "Stueck", "piece", "pieces",
+                           "Scheiben", "slices", "Scheibe", "slice",
+                           "Dosen", "dose", "doses", "can", "cans",
+                           "Tassen", "Tasse", "cup", "cups",
+                           "Zwiebeln", "onions", "Zwiebel", "onion",
+                           "Zehen", "cloves", "Zehe", "clove"]
+        
+        // Time and temperature units (will NOT be scaled)
+        let timeUnits = ["min", "minute", "minuten", "minutes", "sek", "sekunde", "sekunden", "seconds", "sec",
+                        "std", "stunde", "stunden", "hour", "hours", "h",
+                        "°c", "°f", "grad", "celsius", "fahrenheit", "c", "f",
+                        "grad celsius", "grad fahrenheit"]
+        
+        // Pattern: number (int|decimal|fraction) + optional space + unit (but NOT if already labeled)
+        // Supports: 1/2, 3/4, 0.5, 0,5, 2, etc.
+        let pattern = #"(?i)(\b\d+\/\d+|\b\d+[\.,]\d+|\b\d+)\s*(\p{L}+)(?!\s*⟦ingredient_qty:⟧)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return result }
+        
+        let ns = result as NSString
+        let matches = regex.matches(in: result, options: [], range: NSRange(location: 0, length: ns.length))
+        if matches.isEmpty { return result }
+        
+        // Replace from end to start to keep ranges valid
+        for m in matches.reversed() {
+            guard m.numberOfRanges >= 3 else { continue }
+            let numRange = m.range(at: 1)
+            let unitRange = m.range(at: 2)
+            
+            // Extract strings for decision making
+            guard let numStr = Range(numRange, in: result).map({ String(result[$0]) }),
+                  let unitStr = Range(unitRange, in: result).map({ String(result[$0]) }) else { continue }
+            
+            let unitLower = unitStr.lowercased()
+            
+            // Skip time and temperature units
+            if timeUnits.contains(where: { $0.lowercased() == unitLower }) { continue }
+            
+            // Only scale if it's a known ingredient unit
+            if !allowedUnits.contains(where: { $0.lowercased() == unitLower }) { continue }
+            
+            // Parse the number (handles fractions, decimals, etc.)
+            guard let value = parseQuantityNumber(numStr) else { continue }
+            
+            // Scale the value
+            let scaled = value * scale
+            let replacement = formatScaledQuantity(scaled, original: numStr) + " " + unitStr
+            
+            // Replace the entire matched span (number + optional space + unit)
+            let fullRange = m.range
+            guard let swiftRange = Range(fullRange, in: result) else { continue }
+            result.replaceSubrange(swiftRange, with: replacement)
+        }
+        
+        return result
+    }
+    
+    private func parseQuantityNumber(_ s: String) -> Double? {
+        let t = s.trimmingCharacters(in: .whitespaces)
+        // Handle fractions (e.g., "1/2", "3/4")
+        if t.contains("/") {
+            let parts = t.split(separator: "/").map { String($0) }
+            if parts.count == 2, 
+               let a = Double(parts[0].replacingOccurrences(of: ",", with: ".")), 
+               let b = Double(parts[1].replacingOccurrences(of: ",", with: ".")), 
+               b != 0 {
+                return a / b
+            }
+        }
+        // Handle regular numbers (e.g., "2", "0.5", "0,5")
+        let norm = t.replacingOccurrences(of: ",", with: ".")
+        return Double(norm)
+    }
+    
+    private func formatScaledQuantity(_ value: Double, original: String) -> String {
+        // Keep integers as whole numbers; else one decimal
+        if abs(value.rounded() - value) < 0.001 {
+            return String(format: "%.0f", value.rounded())
+        }
+        return String(format: "%.1f", value)
+    }
+    
     // MARK: - Share Functions
     private func shareRecipe() {
         var items: [Any] = []
@@ -1099,8 +1247,8 @@ struct RecipeDetailView: View {
         items.append(markdown)
         
         // Add Deep Link for public recipes
-        if recipe.is_public == true {
-            let deepLink = "https://culinachef.app/recipe/\(recipe.id)"
+        if displayRecipe.is_public == true {
+            let deepLink = "https://culinachef.app/recipe/\(displayRecipe.id)"
             if let url = URL(string: deepLink) {
                 items.append(url)
             }
@@ -1114,29 +1262,29 @@ struct RecipeDetailView: View {
         var md = ""
         
         // Title
-        md += "# \(recipe.title)\n\n"
+        md += "# \(displayRecipe.title)\n\n"
         
         // Metadata
-        if let cookTime = recipe.cooking_time {
+        if let cookTime = displayRecipe.cooking_time {
             md += "**Kochzeit:** \(cookTime)\n\n"
         }
-        if let difficulty = recipe.difficulty {
+        if let difficulty = displayRecipe.difficulty {
             md += "**Schwierigkeit:** \(difficulty)\n\n"
         }
-        if let tags = recipe.tags, !tags.isEmpty {
+        if let tags = displayRecipe.tags, !tags.isEmpty {
             md += "**Tags:** \(tags.joined(separator: ", "))\n\n"
         }
         
         // Ingredients
         md += "## Zutaten\n\n"
-        for ingredient in recipe.ingredients ?? [] {
+        for ingredient in displayRecipe.ingredients ?? [] {
             md += "- \(ingredient)\n"
         }
         md += "\n"
         
         // Instructions
         md += "## Zubereitung\n\n"
-        for (index, instruction) in (recipe.instructions ?? []).enumerated() {
+        for (index, instruction) in (displayRecipe.instructions ?? []).enumerated() {
             let split = splitInstruction(instruction)
             let cleanText = split.body
             md += "**Schritt \(index + 1)**\n\n"
@@ -1145,7 +1293,7 @@ struct RecipeDetailView: View {
         
         // Nutrition
         md += "## Nährwerte (pro Portion)\n\n"
-        if let nutrition = recipe.nutrition {
+        if let nutrition = displayRecipe.nutrition {
             if let calories = nutrition.calories {
             md += "- **Kalorien:** \(calories) kcal\n"
         }
@@ -1168,7 +1316,7 @@ struct RecipeDetailView: View {
     
     // Add ingredients to shopping list
     private func addIngredientsToShoppingList(servings: Int) {
-        let items = (recipe.ingredients ?? []).map { ingredient -> ShoppingListItem in
+        let items = (displayRecipe.ingredients ?? []).map { ingredient -> ShoppingListItem in
             let name = parseIngredientName(ingredient)
             let quantity: String?
             

@@ -181,7 +181,7 @@ struct ShoppingListProvider: TimelineProvider {
         // If there's an animating item, create animation timeline entries
         if let animatingId = animatingItemId, animationStartTime > 0 {
             let startTime = Date(timeIntervalSince1970: animationStartTime)
-            let elapsed = currentDate.timeIntervalSince(startTime)
+            let _ = currentDate.timeIntervalSince(startTime)
             
             // Create immediate entry with checkmark visible (scale 1.0)
             entries.append(ShoppingListEntry(date: currentDate, items: items, animatingItemId: animatingId, checkmarkScale: 1.0))

@@ -56,10 +56,12 @@ struct RecipeDetailView: View {
     }
     
     private var tabContent: some View {
-        TabView(selection: $currentPage) {
+        let hasInstructions = displayRecipe.instructions?.isEmpty == false
+        
+        return TabView(selection: $currentPage) {
             overviewPage.tag(0)
             
-            if let instructions = displayRecipe.instructions, !instructions.isEmpty {
+            if hasInstructions {
                 instructionPages
             } else {
                 emptyInstructionsView
@@ -92,21 +94,24 @@ struct RecipeDetailView: View {
     
     @ViewBuilder
     private var instructionPages: some View {
-        if let instructions = displayRecipe.instructions {
-            ForEach(instructions.indices, id: \.self) { idx in
-                stepPage(index: idx + 1, instruction: instructions[idx])
-                .tag(idx + 1)
-        }
-        if displayRecipe.is_public ?? false {
-                ratingPage.tag(instructions.count + 1)
+        Group {
+            if let instructions = displayRecipe.instructions {
+                ForEach(instructions.indices, id: \.self) { idx in
+                    stepPage(index: idx + 1, instruction: instructions[idx])
+                        .tag(idx + 1)
+                }
+                if displayRecipe.is_public ?? false {
+                    ratingPage.tag(instructions.count + 1)
+                }
             }
         }
     }
     
     var body: some View {
-        ZStack {
+        let content = tabContent
+        return ZStack {
             backgroundGradient
-            tabContent
+            content
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -1361,6 +1366,63 @@ struct RecipeDetailView: View {
         
         // Generic fallback
         return L.errorGenericUserFriendly.localized
+    }
+    
+    // MARK: - Load Full Recipe Data
+    private func loadFullRecipe() async {
+        guard let token = app.accessToken else {
+            await MainActor.run {
+                self.error = "Nicht angemeldet"
+            }
+            return
+        }
+        
+        await MainActor.run {
+            isLoadingFullRecipe = true
+        }
+        
+        do {
+            var url = Config.supabaseURL
+            url.append(path: "/rest/v1/recipes")
+            url.append(queryItems: [
+                URLQueryItem(name: "id", value: "eq.\(recipe.id)"),
+                URLQueryItem(name: "select", value: "*")
+            ])
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            let (data, response) = try await SecureURLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            
+            let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+            guard let fullRecipeData = recipes.first else {
+                throw URLError(.fileDoesNotExist)
+            }
+            
+            await MainActor.run {
+                fullRecipe = fullRecipeData
+                isLoadingFullRecipe = false
+                // Update uploadedImageUrl if full recipe has image
+                if let imageUrl = fullRecipeData.image_url {
+                    uploadedImageUrl = imageUrl
+                }
+            }
+        } catch {
+            let errorMessage = error.localizedDescription
+            Logger.error("[RecipeDetailView] Failed to load full recipe: \(errorMessage)", category: .network)
+            await MainActor.run {
+                isLoadingFullRecipe = false
+                self.error = "Rezept konnte nicht vollständig geladen werden"
+            }
+        }
     }
 }
 

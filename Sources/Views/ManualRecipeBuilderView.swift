@@ -51,17 +51,63 @@ struct ManualRecipeBuilderView: View {
     private var difficultyOptions: [String] {
         [L.difficulty_easy.localized, L.difficulty_medium.localized, L.difficulty_hard.localized]
     }
+    // Available filter tags - same as AI-generated recipes
+    // Display names are localized, but we store English tag names internally
     private var availableTags: [String] {
         [
             L.tag_vegan.localized,
             L.tag_vegetarian.localized,
+            L.tag_pescetarian.localized,
             L.tag_glutenFree.localized,
             L.tag_lactoseFree.localized,
             L.tag_lowCarb.localized,
             L.tag_highProtein.localized,
-            L.tag_quick.localized,
-            L.tag_budget.localized
+            L.tag_halal.localized,
+            L.tag_kosher.localized,
+            L.tag_budget.localized,
+            L.tag_spicy.localized,
+            L.tag_quick.localized
         ]
+    }
+    
+    // Map localized UI filter names to English filter tags (used in recipes)
+    // Filter tags in recipes are always in English (vegan, vegetarian, etc.)
+    // This ensures filtering works correctly regardless of UI language
+    private func localizedFilterNameToTag(_ localizedName: String) -> String {
+        let mapping: [String: String] = [
+            L.tag_vegan.localized: "vegan",
+            L.tag_vegetarian.localized: "vegetarian",
+            L.tag_pescetarian.localized: "pescetarian",
+            L.tag_glutenFree.localized: "gluten-free",
+            L.tag_lactoseFree.localized: "lactose-free",
+            L.tag_lowCarb.localized: "low-carb",
+            L.tag_highProtein.localized: "high-protein",
+            L.tag_halal.localized: "halal",
+            L.tag_kosher.localized: "kosher",
+            L.tag_budget.localized: "budget",
+            L.tag_spicy.localized: "spicy",
+            L.tag_quick.localized: "quick"
+        ]
+        return mapping[localizedName] ?? localizedName.lowercased().replacingOccurrences(of: "[^a-z0-9-]", with: "", options: .regularExpression)
+    }
+    
+    // Map English filter tags to localized UI filter names (for display)
+    private func tagToLocalizedFilterName(_ englishTag: String) -> String {
+        let mapping: [String: String] = [
+            "vegan": L.tag_vegan.localized,
+            "vegetarian": L.tag_vegetarian.localized,
+            "pescetarian": L.tag_pescetarian.localized,
+            "gluten-free": L.tag_glutenFree.localized,
+            "lactose-free": L.tag_lactoseFree.localized,
+            "low-carb": L.tag_lowCarb.localized,
+            "high-protein": L.tag_highProtein.localized,
+            "halal": L.tag_halal.localized,
+            "kosher": L.tag_kosher.localized,
+            "budget": L.tag_budget.localized,
+            "spicy": L.tag_spicy.localized,
+            "quick": L.tag_quick.localized
+        ]
+        return mapping[englishTag.lowercased()] ?? englishTag
     }
     
     var body: some View {
@@ -450,6 +496,9 @@ struct ManualRecipeBuilderView: View {
             
             let cookingTimeStr = cookingTime.isEmpty ? nil : "\(cookingTime) Min"
             
+            // Convert localized tag names to English filter tags
+            let filterTags = selectedTags.map { localizedFilterNameToTag($0) }
+            
             let recipeData: [String: Any] = [
                 "user_id": userId,
                 "title": recipeName.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -459,7 +508,7 @@ struct ManualRecipeBuilderView: View {
                 "image_url": imageUrl ?? NSNull(),
                 "cooking_time": cookingTimeStr ?? NSNull(),
                 "difficulty": difficulty,
-                "tags": Array(selectedTags)
+                "filter_tags": filterTags  // Use filter_tags instead of tags to match AI-generated recipes
             ]
             
             // Save to Supabase

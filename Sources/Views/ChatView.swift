@@ -792,108 +792,150 @@ private struct RecipeSuggestionsView: View {
                     Text(cleanedText)
                         .foregroundStyle(.white)
                 } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                    ForEach(Array(recipes.enumerated()), id: \.offset) { _, recipe in
-                        VStack(alignment: .leading, spacing: 8) {
-                            // Kurs-Label bei Menüs anzeigen (über dem Titel)
-                            if (kind?.lowercased() == "menu"), let course = recipe.course {
-                                Text(course)
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.white.opacity(0.95))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(Color.white.opacity(0.12), in: Capsule())
-                                    .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                            }
-                            
-                            // Rezepttitel
-                            Text(recipe.name)
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                            
-                            // Beschreibung
-                            Text(recipe.description)
-                                .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.85))
-                            
-                            // Einzeln-Button nur anzeigen, wenn NICHT als Menü klassifiziert
-                            if (kind?.lowercased() != "menu") {
-                                Button(action: {
-                                    selectedRecipe = recipe
-                                    showGenerationOptions = true
-                                }) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "wand.and.stars")
-                                        Text(L.chat_erstelle_ein_rezept.localized)
-                                    }
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 14)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        in: Capsule()
-                                    )
-                                    .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                                    .shadow(color: Color.orange.opacity(0.3), radius: 6, x: 0, y: 3)
-                                }
-                                .accessibilityLabel(L.chat_erstelle_ein_rezept.localized)
-                                .accessibilityHint("Erstellt ein Rezept für \(recipe.name)")
-                            }
-                        }
-                        .padding(.vertical, 6)
+                    // Bei Menüs: Nach Gängen gruppieren und strukturiert anzeigen
+                    if (kind?.lowercased() == "menu") {
+                        let groupedRecipes = groupRecipesByCourse(recipes)
+                        let orderedCourses = orderCourses(Set(groupedRecipes.keys))
                         
-                        if recipe != recipes.last {
-                            Divider()
-                                .background(Color.white.opacity(0.2))
-                        }
-                    }
-
-
-                    // Menü erstellen Button nur bei Menüs anzeigen
-                    if showMenuButton {
-                        Button(action: { Task { await createMenu(from: recipes) } }) {
-                            HStack(spacing: 6) {
-                                if creatingMenu { ProgressView().tint(.white) }
-                                Image(systemName: "folder.badge.plus")
-                                Text(createdMenuId == nil ? "Menü erstellen" : "Menü erstellt ✓")
+                        VStack(alignment: .leading, spacing: 20) {
+                            ForEach(orderedCourses, id: \.self) { course in
+                                if let courseRecipes = groupedRecipes[course] {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        // Gang-Name (in der jeweiligen Sprache)
+                                        Text(course)
+                                            .font(.headline)
+                                            .foregroundStyle(.white)
+                                        
+                                        // Rezepte dieses Gangs
+                                        ForEach(Array(courseRecipes.enumerated()), id: \.offset) { idx, recipe in
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                // Rezepttitel
+                                                Text(recipe.name)
+                                                    .font(.headline)
+                                                    .foregroundStyle(.white)
+                                                
+                                                // Beschreibung
+                                                if !recipe.description.isEmpty {
+                                                    Text(recipe.description)
+                                                        .font(.subheadline)
+                                                        .foregroundStyle(.white.opacity(0.85))
+                                                }
+                                            }
+                                            .padding(.vertical, 8)
+                                        }
+                                    }
+                                    .padding(.vertical, 8)
+                                    
+                                    // Weiße Linie zwischen den Gängen
+                                    if course != orderedCourses.last {
+                                        Divider()
+                                            .background(Color.white)
+                                            .padding(.vertical, 8)
+                                    }
+                                }
                             }
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .padding(.vertical, 10)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ), in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            )
-                            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white.opacity(0.2), lineWidth: 1))
-                            .shadow(color: Color.orange.opacity(0.25), radius: 8, x: 0, y: 4)
                         }
-                        .accessibilityLabel(createdMenuId == nil ? "Menü erstellen" : "Menü erstellt")
-                        .accessibilityHint(creatingMenu ? "Erstellt Menü" : "Erstellt ein Menü aus den vorgeschlagenen Rezepten")
-                        .buttonStyle(.plain)
-                        .disabled(creatingMenu || recipes.isEmpty)
+                    } else {
+                        // Normale Rezept-Vorschläge (nicht als Menü)
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(Array(recipes.enumerated()), id: \.offset) { _, recipe in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    // Rezepttitel
+                                    Text(recipe.name)
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+                                    
+                                    // Beschreibung
+                                    Text(recipe.description)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.white.opacity(0.85))
+                                    
+                                    // Einzeln-Button
+                                    Button(action: {
+                                        selectedRecipe = recipe
+                                        showGenerationOptions = true
+                                    }) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "wand.and.stars")
+                                            Text(L.chat_erstelle_ein_rezept.localized)
+                                        }
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(.vertical, 8)
+                                        .padding(.horizontal, 14)
+                                        .background(
+                                            LinearGradient(
+                                                colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            in: Capsule()
+                                        )
+                                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                                        .shadow(color: Color.orange.opacity(0.3), radius: 6, x: 0, y: 3)
+                                    }
+                                    .accessibilityLabel(L.chat_erstelle_ein_rezept.localized)
+                                    .accessibilityHint("Erstellt ein Rezept für \(recipe.name)")
+                                }
+                                .padding(.vertical, 6)
+                                
+                                if recipe != recipes.last {
+                                    Divider()
+                                        .background(Color.white.opacity(0.2))
+                                }
+                            }
+                        }
                     }
+
+
+                    // Menü erstellen Button nur bei Menüs anzeigen - GANZ UNTEN
+                    if showMenuButton {
+                        VStack(spacing: 8) {
+                            Button(action: { Task { await createMenu(from: recipes) } }) {
+                                HStack(spacing: 6) {
+                                    if creatingMenu { ProgressView().tint(.white) }
+                                    Image(systemName: "folder.badge.plus")
+                                    Text(createdMenuId == nil ? "Menü erstellen" : "Menü erstellt ✓")
+                                }
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    ), in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                )
+                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                                .shadow(color: Color.orange.opacity(0.25), radius: 8, x: 0, y: 4)
+                            }
+                            .accessibilityLabel(createdMenuId == nil ? "Menü erstellen" : "Menü erstellt")
+                            .accessibilityHint(creatingMenu ? "Erstellt Menü" : "Erstellt ein Menü aus den vorgeschlagenen Rezepten")
+                            .buttonStyle(.plain)
+                            .disabled(creatingMenu || recipes.isEmpty)
+                            
+                            if let err = createError {
+                                Text(err).font(.footnote).foregroundStyle(.red)
+                            }
+                        }
+                        .padding(.top, 16)
+                    } else {
                         if let err = createError {
                             Text(err).font(.footnote).foregroundStyle(.red)
+                                .padding(.top, 8)
                         }
                     }
                 }
             }
             
-                // Show loading state below suggestions when generating automatically
-                if generatingAuto {
-                    SearchingPenguinView()
-                        .frame(maxWidth: .infinity)
-                        .id("autoGenerating")
-                }
+            // Show loading state below suggestions when generating automatically
+            if generatingAuto {
+                SearchingPenguinView()
+                    .frame(maxWidth: .infinity)
+                    .id("autoGenerating")
+            }
             }
             .onChange(of: scrollTarget) { _, newTarget in
                 if let target = newTarget {
@@ -1063,6 +1105,221 @@ private struct RecipeSuggestionsView: View {
         ]
         return pairs.first(where: { t.contains($0.0) })?.1
     }
+    
+    // Gruppiert Rezepte nach Gängen
+    private func groupRecipesByCourse(_ recipes: [RecipeSuggestion]) -> [String: [RecipeSuggestion]] {
+        var grouped: [String: [RecipeSuggestion]] = [:]
+        let defaultCourse = "Hauptspeise" // Fallback für Rezepte ohne Gang
+        
+        for recipe in recipes {
+            let course = recipe.course ?? defaultCourse
+            if grouped[course] == nil {
+                grouped[course] = []
+            }
+            grouped[course]?.append(recipe)
+        }
+        
+        return grouped
+    }
+    
+    // Sortiert Gänge in der richtigen Reihenfolge (unterstützt alle Sprachen)
+    private func orderCourses(_ courses: Set<String>) -> [String] {
+        // Normalisiere Gang-Namen zu kanonischen deutschen Namen für Sortierung
+        func normalizeCourse(_ course: String) -> String {
+            let normalized = course.lowercased()
+            let mapping: [String: String] = [
+                // German
+                "vorspeise": "Vorspeise",
+                "zwischengang": "Zwischengang",
+                "hauptspeise": "Hauptspeise",
+                "hauptgang": "Hauptspeise",
+                "nachspeise": "Nachspeise",
+                "dessert": "Nachspeise",
+                "beilage": "Beilage",
+                "suppengang": "Suppengang",
+                "suppe": "Suppengang",
+                "getränk": "Getränk",
+                "getraenk": "Getränk",
+                "amuse-bouche": "Amuse-Bouche",
+                "aperitif": "Aperitif",
+                "digestif": "Digestif",
+                "käsegang": "Käsegang",
+                "kaesegang": "Käsegang",
+                // English
+                "appetizer": "Vorspeise",
+                "soup course": "Suppengang",
+                "soup": "Suppengang",
+                "intermediate course": "Zwischengang",
+                "main course": "Hauptspeise",
+                "main": "Hauptspeise",
+                "side dish": "Beilage",
+                "side": "Beilage",
+                "cheese course": "Käsegang",
+                "cheese": "Käsegang",
+                "beverage": "Getränk",
+                "drink": "Getränk",
+                // Spanish
+                "sopa": "Suppengang",
+                "plato intermedio": "Zwischengang",
+                "plato principal": "Hauptspeise",
+                "principal": "Hauptspeise",
+                "postre": "Nachspeise",
+                "guarnición": "Beilage",
+                "guarnicion": "Beilage",
+                "quesos": "Käsegang",
+                "queso": "Käsegang",
+                "aperitivo": "Aperitif",
+                "digestivo": "Digestif",
+                "bebida": "Getränk",
+                // French
+                "entrée": "Vorspeise",
+                "entree": "Vorspeise",
+                "potage": "Suppengang",
+                "plat intermédiaire": "Zwischengang",
+                "plat intermediaire": "Zwischengang",
+                "plat principal": "Hauptspeise",
+                "accompagnement": "Beilage",
+                "fromages": "Käsegang",
+                "fromage": "Käsegang",
+                "apéritif": "Aperitif",
+                "boisson": "Getränk",
+                // Italian
+                "antipasto": "Vorspeise",
+                "primo": "Suppengang",
+                "piatto intermedio": "Zwischengang",
+                "secondo": "Hauptspeise",
+                "dolce": "Nachspeise",
+                "contorno": "Beilage",
+                "formaggi": "Käsegang",
+                "formaggio": "Käsegang",
+                "bevanda": "Getränk"
+            ]
+            return mapping[normalized] ?? course
+        }
+        
+        // Definiere Reihenfolge basierend auf kanonischen deutschen Namen
+        let courseOrder: [String] = [
+            "Amuse-Bouche",
+            "Aperitif",
+            "Vorspeise",
+            "Suppengang",
+            "Zwischengang",
+            "Hauptspeise",
+            "Beilage",
+            "Käsegang",
+            "Nachspeise",
+            "Digestif",
+            "Getränk"
+        ]
+        
+        // Sortiere nach definierter Reihenfolge, dann alphabetisch für nicht-definierte Gänge
+        return courses.sorted { course1, course2 in
+            let normalized1 = normalizeCourse(course1)
+            let normalized2 = normalizeCourse(course2)
+            
+            let index1 = courseOrder.firstIndex(of: normalized1) ?? Int.max
+            let index2 = courseOrder.firstIndex(of: normalized2) ?? Int.max
+            
+            if index1 != index2 {
+                return index1 < index2
+            }
+            // Wenn beide nicht in der Liste sind, alphabetisch sortieren
+            return course1 < course2
+        }
+    }
+    
+    // Gibt die Beschreibung für jeden Gang zurück (unterstützt alle Sprachen)
+    private func courseDescription(_ course: String) -> String {
+        // Normalisiere zu kanonischem Namen für Beschreibung
+        func normalizeForDescription(_ course: String) -> String {
+            let normalized = course.lowercased()
+            let mapping: [String: String] = [
+                // German
+                "vorspeise": "Vorspeise",
+                "zwischengang": "Zwischengang",
+                "hauptspeise": "Hauptspeise",
+                "hauptgang": "Hauptspeise",
+                "nachspeise": "Nachspeise",
+                "dessert": "Nachspeise",
+                "beilage": "Beilage",
+                "suppengang": "Suppengang",
+                "suppe": "Suppengang",
+                "getränk": "Getränk",
+                "getraenk": "Getränk",
+                "amuse-bouche": "Amuse-Bouche",
+                "aperitif": "Aperitif",
+                "digestif": "Digestif",
+                "käsegang": "Käsegang",
+                "kaesegang": "Käsegang",
+                // English
+                "appetizer": "Vorspeise",
+                "soup course": "Suppengang",
+                "soup": "Suppengang",
+                "intermediate course": "Zwischengang",
+                "main course": "Hauptspeise",
+                "main": "Hauptspeise",
+                "side dish": "Beilage",
+                "side": "Beilage",
+                "cheese course": "Käsegang",
+                "cheese": "Käsegang",
+                "beverage": "Getränk",
+                "drink": "Getränk",
+                // Spanish
+                "sopa": "Suppengang",
+                "plato intermedio": "Zwischengang",
+                "plato principal": "Hauptspeise",
+                "principal": "Hauptspeise",
+                "postre": "Nachspeise",
+                "guarnición": "Beilage",
+                "guarnicion": "Beilage",
+                "quesos": "Käsegang",
+                "queso": "Käsegang",
+                "aperitivo": "Aperitif",
+                "digestivo": "Digestif",
+                "bebida": "Getränk",
+                // French
+                "entrée": "Vorspeise",
+                "entree": "Vorspeise",
+                "potage": "Suppengang",
+                "plat intermédiaire": "Zwischengang",
+                "plat intermediaire": "Zwischengang",
+                "plat principal": "Hauptspeise",
+                "accompagnement": "Beilage",
+                "fromages": "Käsegang",
+                "fromage": "Käsegang",
+                "apéritif": "Aperitif",
+                "boisson": "Getränk",
+                // Italian
+                "antipasto": "Vorspeise",
+                "primo": "Suppengang",
+                "piatto intermedio": "Zwischengang",
+                "secondo": "Hauptspeise",
+                "dolce": "Nachspeise",
+                "contorno": "Beilage",
+                "formaggi": "Käsegang",
+                "formaggio": "Käsegang",
+                "bevanda": "Getränk"
+            ]
+            return mapping[normalized] ?? course
+        }
+        
+        let normalizedCourse = normalizeForDescription(course)
+        let descriptions: [String: String] = [
+            "Amuse-Bouche": "Kleine Gaumenfreude zum Auftakt",
+            "Aperitif": "Aperitif zum Anstoßen",
+            "Vorspeise": "Leichte Speisen zum Auftakt",
+            "Suppengang": "Warme Suppe zwischen den Gängen",
+            "Zwischengang": "Kleiner Gang zwischen Hauptgängen",
+            "Hauptspeise": "Das Hauptgericht des Menüs",
+            "Beilage": "Beilagen zum Hauptgericht",
+            "Käsegang": "Ausgewählte Käsesorten",
+            "Nachspeise": "Süßer Abschluss des Menüs",
+            "Digestif": "Digestif zum Ausklingen",
+            "Getränk": "Getränke zum Menü"
+        ]
+        
+        return descriptions[normalizedCourse] ?? "Köstlicher Gang"
+    }
 
     private func createMenu(from suggestions: [RecipeSuggestion]) async {
         guard !suggestions.isEmpty else { return }
@@ -1128,13 +1385,16 @@ private struct RecipeSuggestionsView: View {
         }
     }
     
-    // Validate and normalize course labels from AI
+    // Validate and normalize course labels from AI (supports all languages)
+    // Normalizes course names from different languages to a canonical form for display
     private func validateCourse(_ course: String?) -> String? {
         guard let c = course?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
         let normalized = c.lowercased()
         
-        // Valid courses as defined in system prompt
+        // Map course names from all languages to canonical German names for consistency
+        // The UI will display them as received, but we normalize for internal processing
         let validCourses: [String: String] = [
+            // German
             "vorspeise": "Vorspeise",
             "zwischengang": "Zwischengang",
             "hauptspeise": "Hauptspeise",
@@ -1142,16 +1402,72 @@ private struct RecipeSuggestionsView: View {
             "nachspeise": "Nachspeise",
             "dessert": "Nachspeise",
             "beilage": "Beilage",
+            "suppengang": "Suppengang",
+            "suppe": "Suppengang",
             "getränk": "Getränk",
             "getraenk": "Getränk",
             "amuse-bouche": "Amuse-Bouche",
             "aperitif": "Aperitif",
             "digestif": "Digestif",
             "käsegang": "Käsegang",
-            "kaesegang": "Käsegang"
+            "kaesegang": "Käsegang",
+            // English
+            "appetizer": "Vorspeise",
+            "soup course": "Suppengang",
+            "soup": "Suppengang",
+            "intermediate course": "Zwischengang",
+            "main course": "Hauptspeise",
+            "main": "Hauptspeise",
+            "side dish": "Beilage",
+            "side": "Beilage",
+            "cheese course": "Käsegang",
+            "cheese": "Käsegang",
+            "beverage": "Getränk",
+            "drink": "Getränk",
+            // Spanish
+            "sopa": "Suppengang",
+            "plato intermedio": "Zwischengang",
+            "plato principal": "Hauptspeise",
+            "principal": "Hauptspeise",
+            "postre": "Nachspeise",
+            "guarnición": "Beilage",
+            "guarnicion": "Beilage",
+            "quesos": "Käsegang",
+            "queso": "Käsegang",
+            "aperitivo": "Aperitif",
+            "digestivo": "Digestif",
+            "bebida": "Getränk",
+            // French
+            "entrée": "Vorspeise",
+            "entree": "Vorspeise",
+            "potage": "Suppengang",
+            "plat intermédiaire": "Zwischengang",
+            "plat intermediaire": "Zwischengang",
+            "plat principal": "Hauptspeise",
+            "accompagnement": "Beilage",
+            "fromages": "Käsegang",
+            "fromage": "Käsegang",
+            "apéritif": "Aperitif",
+            "boisson": "Getränk",
+            // Italian
+            "antipasto": "Vorspeise",
+            "primo": "Suppengang",
+            "piatto intermedio": "Zwischengang",
+            "secondo": "Hauptspeise",
+            "dolce": "Nachspeise",
+            "contorno": "Beilage",
+            "formaggi": "Käsegang",
+            "formaggio": "Käsegang",
+            "bevanda": "Getränk"
         ]
         
-        return validCourses[normalized]
+        // Return the original course name (in its original language) if found in mapping
+        // This preserves the language-specific names from the AI
+        if let _ = validCourses[normalized] {
+            return c  // Return original (preserves capitalization and language)
+        }
+        
+        return nil
     }
     
     // Generate recipe automatically with essential preferences only

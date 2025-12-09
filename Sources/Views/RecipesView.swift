@@ -431,6 +431,8 @@ struct PersonalRecipesView: View {
     @State private var menus: [Menu] = []
     @State private var selectedMenu: Menu? = nil
     @State private var selectedMenuRecipeIds: Set<String> = []
+    @State private var menuRecipeIdsCache: [String: Set<String>] = [:] // Cache für alle Menü-Rezept-IDs
+    @State private var menuRecipeIdsLoading: Set<String> = [] // Track welche Menüs gerade geladen werden
     @State private var showNewMenuSheet = false
     @State private var newMenuTitle: String = ""
     @State private var assigningRecipe: Recipe? = nil
@@ -453,13 +455,14 @@ struct PersonalRecipesView: View {
             return filteredRecipes.filter { likedIds.contains($0.id) }
         }
         
-        if let _ = selectedMenu {
-            // Until IDs sind geladen, zeige alle Rezepte statt leer
-            if selectedMenuLoaded {
-                return filteredRecipes.filter { selectedMenuRecipeIds.contains($0.id) }
-            } else {
-                return filteredRecipes
+        if let menuId = selectedMenu?.id {
+            // Verwende Cache, wenn verfügbar, sonst selectedMenuRecipeIds (für Backward Compatibility)
+            let ids = menuRecipeIdsCache[menuId] ?? selectedMenuRecipeIds
+            // Wenn IDs noch nicht geladen sind, zeige optimistisch alle Rezepte
+            if ids.isEmpty && menuRecipeIdsLoading.contains(menuId) {
+                return filteredRecipes // Zeige alle während des Ladens
             }
+            return filteredRecipes.filter { ids.contains($0.id) }
         }
         return filteredRecipes
     }
@@ -703,8 +706,11 @@ struct PersonalRecipesView: View {
                                     // Reload recipes if switching to liked menu (to load community recipes)
                                     if newId == "__liked__" {
                                         Task { await loadRecipes(keepVisible: true) }
-                                    } else {
-                                        Task { await reloadSelectedMenuRecipes() }
+                                    } else if let menuId = newId, menuId != "__liked__" {
+                                        // Verwende Cache wenn verfügbar, sonst lade
+                                        if let token = app.accessToken {
+                                            Task { await loadMenuRecipeIds(menuId: menuId, token: token, updateSelected: true) }
+                                        }
                                     }
                                     // Load local placeholders for this menu
                                     if let mid = selectedMenu?.id {
@@ -772,18 +778,21 @@ struct PersonalRecipesView: View {
                                 }
                             }
                             .id(app.likedRecipesManager.likedRecipeIds)
-                            // NavigationLink using tag/selection pattern
+                            // NavigationLink using isActive pattern (compatible with NavigationView)
                             if let recipeId = navigationRecipeId {
-                                let allRecipes = selectedMenu?.id != "__liked__" 
-                                    ? groupedByCourse(menuId: selectedMenu?.id ?? "").flatMap { $0.recipes }
-                                    : visibleRecipes
+                                let allRecipes: [Recipe] = {
+                                    if let menuId = selectedMenu?.id, menuId != "__liked__" {
+                                        return groupedByCourse(menuId: menuId).flatMap { $0.recipes }
+                                    } else {
+                                        return visibleRecipes
+                                    }
+                                }()
                                 if let recipe = allRecipes.first(where: { $0.id == recipeId }) {
                                     NavigationLink(
                                         destination: RecipeDetailView(recipe: recipe),
-                                        tag: recipeId,
-                                        selection: Binding(
-                                            get: { navigationRecipeId },
-                                            set: { navigationRecipeId = $0 }
+                                        isActive: Binding(
+                                            get: { navigationRecipeId == recipeId },
+                                            set: { if !$0 { navigationRecipeId = nil } }
                                         )
                                     ) {
                                         EmptyView()
@@ -809,7 +818,25 @@ struct PersonalRecipesView: View {
                     await loadRecipes(keepVisible: true)
                 }
             }
-            .refreshable { await loadRecipes(keepVisible: true) }
+            .onAppear {
+                let appearTime = Date()
+                print("📱 [PERFORMANCE] PersonalRecipesView APPEARED at \(appearTime)")
+                print("📱 [PERFORMANCE] Current state: loading=\(loading), recipes=\(recipes.count), menus=\(menus.count)")
+            }
+            .task {
+                let taskStartTime = Date()
+                print("📱 [PERFORMANCE] PersonalRecipesView .task STARTED at \(taskStartTime)")
+                await loadRecipes(keepVisible: false)
+                let taskDuration = Date().timeIntervalSince(taskStartTime)
+                print("✅ [PERFORMANCE] PersonalRecipesView .task COMPLETED in \(String(format: "%.3f", taskDuration))s")
+            }
+            .refreshable { 
+                let refreshStartTime = Date()
+                print("🔄 [PERFORMANCE] Pull-to-refresh STARTED")
+                await loadRecipes(keepVisible: true)
+                let refreshDuration = Date().timeIntervalSince(refreshStartTime)
+                print("✅ [PERFORMANCE] Pull-to-refresh COMPLETED in \(String(format: "%.3f", refreshDuration))s")
+            }
             .sheet(isPresented: $showNewMenuSheet) {
             NewMenuSheet(title: $newMenuTitle, onCreate: { t in Task { await createMenu(title: t) } })
                 .presentationDetents([.height(260), .medium])
@@ -884,20 +911,76 @@ struct PersonalRecipesView: View {
     func reloadSelectedMenuRecipes() async {
         guard let token = app.accessToken else { return }
         if let menu = selectedMenu {
-            await MainActor.run { self.selectedMenuLoaded = false }
-            if let ids = try? await app.fetchMenuRecipeIds(menuId: menu.id, accessToken: token) {
-                await MainActor.run {
-                    self.selectedMenuRecipeIds = Set(ids)
-                    self.selectedMenuLoaded = true
-                }
-            } else {
-                // Fehler: behalte vorherige IDs, aber markiere als geladen, damit UI nicht leer bleibt
-                await MainActor.run { self.selectedMenuLoaded = true }
-            }
+            await loadMenuRecipeIds(menuId: menu.id, token: token, updateSelected: true)
         } else {
             await MainActor.run {
                 self.selectedMenuRecipeIds = []
                 self.selectedMenuLoaded = true
+            }
+        }
+    }
+    
+    // Lade Menü-Rezept-IDs für ein spezifisches Menü (mit Caching)
+    private func loadMenuRecipeIds(menuId: String, token: String, updateSelected: Bool = false) async {
+        // Prüfe Cache zuerst
+        if let cached = menuRecipeIdsCache[menuId] {
+            if updateSelected {
+                await MainActor.run {
+                    self.selectedMenuRecipeIds = cached
+                    self.selectedMenuLoaded = true
+                }
+            }
+            return
+        }
+        
+        // Verhindere doppeltes Laden
+        if menuRecipeIdsLoading.contains(menuId) {
+            return
+        }
+        
+        await MainActor.run {
+            self.menuRecipeIdsLoading.insert(menuId)
+            if updateSelected {
+                self.selectedMenuLoaded = false
+            }
+        }
+        
+        if let ids = try? await app.fetchMenuRecipeIds(menuId: menuId, accessToken: token) {
+            await MainActor.run {
+                let idSet = Set(ids)
+                self.menuRecipeIdsCache[menuId] = idSet
+                if updateSelected {
+                    self.selectedMenuRecipeIds = idSet
+                    self.selectedMenuLoaded = true
+                }
+                self.menuRecipeIdsLoading.remove(menuId)
+            }
+        } else {
+            // Fehler: markiere als geladen, damit UI nicht leer bleibt
+            await MainActor.run {
+                if updateSelected {
+                    self.selectedMenuLoaded = true
+                }
+                self.menuRecipeIdsLoading.remove(menuId)
+            }
+        }
+    }
+    
+    // Preload Menü-Rezept-IDs für alle Menüs parallel
+    private func preloadAllMenuRecipeIds(token: String) async {
+        let menuIds = menus.filter { $0.id != "__liked__" }.map { $0.id }
+        
+        // Lade alle IDs parallel
+        await withTaskGroup(of: Void.self) { group in
+            for menuId in menuIds {
+                // Skip wenn bereits im Cache oder wird gerade geladen
+                if menuRecipeIdsCache[menuId] != nil || menuRecipeIdsLoading.contains(menuId) {
+                    continue
+                }
+                
+                group.addTask {
+                    await loadMenuRecipeIds(menuId: menuId, token: token, updateSelected: false)
+                }
             }
         }
     }
@@ -920,6 +1003,13 @@ struct PersonalRecipesView: View {
         guard let token = app.accessToken else { return }
         do {
             try await app.addRecipeToMenu(menuId: menu.id, recipeId: recipe.id, accessToken: token)
+            // Update cache
+            await MainActor.run {
+                if var ids = menuRecipeIdsCache[menu.id] {
+                    ids.insert(recipe.id)
+                    menuRecipeIdsCache[menu.id] = ids
+                }
+            }
             await reloadSelectedMenuRecipes()
             await MainActor.run { assigningRecipe = nil }
         } catch {}
@@ -937,6 +1027,10 @@ struct PersonalRecipesView: View {
             deletedRecipeIds.insert(recipeId)
             recipes.removeAll { $0.id == recipeId }
             selectedMenuRecipeIds.remove(recipeId)
+            // Entferne auch aus allen Menü-Caches
+            for menuId in menuRecipeIdsCache.keys {
+                menuRecipeIdsCache[menuId]?.remove(recipeId)
+            }
             toDelete = nil
             showDeleteAlert = false
         }
@@ -989,82 +1083,84 @@ struct PersonalRecipesView: View {
     }
     
     func loadRecipes(keepVisible: Bool = false) async {
+        let tabOpenTime = Date()
+        print("📱 [PERFORMANCE] ========================================")
+        print("📱 [PERFORMANCE] 'Meine Rezepte' Tab OPENED at \(tabOpenTime)")
+        print("📱 [PERFORMANCE] keepVisible: \(keepVisible)")
+        
         guard let userId = KeychainManager.get(key: "user_id"),
               let token = app.accessToken else {
             await MainActor.run { 
                 self.error = "Nicht angemeldet"
                 self.loading = false
             }
+            print("❌ [PERFORMANCE] Not authenticated")
             return
         }
         
-        // OPTIMIZATION: Wenn Cache vorhanden ist und nicht zu alt (max 5 Minuten), zeige Cache sofort
+        // OPTIMIZATION: Wenn Cache vorhanden ist, zeige Cache sofort (auch wenn alt)
+        // Background refresh lädt dann im Hintergrund neue Daten
         if !keepVisible {
-            if !app.cachedRecipes.isEmpty, 
-               let timestamp = app.recipesCacheTimestamp,
-               Date().timeIntervalSince(timestamp) < 300 { // 5 Minuten
+            if !app.cachedRecipes.isEmpty {
+                let cacheCheckTime = Date()
+                let cacheAge = app.recipesCacheTimestamp.map { Date().timeIntervalSince($0) } ?? 0
+                print("💾 [PERFORMANCE] Cache found: \(app.cachedRecipes.count) recipes, \(app.cachedMenus.count) menus")
+                print("💾 [PERFORMANCE] Cache age: \(String(format: "%.1f", cacheAge))s")
+                
+                let uiUpdateStartTime = Date()
                 await MainActor.run {
                     self.recipes = app.cachedRecipes
                     self.menus = app.cachedMenus
                     self.loading = false // Seite sofort anzeigen!
-                    Logger.info("[PersonalRecipesView] Using fresh cache (\(app.cachedRecipes.count) recipes)", category: .data)
+                    let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
+                    let totalDuration = Date().timeIntervalSince(tabOpenTime)
+                    print("⚡ [PERFORMANCE] UI updated from cache in \(String(format: "%.3f", uiUpdateDuration))s")
+                    print("⚡ [PERFORMANCE] Total time to display: \(String(format: "%.3f", totalDuration))s")
+                    print("✅ [PERFORMANCE] Recipes displayed INSTANTLY from cache")
+                    Logger.info("[PersonalRecipesView] Using cache (\(app.cachedRecipes.count) recipes) - instant display", category: .data)
                 }
-                // Lade im Hintergrund aktualisiert (nur wenn Cache älter als 1 Minute)
-                let cacheAge = Date().timeIntervalSince(timestamp)
-                if cacheAge > 60 {
-                    Task.detached(priority: .utility) {
-                        await self.loadRecipesFromNetwork(userId: userId, token: token, keepVisible: true)
-                    }
+                
+                // Lade im Hintergrund aktualisiert (auch wenn Cache frisch ist, für Background-Refresh)
+                print("🔄 [PERFORMANCE] Starting background refresh...")
+                Task.detached(priority: .utility) {
+                    await self.loadRecipesFromNetwork(userId: userId, token: token, keepVisible: true)
                 }
                 return
+            } else {
+                print("⚠️ [PERFORMANCE] No cache available - loading from network")
             }
         }
         
-        // Kein Cache oder Cache zu alt: Lade sofort das erste Rezept für instant display
-        // loading bleibt true bis erstes Rezept geladen ist
-        if !keepVisible { loading = true }
+        // Kein Cache vorhanden: Lade sofort
+        if !keepVisible { 
+            loading = true
+            print("⏳ [PERFORMANCE] Loading state set to true - showing loading indicator")
+        }
         
         await loadRecipesFromNetwork(userId: userId, token: token, keepVisible: keepVisible)
     }
     
     private func loadRecipesFromNetwork(userId: String, token: String, keepVisible: Bool) async {
+        let networkStartTime = Date()
+        print("📡 [PERFORMANCE] Network load STARTED at \(networkStartTime)")
+        print("📡 [PERFORMANCE] Mode: \(keepVisible ? "Background refresh" : "Foreground load")")
+        
         do {
             // Wenn ein Menü aktiv ist, markiere als nicht geladen bis IDs neu geladen wurden
             if selectedMenu != nil { await MainActor.run { self.selectedMenuLoaded = false } }
             
-            // OPTIMIZATION: Lade zuerst das erste Rezept sofort für instant display
-            // Dann lade den Rest im Hintergrund
-            async let firstRecipeTask = loadFirstRecipeFromSupabase(userId: userId, token: token)
+            // OPTIMIZATION: Lade alle Rezepte und Menüs in einem einzigen parallelen Call
+            // Keine separaten Calls mehr - alles auf einmal
+            let parallelStartTime = Date()
+            print("📡 [PERFORMANCE] Starting parallel requests (recipes + menus)...")
+            async let recipesTask = loadRecipesFromSupabase(userId: userId, token: token)
             async let menusTask = app.fetchMenus(accessToken: token, userId: userId)
             
-            // Warte auf erstes Rezept und Menüs
-            let (firstRecipe, menusResult) = try await (firstRecipeTask, menusTask)
-            
-            // Zeige sofort an, wenn wir mindestens 1 Rezept haben
-            if let first = firstRecipe {
-                await MainActor.run {
-                    // Ersetze die Liste mit dem ersten Rezept, wenn noch keine Rezepte vorhanden sind
-                    // Oder füge es hinzu, wenn es noch nicht vorhanden ist
-                    if self.recipes.isEmpty {
-                        self.recipes = [first]
-                    } else if !self.recipes.contains(where: { $0.id == first.id }) {
-                        self.recipes.insert(first, at: 0)
-                    }
-                    self.menus = menusResult
-                    self.loading = false // Seite sofort anzeigen!
-                    Logger.info("[PersonalRecipesView] Displaying first recipe immediately", category: .data)
-                }
-            } else {
-                // Kein erstes Rezept gefunden, lade Menüs trotzdem
-                await MainActor.run {
-                    self.menus = menusResult
-                    self.loading = false // Zeige Seite auch wenn keine Rezepte
-                    Logger.info("[PersonalRecipesView] No recipes found, displaying empty state", category: .data)
-            }
-            }
-            
-            // Lade jetzt alle Rezepte im Hintergrund und ersetze die Liste
-            let allRecipes = try await loadRecipesFromSupabase(userId: userId, token: token)
+            // Warte auf beide Calls parallel
+            let (allRecipes, menusResult) = try await (recipesTask, menusTask)
+            let parallelDuration = Date().timeIntervalSince(parallelStartTime)
+            print("📡 [PERFORMANCE] Parallel requests completed in \(String(format: "%.3f", parallelDuration))s")
+            print("📡 [PERFORMANCE] Received: \(allRecipes.count) recipes, \(menusResult.count) menus")
             
             var list = allRecipes
             
@@ -1083,10 +1179,13 @@ struct PersonalRecipesView: View {
                 }
             }
             
+            let uiUpdateStartTime = Date()
             await MainActor.run { 
                 self.recipes = list
                 self.error = nil
                 self.menus = menusResult
+                // CRITICAL: Always set loading = false after loading completes
+                self.loading = false
                 // Entferne gelöschte Rezepte aus deletedRecipeIds, die nicht mehr in der Liste sind
                 // (d.h. die erfolgreich vom Server gelöscht wurden)
                 self.deletedRecipeIds = self.deletedRecipeIds.filter { recipeId in
@@ -1095,31 +1194,60 @@ struct PersonalRecipesView: View {
                 if let cur = self.selectedMenu, let updated = menusResult.first(where: { $0.id == cur.id }) {
                         self.selectedMenu = updated
                     }
+                let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
+                let totalDuration = Date().timeIntervalSince(networkStartTime)
+                print("⚡ [PERFORMANCE] UI updated in \(String(format: "%.3f", uiUpdateDuration))s")
+                print("✅ [PERFORMANCE] Network load COMPLETED in \(String(format: "%.3f", totalDuration))s")
+                print("✅ [PERFORMANCE] Displaying \(list.count) recipes and \(menusResult.count) menus")
+                Logger.info("[PersonalRecipesView] Loaded \(list.count) recipes and \(menusResult.count) menus", category: .data)
                 }
             
             // OPTIMIZATION: Update cache with fresh data for next time
+            let cacheUpdateStartTime = Date()
             await MainActor.run {
                 app.cachedRecipes = list
                 app.cachedMenus = menusResult
                 app.recipesCacheTimestamp = Date()
+                let cacheUpdateDuration = Date().timeIntervalSince(cacheUpdateStartTime)
+                print("💾 [PERFORMANCE] Cache updated in \(String(format: "%.3f", cacheUpdateDuration))s")
+                print("💾 [PERFORMANCE] Cached \(list.count) recipes and \(menusResult.count) menus")
             }
             
             // Speichere auch auf Disk für Persistenz
+            let diskSaveStartTime = Date()
             app.saveCachedRecipesToDisk(recipes: list, menus: menusResult)
+            let diskSaveDuration = Date().timeIntervalSince(diskSaveStartTime)
+            print("💿 [PERFORMANCE] Disk save completed in \(String(format: "%.3f", diskSaveDuration))s")
             
-            // Lade Menü-Rezept-IDs parallel (nicht sequenziell)
-            if selectedMenu != nil {
-                    await reloadSelectedMenuRecipes()
+            // OPTIMIZATION: Preload Menü-Rezept-IDs für alle Menüs parallel im Hintergrund
+            // Dies macht das Wechseln zwischen Menüs viel schneller
+            Task.detached(priority: .userInitiated) {
+                await self.preloadAllMenuRecipeIds(token: token)
+            }
+            
+            // Lade sofort IDs für das aktuell ausgewählte Menü (falls vorhanden)
+            if let menuId = selectedMenu?.id, menuId != "__liked__" {
+                await loadMenuRecipeIds(menuId: menuId, token: token, updateSelected: true)
             }
         } catch {
+            let errorDuration = Date().timeIntervalSince(networkStartTime)
+            print("❌ [PERFORMANCE] Network load FAILED after \(String(format: "%.3f", errorDuration))s")
+            print("❌ [PERFORMANCE] Error: \(error.localizedDescription)")
             Logger.error("Failed to load personal recipes", error: error, category: .data)
             await MainActor.run {
+                // CRITICAL: Always set loading = false so empty state can be shown
+                self.loading = false
+                
                 if let urlError = error as? URLError {
                     switch urlError.code {
                     case .notConnectedToInternet:
                         self.error = "Keine Internetverbindung"
                     case .timedOut:
-                        self.error = "Zeitüberschreitung"
+                        // Bei Timeout: Zeige leeren State statt Fehler - App bleibt nutzbar
+                        self.recipes = []
+                        self.menus = []
+                        self.error = nil
+                        print("⚠️ [PERFORMANCE] Personal recipes timed out - showing empty state")
                     default:
                         // Bei Fehlern Liste beibehalten, keine Leerstates forcieren
                         self.error = nil
@@ -1132,35 +1260,9 @@ struct PersonalRecipesView: View {
     }
     
     // Helper function to load the first recipe immediately
-    private func loadFirstRecipeFromSupabase(userId: String, token: String) async throws -> Recipe? {
-        var url = Config.supabaseURL
-        url.append(path: "/rest/v1/recipes")
-        url.append(queryItems: [
-            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
-            URLQueryItem(name: "select", value: "*"),
-            URLQueryItem(name: "order", value: "created_at.desc"),
-            URLQueryItem(name: "limit", value: "1")
-        ])
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        let (data, response) = try await SecureURLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
-        
-        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
-        return recipes.first
-    }
-    
     // Helper function to load all recipes from Supabase
     private func loadRecipesFromSupabase(userId: String, token: String) async throws -> [Recipe] {
+        let requestStartTime = Date()
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/recipes")
         url.append(queryItems: [
@@ -1174,15 +1276,30 @@ struct PersonalRecipesView: View {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        // Aggressive timeout - Query sollte schnell sein
+        request.timeoutInterval = 5.0
         
+        let networkStartTime = Date()
         let (data, response) = try await SecureURLSession.shared.data(for: request)
+        let networkDuration = Date().timeIntervalSince(networkStartTime)
+        let dataSizeKB = Double(data.count) / 1024.0
         
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
+            let totalDuration = Date().timeIntervalSince(requestStartTime)
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            print("❌ [PERFORMANCE] Recipes request FAILED after \(String(format: "%.3f", totalDuration))s (HTTP \(statusCode))")
             throw URLError(.badServerResponse)
         }
         
-        return try JSONDecoder().decode([Recipe].self, from: data)
+        let decodeStartTime = Date()
+        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+        let decodeDuration = Date().timeIntervalSince(decodeStartTime)
+        let totalDuration = Date().timeIntervalSince(requestStartTime)
+        
+        print("📡 [PERFORMANCE] Recipes API: Network=\(String(format: "%.3f", networkDuration))s, Decode=\(String(format: "%.3f", decodeDuration))s, Total=\(String(format: "%.3f", totalDuration))s, Size=\(String(format: "%.2f", dataSizeKB))KB, Recipes=\(recipes.count)")
+        
+        return recipes
     }
     
     // Helper function to load liked community recipes
@@ -1589,6 +1706,38 @@ struct CommunityRecipesView: View {
         ]
     }
     
+    // Map localized UI filter names to English filter tags (used in recipes)
+    // Filter tags in recipes are always in English (vegan, vegetarian, etc.)
+    // This ensures filtering works correctly regardless of UI language
+    private func localizedFilterNameToTag(_ localizedName: String) -> String {
+        // Map all possible localized names to English filter tags
+        // The keys are the localized names that appear in the UI
+        let mapping: [String: String] = [
+            // Map localized UI names to English filter tags
+            L.tag_vegan.localized: "vegan",
+            L.tag_vegetarian.localized: "vegetarian",
+            L.tag_pescetarian.localized: "pescetarian",
+            L.tag_glutenFree.localized: "gluten-free",
+            L.tag_lactoseFree.localized: "lactose-free",
+            L.tag_lowCarb.localized: "low-carb",
+            L.tag_highProtein.localized: "high-protein",
+            L.tag_halal.localized: "halal",
+            L.tag_kosher.localized: "kosher",
+            L.tag_budget.localized: "budget",
+            L.tag_spicy.localized: "spicy",
+            L.tag_quick.localized: "quick"
+        ]
+        // Return the English tag name, or fallback to normalized input
+        if let englishTag = mapping[localizedName] {
+            return englishTag
+        }
+        // Fallback: normalize and return (shouldn't happen with proper mapping)
+        func norm(_ s: String) -> String {
+            s.lowercased().replacingOccurrences(of: "[^a-z0-9]", with: "", options: .regularExpression)
+        }
+        return norm(localizedName)
+    }
+    
     private var availableFilters: [String] {
         [
             L.tag_vegan.localized,
@@ -1762,97 +1911,53 @@ struct CommunityRecipesView: View {
         }
         
         // Then apply other filters
+        // Filter tags in recipes are always in English (vegan, vegetarian, gluten-free, etc.)
+        // We need to map the localized UI filter names to the English tag names
         let finalFiltered: [Recipe]
         if selectedFilters.isEmpty {
             finalFiltered = dietaryFiltered
         } else {
-            let wanted = selectedFilters.map { norm($0) }
+            // Convert localized filter names to English filter tags
+            let wantedEnglishTags = selectedFilters.map { localizedFilterNameToTag($0) }
             finalFiltered = dietaryFiltered.filter { r in
-            // Normalize tags, removing _filter: prefix for comparison but keeping original for display
-            // Include both tags and filter_tags (filter_tags are the hidden tags from AI)
-            let allTags = (r.tags ?? []) + (r.filter_tags ?? [])
-            let tagsNorm = Set(allTags.map { (tag: String) -> String in
-                // Remove _filter: prefix if present for filtering comparison
-                let cleaned = tag.hasPrefix("_filter:") ? String(tag.dropFirst(8)) : tag
-                return norm(cleaned)
-            })
-            var matched = false
-            for f in wanted {
-                // Normalize filter name to match tag format
-                let filterNorm = norm(f)
+                // Get all filter tags from recipe (both tags and filter_tags)
+                // Filter tags are stored as "_filter:vegan" or just "vegan" in filter_tags array
+                let allTags = (r.tags ?? []) + (r.filter_tags ?? [])
+                let tagsNorm = Set(allTags.map { (tag: String) -> String in
+                    // Remove _filter: prefix if present for filtering comparison
+                    let cleaned = tag.hasPrefix("_filter:") ? String(tag.dropFirst(8)) : tag
+                    return norm(cleaned)
+                })
                 
-                // Map localized filter names to tag names
-                let filterToTagMap: [String: String] = [
-                    "vegan": "vegan",
-                    "vegetarian": "vegetarian",
-                    "pescetarian": "pescetarian",
-                    "pescatarian": "pescetarian",
-                    "pescetarisch": "pescetarian",
-                    "glutenfrei": "gluten-free",
-                    "glutenfree": "gluten-free",
-                    "laktosefrei": "lactose-free",
-                    "lactosefree": "lactose-free",
-                    "kohlenhydratarm": "low-carb",
-                    "lowcarb": "low-carb",
-                    "proteinreich": "high-protein",
-                    "highprotein": "high-protein",
-                    "halal": "halal",
-                    "kosher": "kosher",
-                    "koscher": "kosher",
-                    "günstig": "budget",
-                    "budget": "budget",
-                    "scharf": "spicy",
-                    "spicy": "spicy",
-                    "schnell": "quick",
-                    "quick": "quick"
-                ]
-                
-                let tagName = filterToTagMap[filterNorm] ?? filterNorm
-                
-                // Check nutrition-based filters
-                if tagName == "high-protein" {
-                    if let nutrition = r.nutrition, (nutrition.protein_g ?? 0) >= 30 { matched = true; break }
-                    if tagsNorm.contains("high-protein") || tagsNorm.contains("highprotein") { matched = true; break }
-                } else if tagName == "low-carb" {
-                    if let nutrition = r.nutrition, let c = nutrition.carbs_g, c < lowCarbThreshold { matched = true; break }
-                    if tagsNorm.contains("low-carb") || tagsNorm.contains("lowcarb") { matched = true; break }
-                } else if tagName == "quick" {
-                    if let mins = parseMinutes(r.cooking_time), mins < quickThresholdMinutes { matched = true; break }
-                    if tagsNorm.contains("quick") || tagsNorm.contains("schnell") { matched = true; break }
-                } else if tagName == "vegetarian" {
-                    // Only show recipes with vegetarian tag (KI should add this tag to all vegetarian recipes)
-                    if tagsNorm.contains("vegetarian") || tagsNorm.contains("vegetarisch") {
+                // Check if recipe matches any of the selected filters
+                var matched = false
+                for englishTag in wantedEnglishTags {
+                    let tagNorm = norm(englishTag)
+                    
+                    // Direct tag match (most common case)
+                    if tagsNorm.contains(tagNorm) {
                         matched = true
                         break
                     }
-                } else if tagName == "vegan" {
-                    // Only show recipes with vegan tag (KI should add this tag to all vegan recipes)
-                    // Check both normalized tag name and filter name to handle variations
-                    // The norm() function already normalizes tags (removes _filter: prefix and normalizes), so we check both
-                    let hasVeganTag = tagsNorm.contains("vegan") || tagsNorm.contains(filterNorm)
-                    if hasVeganTag {
-                        matched = true
-                        break
-                } else {
-                        // Debug: Log if recipe has tags but not vegan tag
-                        if let tags = r.tags, !tags.isEmpty {
-                            Logger.debug("Recipe '\(r.title)' has tags: \(tags.joined(separator: ", ")), normalized: \(tagsNorm), but no vegan tag", category: .ui)
+                    
+                    // Special handling for nutrition-based filters (fallback if tag missing)
+                    if englishTag == "high-protein" {
+                        if let nutrition = r.nutrition, (nutrition.protein_g ?? 0) >= 30 {
+                            matched = true
+                            break
+                        }
+                    } else if englishTag == "low-carb" {
+                        if let nutrition = r.nutrition, let c = nutrition.carbs_g, c < lowCarbThreshold {
+                            matched = true
+                            break
+                        }
+                    } else if englishTag == "quick" {
+                        if let mins = parseMinutes(r.cooking_time), mins < quickThresholdMinutes {
+                            matched = true
+                            break
                         }
                     }
-                } else {
-                    // Check if tag matches (with variations)
-                    if tagsNorm.contains(tagName) || 
-                       tagsNorm.contains(filterNorm) ||
-                       (tagName == "gluten-free" && tagsNorm.contains("glutenfree")) ||
-                       (tagName == "lactose-free" && tagsNorm.contains("lactosefree")) ||
-                       (tagName == "low-carb" && tagsNorm.contains("lowcarb")) ||
-                       (tagName == "high-protein" && tagsNorm.contains("highprotein")) ||
-                       (tagName == "pescetarian" && (tagsNorm.contains("pescetarian") || tagsNorm.contains("pescatarian"))) {
-                        matched = true
-                        break
-                    }
                 }
-            }
                 return matched
             }
         }
@@ -1886,14 +1991,19 @@ struct CommunityRecipesView: View {
                         Task.detached(priority: .utility) {
                             let now = Date()
                             
+                            // Read main actor isolated properties
+                            let (currentLastPreloadTime, currentFilteredRecipes, currentLastLoadMoreTime, currentHasMore, currentLoadingMore, currentQuery, currentSelectedFilters, currentSelectedLanguages) = await MainActor.run {
+                                (lastPreloadTime, filteredRecipes, lastLoadMoreTime, hasMore, loadingMore, query, selectedFilters, selectedLanguages)
+                            }
+                            
                             // Throttle preloading: Only preload every 200ms to avoid lag
-                            if now.timeIntervalSince(lastPreloadTime) > 0.2 {
+                            if now.timeIntervalSince(currentLastPreloadTime) > 0.2 {
                                 await MainActor.run {
                                     lastPreloadTime = now
                                 }
                                 
                                 // Preload images for next 3 recipes (reduced from 5)
-                                let nextRecipes = filteredRecipes.suffix(from: min(index + 1, filteredRecipes.count)).prefix(3)
+                                let nextRecipes = currentFilteredRecipes.suffix(from: min(index + 1, currentFilteredRecipes.count)).prefix(3)
                                 let nextImageUrls = nextRecipes.compactMap { r -> URL? in
                                     guard let imageUrl = r.image_url else { return nil }
                                     return URL(string: imageUrl)
@@ -1904,8 +2014,8 @@ struct CommunityRecipesView: View {
                             }
                             
                             // Throttle load more: Only check every 500ms
-                            let timeSinceLastLoad = now.timeIntervalSince(lastLoadMoreTime)
-                            if timeSinceLastLoad > 0.5 && index >= filteredRecipes.count - 10 && hasMore && !loadingMore && query.isEmpty && selectedFilters.isEmpty && selectedLanguages.isEmpty {
+                            let timeSinceLastLoad = now.timeIntervalSince(currentLastLoadMoreTime)
+                            if timeSinceLastLoad > 0.5 && index >= currentFilteredRecipes.count - 10 && currentHasMore && !currentLoadingMore && currentQuery.isEmpty && currentSelectedFilters.isEmpty && currentSelectedLanguages.isEmpty {
                                 await MainActor.run {
                                     lastLoadMoreTime = now
                                 }
@@ -2098,17 +2208,27 @@ struct CommunityRecipesView: View {
             }
         }
         .navigationBarHidden(true)
-        .task { await loadCommunityRecipes() }
+        .onAppear {
+            let appearTime = Date()
+            print("📱 [PERFORMANCE] CommunityRecipesView APPEARED at \(appearTime)")
+            print("📱 [PERFORMANCE] Current state: loading=\(loading), recipes=\(recipes.count), filtered=\(filteredRecipes.count)")
+        }
+        .task { 
+            let taskStartTime = Date()
+            print("📱 [PERFORMANCE] CommunityRecipesView .task STARTED at \(taskStartTime)")
+            await loadCommunityRecipes()
+            let taskDuration = Date().timeIntervalSince(taskStartTime)
+            print("✅ [PERFORMANCE] CommunityRecipesView .task COMPLETED in \(String(format: "%.3f", taskDuration))s")
+        }
         .background(
             // Hidden NavigationLink for smooth navigation (outside list for better performance)
             Group {
                 if let recipeId = navigationRecipeId, let recipe = filteredRecipes.first(where: { $0.id == recipeId }) {
                     NavigationLink(
                         destination: RecipeDetailView(recipe: recipe),
-                        tag: recipeId,
-                        selection: Binding(
-                            get: { navigationRecipeId },
-                            set: { navigationRecipeId = $0 }
+                        isActive: Binding(
+                            get: { navigationRecipeId == recipeId },
+                            set: { if !$0 { navigationRecipeId = nil } }
                         )
                     ) {
                         EmptyView()
@@ -2140,13 +2260,20 @@ struct CommunityRecipesView: View {
     }
     
     func loadCommunityRecipes(forceRefresh: Bool = false) async {
+        let tabOpenTime = Date()
+        print("🌍 [PERFORMANCE] ========================================")
+        print("🌍 [PERFORMANCE] 'Community Library' Tab OPENED at \(tabOpenTime)")
+        print("🌍 [PERFORMANCE] forceRefresh: \(forceRefresh)")
+        
         // If forceRefresh is true (e.g., from pull-to-refresh), cancel existing task
         // Otherwise, if already loading, wait for it to finish to prevent race conditions
         if forceRefresh {
             loadTask?.cancel()
+            print("🔄 [PERFORMANCE] Force refresh - cancelled existing task")
         } else if let existingTask = loadTask, !existingTask.isCancelled {
             // Wait for existing task to complete instead of cancelling
             // This prevents race conditions where multiple calls cancel each other
+            print("⏳ [PERFORMANCE] Waiting for existing load task to complete...")
             await existingTask.value
             return
         }
@@ -2156,7 +2283,49 @@ struct CommunityRecipesView: View {
                 self.error = "Nicht angemeldet"
                 self.loading = false
             }
+            print("❌ [PERFORMANCE] Not authenticated")
             return
+        }
+        
+        // OPTIMIZATION: Wenn Cache vorhanden ist, zeige Cache sofort (auch wenn alt)
+        // Background refresh lädt dann im Hintergrund neue Daten
+        if !forceRefresh && !app.cachedCommunityRecipes.isEmpty {
+            let cacheCheckTime = Date()
+            let cacheAge = app.communityRecipesCacheTimestamp.map { Date().timeIntervalSince($0) } ?? 0
+            print("💾 [PERFORMANCE] Cache found: \(app.cachedCommunityRecipes.count) recipes")
+            print("💾 [PERFORMANCE] Cache age: \(String(format: "%.1f", cacheAge))s")
+            
+            let uiUpdateStartTime = Date()
+            await MainActor.run {
+                // Use first pageSize recipes from cache for instant display
+                let cacheRecipes = Array(app.cachedCommunityRecipes.prefix(pageSize))
+                self.recipes = cacheRecipes
+                
+                let filterStartTime = Date()
+                self.filteredRecipes = self.applyFilters(to: cacheRecipes)
+                let filterDuration = Date().timeIntervalSince(filterStartTime)
+                
+                self.loading = false // Seite sofort anzeigen!
+                self.currentPage = 1 // Nächste Seite ist 1
+                self.hasMore = app.cachedCommunityRecipes.count >= pageSize
+                
+                let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
+                let totalDuration = Date().timeIntervalSince(tabOpenTime)
+                print("⚡ [PERFORMANCE] UI updated from cache in \(String(format: "%.3f", uiUpdateDuration))s")
+                print("⚡ [PERFORMANCE] Filtering took \(String(format: "%.3f", filterDuration))s")
+                print("⚡ [PERFORMANCE] Total time to display: \(String(format: "%.3f", totalDuration))s")
+                print("✅ [PERFORMANCE] Recipes displayed INSTANTLY from cache (\(cacheRecipes.count) recipes)")
+                Logger.info("[CommunityRecipesView] Using cache (\(cacheRecipes.count) recipes) - instant display", category: .data)
+            }
+            
+            // Lade im Hintergrund aktualisiert
+            print("🔄 [PERFORMANCE] Starting background refresh...")
+            Task.detached(priority: .utility) {
+                await self.performLoadCommunityRecipes(token: token)
+            }
+            return
+        } else {
+            print("⚠️ [PERFORMANCE] No cache available - loading from network")
         }
         
         // Reset pagination when loading fresh
@@ -2165,6 +2334,7 @@ struct CommunityRecipesView: View {
             currentPage = 0
             hasMore = true
             recipes = []
+            print("⏳ [PERFORMANCE] Loading state set to true - showing loading indicator")
         }
         
         // Create new load task
@@ -2177,7 +2347,7 @@ struct CommunityRecipesView: View {
     private func performLoadCommunityRecipes(token: String) async {
         // PERFORMANCE DEBUGGING: Start-Zeitpunkt
         let totalStartTime = Date()
-        Logger.info("[CommunityRecipesView] ⏱️ Starting to load community recipes", category: .data)
+        print("🌍 [PERFORMANCE] performLoadCommunityRecipes STARTED at \(totalStartTime)")
         
         do {
             // Check if task was cancelled
@@ -2186,18 +2356,18 @@ struct CommunityRecipesView: View {
             // PERFORMANCE OPTIMIZATION: Lade sofort die erste Seite (15 Rezepte) für schnelle Anzeige
             // Mit optimierten Datenbank-Indizes sollte dies <2 Sekunden dauern
             let networkStartTime = Date()
-            Logger.info("[CommunityRecipesView] ⏱️ Starting network request...", category: .data)
+            print("📡 [PERFORMANCE] Loading first page (pageSize: \(pageSize))...")
             
             let firstPage = try await loadCommunityRecipesPage(page: 0, pageSize: pageSize, token: token)
             
             let networkDuration = Date().timeIntervalSince(networkStartTime)
-            Logger.info("[CommunityRecipesView] ⏱️ Network request completed in \(String(format: "%.3f", networkDuration))s (received \(firstPage.count) recipes)", category: .data)
+            print("📡 [PERFORMANCE] First page loaded in \(String(format: "%.3f", networkDuration))s (\(firstPage.count) recipes)")
             
             // Check again after load
             try Task.checkCancellation()
             
             let uiUpdateStartTime = Date()
-            Logger.info("[CommunityRecipesView] ⏱️ Starting UI update...", category: .data)
+            print("⚡ [PERFORMANCE] Starting UI update...")
             
             await MainActor.run {
                 if !firstPage.isEmpty {
@@ -2208,22 +2378,50 @@ struct CommunityRecipesView: View {
                     // This must happen BEFORE setting loading = false to ensure UI updates correctly
                     self.filteredRecipes = self.applyFilters(to: firstPage)
                     let filterDuration = Date().timeIntervalSince(filterStartTime)
-                    Logger.info("[CommunityRecipesView] ⏱️ Filtering completed in \(String(format: "%.3f", filterDuration))s (\(firstPage.count) -> \(self.filteredRecipes.count))", category: .data)
                     
                     self.loading = false // Seite sofort anzeigen!
                     self.currentPage = 1 // Nächste Seite ist 1
                     self.hasMore = firstPage.count >= pageSize
                     
                     let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
-                    Logger.info("[CommunityRecipesView] ⏱️ UI update completed in \(String(format: "%.3f", uiUpdateDuration))s", category: .data)
+                    let totalDuration = Date().timeIntervalSince(totalStartTime)
+                    print("⚡ [PERFORMANCE] UI update completed in \(String(format: "%.3f", uiUpdateDuration))s")
+                    print("⚡ [PERFORMANCE] Filtering took \(String(format: "%.3f", filterDuration))s (\(firstPage.count) -> \(self.filteredRecipes.count))")
+                    print("✅ [PERFORMANCE] Displaying \(firstPage.count) recipes (filtered: \(self.filteredRecipes.count))")
+                    print("✅ [PERFORMANCE] Total load time: \(String(format: "%.3f", totalDuration))s")
+                    print("✅ [PERFORMANCE] Breakdown: Network=\(String(format: "%.3f", networkDuration))s, Filter=\(String(format: "%.3f", filterDuration))s, UI=\(String(format: "%.3f", uiUpdateDuration))s")
                     Logger.info("[CommunityRecipesView] ✅ Displaying \(firstPage.count) recipes immediately (filtered: \(self.filteredRecipes.count))", category: .data)
                 } else {
                     self.loading = false
                     self.filteredRecipes = []
                     let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
-                    Logger.info("[CommunityRecipesView] ⏱️ UI update completed in \(String(format: "%.3f", uiUpdateDuration))s", category: .data)
+                    let totalDuration = Date().timeIntervalSince(totalStartTime)
+                    print("⚠️ [PERFORMANCE] No recipes found - displaying empty state")
+                    print("✅ [PERFORMANCE] Total load time: \(String(format: "%.3f", totalDuration))s")
                     Logger.info("[CommunityRecipesView] No recipes found, displaying empty state", category: .data)
                 }
+            }
+            
+            // OPTIMIZATION: Update cache with loaded recipes for next time
+            // This ensures future tab switches are instant
+            let cacheUpdateStartTime = Date()
+            await MainActor.run {
+                // Merge with existing cache (avoid duplicates)
+                var existingIds = Set(app.cachedCommunityRecipes.map { $0.id })
+                var updatedCache = app.cachedCommunityRecipes
+                var newRecipesAdded = 0
+                for recipe in firstPage {
+                    if !existingIds.contains(recipe.id) {
+                        updatedCache.append(recipe)
+                        existingIds.insert(recipe.id)
+                        newRecipesAdded += 1
+                    }
+                }
+                app.cachedCommunityRecipes = updatedCache
+                app.communityRecipesCacheTimestamp = Date()
+                let cacheUpdateDuration = Date().timeIntervalSince(cacheUpdateStartTime)
+                print("💾 [PERFORMANCE] Cache updated in \(String(format: "%.3f", cacheUpdateDuration))s")
+                print("💾 [PERFORMANCE] Cache now contains \(updatedCache.count) recipes (+\(newRecipesAdded) new)")
             }
             
             let totalDuration = Date().timeIntervalSince(totalStartTime)
@@ -2261,11 +2459,15 @@ struct CommunityRecipesView: View {
             Logger.info("[CommunityRecipesView] Load task cancelled", category: .data)
             return
         } catch let error as URLError where error.code == .timedOut {
-            // Timeout error - möglicherweise fehlende Datenbank-Indizes oder langsame Verbindung
+            // Timeout error - zeige leeren State statt Fehler, damit App nutzbar bleibt
             Logger.error("Failed to load community recipes: Timeout (check database indexes and connection)", error: error, category: .data)
             await MainActor.run {
-                self.error = "Die Community-Rezepte laden zu langsam. Bitte führe das Performance-Optimierungs-Script aus (optimize_community_recipes_performance.sql)"
+                // Zeige leeren State statt Fehler - App bleibt nutzbar
+                self.recipes = []
+                self.filteredRecipes = []
                 self.loading = false
+                self.error = nil // Kein Fehler, nur leere Liste
+                print("⚠️ [PERFORMANCE] Community recipes timed out - showing empty state")
             }
         } catch {
             Logger.error("Failed to load community recipes", error: error, category: .data)
@@ -2309,6 +2511,7 @@ struct CommunityRecipesView: View {
               !loadingMore else { return }
         
         let loadMoreStartTime = Date()
+        print("📄 [PERFORMANCE] Load More STARTED (page \(currentPage))")
         Logger.info("[CommunityRecipesView] ⏱️ Starting to load more recipes (page \(currentPage))", category: .data)
         
         await MainActor.run { loadingMore = true }
@@ -2316,11 +2519,13 @@ struct CommunityRecipesView: View {
         do {
             // OPTIMIZATION: Lade 2 Seiten parallel für schnellere Ladezeiten (100 Rezepte auf einmal)
             let parallelStartTime = Date()
+            print("📡 [PERFORMANCE] Loading pages \(currentPage) and \(currentPage + 1) in parallel...")
             async let page1Task = loadCommunityRecipesPage(page: currentPage, pageSize: pageSize, token: token)
             async let page2Task = loadCommunityRecipesPage(page: currentPage + 1, pageSize: pageSize, token: token)
             
             let (page1Recipes, page2Recipes) = try await (page1Task, page2Task)
             let parallelDuration = Date().timeIntervalSince(parallelStartTime)
+            print("📡 [PERFORMANCE] Parallel pages loaded in \(String(format: "%.3f", parallelDuration))s (page1: \(page1Recipes.count), page2: \(page2Recipes.count))")
             Logger.info("[CommunityRecipesView] ⏱️ Parallel page loading completed in \(String(format: "%.3f", parallelDuration))s (page1: \(page1Recipes.count), page2: \(page2Recipes.count))", category: .data)
             
             let allNewRecipes = page1Recipes + page2Recipes
@@ -2342,6 +2547,8 @@ struct CommunityRecipesView: View {
                 updateFilteredRecipes()
                 
                 let loadMoreDuration = Date().timeIntervalSince(loadMoreStartTime)
+                print("✅ [PERFORMANCE] Load More COMPLETED in \(String(format: "%.3f", loadMoreDuration))s")
+                print("✅ [PERFORMANCE] Added \(uniqueNewRecipes.count) new recipes (total: \(recipes.count), filtered: \(filteredRecipes.count))")
                 Logger.info("[CommunityRecipesView] ⏱️ Load more completed in \(String(format: "%.3f", loadMoreDuration))s", category: .data)
                 Logger.info("[CommunityRecipesView] Loaded pages \(currentPage - 1)-\(currentPage) with \(allNewRecipes.count) recipes. Total: \(recipes.count)", category: .data)
                 
@@ -2363,6 +2570,8 @@ struct CommunityRecipesView: View {
                 }
             }
         } catch {
+            let errorDuration = Date().timeIntervalSince(loadMoreStartTime)
+            print("❌ [PERFORMANCE] Load More FAILED after \(String(format: "%.3f", errorDuration))s: \(error.localizedDescription)")
             Logger.error("Failed to load more community recipes", error: error, category: .data)
             await MainActor.run {
                 loadingMore = false
@@ -2402,9 +2611,6 @@ struct CommunityRecipesView: View {
             throw URLError(.badURL)
         }
         
-        Logger.info("[CommunityRecipesView] ⏱️ Request URL: \(finalURL.absoluteString)", category: .data)
-        Logger.info("[CommunityRecipesView] ⏱️ Select fields: \(selectFields)", category: .data)
-        
         var request = URLRequest(url: finalURL)
         request.httpMethod = "GET"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -2415,22 +2621,22 @@ struct CommunityRecipesView: View {
         // Ohne diesen Header könnte Supabase alle Felder zurückgeben (auch ingredients, instructions, etc.)
         request.addValue("return=representation", forHTTPHeaderField: "Prefer")
         
-        // PERFORMANCE: Timeout reduziert, da mit optimierten Indizes die Query schnell sein sollte
-        // Mit optimierten Datenbank-Indizes sollte die Query <2 Sekunden dauern
-        request.timeoutInterval = 10.0 // Reduziert von 60s auf 10s (mit Indizes sollte dies ausreichen)
+        // PERFORMANCE: Aggressive timeout - Query sollte <2 Sekunden dauern mit Indizes
+        // Falls Timeout: App zeigt leeren Cache statt zu hängen
+        request.timeoutInterval = 5.0 // Aggressives Timeout für schnelle Fehlerbehandlung
         
         // PERFORMANCE: Cache-Control Header für bessere Performance bei wiederholten Requests
         // Browser/Client kann Antworten cachen, aber wir wollen keine stale Daten
         request.cachePolicy = .reloadIgnoringLocalCacheData // Immer frische Daten laden
         
         let networkStartTime = Date()
-        Logger.info("[CommunityRecipesView] ⏱️ Starting network request (page \(page), size \(pageSize))...", category: .data)
+        print("📡 [PERFORMANCE] Community page \(page) request STARTED (offset: \(offset), limit: \(pageSize))")
         
         let (data, response) = try await SecureURLSession.shared.data(for: request)
         
         let networkDuration = Date().timeIntervalSince(networkStartTime)
         let dataSizeKB = Double(data.count) / 1024.0
-        Logger.info("[CommunityRecipesView] ⏱️ Network response received in \(String(format: "%.3f", networkDuration))s (size: \(String(format: "%.2f", dataSizeKB)) KB)", category: .data)
+        print("📡 [PERFORMANCE] Community page \(page) response received in \(String(format: "%.3f", networkDuration))s (size: \(String(format: "%.2f", dataSizeKB))KB)")
         
         // DEBUGGING: Prüfe, ob die Response wirklich nur die angeforderten Felder enthält
         if dataSizeKB > 100 { // Wenn größer als 100 KB, ist etwas falsch

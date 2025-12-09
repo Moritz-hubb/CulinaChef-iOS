@@ -504,7 +504,7 @@ final class SubscriptionManager {
     func openManageSubscriptions() async {
         #if canImport(UIKit)
         if #available(iOS 15.0, *) {
-            let scenes = await UIApplication.shared.connectedScenes
+            let scenes = UIApplication.shared.connectedScenes
             guard let scene = scenes.compactMap({ $0 as? UIWindowScene }).first else { return }
             try? await AppStore.showManageSubscriptions(in: scene)
         } else {

@@ -1129,9 +1129,9 @@ private struct ProfileSettingsSheet: View {
                     [
                         "id": recipe.id,
                         "title": recipe.title,
-                        "ingredients": recipe.ingredients,
-                        "instructions": recipe.instructions,
-                        "nutrition": recipe.nutrition,
+                        "ingredients": recipe.ingredients as Any,
+                        "instructions": recipe.instructions as Any,
+                        "nutrition": recipe.nutrition as Any,
                         "created_at": recipe.created_at ?? "unknown"
                     ]
                 }

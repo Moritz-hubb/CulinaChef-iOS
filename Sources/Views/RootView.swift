@@ -237,6 +237,8 @@ struct MainTabView: View {
     @State private var showNotifications = false
     @State private var showDeepLinkRecipe = false
     @State private var deepLinkRecipeToShow: Recipe? = nil
+    @State private var animationTrigger: UUID = UUID()
+    @State private var previousTab: Int = 0
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -244,19 +246,23 @@ struct MainTabView: View {
                 ChatView()
                     .tabItem { EmptyView() }
                     .tag(0)
-                    .id(localizationManager.currentLanguage) // Force re-render on language change
+                    .id("\(localizationManager.currentLanguage)_0_\(animationTrigger)")
+                    .modifier(PageTransitionModifier(tabIndex: 0, selectedTab: app.selectedTab))
                 RecipeCreatorView()
                     .tabItem { EmptyView() }
                     .tag(1)
-                    .id(localizationManager.currentLanguage) // Force re-render on language change
+                    .id("\(localizationManager.currentLanguage)_1_\(animationTrigger)")
+                    .modifier(PageTransitionModifier(tabIndex: 1, selectedTab: app.selectedTab))
                 RecipesView()
                     .tabItem { EmptyView() }
                     .tag(2)
-                    .id(localizationManager.currentLanguage) // Force re-render on language change
+                    .id("\(localizationManager.currentLanguage)_2_\(animationTrigger)")
+                    .modifier(PageTransitionModifier(tabIndex: 2, selectedTab: app.selectedTab))
                 ShoppingListView()
                     .tabItem { EmptyView() }
                     .tag(3)
-                    .id(localizationManager.currentLanguage) // Force re-render on language change
+                    .id("\(localizationManager.currentLanguage)_3_\(animationTrigger)")
+                    .modifier(PageTransitionModifier(tabIndex: 3, selectedTab: app.selectedTab))
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
         }
@@ -356,6 +362,54 @@ LinearGradient(
                 }
             }
         }
+        .onChange(of: app.selectedTab) { oldValue, newValue in
+            // Trigger rebuild when tab changes
+            if oldValue != newValue {
+                previousTab = oldValue
+                animationTrigger = UUID()
+            }
+        }
+        .onAppear {
+            previousTab = app.selectedTab
+        }
+    }
+}
+
+// MARK: - Page Transition Modifier
+struct PageTransitionModifier: ViewModifier {
+    let tabIndex: Int
+    let selectedTab: Int
+    @State private var isVisible = false
+    
+    var isActive: Bool {
+        selectedTab == tabIndex
+    }
+    
+    func body(content: Content) -> some View {
+        content
+            .opacity(isVisible ? 1 : 0)
+            .scaleEffect(isVisible ? 1 : 0.98)
+            .offset(y: isVisible ? 0 : 10)
+            .onChange(of: selectedTab) { oldValue, newValue in
+                if newValue == tabIndex && oldValue != tabIndex {
+                    // Tab just became active - trigger fast animation
+                    isVisible = false
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        isVisible = true
+                    }
+                } else if newValue != tabIndex {
+                    // Tab is no longer active
+                    isVisible = false
+                }
+            }
+            .onAppear {
+                if isActive {
+                    isVisible = false
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        isVisible = true
+                    }
+                }
+            }
     }
 }
 

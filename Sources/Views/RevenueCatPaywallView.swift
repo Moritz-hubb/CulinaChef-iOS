@@ -302,7 +302,7 @@ struct RevenueCatPaywallView: View {
             try await revenueCat.restorePurchases()
             
             if revenueCat.isSubscribed {
-                await app.loadSubscriptionStatus()
+                app.loadSubscriptionStatus()
                 await MainActor.run {
                     dismiss()
                 }

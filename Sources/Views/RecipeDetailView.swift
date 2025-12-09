@@ -331,15 +331,13 @@ struct RecipeDetailView: View {
                     }
                     
                     ForEach(displayRecipe.ingredients ?? [], id: \.self) { ing in
+                        // Remove ingredient_qty marker before displaying
+                        let cleanedIngredient = ing.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
                         HStack {
-                            // Remove ingredient_qty marker before displaying
-                            let cleanedIngredient = ing.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
                             Text(parseIngredientName(cleanedIngredient))
                                 .font(.body)
                                 .foregroundStyle(.white)
                             Spacer()
-                            // Remove ingredient_qty marker before parsing quantity
-                            let cleanedIngredient = ing.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
                             if let qty = parseIngredientQuantity(cleanedIngredient) {
                                 Text(scaleQuantity(qty, servings: servings))
                                     .font(.body)

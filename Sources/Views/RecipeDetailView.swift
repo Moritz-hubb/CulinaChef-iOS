@@ -332,11 +332,15 @@ struct RecipeDetailView: View {
                     
                     ForEach(displayRecipe.ingredients ?? [], id: \.self) { ing in
                         HStack {
-                            Text(parseIngredientName(ing))
+                            // Remove ingredient_qty marker before displaying
+                            let cleanedIngredient = ing.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
+                            Text(parseIngredientName(cleanedIngredient))
                                 .font(.body)
                                 .foregroundStyle(.white)
                             Spacer()
-                            if let qty = parseIngredientQuantity(ing) {
+                            // Remove ingredient_qty marker before parsing quantity
+                            let cleanedIngredient = ing.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
+                            if let qty = parseIngredientQuantity(cleanedIngredient) {
                                 Text(scaleQuantity(qty, servings: servings))
                                     .font(.body)
                                     .foregroundStyle(.white.opacity(0.8))
@@ -1032,20 +1036,23 @@ struct RecipeDetailView: View {
     
     // Parse ingredient name (remove quantity from string)
     private func parseIngredientName(_ ingredient: String) -> String {
+        // First, remove the invisible ingredient_qty marker
+        var cleaned = ingredient.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
+        
         // Pattern: "amount unit name" or "amount name"
         // Examples: "200g Mehl", "2 Eier", "1 TL Salz"
         let pattern = #"^[\d\/.,\s-]+(?:g|kg|ml|l|tl|el|teel\u00f6ffel|essl\u00f6ffel|tasse|tassen|st\u00fcck|prise|prisen)?\s*"#
         if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
-            let range = NSRange(location: 0, length: ingredient.utf16.count)
-            let cleaned = regex.stringByReplacingMatches(in: ingredient, options: [], range: range, withTemplate: "")
-            return cleaned.trimmingCharacters(in: .whitespaces)
+            let range = NSRange(location: 0, length: cleaned.utf16.count)
+            cleaned = regex.stringByReplacingMatches(in: cleaned, options: [], range: range, withTemplate: "")
         }
-        return ingredient
+        return cleaned.trimmingCharacters(in: .whitespaces)
     }
     
     // Parse ingredient quantity
     private func parseIngredientQuantity(_ ingredient: String) -> String? {
-        let trimmed = ingredient.trimmingCharacters(in: .whitespaces)
+        // First, remove the invisible ingredient_qty marker
+        var trimmed = ingredient.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "").trimmingCharacters(in: .whitespaces)
         
         // Extended pattern with more units and variations
         let patterns = [
@@ -1283,7 +1290,9 @@ struct RecipeDetailView: View {
         // Ingredients
         md += "## Zutaten\n\n"
         for ingredient in displayRecipe.ingredients ?? [] {
-            md += "- \(ingredient)\n"
+            // Remove invisible ingredient_qty marker before displaying
+            let cleanedIngredient = ingredient.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
+            md += "- \(cleanedIngredient)\n"
         }
         md += "\n"
         

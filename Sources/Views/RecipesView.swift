@@ -2278,34 +2278,14 @@ struct CommunityRecipesView: View {
             return
         }
         
-        // OPTIMIZATION: Wenn Cache vorhanden ist (auch wenn leer), zeige Cache sofort
-        // Background refresh lädt dann im Hintergrund neue Daten
-        // Cache-Timestamp prüfen: Wenn Cache vorhanden ist (auch leer), verwenden wir ihn
-        if !forceRefresh && app.communityRecipesCacheTimestamp != nil {
+        // OPTIMIZATION: Wenn Cache vorhanden ist UND Rezepte enthält, zeige Cache sofort
+        // Wenn Cache leer ist, versuche trotzdem zu laden (kann temporäres Problem sein)
+        if !forceRefresh && !app.cachedCommunityRecipes.isEmpty {
             let cacheCheckTime = Date()
             let cacheAge = app.communityRecipesCacheTimestamp.map { Date().timeIntervalSince($0) } ?? 0
             let cacheRecipes = app.cachedCommunityRecipes
             print("💾 [PERFORMANCE] Cache found: \(cacheRecipes.count) recipes")
             print("💾 [PERFORMANCE] Cache age: \(String(format: "%.1f", cacheAge))s")
-            
-            // If cache is recent (< 5 minutes) and empty, don't retry immediately
-            // This prevents repeated failed requests
-            if cacheRecipes.isEmpty && cacheAge < 300 {
-                print("⚠️ [PERFORMANCE] Cache is empty and recent - skipping immediate retry to prevent repeated failures")
-                await MainActor.run {
-                    self.recipes = []
-                    self.filteredRecipes = []
-                    self.loading = false
-                    self.currentPage = 0
-                    self.hasMore = false
-                }
-                // Retry in background after a delay
-                Task.detached(priority: .utility) {
-                    try? await Task.sleep(nanoseconds: 30_000_000_000) // Wait 30 seconds
-                    await self.performLoadCommunityRecipes(token: token)
-                }
-                return
-            }
             
             let uiUpdateStartTime = Date()
             await MainActor.run {
@@ -2341,7 +2321,7 @@ struct CommunityRecipesView: View {
             }
             return
         } else {
-            print("⚠️ [PERFORMANCE] No cache available - loading from network")
+            print("⚠️ [PERFORMANCE] No cache available or cache is empty - loading from network")
         }
         
         // Reset pagination when loading fresh

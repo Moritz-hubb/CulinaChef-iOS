@@ -1711,21 +1711,21 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             print("🔄 [PERFORMANCE] Processing (dedupe + sort) completed in \(String(format: "%.3f", processingDuration))s")
             print("🔄 [PERFORMANCE] Unique recipes: \(uniqueRecipes.count) (removed \(allRecipes.count - uniqueRecipes.count) duplicates)")
             
-            // OPTIMIZATION: Always cache, even if empty or failed
-            // This prevents repeated failed requests when user switches tabs
+            // OPTIMIZATION: Cache only if we got recipes
+            // Don't cache empty results - allows retry on next tab switch
             let cacheStartTime = Date()
             await MainActor.run {
-                // Always update cache, even if empty - prevents repeated failed requests
-                self.cachedCommunityRecipes = uniqueRecipes
-                self.communityRecipesCacheTimestamp = Date()
-                let cacheDuration = Date().timeIntervalSince(cacheStartTime)
-                print("💾 [PERFORMANCE] Community cache updated in \(String(format: "%.3f", cacheDuration))s")
+                // Only cache if we got recipes - empty cache means no cache, allows retry
                 if !uniqueRecipes.isEmpty {
+                    self.cachedCommunityRecipes = uniqueRecipes
+                    self.communityRecipesCacheTimestamp = Date()
+                    let cacheDuration = Date().timeIntervalSince(cacheStartTime)
+                    print("💾 [PERFORMANCE] Community cache updated in \(String(format: "%.3f", cacheDuration))s")
                     print("💾 [PERFORMANCE] Cached \(uniqueRecipes.count) community recipes (from \(successfulPages)/\(pages) pages)")
                     Logger.info("[AppState] Preloaded \(uniqueRecipes.count) community recipes to cache (from \(successfulPages)/\(pages) pages)", category: .data)
                 } else {
-                    print("💾 [PERFORMANCE] Cached empty result (from \(successfulPages)/\(pages) pages) - prevents repeated failed requests")
-                    Logger.info("[AppState] Cached empty community recipes (from \(successfulPages)/\(pages) pages) to prevent repeated requests", category: .data)
+                    print("⚠️ [PERFORMANCE] No recipes to cache (from \(successfulPages)/\(pages) pages) - will retry on next tab switch")
+                    // Don't set cache if empty - allows retry
                 }
             }
             

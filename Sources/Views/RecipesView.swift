@@ -2278,41 +2278,66 @@ struct CommunityRecipesView: View {
             return
         }
         
-        // OPTIMIZATION: Wenn Cache vorhanden ist, zeige Cache sofort (auch wenn alt)
+        // OPTIMIZATION: Wenn Cache vorhanden ist (auch wenn leer), zeige Cache sofort
         // Background refresh lädt dann im Hintergrund neue Daten
-        if !forceRefresh && !app.cachedCommunityRecipes.isEmpty {
+        // Cache-Timestamp prüfen: Wenn Cache vorhanden ist (auch leer), verwenden wir ihn
+        if !forceRefresh && app.communityRecipesCacheTimestamp != nil {
             let cacheCheckTime = Date()
             let cacheAge = app.communityRecipesCacheTimestamp.map { Date().timeIntervalSince($0) } ?? 0
-            print("💾 [PERFORMANCE] Cache found: \(app.cachedCommunityRecipes.count) recipes")
+            let cacheRecipes = app.cachedCommunityRecipes
+            print("💾 [PERFORMANCE] Cache found: \(cacheRecipes.count) recipes")
             print("💾 [PERFORMANCE] Cache age: \(String(format: "%.1f", cacheAge))s")
+            
+            // If cache is recent (< 5 minutes) and empty, don't retry immediately
+            // This prevents repeated failed requests
+            if cacheRecipes.isEmpty && cacheAge < 300 {
+                print("⚠️ [PERFORMANCE] Cache is empty and recent - skipping immediate retry to prevent repeated failures")
+                await MainActor.run {
+                    self.recipes = []
+                    self.filteredRecipes = []
+                    self.loading = false
+                    self.currentPage = 0
+                    self.hasMore = false
+                }
+                // Retry in background after a delay
+                Task.detached(priority: .utility) {
+                    try? await Task.sleep(nanoseconds: 30_000_000_000) // Wait 30 seconds
+                    await self.performLoadCommunityRecipes(token: token)
+                }
+                return
+            }
             
             let uiUpdateStartTime = Date()
             await MainActor.run {
                 // Use first pageSize recipes from cache for instant display
-                let cacheRecipes = Array(app.cachedCommunityRecipes.prefix(pageSize))
-                self.recipes = cacheRecipes
+                let displayRecipes = Array(cacheRecipes.prefix(pageSize))
+                self.recipes = displayRecipes
                 
                 let filterStartTime = Date()
-                self.filteredRecipes = self.applyFilters(to: cacheRecipes)
+                self.filteredRecipes = self.applyFilters(to: displayRecipes)
                 let filterDuration = Date().timeIntervalSince(filterStartTime)
                 
                 self.loading = false // Seite sofort anzeigen!
                 self.currentPage = 1 // Nächste Seite ist 1
-                self.hasMore = app.cachedCommunityRecipes.count >= pageSize
+                self.hasMore = cacheRecipes.count >= pageSize
                 
                 let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
                 let totalDuration = Date().timeIntervalSince(tabOpenTime)
                 print("⚡ [PERFORMANCE] UI updated from cache in \(String(format: "%.3f", uiUpdateDuration))s")
                 print("⚡ [PERFORMANCE] Filtering took \(String(format: "%.3f", filterDuration))s")
                 print("⚡ [PERFORMANCE] Total time to display: \(String(format: "%.3f", totalDuration))s")
-                print("✅ [PERFORMANCE] Recipes displayed INSTANTLY from cache (\(cacheRecipes.count) recipes)")
-                Logger.info("[CommunityRecipesView] Using cache (\(cacheRecipes.count) recipes) - instant display", category: .data)
+                print("✅ [PERFORMANCE] Recipes displayed INSTANTLY from cache (\(displayRecipes.count) recipes)")
+                Logger.info("[CommunityRecipesView] Using cache (\(displayRecipes.count) recipes) - instant display", category: .data)
             }
             
-            // Lade im Hintergrund aktualisiert
-            print("🔄 [PERFORMANCE] Starting background refresh...")
-            Task.detached(priority: .utility) {
-                await self.performLoadCommunityRecipes(token: token)
+            // Lade im Hintergrund aktualisiert (nur wenn Cache alt genug)
+            if cacheAge > 60 { // Nur refreshen wenn Cache > 1 Minute alt
+                print("🔄 [PERFORMANCE] Starting background refresh (cache age: \(String(format: "%.1f", cacheAge))s)...")
+                Task.detached(priority: .utility) {
+                    await self.performLoadCommunityRecipes(token: token)
+                }
+            } else {
+                print("✅ [PERFORMANCE] Cache is fresh - skipping background refresh")
             }
             return
         } else {
@@ -2450,7 +2475,7 @@ struct CommunityRecipesView: View {
             Logger.info("[CommunityRecipesView] Load task cancelled", category: .data)
             return
         } catch let error as URLError where error.code == .timedOut {
-            // Timeout error - zeige leeren State statt Fehler, damit App nutzbar bleibt
+            // Timeout error - zeige leeren State und setze Cache, damit nicht sofort wieder versucht wird
             Logger.error("Failed to load community recipes: Timeout (check database indexes and connection)", error: error, category: .data)
             await MainActor.run {
                 // Zeige leeren State statt Fehler - App bleibt nutzbar
@@ -2458,7 +2483,11 @@ struct CommunityRecipesView: View {
                 self.filteredRecipes = []
                 self.loading = false
                 self.error = nil // Kein Fehler, nur leere Liste
-                print("⚠️ [PERFORMANCE] Community recipes timed out - showing empty state")
+                
+                // Setze leeren Cache, damit nicht sofort wieder versucht wird
+                app.cachedCommunityRecipes = []
+                app.communityRecipesCacheTimestamp = Date()
+                print("⚠️ [PERFORMANCE] Community recipes timed out - showing empty state and caching empty result")
             }
         } catch {
             Logger.error("Failed to load community recipes", error: error, category: .data)

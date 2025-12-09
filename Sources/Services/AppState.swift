@@ -1711,20 +1711,21 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             print("🔄 [PERFORMANCE] Processing (dedupe + sort) completed in \(String(format: "%.3f", processingDuration))s")
             print("🔄 [PERFORMANCE] Unique recipes: \(uniqueRecipes.count) (removed \(allRecipes.count - uniqueRecipes.count) duplicates)")
             
-            // OPTIMIZATION: Cache even if not all pages loaded successfully
-            // This ensures the cache is available even if some pages timeout
+            // OPTIMIZATION: Always cache, even if empty or failed
+            // This prevents repeated failed requests when user switches tabs
             let cacheStartTime = Date()
             await MainActor.run {
-                // Only update cache if we got at least some recipes
+                // Always update cache, even if empty - prevents repeated failed requests
+                self.cachedCommunityRecipes = uniqueRecipes
+                self.communityRecipesCacheTimestamp = Date()
+                let cacheDuration = Date().timeIntervalSince(cacheStartTime)
+                print("💾 [PERFORMANCE] Community cache updated in \(String(format: "%.3f", cacheDuration))s")
                 if !uniqueRecipes.isEmpty {
-                    self.cachedCommunityRecipes = uniqueRecipes
-                    self.communityRecipesCacheTimestamp = Date()
-                    let cacheDuration = Date().timeIntervalSince(cacheStartTime)
-                    print("💾 [PERFORMANCE] Community cache updated in \(String(format: "%.3f", cacheDuration))s")
                     print("💾 [PERFORMANCE] Cached \(uniqueRecipes.count) community recipes (from \(successfulPages)/\(pages) pages)")
                     Logger.info("[AppState] Preloaded \(uniqueRecipes.count) community recipes to cache (from \(successfulPages)/\(pages) pages)", category: .data)
                 } else {
-                    print("⚠️ [PERFORMANCE] No recipes to cache (all pages failed or empty)")
+                    print("💾 [PERFORMANCE] Cached empty result (from \(successfulPages)/\(pages) pages) - prevents repeated failed requests")
+                    Logger.info("[AppState] Cached empty community recipes (from \(successfulPages)/\(pages) pages) to prevent repeated requests", category: .data)
                 }
             }
             

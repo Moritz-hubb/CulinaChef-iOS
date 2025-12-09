@@ -2237,15 +2237,6 @@ struct CommunityRecipesView: View {
                 }
             }
         )
-        .refreshable { 
-            // Reset und neu laden beim Pull-to-Refresh
-            // Beim Refresh wollen wir den alten Task abbrechen und neu laden
-            await MainActor.run {
-                currentPage = 0
-                hasMore = true
-            }
-            await loadCommunityRecipes(forceRefresh: true) 
-        }
         .onChange(of: query) { _, _ in updateFilteredRecipes() }
         .onChange(of: selectedFilters) { _, _ in updateFilteredRecipes() }
         .onChange(of: selectedLanguages) { _, _ in updateFilteredRecipes() }

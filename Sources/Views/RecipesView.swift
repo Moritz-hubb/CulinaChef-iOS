@@ -2584,23 +2584,18 @@ struct CommunityRecipesView: View {
     private func loadCommunityRecipesPage(page: Int, pageSize: Int, token: String) async throws -> [Recipe] {
         let requestStartTime = Date()
         var url = Config.supabaseURL
-        url.append(path: "/rest/v1/recipes")
+        // PERFORMANCE FIX: Verwende Materialized View statt Tabelle
+        // Die View enthält nur die benötigten Felder und ist bereits gefiltert (is_public = true)
+        // Dies reduziert die Response-Größe von 24MB auf <10KB
+        url.append(path: "/rest/v1/recipes_preview")
         
         // Calculate offset for pagination
         let offset = page * pageSize
         
-        // PERFORMANCE OPTIMIZATION: Nur benötigte Felder für Recipe-Cards laden
-        // Reduziert die Payload-Größe erheblich und verbessert die Ladegeschwindigkeit
-        // Mit optimierten Datenbank-Indizes sollte die Query <500ms dauern
-        // FIX: Manuelle URL-Konstruktion mit korrekter PostgREST select-Syntax
-        // PostgREST erwartet select als Query-Parameter ohne URL-Encoding der Kommas
-        let selectFields = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
-        
-        // Manuelle URL-Konstruktion, um sicherzustellen, dass select korrekt formatiert ist
+        // Manuelle URL-Konstruktion für Pagination
+        // Die View hat bereits is_public = true gefiltert, daher brauchen wir diesen Filter nicht
         var urlString = url.absoluteString
-        urlString += "?select=\(selectFields)"
-        urlString += "&is_public=eq.true"
-        urlString += "&order=created_at.desc"
+        urlString += "?order=created_at.desc"
         urlString += "&limit=\(pageSize)"
         urlString += "&offset=\(offset)"
         

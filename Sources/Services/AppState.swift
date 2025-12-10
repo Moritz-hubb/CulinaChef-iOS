@@ -1743,17 +1743,16 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     private func loadCommunityRecipesPage(page: Int, pageSize: Int, token: String) async throws -> [Recipe] {
         let requestStartTime = Date()
         var url = Config.supabaseURL
-        url.append(path: "/rest/v1/recipes")
+        // PERFORMANCE FIX: Verwende Materialized View statt Tabelle
+        // Die View enthält nur die benötigten Felder und ist bereits gefiltert (is_public = true)
+        url.append(path: "/rest/v1/recipes_preview")
         
         let offset = page * pageSize
-        let selectFields = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
         
-        // FIX: Manuelle URL-Konstruktion mit korrekter PostgREST select-Syntax
-        // PostgREST erwartet select als Query-Parameter ohne URL-Encoding der Kommas
+        // Manuelle URL-Konstruktion für Pagination
+        // Die View hat bereits is_public = true gefiltert, daher brauchen wir diesen Filter nicht
         var urlString = url.absoluteString
-        urlString += "?select=\(selectFields)"
-        urlString += "&is_public=eq.true"
-        urlString += "&order=created_at.desc"
+        urlString += "?order=created_at.desc"
         urlString += "&limit=\(pageSize)"
         urlString += "&offset=\(offset)"
         

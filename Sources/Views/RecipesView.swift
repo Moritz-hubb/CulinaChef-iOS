@@ -2611,6 +2611,9 @@ struct CommunityRecipesView: View {
         
         url = finalURL
         
+        // DEBUG: Log the actual URL being used
+        Logger.info("[CommunityRecipesView] Request URL: \(url.absoluteString)", category: .network)
+        
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")

@@ -315,12 +315,20 @@ struct CommunityUploadSheet: View {
         }
         
         do {
-            // Convert uploaded images to base64 data URLs
+            // Upload images to Supabase Storage instead of Base64
             var allImageUrls = imageUrls
+            guard let userId = KeychainManager.get(key: "user_id") else {
+                throw URLError(.userAuthenticationRequired)
+            }
+            
+            // Upload new images to Supabase Storage
             for image in uploadedImages {
-                if let data = image.jpegData(compressionQuality: 0.8) {
-                    let base64 = data.base64EncodedString()
-                    allImageUrls.append("data:image/jpeg;base64,\(base64)")
+                do {
+                    let uploadedUrl = try await uploadPhotoToStorage(image: image, userId: userId, token: token)
+                    allImageUrls.append(uploadedUrl)
+                } catch {
+                    Logger.error("Failed to upload image to storage: \(error.localizedDescription)", category: .network)
+                    // Continue with other images even if one fails
                 }
             }
             
@@ -408,6 +416,40 @@ struct CommunityUploadSheet: View {
                 showError = true
             }
         }
+    }
+    
+    // Upload photo to Supabase Storage (not Base64!)
+    private func uploadPhotoToStorage(image: UIImage, userId: String, token: String) async throws -> String {
+        let filename = "\(userId)_\(UUID().uuidString).jpg"
+        
+        // Compress image
+        guard let compressedData = image.jpegData(compressionQuality: 0.8) else {
+            throw URLError(.cannotDecodeContentData)
+        }
+        
+        // Upload to Supabase Storage
+        let uploadUrlString = "\(Config.supabaseURL.absoluteString)/storage/v1/object/recipe-photo/\(filename)"
+        guard let uploadUrl = URL(string: uploadUrlString) else {
+            throw URLError(.badURL)
+        }
+        
+        var uploadRequest = URLRequest(url: uploadUrl)
+        uploadRequest.httpMethod = "POST"
+        uploadRequest.addValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        uploadRequest.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        uploadRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        uploadRequest.httpBody = compressedData
+        
+        let (_, uploadResponse) = try await SecureURLSession.shared.data(for: uploadRequest)
+        
+        guard let httpResponse = uploadResponse as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
+        // Return public URL (not Base64!)
+        let publicUrl = "\(Config.supabaseURL.absoluteString)/storage/v1/object/public/recipe-photo/\(filename)"
+        return publicUrl
     }
     
     private func userFriendlyErrorMessage(from error: Error) -> String {

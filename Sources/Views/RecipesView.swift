@@ -2592,16 +2592,24 @@ struct CommunityRecipesView: View {
         // PERFORMANCE OPTIMIZATION: Nur benötigte Felder für Recipe-Cards laden
         // Reduziert die Payload-Größe erheblich und verbessert die Ladegeschwindigkeit
         // Mit optimierten Datenbank-Indizes sollte die Query <500ms dauern
-        // FIX: Verwende URLQueryItem statt manueller String-Konstruktion für korrekte Encoding
+        // FIX: Manuelle URL-Konstruktion mit korrekter PostgREST select-Syntax
+        // PostgREST erwartet select als Query-Parameter ohne URL-Encoding der Kommas
         let selectFields = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
         
-        url.append(queryItems: [
-            URLQueryItem(name: "select", value: selectFields),
-            URLQueryItem(name: "is_public", value: "eq.true"),
-            URLQueryItem(name: "order", value: "created_at.desc"),
-            URLQueryItem(name: "limit", value: "\(pageSize)"),
-            URLQueryItem(name: "offset", value: "\(offset)")
-        ])
+        // Manuelle URL-Konstruktion, um sicherzustellen, dass select korrekt formatiert ist
+        var urlString = url.absoluteString
+        urlString += "?select=\(selectFields)"
+        urlString += "&is_public=eq.true"
+        urlString += "&order=created_at.desc"
+        urlString += "&limit=\(pageSize)"
+        urlString += "&offset=\(offset)"
+        
+        guard let finalURL = URL(string: urlString) else {
+            Logger.error("[CommunityRecipesView] Failed to construct URL", category: .network)
+            throw URLError(.badURL)
+        }
+        
+        url = finalURL
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
@@ -2646,40 +2654,7 @@ struct CommunityRecipesView: View {
         let decodeStartTime = Date()
         Logger.info("[CommunityRecipesView] ⏱️ Starting JSON decoding...", category: .data)
         
-        // PERFORMANCE FIX: Filter JSON response to only include needed fields
-        // Supabase ignores select parameter, so we filter client-side to reduce data size
-        let filteredData: Data
-        if dataSizeKB > 10 { // Only filter if response is suspiciously large
-            do {
-                let json = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
-                let filteredJson = json.map { recipe -> [String: Any] in
-                    var filtered: [String: Any] = [:]
-                    // Only keep the fields we actually need for recipe cards
-                    if let id = recipe["id"] { filtered["id"] = id }
-                    if let user_id = recipe["user_id"] { filtered["user_id"] = user_id }
-                    if let title = recipe["title"] { filtered["title"] = title }
-                    if let image_url = recipe["image_url"] { filtered["image_url"] = image_url }
-                    if let cooking_time = recipe["cooking_time"] { filtered["cooking_time"] = cooking_time }
-                    if let difficulty = recipe["difficulty"] { filtered["difficulty"] = difficulty }
-                    if let tags = recipe["tags"] { filtered["tags"] = tags }
-                    if let language = recipe["language"] { filtered["language"] = language }
-                    if let created_at = recipe["created_at"] { filtered["created_at"] = created_at }
-                    // Explicitly exclude large fields
-                    // ingredients, instructions, nutrition are NOT included
-                    return filtered
-                }
-                filteredData = try JSONSerialization.data(withJSONObject: filteredJson)
-                let filteredSizeKB = Double(filteredData.count) / 1024.0
-                Logger.info("[CommunityRecipesView] ⚡ Filtered response: \(String(format: "%.2f", dataSizeKB))KB -> \(String(format: "%.2f", filteredSizeKB))KB", category: .data)
-            } catch {
-                Logger.error("[CommunityRecipesView] Failed to filter JSON, using original: \(error.localizedDescription)", category: .data)
-                filteredData = data
-            }
-        } else {
-            filteredData = data
-        }
-        
-        let recipes = try JSONDecoder().decode([Recipe].self, from: filteredData)
+        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
         
         let decodeDuration = Date().timeIntervalSince(decodeStartTime)
         let totalDuration = Date().timeIntervalSince(requestStartTime)

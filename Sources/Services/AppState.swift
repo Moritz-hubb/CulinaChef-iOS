@@ -1781,7 +1781,41 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         }
         
         let decodeStartTime = Date()
-        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+        
+        // PERFORMANCE FIX: Filter JSON response to only include needed fields
+        // Supabase ignores select parameter, so we filter client-side to reduce data size
+        let filteredData: Data
+        if dataSizeKB > 10 { // Only filter if response is suspiciously large
+            do {
+                let json = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
+                let filteredJson = json.map { recipe -> [String: Any] in
+                    var filtered: [String: Any] = [:]
+                    // Only keep the fields we actually need for recipe cards
+                    if let id = recipe["id"] { filtered["id"] = id }
+                    if let user_id = recipe["user_id"] { filtered["user_id"] = user_id }
+                    if let title = recipe["title"] { filtered["title"] = title }
+                    if let image_url = recipe["image_url"] { filtered["image_url"] = image_url }
+                    if let cooking_time = recipe["cooking_time"] { filtered["cooking_time"] = cooking_time }
+                    if let difficulty = recipe["difficulty"] { filtered["difficulty"] = difficulty }
+                    if let tags = recipe["tags"] { filtered["tags"] = tags }
+                    if let language = recipe["language"] { filtered["language"] = language }
+                    if let created_at = recipe["created_at"] { filtered["created_at"] = created_at }
+                    // Explicitly exclude large fields
+                    // ingredients, instructions, nutrition are NOT included
+                    return filtered
+                }
+                filteredData = try JSONSerialization.data(withJSONObject: filteredJson)
+                let filteredSizeKB = Double(filteredData.count) / 1024.0
+                print("📡 [PERFORMANCE] Filtered response: \(String(format: "%.2f", dataSizeKB))KB -> \(String(format: "%.2f", filteredSizeKB))KB")
+            } catch {
+                print("❌ [PERFORMANCE] Failed to filter JSON, using original: \(error.localizedDescription)")
+                filteredData = data
+            }
+        } else {
+            filteredData = data
+        }
+        
+        let recipes = try JSONDecoder().decode([Recipe].self, from: filteredData)
         let decodeDuration = Date().timeIntervalSince(decodeStartTime)
         let totalDuration = Date().timeIntervalSince(requestStartTime)
         

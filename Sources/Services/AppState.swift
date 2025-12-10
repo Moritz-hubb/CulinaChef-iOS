@@ -1748,25 +1748,24 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         let offset = page * pageSize
         let selectFields = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
         
-        var urlString = url.absoluteString
-        urlString += "?select=\(selectFields.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? selectFields)"
-        urlString += "&is_public=eq.true"
-        urlString += "&order=created_at.desc"
-        urlString += "&limit=\(pageSize)"
-        urlString += "&offset=\(offset)"
+        // FIX: Verwende URLQueryItem statt manueller String-Konstruktion für korrekte Encoding
+        url.append(queryItems: [
+            URLQueryItem(name: "select", value: selectFields),
+            URLQueryItem(name: "is_public", value: "eq.true"),
+            URLQueryItem(name: "order", value: "created_at.desc"),
+            URLQueryItem(name: "limit", value: "\(pageSize)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ])
         
-        guard let finalURL = URL(string: urlString) else {
-            throw URLError(.badURL)
-        }
-        
-        var request = URLRequest(url: finalURL)
+        var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.addValue("return=representation", forHTTPHeaderField: "Prefer")
-        // Aggressive timeout - Query sollte <2 Sekunden dauern mit Indizes
-        request.timeoutInterval = 5.0
+        // Timeout erhöht auf 30s, da Netzwerk manchmal langsam ist
+        // Aber mit korrekter select-Query sollte die Response <1s dauern
+        request.timeoutInterval = 30.0
         
         let networkStartTime = Date()
         let (data, response) = try await SecureURLSession.shared.data(for: request)

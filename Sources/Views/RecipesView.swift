@@ -2455,7 +2455,8 @@ struct CommunityRecipesView: View {
             Logger.info("[CommunityRecipesView] Load task cancelled", category: .data)
             return
         } catch let error as URLError where error.code == .timedOut {
-            // Timeout error - zeige leeren State und setze Cache, damit nicht sofort wieder versucht wird
+            // Timeout error - zeige leeren State, aber setze KEINEN Cache
+            // So kann beim nächsten Tab-Wechsel erneut versucht werden
             Logger.error("Failed to load community recipes: Timeout (check database indexes and connection)", error: error, category: .data)
             await MainActor.run {
                 // Zeige leeren State statt Fehler - App bleibt nutzbar
@@ -2463,11 +2464,7 @@ struct CommunityRecipesView: View {
                 self.filteredRecipes = []
                 self.loading = false
                 self.error = nil // Kein Fehler, nur leere Liste
-                
-                // Setze leeren Cache, damit nicht sofort wieder versucht wird
-                app.cachedCommunityRecipes = []
-                app.communityRecipesCacheTimestamp = Date()
-                print("⚠️ [PERFORMANCE] Community recipes timed out - showing empty state and caching empty result")
+                print("⚠️ [PERFORMANCE] Community recipes timed out - showing empty state (no cache set, will retry)")
             }
         } catch {
             Logger.error("Failed to load community recipes", error: error, category: .data)
@@ -2595,23 +2592,18 @@ struct CommunityRecipesView: View {
         // PERFORMANCE OPTIMIZATION: Nur benötigte Felder für Recipe-Cards laden
         // Reduziert die Payload-Größe erheblich und verbessert die Ladegeschwindigkeit
         // Mit optimierten Datenbank-Indizes sollte die Query <500ms dauern
-        // KRITISCH: Manuelle URL-Konstruktion, um sicherzustellen, dass select richtig formatiert ist
+        // FIX: Verwende URLQueryItem statt manueller String-Konstruktion für korrekte Encoding
         let selectFields = "id,user_id,title,image_url,cooking_time,difficulty,tags,language,created_at"
         
-        // Manuelle URL-Konstruktion mit korrekter Encoding
-        var urlString = url.absoluteString
-        urlString += "?select=\(selectFields.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? selectFields)"
-        urlString += "&is_public=eq.true"
-        urlString += "&order=created_at.desc"
-        urlString += "&limit=\(pageSize)"
-        urlString += "&offset=\(offset)"
+        url.append(queryItems: [
+            URLQueryItem(name: "select", value: selectFields),
+            URLQueryItem(name: "is_public", value: "eq.true"),
+            URLQueryItem(name: "order", value: "created_at.desc"),
+            URLQueryItem(name: "limit", value: "\(pageSize)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ])
         
-        guard let finalURL = URL(string: urlString) else {
-            Logger.error("[CommunityRecipesView] Failed to construct URL", category: .network)
-            throw URLError(.badURL)
-        }
-        
-        var request = URLRequest(url: finalURL)
+        var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
@@ -2621,9 +2613,9 @@ struct CommunityRecipesView: View {
         // Ohne diesen Header könnte Supabase alle Felder zurückgeben (auch ingredients, instructions, etc.)
         request.addValue("return=representation", forHTTPHeaderField: "Prefer")
         
-        // PERFORMANCE: Aggressive timeout - Query sollte <2 Sekunden dauern mit Indizes
-        // Falls Timeout: App zeigt leeren Cache statt zu hängen
-        request.timeoutInterval = 5.0 // Aggressives Timeout für schnelle Fehlerbehandlung
+        // PERFORMANCE: Timeout erhöht auf 30s, da Netzwerk manchmal langsam ist
+        // Aber mit korrekter select-Query sollte die Response <1s dauern
+        request.timeoutInterval = 30.0
         
         // PERFORMANCE: Cache-Control Header für bessere Performance bei wiederholten Requests
         // Browser/Client kann Antworten cachen, aber wir wollen keine stale Daten
@@ -2638,7 +2630,31 @@ struct CommunityRecipesView: View {
         let dataSizeKB = Double(data.count) / 1024.0
         print("📡 [PERFORMANCE] Community page \(page) response received in \(String(format: "%.3f", networkDuration))s (size: \(String(format: "%.2f", dataSizeKB))KB)")
         
+        guard let httpResponse = response as? HTTPURLResponse else {
+            Logger.error("[CommunityRecipesView] Invalid response type", category: .network)
+            throw URLError(.badServerResponse)
+        }
+        
+        Logger.info("[CommunityRecipesView] ⏱️ HTTP Status: \(httpResponse.statusCode)", category: .data)
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
+            Logger.error("[CommunityRecipesView] HTTP \(httpResponse.statusCode): \(errorBody)", category: .network)
+            throw URLError(.badServerResponse)
+        }
+        
+        let decodeStartTime = Date()
+        Logger.info("[CommunityRecipesView] ⏱️ Starting JSON decoding...", category: .data)
+        
+        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+        
+        let decodeDuration = Date().timeIntervalSince(decodeStartTime)
+        let totalDuration = Date().timeIntervalSince(requestStartTime)
+        Logger.info("[CommunityRecipesView] ⏱️ JSON decoding completed in \(String(format: "%.3f", decodeDuration))s (decoded \(recipes.count) recipes)", category: .data)
+        Logger.info("[CommunityRecipesView] ⏱️ Total request time: \(String(format: "%.3f", totalDuration))s (Network: \(String(format: "%.3f", networkDuration))s, Decode: \(String(format: "%.3f", decodeDuration))s)", category: .data)
+        
         // DEBUGGING: Prüfe, ob die Response wirklich nur die angeforderten Felder enthält
+        // Nach dem Dekodieren, damit wir recipes.count verwenden können
         if dataSizeKB > 100 { // Wenn größer als 100 KB, ist etwas falsch
             Logger.error("[CommunityRecipesView] ⚠️ CRITICAL: Response is \(String(format: "%.2f", dataSizeKB)) KB for only \(recipes.count) recipes! Should be <10 KB!", category: .data)
             
@@ -2666,31 +2682,8 @@ struct CommunityRecipesView: View {
             }
             
             // Zeige die tatsächliche URL, die verwendet wurde
-            Logger.error("[CommunityRecipesView] ⚠️ Request URL was: \(url.absoluteString)", category: .data)
+            Logger.error("[CommunityRecipesView] ⚠️ Request URL was: \(request.url?.absoluteString ?? "unknown")", category: .data)
         }
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            Logger.error("[CommunityRecipesView] Invalid response type", category: .network)
-            throw URLError(.badServerResponse)
-        }
-        
-        Logger.info("[CommunityRecipesView] ⏱️ HTTP Status: \(httpResponse.statusCode)", category: .data)
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
-            Logger.error("[CommunityRecipesView] HTTP \(httpResponse.statusCode): \(errorBody)", category: .network)
-            throw URLError(.badServerResponse)
-        }
-        
-        let decodeStartTime = Date()
-        Logger.info("[CommunityRecipesView] ⏱️ Starting JSON decoding...", category: .data)
-        
-        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
-        
-        let decodeDuration = Date().timeIntervalSince(decodeStartTime)
-        let totalDuration = Date().timeIntervalSince(requestStartTime)
-        Logger.info("[CommunityRecipesView] ⏱️ JSON decoding completed in \(String(format: "%.3f", decodeDuration))s (decoded \(recipes.count) recipes)", category: .data)
-        Logger.info("[CommunityRecipesView] ⏱️ Total request time: \(String(format: "%.3f", totalDuration))s (Network: \(String(format: "%.3f", networkDuration))s, Decode: \(String(format: "%.3f", decodeDuration))s)", category: .data)
         
         return recipes
     }

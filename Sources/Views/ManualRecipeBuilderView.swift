@@ -555,12 +555,11 @@ struct ManualRecipeBuilderView: View {
     func uploadPhoto(_ data: Data, userId: String, token: String) async throws -> String {
         let fileName = "\(userId)_\(UUID().uuidString).jpg"
         
-        // Resize to fit max dimensions (aspect fit) and compress
-        guard let image = UIImage(data: data),
-              let resizedImage = resizeImageToFit(image, maxWidth: 1200, maxHeight: 800),
-              let compressedData = resizedImage.jpegData(compressionQuality: 0.8) else {
+        // Optimize image (resize + compress to max 2MB)
+        guard let image = UIImage(data: data) else {
             throw URLError(.cannotDecodeContentData)
         }
+        let optimizedData = try ImageOptimizer.optimizeImage(image)
         
         let uploadUrlString = "\(Config.supabaseURL.absoluteString)/storage/v1/object/recipe-photo/\(fileName)"
         guard let uploadUrl = URL(string: uploadUrlString) else {
@@ -572,7 +571,7 @@ struct ManualRecipeBuilderView: View {
         request.addValue("image/jpeg", forHTTPHeaderField: "Content-Type")
         request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.httpBody = compressedData
+        request.httpBody = optimizedData
         
         let (responseData, response) = try await SecureURLSession.shared.data(for: request)
         
@@ -590,31 +589,6 @@ struct ManualRecipeBuilderView: View {
         
         let publicURL = "\(Config.supabaseURL.absoluteString)/storage/v1/object/public/recipe-photo/\(fileName)"
         return publicURL
-    }
-    
-    func resizeImageToFit(_ image: UIImage, maxWidth: CGFloat, maxHeight: CGFloat) -> UIImage? {
-        let originalSize = image.size
-        
-        // If image is already smaller than max dimensions, return original
-        if originalSize.width <= maxWidth && originalSize.height <= maxHeight {
-            return image
-        }
-        
-        // Calculate scale factor to fit within max dimensions (aspect fit)
-        let widthRatio = maxWidth / originalSize.width
-        let heightRatio = maxHeight / originalSize.height
-        let scaleFactor = min(widthRatio, heightRatio)
-        
-        let newSize = CGSize(
-            width: originalSize.width * scaleFactor,
-            height: originalSize.height * scaleFactor
-        )
-        
-        // Render the resized image
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        return renderer.image { context in
-            image.draw(in: CGRect(origin: .zero, size: newSize))
-        }
     }
 }
 

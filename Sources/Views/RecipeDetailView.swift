@@ -824,10 +824,11 @@ struct RecipeDetailView: View {
     private func uploadPhoto(data: Data, userId: String, token: String) async throws -> String {
         let filename = "\(userId)_\(UUID().uuidString).jpg"
         
-        guard let image = UIImage(data: data),
-              let compressedData = image.jpegData(compressionQuality: 0.8) else {
+        // Optimize image (resize + compress to max 2MB)
+        guard let image = UIImage(data: data) else {
             throw URLError(.cannotDecodeContentData)
         }
+        let optimizedData = try ImageOptimizer.optimizeImage(image)
         
         let uploadUrlString = "\(Config.supabaseURL.absoluteString)/storage/v1/object/recipe-photo/\(filename)"
         guard let uploadUrl = URL(string: uploadUrlString) else {
@@ -839,7 +840,7 @@ struct RecipeDetailView: View {
         uploadRequest.addValue("image/jpeg", forHTTPHeaderField: "Content-Type")
         uploadRequest.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         uploadRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        uploadRequest.httpBody = compressedData
+        uploadRequest.httpBody = optimizedData
         
         let (_, uploadResponse) = try await SecureURLSession.shared.data(for: uploadRequest)
         

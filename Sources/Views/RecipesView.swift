@@ -2298,9 +2298,11 @@ struct CommunityRecipesView: View {
                 self.currentPage = 1 // Nächste Seite ist 1
                 self.hasMore = cacheRecipes.count >= pageSize
                 
-                // PERFORMANCE: Preload images for visible recipes to prevent reloading when scrolling
+                // PERFORMANCE: Preload images IMMEDIATELY for first visible recipes
+                // This prevents lag when user starts scrolling
                 Task.detached(priority: .userInitiated) {
-                    await self.preloadRecipeImages(recipes: displayRecipes)
+                    // Preload first 10 images immediately (visible + next few)
+                    await self.preloadRecipeImages(recipes: displayRecipes, immediateCount: 10)
                 }
                 
                 let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
@@ -2361,10 +2363,10 @@ struct CommunityRecipesView: View {
             let networkDuration = Date().timeIntervalSince(networkStartTime)
             print("📡 [PERFORMANCE] First page loaded in \(String(format: "%.3f", networkDuration))s (\(firstPage.count) recipes)")
             
-            // PERFORMANCE: Preload images immediately after loading recipes
-            // This ensures images are in cache before user scrolls to them
+            // PERFORMANCE: Preload images IMMEDIATELY after loading recipes
+            // Preload first 12 images immediately to prevent lag on first scroll
             Task.detached(priority: .userInitiated) {
-                await self.preloadRecipeImages(recipes: firstPage)
+                await self.preloadRecipeImages(recipes: firstPage, immediateCount: 12)
             }
             
             // Check again after load
@@ -2667,10 +2669,10 @@ struct CommunityRecipesView: View {
         Logger.info("[CommunityRecipesView] ⏱️ JSON decoding completed in \(String(format: "%.3f", decodeDuration))s (decoded \(recipes.count) recipes)", category: .data)
         Logger.info("[CommunityRecipesView] ⏱️ Total request time: \(String(format: "%.3f", totalDuration))s (Network: \(String(format: "%.3f", networkDuration))s, Decode: \(String(format: "%.3f", decodeDuration))s)", category: .data)
         
-        // PERFORMANCE: Preload images immediately after loading recipes
-        // This ensures images are in cache before user scrolls to them
+        // PERFORMANCE: Preload images IMMEDIATELY after loading recipes
+        // Preload first 12 images immediately (visible + next few) to prevent lag on first scroll
         Task.detached(priority: .userInitiated) {
-            await self.preloadRecipeImages(recipes: recipes)
+            await self.preloadRecipeImages(recipes: recipes, immediateCount: 12)
         }
         
         // DEBUGGING: Prüfe, ob die Response wirklich nur die angeforderten Felder enthält
@@ -2709,7 +2711,7 @@ struct CommunityRecipesView: View {
     }
     
     // PERFORMANCE: Preload images for recipes to prevent reloading when scrolling
-    private func preloadRecipeImages(recipes: [Recipe]) async {
+    private func preloadRecipeImages(recipes: [Recipe], immediateCount: Int = 8) async {
         // Extract all image URLs from recipes
         let imageUrls = recipes.compactMap { recipe -> URL? in
             guard let imageUrl = recipe.image_url,
@@ -2724,10 +2726,11 @@ struct CommunityRecipesView: View {
         
         guard !imageUrls.isEmpty else { return }
         
-        Logger.debug("[CommunityRecipesView] Preloading \(imageUrls.count) images", category: .data)
+        Logger.debug("[CommunityRecipesView] Preloading \(imageUrls.count) images (immediate: \(immediateCount))", category: .data)
         
-        // Preload images with priority - first 5 immediately, rest in background
-        await ImageCache.shared.preloadPriority(urls: imageUrls, immediateCount: 5)
+        // Preload images with priority - first N immediately, rest in background
+        // Higher immediateCount for first load to prevent lag on initial scroll
+        await ImageCache.shared.preloadPriority(urls: imageUrls, immediateCount: immediateCount)
     }
 }
 

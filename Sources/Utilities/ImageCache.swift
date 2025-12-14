@@ -108,12 +108,27 @@ final class ImageCache {
         let immediateUrls = Array(urls.prefix(immediateCount))
         let backgroundUrls = Array(urls.dropFirst(immediateCount))
         
-        // Load immediate images with high priority (limited concurrency to prevent lag)
+        // Load immediate images with high priority
+        // For first load, allow more concurrent downloads (up to 5) to load faster
+        // This prevents lag on initial scroll
+        let maxConcurrent = immediateCount > 10 ? 5 : 3
         await withTaskGroup(of: Void.self) { group in
-            // Limit to 3 concurrent downloads to prevent overwhelming the system
-            for url in immediateUrls.prefix(3) {
+            for url in immediateUrls.prefix(maxConcurrent) {
                 group.addTask(priority: .userInitiated) {
                     _ = await self.image(for: url)
+                }
+            }
+            
+            // Load remaining immediate URLs after first batch completes
+            if immediateUrls.count > maxConcurrent {
+                // Wait for first batch to complete
+                await group.waitForAll()
+                
+                // Load next batch
+                for url in immediateUrls.dropFirst(maxConcurrent) {
+                    group.addTask(priority: .userInitiated) {
+                        _ = await self.image(for: url)
+                    }
                 }
             }
         }

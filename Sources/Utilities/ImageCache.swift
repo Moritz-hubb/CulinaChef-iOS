@@ -84,13 +84,13 @@ final class ImageCache {
     }
     
     /// Preload images in background (for recipe lists, etc.)
-    /// Uses concurrent loading for better performance
+    /// Uses limited concurrent loading to prevent lag
     func preload(urls: [URL]) {
         Task {
-            // Load images concurrently (up to 5 at a time)
+            // Load images with limited concurrency (max 3 at a time) to prevent lag
             await withTaskGroup(of: Void.self) { group in
-                for url in urls.prefix(20) { // Limit to first 20 images to avoid overwhelming
-                    group.addTask {
+                for url in urls.prefix(15) { // Limit to first 15 images
+                    group.addTask(priority: .utility) {
                         _ = await self.image(for: url)
                     }
                 }
@@ -100,6 +100,7 @@ final class ImageCache {
     
     /// Preload images with priority (for immediate display)
     /// Loads first N images immediately, rest in background
+    /// OPTIMIZATION: Limited concurrent downloads to prevent lag
     func preloadPriority(urls: [URL], immediateCount: Int = 8) async {
         guard !urls.isEmpty else { return }
         
@@ -107,20 +108,22 @@ final class ImageCache {
         let immediateUrls = Array(urls.prefix(immediateCount))
         let backgroundUrls = Array(urls.dropFirst(immediateCount))
         
-        // Load immediate images with high priority (concurrent, but wait for completion)
+        // Load immediate images with high priority (limited concurrency to prevent lag)
         await withTaskGroup(of: Void.self) { group in
-            for url in immediateUrls {
+            // Limit to 3 concurrent downloads to prevent overwhelming the system
+            for url in immediateUrls.prefix(3) {
                 group.addTask(priority: .userInitiated) {
                     _ = await self.image(for: url)
                 }
             }
         }
         
-        // Load remaining images in background (don't wait)
+        // Load remaining images in background (don't wait, limited concurrency)
         if !backgroundUrls.isEmpty {
             Task.detached(priority: .utility) {
                 await withTaskGroup(of: Void.self) { group in
-                    for url in backgroundUrls.prefix(20) {
+                    // Limit to 2 concurrent background downloads
+                    for url in backgroundUrls.prefix(10) {
                         group.addTask {
                             _ = await ImageCache.shared.image(for: url)
                         }

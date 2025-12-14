@@ -1972,80 +1972,76 @@ struct CommunityRecipesView: View {
     
     @ViewBuilder
     private var recipesListContent: some View {
-        List {
-            // OPTIMIZATION: Use ForEach with enumerated for index, but cache it
-            ForEach(Array(filteredRecipes.enumerated()), id: \.element.id) { index, recipe in
-                RecipeCard(recipe: recipe, isPersonal: false)
-                    .id(recipe.id) // CRITICAL: Stable ID prevents view recreation on scroll
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        navigationRecipeId = recipe.id
-                    }
-                    .onAppear {
-                        // CRITICAL: Do minimal work synchronously, defer heavy work
-                        // Only log if needed (disabled for performance)
-                        // Logger.debug("[CommunityRecipesView] 📱 Card appeared: \(index)", category: .ui)
-                        
-                        // Defer all heavy work to async task
-                        Task.detached(priority: .utility) {
-                            let now = Date()
-                            
-                            // Read main actor isolated properties
-                            let (currentLastPreloadTime, currentFilteredRecipes, currentLastLoadMoreTime, currentHasMore, currentLoadingMore, currentQuery, currentSelectedFilters, currentSelectedLanguages) = await MainActor.run {
-                                (lastPreloadTime, filteredRecipes, lastLoadMoreTime, hasMore, loadingMore, query, selectedFilters, selectedLanguages)
-                            }
-                            
-                            // Throttle preloading: Only preload every 200ms to avoid lag
-                            if now.timeIntervalSince(currentLastPreloadTime) > 0.2 {
-                                await MainActor.run {
-                                    lastPreloadTime = now
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                // OPTIMIZATION: Use LazyVStack instead of List for better scroll performance
+                ForEach(Array(filteredRecipes.enumerated()), id: \.element.id) { index, recipe in
+                    RecipeCard(recipe: recipe, isPersonal: false)
+                        .id(recipe.id) // CRITICAL: Stable ID prevents view recreation on scroll
+                        .padding(.horizontal, 16)
+                        .onTapGesture {
+                            navigationRecipeId = recipe.id
+                        }
+                        .onAppear {
+                            // CRITICAL: Do minimal work synchronously, defer heavy work
+                            // Defer all heavy work to async task
+                            Task.detached(priority: .utility) {
+                                let now = Date()
+                                
+                                // Read main actor isolated properties
+                                let (currentLastPreloadTime, currentFilteredRecipes, currentLastLoadMoreTime, currentHasMore, currentLoadingMore, currentQuery, currentSelectedFilters, currentSelectedLanguages) = await MainActor.run {
+                                    (lastPreloadTime, filteredRecipes, lastLoadMoreTime, hasMore, loadingMore, query, selectedFilters, selectedLanguages)
                                 }
                                 
-                                // Preload images for next 3 recipes (reduced from 5)
-                                let nextRecipes = currentFilteredRecipes.suffix(from: min(index + 1, currentFilteredRecipes.count)).prefix(3)
-                                let nextImageUrls = nextRecipes.compactMap { r -> URL? in
-                                    guard let imageUrl = r.image_url else { return nil }
-                                    return URL(string: imageUrl)
+                                // Throttle preloading: Only preload every 300ms to avoid lag
+                                if now.timeIntervalSince(currentLastPreloadTime) > 0.3 {
+                                    await MainActor.run {
+                                        lastPreloadTime = now
+                                    }
+                                    
+                                    // Preload images for next 2 recipes (reduced to minimize work)
+                                    let nextRecipes = currentFilteredRecipes.suffix(from: min(index + 1, currentFilteredRecipes.count)).prefix(2)
+                                    let nextImageUrls = nextRecipes.compactMap { r -> URL? in
+                                        guard let imageUrl = r.image_url,
+                                              !imageUrl.isEmpty,
+                                              !imageUrl.hasPrefix("data:image/"),
+                                              let url = URL(string: imageUrl),
+                                              url.scheme == "http" || url.scheme == "https" else { return nil }
+                                        return url
+                                    }
+                                    if !nextImageUrls.isEmpty {
+                                        await ImageCache.shared.preloadPriority(urls: Array(nextImageUrls), immediateCount: 1)
+                                    }
                                 }
-                                if !nextImageUrls.isEmpty {
-                                    await ImageCache.shared.preloadPriority(urls: Array(nextImageUrls), immediateCount: 1)
+                                
+                                // Throttle load more: Only check every 500ms
+                                let timeSinceLastLoad = now.timeIntervalSince(currentLastLoadMoreTime)
+                                if timeSinceLastLoad > 0.5 && index >= currentFilteredRecipes.count - 10 && currentHasMore && !currentLoadingMore && currentQuery.isEmpty && currentSelectedFilters.isEmpty && currentSelectedLanguages.isEmpty {
+                                    await MainActor.run {
+                                        lastLoadMoreTime = now
+                                    }
+                                    await loadMoreCommunityRecipes()
                                 }
-                            }
-                            
-                            // Throttle load more: Only check every 500ms
-                            let timeSinceLastLoad = now.timeIntervalSince(currentLastLoadMoreTime)
-                            if timeSinceLastLoad > 0.5 && index >= currentFilteredRecipes.count - 10 && currentHasMore && !currentLoadingMore && currentQuery.isEmpty && currentSelectedFilters.isEmpty && currentSelectedLanguages.isEmpty {
-                                await MainActor.run {
-                                    lastLoadMoreTime = now
-                                }
-                                await loadMoreCommunityRecipes()
                             }
                         }
-                    }
-            }
-            
-            // Loading indicator am Ende, wenn weitere Rezepte geladen werden
-            if loadingMore {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .tint(Color(red: 0.85, green: 0.4, blue: 0.2))
-                    Spacer()
                 }
-                .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 16, trailing: 0))
-                .listRowBackground(Color.clear)
+                
+                // Loading indicator am Ende, wenn weitere Rezepte geladen werden
+                if loadingMore {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .tint(Color(red: 0.85, green: 0.4, blue: 0.2))
+                        Spacer()
+                    }
+                    .padding(.vertical, 16)
+                }
             }
+            .padding(.vertical, 8)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
         .background(Color.white)
-        // OPTIMIZATION: Disable default List animations for smoother scrolling
+        // OPTIMIZATION: Disable animations for smoother scrolling
         .animation(nil, value: filteredRecipes.count)
-        .onAppear {
-            Logger.debug("[CommunityRecipesView] 🎨 List appeared with \(filteredRecipes.count) filtered recipes (total: \(recipes.count))", category: .ui)
-        }
     }
     
     // Update filtered recipes with debouncing (150ms delay)
@@ -3004,46 +3000,44 @@ struct RecipeCard: View {
     }
     
     var body: some View {
-        
-        return VStack(alignment: .leading, spacing: 0) {
+        // OPTIMIZATION: Use @ViewBuilder to reduce view hierarchy complexity
+        VStack(alignment: .leading, spacing: 0) {
             // Recipe Image(s) with swipe
             ZStack(alignment: .topTrailing) {
                 ZStack(alignment: .bottomLeading) {
-                    // Image - OPTIMIZATION: Only use TabView if multiple images exist
-                    Group {
-                        if !imageURLs.isEmpty {
-                            // OPTIMIZATION: Single image doesn't need TabView (better performance)
-                            if imageURLs.count == 1 {
-                                CachedAsyncImage(url: imageURLs[0]) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 180)
-                                        .clipped()
-                                } placeholder: {
-                                    placeholderImage
-                                }
-                            } else {
-                                TabView {
-                                    ForEach(imageURLs, id: \.self) { url in
-                                        CachedAsyncImage(url: url) { image in
-                                            image
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(maxWidth: .infinity)
-                                                .frame(height: 180)
-                                                .clipped()
-                                        } placeholder: {
-                                            placeholderImage
-                                        }
-                                    }
-                                }
-                                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+                    // Image - OPTIMIZATION: Simplified view hierarchy
+                    if !imageURLs.isEmpty {
+                        // OPTIMIZATION: Single image doesn't need TabView (better performance)
+                        if imageURLs.count == 1 {
+                            CachedAsyncImage(url: imageURLs[0]) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 180)
+                                    .clipped()
+                            } placeholder: {
+                                placeholderImage
                             }
                         } else {
-                            placeholderImage
+                            TabView {
+                                ForEach(imageURLs, id: \.self) { url in
+                                    CachedAsyncImage(url: url) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 180)
+                                            .clipped()
+                                    } placeholder: {
+                                        placeholderImage
+                                    }
+                                }
+                            }
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
                         }
+                    } else {
+                        placeholderImage
                     }
                 
                     // Gradient overlay for better text readability

@@ -1976,6 +1976,7 @@ struct CommunityRecipesView: View {
             // OPTIMIZATION: Use ForEach with enumerated for index, but cache it
             ForEach(Array(filteredRecipes.enumerated()), id: \.element.id) { index, recipe in
                 RecipeCard(recipe: recipe, isPersonal: false)
+                    .id(recipe.id) // CRITICAL: Stable ID prevents view recreation on scroll
                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
                     .contentShape(Rectangle())
@@ -2301,6 +2302,11 @@ struct CommunityRecipesView: View {
                 self.currentPage = 1 // Nächste Seite ist 1
                 self.hasMore = cacheRecipes.count >= pageSize
                 
+                // PERFORMANCE: Preload images for visible recipes to prevent reloading when scrolling
+                Task.detached(priority: .userInitiated) {
+                    await self.preloadRecipeImages(recipes: displayRecipes)
+                }
+                
                 let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
                 let totalDuration = Date().timeIntervalSince(tabOpenTime)
                 print("⚡ [PERFORMANCE] UI updated from cache in \(String(format: "%.3f", uiUpdateDuration))s")
@@ -2358,6 +2364,12 @@ struct CommunityRecipesView: View {
             
             let networkDuration = Date().timeIntervalSince(networkStartTime)
             print("📡 [PERFORMANCE] First page loaded in \(String(format: "%.3f", networkDuration))s (\(firstPage.count) recipes)")
+            
+            // PERFORMANCE: Preload images immediately after loading recipes
+            // This ensures images are in cache before user scrolls to them
+            Task.detached(priority: .userInitiated) {
+                await self.preloadRecipeImages(recipes: firstPage)
+            }
             
             // Check again after load
             try Task.checkCancellation()
@@ -2659,6 +2671,12 @@ struct CommunityRecipesView: View {
         Logger.info("[CommunityRecipesView] ⏱️ JSON decoding completed in \(String(format: "%.3f", decodeDuration))s (decoded \(recipes.count) recipes)", category: .data)
         Logger.info("[CommunityRecipesView] ⏱️ Total request time: \(String(format: "%.3f", totalDuration))s (Network: \(String(format: "%.3f", networkDuration))s, Decode: \(String(format: "%.3f", decodeDuration))s)", category: .data)
         
+        // PERFORMANCE: Preload images immediately after loading recipes
+        // This ensures images are in cache before user scrolls to them
+        Task.detached(priority: .userInitiated) {
+            await self.preloadRecipeImages(recipes: recipes)
+        }
+        
         // DEBUGGING: Prüfe, ob die Response wirklich nur die angeforderten Felder enthält
         // Nach dem Dekodieren, damit wir recipes.count verwenden können
         if dataSizeKB > 100 { // Wenn größer als 100 KB, ist etwas falsch
@@ -2692,6 +2710,28 @@ struct CommunityRecipesView: View {
         }
         
         return recipes
+    }
+    
+    // PERFORMANCE: Preload images for recipes to prevent reloading when scrolling
+    private func preloadRecipeImages(recipes: [Recipe]) async {
+        // Extract all image URLs from recipes
+        let imageUrls = recipes.compactMap { recipe -> URL? in
+            guard let imageUrl = recipe.image_url,
+                  !imageUrl.isEmpty,
+                  !imageUrl.hasPrefix("data:image/"),
+                  let url = URL(string: imageUrl),
+                  url.scheme == "http" || url.scheme == "https" else {
+                return nil
+            }
+            return url
+        }
+        
+        guard !imageUrls.isEmpty else { return }
+        
+        Logger.debug("[CommunityRecipesView] Preloading \(imageUrls.count) images", category: .data)
+        
+        // Preload images with priority - first 5 immediately, rest in background
+        await ImageCache.shared.preloadPriority(urls: imageUrls, immediateCount: 5)
     }
 }
 

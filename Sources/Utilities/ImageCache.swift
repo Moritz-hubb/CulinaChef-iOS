@@ -15,10 +15,10 @@ final class ImageCache {
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
     
-    /// Memory cache capacity (200 images max - increased for smoother scrolling)
-    private let memoryCacheCountLimit = 200
-    /// Total memory cost limit (100 MB - increased for better performance)
-    private let memoryCacheTotalCostLimit = 100 * 1024 * 1024
+    /// Memory cache capacity (500 images max - increased for smooth scrolling without reloads)
+    private let memoryCacheCountLimit = 500
+    /// Total memory cost limit (200 MB - increased for better performance)
+    private let memoryCacheTotalCostLimit = 200 * 1024 * 1024
     /// Disk cache size limit (200 MB)
     private let diskCacheSizeLimit = 200 * 1024 * 1024
     /// Cache expiration (7 days)
@@ -353,6 +353,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         Group {
             if let image = image {
                 content(Image(uiImage: image))
+                    .id(url?.absoluteString) // CRITICAL: Use URL as id to prevent view recreation
             } else {
                 placeholder()
                     .task(id: url?.absoluteString) {
@@ -364,6 +365,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                     }
             }
         }
+        .id(url?.absoluteString) // CRITICAL: Stable ID prevents view recreation on scroll
     }
     
     private func loadImage() async {
@@ -374,7 +376,9 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         // The task(id:) modifier ensures this only runs once per URL and cancels
         // previous tasks if the URL changes.
         if let cachedImage = await ImageCache.shared.image(for: url) {
-            self.image = cachedImage
+            await MainActor.run {
+                self.image = cachedImage
+            }
         }
     }
 }

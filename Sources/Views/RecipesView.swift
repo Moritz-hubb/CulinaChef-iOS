@@ -2943,7 +2943,7 @@ struct RecipeCard: View {
         }
         
         // Validate URL format
-        guard let first = URL(string: imageUrl), first.scheme != nil, (first.scheme == "http" || first.scheme == "https") else {
+        guard let first = URL(string: imageUrl), first.scheme != nil, first.scheme == "http" || first.scheme == "https" else {
             Logger.warning("[RecipeCard] Invalid image URL format for recipe: \(recipe.title) - URL: \(imageUrl.prefix(50))", category: .data)
             return []
         }

@@ -93,6 +93,7 @@
 		BF5CFEAC2EDB9529000A4330 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF5CFEAB2EDB9529000A4330 /* StoreKit.framework */; };
 		BF5CFEB02EDB988D000A4330 /* supabase.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF5CFEAE2EDB988D000A4330 /* supabase.cer */; };
 		BF5CFEB12EDB988D000A4330 /* backend.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF5CFEAD2EDB988D000A4330 /* backend.cer */; };
+		BFECDC1F2EEA09D50075BAE3 /* ImageOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFECDC1E2EEA09D50075BAE3 /* ImageOptimizer.swift */; };
 		C03A9DCD41BA6156094F3F11 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF6FA0F10E39BFDD46C6CF5 /* AnalyticsManager.swift */; };
 		C3EAFD35153A4962DFA41F02 /* RevenueCatPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB41330BD678C9C84629B8B /* RevenueCatPaywallView.swift */; };
 		C5DA197679F432B7B8AE0B08 /* OpenAIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E3211EFE8C499247FFEE1F8 /* OpenAIClientTests.swift */; };
@@ -247,6 +248,7 @@
 		BF5CFEAB2EDB9529000A4330 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		BF5CFEAD2EDB988D000A4330 /* backend.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = backend.cer; sourceTree = "<group>"; };
 		BF5CFEAE2EDB988D000A4330 /* supabase.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = supabase.cer; sourceTree = "<group>"; };
+		BFECDC1E2EEA09D50075BAE3 /* ImageOptimizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOptimizer.swift; sourceTree = "<group>"; };
 		C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		C6374362E3A330D0BA9829E2 /* SecureURLSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureURLSession.swift; sourceTree = "<group>"; };
 		D4F8960B0FF5281ECE12C22E /* String+Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Validation.swift"; sourceTree = "<group>"; };
@@ -307,6 +309,7 @@
 		0FCC9B891CB3DF972222AE50 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				BFECDC1E2EEA09D50075BAE3 /* ImageOptimizer.swift */,
 				4D39E8DC21B65D91E66E8372 /* ErrorMessageHelper.swift */,
 				69F58D455277DDC344236C91 /* FeatureAccess.swift */,
 				E4B5A2C547FEE0D43851EDBF /* ImageCache.swift */,
@@ -736,6 +739,7 @@
 				E9024322447EF2B8086445F5 /* ShoppingListView.swift in Sources */,
 				6B7DA5BACF64F64655483583 /* SignInView.swift in Sources */,
 				0B84752B5F9DCFBA11FF2F26 /* SignUpView.swift in Sources */,
+				BFECDC1F2EEA09D50075BAE3 /* ImageOptimizer.swift in Sources */,
 				CB709F7443BF09398A478807 /* StoreKitManager.swift in Sources */,
 				A5606507852FC4E19C2DAE5E /* String+Validation.swift in Sources */,
 				7CE27D0310E2E8C4F56CACCB /* SubscriptionManager.swift in Sources */,

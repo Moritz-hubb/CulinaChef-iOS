@@ -213,6 +213,12 @@ final class ImageCache {
     
     private func downloadAndCache(url: URL, cacheKey: String) async -> UIImage? {
         do {
+            // Validate URL
+            guard url.scheme == "http" || url.scheme == "https" else {
+                Logger.error("[ImageCache] Invalid URL scheme: \(url.absoluteString)", category: .data)
+                return nil
+            }
+            
             // Use URLSession with optimized configuration for faster downloads
             let configuration = URLSessionConfiguration.default
             configuration.timeoutIntervalForRequest = 10
@@ -220,11 +226,23 @@ final class ImageCache {
             configuration.requestCachePolicy = .returnCacheDataElseLoad
             let session = URLSession(configuration: configuration)
             
-            let (data, _) = try await session.data(from: url)
+            Logger.debug("[ImageCache] Downloading from: \(url.absoluteString)", category: .data)
+            let (data, response) = try await session.data(from: url)
+            
+            // Check HTTP response
+            if let httpResponse = response as? HTTPURLResponse {
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    Logger.error("[ImageCache] HTTP \(httpResponse.statusCode) for: \(url.lastPathComponent)", category: .data)
+                    return nil
+                }
+            }
+            
             guard let image = UIImage(data: data) else {
-                Logger.error("[ImageCache] Invalid image data from: \(url.lastPathComponent)", category: .data)
+                Logger.error("[ImageCache] Invalid image data from: \(url.lastPathComponent) (size: \(data.count) bytes)", category: .data)
                 return nil
             }
+            
+            Logger.debug("[ImageCache] Successfully loaded image: \(url.lastPathComponent) (size: \(data.count) bytes)", category: .data)
             
             // Cache in memory immediately
             memoryCache.setObject(image, forKey: cacheKey as NSString, cost: image.memoryCost)
@@ -236,7 +254,7 @@ final class ImageCache {
             
             return image
         } catch {
-            Logger.error("[ImageCache] Download failed: \(url.lastPathComponent)", error: error, category: .data)
+            Logger.error("[ImageCache] Download failed: \(url.absoluteString)", error: error, category: .data)
             return nil
         }
     }

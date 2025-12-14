@@ -2931,9 +2931,23 @@ struct RecipeCard: View {
     
     // OPTIMIZATION: Pre-compute image URLs once (lazy evaluation)
     private var imageURLs: [URL] {
-        guard let imageUrl = recipe.image_url, let first = URL(string: imageUrl) else {
+        guard let imageUrl = recipe.image_url, !imageUrl.isEmpty else {
+            Logger.debug("[RecipeCard] No image_url for recipe: \(recipe.title)", category: .data)
             return []
         }
+        
+        // Filter out Base64 images (should not happen, but safety check)
+        if imageUrl.hasPrefix("data:image/") {
+            Logger.warning("[RecipeCard] Base64 image detected for recipe: \(recipe.title) - skipping", category: .data)
+            return []
+        }
+        
+        // Validate URL format
+        guard let first = URL(string: imageUrl), first.scheme != nil, (first.scheme == "http" || first.scheme == "https") else {
+            Logger.warning("[RecipeCard] Invalid image URL format for recipe: \(recipe.title) - URL: \(imageUrl.prefix(50))", category: .data)
+            return []
+        }
+        
         if imageUrl.contains("_0.") {
             var arr = [first]
             if let u1 = URL(string: imageUrl.replacingOccurrences(of: "_0.", with: "_1.")) { arr.append(u1) }

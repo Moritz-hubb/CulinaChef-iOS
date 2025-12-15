@@ -2123,22 +2123,27 @@ struct CommunityRecipesView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             }
                             .buttonStyle(.plain)
-                            
-                            NavigationLink(destination: MyContributionsView()) {
-                                VStack(spacing: 2) {
-                                    Image(systemName: "person.crop.square")
-                                        .font(.system(size: 18))
-                                    Text(L.recipe_meine.localized)
-                                        .font(.caption2)
-                                }
-                                .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            }
-                            .buttonStyle(.plain)
                         }
+                        
+                        // Link zu eigenen hochgeladenen Rezepten
+                        NavigationLink(destination: MyContributionsView()) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "person.crop.square")
+                                    .font(.system(size: 14))
+                                Text(L.nav_myContributions.localized)
+                                    .font(.subheadline.weight(.medium))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.gray.opacity(0.5))
+                            }
+                            .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
                         
                         // Filter Section - nur sichtbar wenn showFilters = true
                         if showFilters {

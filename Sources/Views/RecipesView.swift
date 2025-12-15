@@ -1672,6 +1672,7 @@ struct CommunityRecipesView: View {
     @State private var showLanguageDropdown = false  // Language dropdown state
     @State private var showMyContributions = false
     @State private var filterByDietaryPreferences = false  // Toggle für Filter nach Ernährungspräferenzen
+    @State private var showFilters = false  // Toggle für Filter-Anzeige
     
     // Pagination state
     @State private var currentPage = 0
@@ -2098,6 +2099,30 @@ struct CommunityRecipesView: View {
                         HStack(spacing: 8) {
                             SearchBar(query: $query, placeholder: L.placeholder_searchCommunityLong.localized)
                             
+                            // Filter Button - zeigt/versteckt die Filter
+                            Button(action: {
+                                withAnimation {
+                                    showFilters.toggle()
+                                }
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "line.3.horizontal.decrease.circle\(showFilters ? ".fill" : "")")
+                                        .font(.system(size: 16))
+                                    Text(L.recipe_filter.localized)
+                                        .font(.caption2)
+                                    if !selectedFilters.isEmpty || !selectedLanguages.isEmpty {
+                                        Text("(\(selectedFilters.count + selectedLanguages.count))")
+                                            .font(.caption2)
+                                    }
+                                }
+                                .foregroundColor(showFilters || !selectedFilters.isEmpty || !selectedLanguages.isEmpty ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(showFilters || !selectedFilters.isEmpty || !selectedLanguages.isEmpty ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                            
                             // Toggle für Filter nach Ernährungspräferenzen
                             Button(action: {
                                 withAnimation {
@@ -2134,14 +2159,17 @@ struct CommunityRecipesView: View {
                             .buttonStyle(.plain)
                         }
                         
-                        // Filter Chips with Language Dropdown
-                        FilterChipsBarWithLanguage(
-                            availableLanguages: availableLanguages,
-                            selectedLanguages: $selectedLanguages,
-                            filterOptions: availableFilters,
-                            selectedFilters: $selectedFilters,
-                            showLanguageDropdown: $showLanguageDropdown
-                        )
+                        // Filter Chips with Language Dropdown - nur sichtbar wenn showFilters = true
+                        if showFilters {
+                            FilterChipsBarWithLanguage(
+                                availableLanguages: availableLanguages,
+                                selectedLanguages: $selectedLanguages,
+                                filterOptions: availableFilters,
+                                selectedFilters: $selectedFilters,
+                                showLanguageDropdown: $showLanguageDropdown
+                            )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
                     .padding(16)
                     .background(Color.white)
@@ -2199,7 +2227,7 @@ struct CommunityRecipesView: View {
                         .fill(Color(.systemBackground))
                         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                 )
-                .offset(x: 16, y: 110)  // Position below filter bar
+                .offset(x: 16, y: showFilters ? 110 : 60)  // Position below filter bar (adjusts based on filter visibility)
                 .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
                 .zIndex(999)
             }

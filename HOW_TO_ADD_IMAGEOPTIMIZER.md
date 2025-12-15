@@ -34,3 +34,4 @@ Falls Xcode das Projekt nicht öffnet, kannst du die Datei auch über das Termin
 
 ## Warum manuell?
 Die `project.pbxproj` Datei ist sehr empfindlich und muss exakt formatiert sein. Xcode fügt Dateien sicher hinzu und stellt sicher, dass alle Referenzen korrekt sind.
+

@@ -2123,19 +2123,19 @@ struct CommunityRecipesView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             }
                             .buttonStyle(.plain)
+                            
+                            // Link zu eigenen hochgeladenen Rezepten - nur Icon
+                            NavigationLink(destination: MyContributionsView()) {
+                                Image(systemName: "person.crop.square")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 6)
+                                    .background(Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
                         }
-                        
-                        // Link zu eigenen hochgeladenen Rezepten - nur Icon
-                        NavigationLink(destination: MyContributionsView()) {
-                            Image(systemName: "person.crop.square")
-                                .font(.system(size: 18))
-                                .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        }
-                        .buttonStyle(.plain)
                         
                         // Filter Section - nur sichtbar wenn showFilters = true
                         if showFilters {

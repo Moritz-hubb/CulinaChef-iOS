@@ -2110,35 +2110,16 @@ struct CommunityRecipesView: View {
                                         .font(.system(size: 16))
                                     Text(L.recipe_filter.localized)
                                         .font(.caption2)
-                                    if !selectedFilters.isEmpty || !selectedLanguages.isEmpty {
-                                        Text("(\(selectedFilters.count + selectedLanguages.count))")
+                                    if !selectedFilters.isEmpty || !selectedLanguages.isEmpty || filterByDietaryPreferences {
+                                        let count = selectedFilters.count + selectedLanguages.count + (filterByDietaryPreferences ? 1 : 0)
+                                        Text("(\(count))")
                                             .font(.caption2)
                                     }
                                 }
-                                .foregroundColor(showFilters || !selectedFilters.isEmpty || !selectedLanguages.isEmpty ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
+                                .foregroundColor(showFilters || !selectedFilters.isEmpty || !selectedLanguages.isEmpty || filterByDietaryPreferences ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
-                                .background(showFilters || !selectedFilters.isEmpty || !selectedLanguages.isEmpty ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            }
-                            .buttonStyle(.plain)
-                            
-                            // Toggle für Filter nach Ernährungspräferenzen
-                            Button(action: {
-                                withAnimation {
-                                    filterByDietaryPreferences.toggle()
-                                }
-                            }) {
-                                VStack(spacing: 2) {
-                                    Image(systemName: filterByDietaryPreferences ? "checkmark.shield.fill" : "shield")
-                                        .font(.system(size: 16))
-                                    Text(L.recipe_filterByDietaryPreferences.localized)
-                                        .font(.caption2)
-                                }
-                                .foregroundColor(filterByDietaryPreferences ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(filterByDietaryPreferences ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
+                                .background(showFilters || !selectedFilters.isEmpty || !selectedLanguages.isEmpty || filterByDietaryPreferences ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
                                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             }
                             .buttonStyle(.plain)
@@ -2159,15 +2140,44 @@ struct CommunityRecipesView: View {
                             .buttonStyle(.plain)
                         }
                         
-                        // Filter Chips with Language Dropdown - nur sichtbar wenn showFilters = true
+                        // Filter Section - nur sichtbar wenn showFilters = true
                         if showFilters {
-                            FilterChipsBarWithLanguage(
-                                availableLanguages: availableLanguages,
-                                selectedLanguages: $selectedLanguages,
-                                filterOptions: availableFilters,
-                                selectedFilters: $selectedFilters,
-                                showLanguageDropdown: $showLanguageDropdown
-                            )
+                            VStack(spacing: 12) {
+                                // Toggle für Filter nach Ernährungspräferenzen
+                                Button(action: {
+                                    withAnimation {
+                                        filterByDietaryPreferences.toggle()
+                                    }
+                                }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: filterByDietaryPreferences ? "checkmark.shield.fill" : "shield")
+                                            .font(.system(size: 16))
+                                        Text(L.recipe_filterByDietaryPreferences.localized)
+                                            .font(.subheadline.weight(.semibold))
+                                        Spacer()
+                                        if filterByDietaryPreferences {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.system(size: 16))
+                                                .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                        }
+                                    }
+                                    .foregroundColor(filterByDietaryPreferences ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 10)
+                                    .background(filterByDietaryPreferences ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                                
+                                // Filter Chips with Language Dropdown
+                                FilterChipsBarWithLanguage(
+                                    availableLanguages: availableLanguages,
+                                    selectedLanguages: $selectedLanguages,
+                                    filterOptions: availableFilters,
+                                    selectedFilters: $selectedFilters,
+                                    showLanguageDropdown: $showLanguageDropdown
+                                )
+                            }
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }

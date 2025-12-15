@@ -1022,6 +1022,7 @@ enum L {
     static let recipe_in_der_zwischenzeit_führe_b7f6 = "recipe.in_der_zwischenzeit_führe_b7f6"
     static let recipe_stell_mir_fragen_zu_facc = "recipe.stell_mir_fragen_zu_facc"
     static let recipe_zb_garzeiten_anpassen_ersatzzutaten_b588 = "recipe.zb_garzeiten_anpassen_ersatzzutaten_b588"
+    static let recipe_filter = "recipe.filter"
     static let recipe_filter_löschen = "recipe.filter_löschen"
     static let recipe_filterByDietaryPreferences = "recipe.filterByDietaryPreferences"
     static let recipe_filterByDietaryPreferencesHint = "recipe.filterByDietaryPreferencesHint"

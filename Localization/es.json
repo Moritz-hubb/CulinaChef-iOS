@@ -340,6 +340,7 @@
   "recipe.nährwerte_pro_portion": "Por porción",
   "recipe.nährwerte_insgesamt": "Total",
   "recipe.nährwerte_hinweis": "Los valores nutricionales son aproximados",
+  "recipe.filter": "Filtro",
   "recipe.filterByDietaryPreferences": "Filtrar por preferencias",
   "recipe.filterByDietaryPreferencesHint": "Filtrar recetas según tus preferencias dietéticas",
   "recipe.rezept_schließen": "Cerrar receta",

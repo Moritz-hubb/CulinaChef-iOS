@@ -340,6 +340,7 @@
   "recipe.nährwerte_pro_portion": "Par portion",
   "recipe.nährwerte_insgesamt": "Total",
   "recipe.nährwerte_hinweis": "Les valeurs nutritionnelles sont approximatives",
+  "recipe.filter": "Filtre",
   "recipe.filterByDietaryPreferences": "Filtrer par préférences",
   "recipe.filterByDietaryPreferencesHint": "Filtrer les recettes selon vos préférences alimentaires",
   "recipe.rezept_schließen": "Fermer la recette",

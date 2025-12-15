@@ -1937,9 +1937,11 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             let hiddenFilterTags = filterTags.map { "_filter:\($0.lowercased())" }
             tagsArray.append(contentsOf: hiddenFilterTags)
         }
-        let langTag = recipeLanguageTag()
-        if !tagsArray.contains(langTag) {
-            tagsArray.append(langTag)
+        // CRITICAL FIX: Use language code (lowercase, e.g. "en", "de") instead of uppercase tag
+        // This ensures filtering works correctly regardless of UI language
+        let langCode = currentLanguageCode().lowercased()  // e.g. "en", "de", "es"
+        if !tagsArray.contains(langCode) {
+            tagsArray.append(langCode)
         }
         let tags: [String]? = tagsArray.isEmpty ? nil : tagsArray
 

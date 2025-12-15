@@ -1771,22 +1771,30 @@ struct CommunityRecipesView: View {
             return Int(s[range])
         }
         // Helper to check if recipe matches a language filter
-        // languageFilter is now always a language code (e.g. "en", "de", "es")
+        // languageCode is always a language code (e.g. "en", "de", "es")
         func matchesLanguage(_ recipe: Recipe, _ languageCode: String) -> Bool {
-            // Check language field - should contain language code
+            let codeLower = languageCode.lowercased()
+            
+            // PRIMARY: Check language field - should contain language code (e.g. "en", "de", "es")
             if let lang = recipe.language {
                 let langLower = lang.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
                 // Direct match with language code
-                if langLower == languageCode.lowercased() {
+                if langLower == codeLower {
                     return true
                 }
             }
-            // Also check tags for language codes (backward compatibility)
+            
+            // SECONDARY: Check tags for language codes (backward compatibility)
+            // Tags may contain codes (e.g. "en", "de") or old format (e.g. "EN", "DE", "English", "Deutsch")
             if let tags = recipe.tags {
                 for tag in tags {
                     let tagLower = tag.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                    // Match language code in tags
-                    if tagLower == languageCode.lowercased() {
+                    // Match language code in tags (e.g. "en", "de", "es")
+                    if tagLower == codeLower {
+                        return true
+                    }
+                    // Backward compatibility: match old uppercase format (e.g. "EN" -> "en")
+                    if tagLower.uppercased() == codeLower.uppercased() {
                         return true
                     }
                 }
@@ -2195,41 +2203,51 @@ struct CommunityRecipesView: View {
         .overlay(alignment: .topLeading) {
             // Language Dropdown Overlay (at top level)
             if showLanguageDropdown {
-                VStack(spacing: 6) {
-                    ForEach(availableLanguages, id: \.code) { language in
-                        // CRITICAL FIX: Use language code, not localized name for filtering
-                        let isSelected = selectedLanguages.contains(language.code)
-                        Button(action: {
-                            Logger.debug("Language selection toggled: \(language.name) (code: \(language.code))", category: .ui)
-                            withAnimation {
-                                if isSelected {
-                                    selectedLanguages.remove(language.code)
-                                } else {
-                                    selectedLanguages.insert(language.code)
-                                }
-                            }
-                        }) {
-                            Text(language.name)
-                                .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
-                                .foregroundColor(isSelected ? .white : .black.opacity(0.7))
-                                .clipShape(Capsule())
-                                .overlay(Capsule().stroke(Color.black.opacity(0.07), lineWidth: 0.5))
+                // Transparent background to close dropdown when tapping outside
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation {
+                            showLanguageDropdown = false
                         }
-                        .buttonStyle(.plain)
                     }
-                }
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(.systemBackground))
-                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-                )
-                .offset(x: 16, y: showFilters ? 110 : 60)  // Position below filter bar (adjusts based on filter visibility)
-                .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
-                .zIndex(999)
+                    .overlay(alignment: .topLeading) {
+                        VStack(spacing: 6) {
+                            ForEach(availableLanguages, id: \.code) { language in
+                                // CRITICAL FIX: Use language code, not localized name for filtering
+                                let isSelected = selectedLanguages.contains(language.code)
+                                Button(action: {
+                                    Logger.debug("Language selection toggled: \(language.name) (code: \(language.code))", category: .ui)
+                                    withAnimation {
+                                        if isSelected {
+                                            selectedLanguages.remove(language.code)
+                                        } else {
+                                            selectedLanguages.insert(language.code)
+                                        }
+                                    }
+                                }) {
+                                    Text(language.name)
+                                        .font(.caption.weight(.semibold))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
+                                        .foregroundColor(isSelected ? .white : .black.opacity(0.7))
+                                        .clipShape(Capsule())
+                                        .overlay(Capsule().stroke(Color.black.opacity(0.07), lineWidth: 0.5))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                        )
+                        .offset(x: 16, y: showFilters ? 110 : 60)  // Position below filter bar (adjusts based on filter visibility)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
+                        .zIndex(999)
+                    }
             }
         }
         .navigationBarHidden(true)

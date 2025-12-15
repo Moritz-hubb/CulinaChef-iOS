@@ -191,9 +191,11 @@ ToolbarItem(placement: .navigationBarTrailing) {
             let hiddenFilterTags = filterTags.map { "_filter:\($0.lowercased())" }
             tags.append(contentsOf: hiddenFilterTags)
         }
-        let langTag = app.recipeLanguageTag()
-        if !tags.contains(langTag) {
-            tags.append(langTag)
+        // CRITICAL FIX: Use language code (lowercase, e.g. "en", "de") instead of uppercase tag
+        // This ensures filtering works correctly regardless of UI language
+        let langCode = app.currentLanguageCode().lowercased()  // e.g. "en", "de", "es"
+        if !tags.contains(langCode) {
+            tags.append(langCode)
         }
 
         return Recipe(

@@ -1668,7 +1668,7 @@ struct CommunityRecipesView: View {
     @State private var error: String?
     @State private var query: String = ""
     @State private var selectedFilters: Set<String> = []
-    @State private var selectedLanguages: Set<String> = []  // Separate language selection
+    @State private var selectedLanguages: Set<String> = []  // Language codes (e.g. "en", "de", "es") - NOT localized names
     @State private var showLanguageDropdown = false  // Language dropdown state
     @State private var showMyContributions = false
     @State private var filterByDietaryPreferences = false  // Toggle für Filter nach Ernährungspräferenzen
@@ -1771,31 +1771,22 @@ struct CommunityRecipesView: View {
             return Int(s[range])
         }
         // Helper to check if recipe matches a language filter
-        func matchesLanguage(_ recipe: Recipe, _ languageFilter: String) -> Bool {
-            let filterNorm = norm(languageFilter)
-            // Check language field
+        // languageFilter is now always a language code (e.g. "en", "de", "es")
+        func matchesLanguage(_ recipe: Recipe, _ languageCode: String) -> Bool {
+            // Check language field - should contain language code
             if let lang = recipe.language {
-                let langNorm = norm(lang)
-                // Match language codes (de, en, es, fr, it) or full names
-                if langNorm == filterNorm || 
-                   (filterNorm == "deutsch" && (langNorm == "de" || langNorm == "german" || langNorm == "deutsch")) ||
-                   (filterNorm == "englisch" && (langNorm == "en" || langNorm == "english" || langNorm == "englisch")) ||
-                   (filterNorm == "spanisch" && (langNorm == "es" || langNorm == "spanish" || langNorm == "spanisch" || langNorm == "espanol")) ||
-                   (filterNorm == "franzosisch" && (langNorm == "fr" || langNorm == "french" || langNorm == "franzosisch" || langNorm == "francais")) ||
-                   (filterNorm == "italienisch" && (langNorm == "it" || langNorm == "italian" || langNorm == "italienisch" || langNorm == "italiano")) {
+                let langLower = lang.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                // Direct match with language code
+                if langLower == languageCode.lowercased() {
                     return true
                 }
             }
-            // Also check tags for language tags
+            // Also check tags for language codes (backward compatibility)
             if let tags = recipe.tags {
                 for tag in tags {
-                    let tagNorm = norm(tag)
-                    if tagNorm == filterNorm ||
-                       (filterNorm == "deutsch" && (tagNorm == "de" || tagNorm == "german" || tagNorm == "deutsch")) ||
-                       (filterNorm == "englisch" && (tagNorm == "en" || tagNorm == "english" || tagNorm == "englisch")) ||
-                       (filterNorm == "spanisch" && (tagNorm == "es" || tagNorm == "spanish" || tagNorm == "spanisch" || tagNorm == "espanol")) ||
-                       (filterNorm == "franzosisch" && (tagNorm == "fr" || tagNorm == "french" || tagNorm == "franzosisch" || tagNorm == "francais")) ||
-                       (filterNorm == "italienisch" && (tagNorm == "it" || tagNorm == "italian" || tagNorm == "italienisch" || tagNorm == "italiano")) {
+                    let tagLower = tag.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                    // Match language code in tags
+                    if tagLower == languageCode.lowercased() {
                         return true
                     }
                 }
@@ -1822,13 +1813,14 @@ struct CommunityRecipesView: View {
             return false
         }
         // First apply language filter
+        // selectedLanguages now contains language codes (e.g. "en", "de", "es"), not localized names
         var languageFiltered = base
         if !selectedLanguages.isEmpty {
-            Logger.debug("Applying language filter: \(selectedLanguages.count) selected", category: .ui)
+            Logger.debug("Applying language filter: \(selectedLanguages.count) selected (codes: \(selectedLanguages.joined(separator: ", ")))", category: .ui)
             languageFiltered = base.filter { recipe in
-                // Check if recipe matches any selected language
-                for langName in selectedLanguages {
-                    if matchesLanguage(recipe, langName) {
+                // Check if recipe matches any selected language code
+                for languageCode in selectedLanguages {
+                    if matchesLanguage(recipe, languageCode) {
                         return true
                     }
                 }
@@ -2205,14 +2197,15 @@ struct CommunityRecipesView: View {
             if showLanguageDropdown {
                 VStack(spacing: 6) {
                     ForEach(availableLanguages, id: \.code) { language in
-                        let isSelected = selectedLanguages.contains(language.name)
+                        // CRITICAL FIX: Use language code, not localized name for filtering
+                        let isSelected = selectedLanguages.contains(language.code)
                         Button(action: {
-                            Logger.debug("Language selection toggled: \(language.name)", category: .ui)
+                            Logger.debug("Language selection toggled: \(language.name) (code: \(language.code))", category: .ui)
                             withAnimation {
                                 if isSelected {
-                                    selectedLanguages.remove(language.name)
+                                    selectedLanguages.remove(language.code)
                                 } else {
-                                    selectedLanguages.insert(language.name)
+                                    selectedLanguages.insert(language.code)
                                 }
                             }
                         }) {
@@ -2781,6 +2774,11 @@ private struct FilterChipsBarWithLanguage: View {
         if selectedLanguages.isEmpty {
             return L.recipe_sprache.localized
         } else if selectedLanguages.count == 1 {
+            // Find localized name for the selected language code
+            if let code = selectedLanguages.first,
+               let language = availableLanguages.first(where: { $0.code == code }) {
+                return language.name
+            }
             return selectedLanguages.first ?? L.recipe_sprache.localized
         } else {
             return "\(selectedLanguages.count) " + L.recipe_sprachen.localized
@@ -2805,6 +2803,7 @@ private struct FilterChipsBarWithLanguage: View {
                     .font(.caption.weight(.semibold))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
+                    // CRITICAL FIX: Check if any language codes are selected (not localized names)
                     .background(!selectedLanguages.isEmpty ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
                     .foregroundColor(!selectedLanguages.isEmpty ? .white : .black.opacity(0.7))
                     .clipShape(Capsule())

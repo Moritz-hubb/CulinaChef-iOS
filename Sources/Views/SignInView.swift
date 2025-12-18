@@ -63,28 +63,30 @@ struct SignInView: View {
                 
                 // White card with form
                 VStack(spacing: 0) {
-                    VStack(spacing: 20) {
-                        // Close button
-                        HStack {
-                            Spacer()
-                            Button {
-                                dismiss()
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 28))
-                                    .foregroundColor(.gray.opacity(0.6))
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            Spacer().frame(height: 1) // Top spacing
+                            // Close button
+                            HStack {
+                                Spacer()
+                                Button {
+                                    dismiss()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 28))
+                                        .foregroundColor(.gray.opacity(0.6))
+                                }
+                                .accessibilityLabel(L.cancel.localized)
+                                .accessibilityHint("Schließt den Anmeldebildschirm")
                             }
-                            .accessibilityLabel(L.cancel.localized)
-                            .accessibilityHint("Schließt den Anmeldebildschirm")
-                        }
-                        .padding(.top, 16)
-                        .padding(.trailing, 16)
-                        Text(L.auth_signInButton.localized)
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        // Email Field
+                            .padding(.top, 16)
+                            .padding(.trailing, 16)
+                            Text(L.auth_signInButton.localized)
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            // Email Field
                         VStack(alignment: .leading, spacing: 6) {
                             Text(L.email.localized)
                                 .font(.system(size: 13, weight: .semibold))
@@ -275,11 +277,12 @@ struct SignInView: View {
                         .frame(height: 44)
                         .frame(maxWidth: 375) // Prevent constraint conflicts
                         .cornerRadius(8)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 8)
+                        .padding(.bottom, 40) // Extra bottom padding for keyboard
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 8)
-                    .padding(.bottom, 24)
-                    .frame(maxHeight: .infinity)
+                    .scrollDismissesKeyboard(.interactively)
                     .background(Color.white)
                     .cornerRadius(30, corners: [.topLeft, .topRight])
                     .ignoresSafeArea(edges: .bottom)

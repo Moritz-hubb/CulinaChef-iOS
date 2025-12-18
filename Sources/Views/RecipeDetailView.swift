@@ -400,20 +400,13 @@ struct RecipeDetailView: View {
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 
                 // Additional Info
-                if let cookTime = displayRecipe.cooking_time, let difficulty = displayRecipe.difficulty {
+                if let cookTime = displayRecipe.cooking_time {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text(L.label_cookingTime.localized)
                                 .foregroundStyle(.white.opacity(0.8))
                             Spacer()
                             Text(cookTime)
-                                .foregroundStyle(.white)
-                        }
-                        HStack {
-                            Text(L.label_difficulty.localized)
-                                .foregroundStyle(.white.opacity(0.8))
-                            Spacer()
-                            Text(difficulty)
                                 .foregroundStyle(.white)
                         }
                     }
@@ -1051,7 +1044,7 @@ struct RecipeDetailView: View {
     // Parse ingredient quantity
     private func parseIngredientQuantity(_ ingredient: String) -> String? {
         // First, remove the invisible ingredient_qty marker
-        var trimmed = ingredient.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "").trimmingCharacters(in: .whitespaces)
+        let trimmed = ingredient.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "").trimmingCharacters(in: .whitespaces)
         
         // Extended pattern with more units and variations
         let patterns = [
@@ -1278,9 +1271,6 @@ struct RecipeDetailView: View {
         // Metadata
         if let cookTime = displayRecipe.cooking_time {
             md += "**Kochzeit:** \(cookTime)\n\n"
-        }
-        if let difficulty = displayRecipe.difficulty {
-            md += "**Schwierigkeit:** \(difficulty)\n\n"
         }
         if let tags = displayRecipe.tags, !tags.isEmpty {
             md += "**Tags:** \(tags.joined(separator: ", "))\n\n"

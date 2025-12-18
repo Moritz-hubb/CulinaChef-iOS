@@ -1102,7 +1102,6 @@ struct PersonalRecipesView: View {
         // Background refresh lädt dann im Hintergrund neue Daten
         if !keepVisible {
             if !app.cachedRecipes.isEmpty {
-                let cacheCheckTime = Date()
                 let cacheAge = app.recipesCacheTimestamp.map { Date().timeIntervalSince($0) } ?? 0
                 print("💾 [PERFORMANCE] Cache found: \(app.cachedRecipes.count) recipes, \(app.cachedMenus.count) menus")
                 print("💾 [PERFORMANCE] Cache age: \(String(format: "%.1f", cacheAge))s")
@@ -1806,7 +1805,6 @@ struct CommunityRecipesView: View {
             if q.isEmpty { return true }
             if r.title.localizedCaseInsensitiveContains(q) { return true }
             if let tags = r.tags, tags.contains(where: { $0.localizedCaseInsensitiveContains(q) }) { return true }
-            if let diff = r.difficulty, diff.localizedCaseInsensitiveContains(q) { return true }
             // Special cases: text queries
             switch norm(q) {
             case "highprotein":
@@ -2324,7 +2322,6 @@ struct CommunityRecipesView: View {
         // OPTIMIZATION: Wenn Cache vorhanden ist UND Rezepte enthält, zeige Cache sofort
         // Wenn Cache leer ist, versuche trotzdem zu laden (kann temporäres Problem sein)
         if !forceRefresh && !app.cachedCommunityRecipes.isEmpty {
-            let cacheCheckTime = Date()
             let cacheAge = app.communityRecipesCacheTimestamp.map { Date().timeIntervalSince($0) } ?? 0
             let cacheRecipes = app.cachedCommunityRecipes
             print("💾 [PERFORMANCE] Cache found: \(cacheRecipes.count) recipes")
@@ -2446,7 +2443,6 @@ struct CommunityRecipesView: View {
                 } else {
                     self.loading = false
                     self.filteredRecipes = []
-                    let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
                     let totalDuration = Date().timeIntervalSince(totalStartTime)
                     print("⚠️ [PERFORMANCE] No recipes found - displaying empty state")
                     print("✅ [PERFORMANCE] Total load time: \(String(format: "%.3f", totalDuration))s")
@@ -3159,12 +3155,6 @@ struct RecipeCard: View {
                 HStack(spacing: 12) {
                     if let cookTime = recipe.cooking_time {
                         Label(cookTime, systemImage: "clock")
-                            .font(.caption)
-                            .foregroundColor(.black.opacity(0.6))
-                    }
-                    
-                    if let difficulty = recipe.difficulty {
-                        Label(difficulty, systemImage: "chart.bar")
                             .font(.caption)
                             .foregroundColor(.black.opacity(0.6))
                     }

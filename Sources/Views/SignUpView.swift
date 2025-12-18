@@ -86,6 +86,7 @@ struct SignUpView: View {
                 VStack(spacing: 0) {
                     ScrollView {
                         VStack(spacing: 16) {
+                            Spacer().frame(height: 1) // Top spacing
                             // Close button
                             HStack {
                                 Spacer()
@@ -476,8 +477,9 @@ struct SignUpView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 8)
-                        .padding(.bottom, 20)
+                        .padding(.bottom, 40) // Extra bottom padding for keyboard
                     }
+                    .scrollDismissesKeyboard(.interactively)
                     .background(Color.white)
                     .cornerRadius(30, corners: [.topLeft, .topRight])
                     .ignoresSafeArea(edges: .bottom)

@@ -1632,111 +1632,105 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         print("🌍 [PERFORMANCE] Preload Community Recipes STARTED at \(startTime)")
         print("🌍 [PERFORMANCE] Loading \(pages) pages (pageSize: \(pageSize)) = ~\(pages * pageSize) recipes")
         
-        do {
-            var allRecipes: [Recipe] = []
-            var successfulPages = 0
-            
-            // Load multiple pages in parallel for faster loading
-            // OPTIMIZATION: Use timeout per page to prevent blocking
-            let networkStartTime = Date()
-            print("📡 [PERFORMANCE] Starting parallel network requests for \(pages) pages...")
-            var tasks: [Task<[Recipe], Error>] = []
-            for page in 0..<pages {
-                tasks.append(Task {
-                    // Add timeout wrapper to prevent 60+ second hangs
-                    return try await withThrowingTaskGroup(of: [Recipe].self) { group in
-                        group.addTask {
-                            let pageStartTime = Date()
-                            let recipes = try await self.loadCommunityRecipesPage(page: page, pageSize: pageSize, token: token)
-                            let pageDuration = Date().timeIntervalSince(pageStartTime)
-                            print("📡 [PERFORMANCE] Page \(page) loaded in \(String(format: "%.3f", pageDuration))s (\(recipes.count) recipes)")
-                            return recipes
-                        }
-                        
-                        // Timeout after 6 seconds per page (shorter than request timeout for faster failure)
-                        group.addTask {
-                            try await Task.sleep(nanoseconds: 6_000_000_000) // 6 seconds
-                            throw URLError(.timedOut)
-                        }
-                        
-                        // Return first completed task (either success or timeout)
-                        let result = try await group.next()!
-                        group.cancelAll()
-                        return result
+        var allRecipes: [Recipe] = []
+        var successfulPages = 0
+        
+        // Load multiple pages in parallel for faster loading
+        // OPTIMIZATION: Use timeout per page to prevent blocking
+        let networkStartTime = Date()
+        print("📡 [PERFORMANCE] Starting parallel network requests for \(pages) pages...")
+        var tasks: [Task<[Recipe], Error>] = []
+        for page in 0..<pages {
+            tasks.append(Task {
+                // Add timeout wrapper to prevent 60+ second hangs
+                return try await withThrowingTaskGroup(of: [Recipe].self) { group in
+                    group.addTask {
+                        let pageStartTime = Date()
+                        let recipes = try await self.loadCommunityRecipesPage(page: page, pageSize: pageSize, token: token)
+                        let pageDuration = Date().timeIntervalSince(pageStartTime)
+                        print("📡 [PERFORMANCE] Page \(page) loaded in \(String(format: "%.3f", pageDuration))s (\(recipes.count) recipes)")
+                        return recipes
                     }
-                })
-            }
-            
-            // Wait for all pages to load (with timeout protection)
-            var pageIndex = 0
-            for task in tasks {
-                do {
-                    let recipes = try await task.value
-                    allRecipes.append(contentsOf: recipes)
-                    successfulPages += 1
-                    print("✅ [PERFORMANCE] Page \(pageIndex) completed: \(recipes.count) recipes")
-                    pageIndex += 1
-                } catch {
-                    print("❌ [PERFORMANCE] Page \(pageIndex) FAILED: \(error.localizedDescription)")
-                    Logger.error("[AppState] Failed to load community recipes page: \(error.localizedDescription)", category: .data)
-                    pageIndex += 1
+                    
+                    // Timeout after 6 seconds per page (shorter than request timeout for faster failure)
+                    group.addTask {
+                        try await Task.sleep(nanoseconds: 6_000_000_000) // 6 seconds
+                        throw URLError(.timedOut)
+                    }
+                    
+                    // Return first completed task (either success or timeout)
+                    let result = try await group.next()!
+                    group.cancelAll()
+                    return result
                 }
-            }
-            
-            print("📊 [PERFORMANCE] Successfully loaded \(successfulPages)/\(pages) pages")
-            
-            let networkDuration = Date().timeIntervalSince(networkStartTime)
-            print("📡 [PERFORMANCE] All \(pages) pages loaded in \(String(format: "%.3f", networkDuration))s")
-            print("📡 [PERFORMANCE] Total recipes received: \(allRecipes.count)")
-            
-            // Remove duplicates (by ID) and sort by created_at desc
-            let processingStartTime = Date()
-            var uniqueRecipes: [Recipe] = []
-            var seenIds: Set<String> = []
-            for recipe in allRecipes {
-                if !seenIds.contains(recipe.id) {
-                    uniqueRecipes.append(recipe)
-                    seenIds.insert(recipe.id)
-                }
-            }
-            
-            // Sort by created_at desc (newest first)
-            uniqueRecipes.sort { recipe1, recipe2 in
-                let date1 = recipe1.created_at ?? ""
-                let date2 = recipe2.created_at ?? ""
-                return date1 > date2
-            }
-            
-            let processingDuration = Date().timeIntervalSince(processingStartTime)
-            print("🔄 [PERFORMANCE] Processing (dedupe + sort) completed in \(String(format: "%.3f", processingDuration))s")
-            print("🔄 [PERFORMANCE] Unique recipes: \(uniqueRecipes.count) (removed \(allRecipes.count - uniqueRecipes.count) duplicates)")
-            
-            // OPTIMIZATION: Cache only if we got recipes
-            // Don't cache empty results - allows retry on next tab switch
-            let cacheStartTime = Date()
-            await MainActor.run {
-                // Only cache if we got recipes - empty cache means no cache, allows retry
-                if !uniqueRecipes.isEmpty {
-                    self.cachedCommunityRecipes = uniqueRecipes
-                    self.communityRecipesCacheTimestamp = Date()
-                    let cacheDuration = Date().timeIntervalSince(cacheStartTime)
-                    print("💾 [PERFORMANCE] Community cache updated in \(String(format: "%.3f", cacheDuration))s")
-                    print("💾 [PERFORMANCE] Cached \(uniqueRecipes.count) community recipes (from \(successfulPages)/\(pages) pages)")
-                    Logger.info("[AppState] Preloaded \(uniqueRecipes.count) community recipes to cache (from \(successfulPages)/\(pages) pages)", category: .data)
-                } else {
-                    print("⚠️ [PERFORMANCE] No recipes to cache (from \(successfulPages)/\(pages) pages) - will retry on next tab switch")
-                    // Don't set cache if empty - allows retry
-                }
-            }
-            
-            let totalDuration = Date().timeIntervalSince(startTime)
-            print("✅ [PERFORMANCE] Preload Community Recipes COMPLETED in \(String(format: "%.3f", totalDuration))s")
-            print("✅ [PERFORMANCE] Breakdown: Network=\(String(format: "%.3f", networkDuration))s, Processing=\(String(format: "%.3f", processingDuration))s, Success=\(successfulPages)/\(pages) pages")
-        } catch {
-            let totalDuration = Date().timeIntervalSince(startTime)
-            print("❌ [PERFORMANCE] Preload Community Recipes FAILED after \(String(format: "%.3f", totalDuration))s: \(error.localizedDescription)")
-            Logger.error("[AppState] Failed to preload community recipes", error: error, category: .data)
+            })
         }
+        
+        // Wait for all pages to load (with timeout protection)
+        var pageIndex = 0
+        for task in tasks {
+            do {
+                let recipes = try await task.value
+                allRecipes.append(contentsOf: recipes)
+                successfulPages += 1
+                print("✅ [PERFORMANCE] Page \(pageIndex) completed: \(recipes.count) recipes")
+                pageIndex += 1
+            } catch {
+                print("❌ [PERFORMANCE] Page \(pageIndex) FAILED: \(error.localizedDescription)")
+                Logger.error("[AppState] Failed to load community recipes page: \(error.localizedDescription)", category: .data)
+                pageIndex += 1
+            }
+        }
+        
+        print("📊 [PERFORMANCE] Successfully loaded \(successfulPages)/\(pages) pages")
+        
+        let networkDuration = Date().timeIntervalSince(networkStartTime)
+        print("📡 [PERFORMANCE] All \(pages) pages loaded in \(String(format: "%.3f", networkDuration))s")
+        print("📡 [PERFORMANCE] Total recipes received: \(allRecipes.count)")
+        
+        // Remove duplicates (by ID) and sort by created_at desc
+        let processingStartTime = Date()
+        var uniqueRecipes: [Recipe] = []
+        var seenIds: Set<String> = []
+        for recipe in allRecipes {
+            if !seenIds.contains(recipe.id) {
+                uniqueRecipes.append(recipe)
+                seenIds.insert(recipe.id)
+            }
+        }
+        
+        // Sort by created_at desc (newest first)
+        uniqueRecipes.sort { recipe1, recipe2 in
+            let date1 = recipe1.created_at ?? ""
+            let date2 = recipe2.created_at ?? ""
+            return date1 > date2
+        }
+        
+        let processingDuration = Date().timeIntervalSince(processingStartTime)
+        print("🔄 [PERFORMANCE] Processing (dedupe + sort) completed in \(String(format: "%.3f", processingDuration))s")
+        print("🔄 [PERFORMANCE] Unique recipes: \(uniqueRecipes.count) (removed \(allRecipes.count - uniqueRecipes.count) duplicates)")
+        
+        // OPTIMIZATION: Cache only if we got recipes
+        // Don't cache empty results - allows retry on next tab switch
+        let cacheStartTime = Date()
+        await MainActor.run {
+            // Only cache if we got recipes - empty cache means no cache, allows retry
+            if !uniqueRecipes.isEmpty {
+                self.cachedCommunityRecipes = uniqueRecipes
+                self.communityRecipesCacheTimestamp = Date()
+                let cacheDuration = Date().timeIntervalSince(cacheStartTime)
+                print("💾 [PERFORMANCE] Community cache updated in \(String(format: "%.3f", cacheDuration))s")
+                print("💾 [PERFORMANCE] Cached \(uniqueRecipes.count) community recipes (from \(successfulPages)/\(pages) pages)")
+                Logger.info("[AppState] Preloaded \(uniqueRecipes.count) community recipes to cache (from \(successfulPages)/\(pages) pages)", category: .data)
+            } else {
+                print("⚠️ [PERFORMANCE] No recipes to cache (from \(successfulPages)/\(pages) pages) - will retry on next tab switch")
+                // Don't set cache if empty - allows retry
+            }
+        }
+        
+        let totalDuration = Date().timeIntervalSince(startTime)
+        print("✅ [PERFORMANCE] Preload Community Recipes COMPLETED in \(String(format: "%.3f", totalDuration))s")
+        print("✅ [PERFORMANCE] Breakdown: Network=\(String(format: "%.3f", networkDuration))s, Processing=\(String(format: "%.3f", processingDuration))s, Success=\(successfulPages)/\(pages) pages")
     }
     
     /// Helper function to load a page of community recipes

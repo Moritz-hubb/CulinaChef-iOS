@@ -125,11 +125,6 @@ struct ManualRecipeBuilderView: View {
                 .ignoresSafeArea()
                 
                 ScrollView {
-                    Color.clear.onAppear {
-                        if difficulty.isEmpty {
-                            difficulty = L.difficulty_medium.localized
-                        }
-                    }
                     VStack(spacing: 20) {
                         // MARK: - Basic Info Section
                         VStack(alignment: .leading, spacing: 12) {
@@ -194,19 +189,6 @@ struct ManualRecipeBuilderView: View {
                                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                         .focused($isFocused)
                                 }
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(L.label_difficulty.localized)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white.opacity(0.9))
-                                Picker(L.label_difficulty.localized, selection: $difficulty) {
-                                    ForEach(difficultyOptions, id: \.self) { option in
-                                        Text(option).tag(option)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
                         }
                         
@@ -507,7 +489,6 @@ struct ManualRecipeBuilderView: View {
                 "nutrition": nutrition,
                 "image_url": imageUrl ?? NSNull(),
                 "cooking_time": cookingTimeStr ?? NSNull(),
-                "difficulty": difficulty,
                 "filter_tags": filterTags  // Use filter_tags instead of tags to match AI-generated recipes
             ]
             

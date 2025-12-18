@@ -92,7 +92,7 @@ struct OnboardingView: View {
     // MARK: - Save Username to Database
     private func saveUsernameToDatabase(_ name: String) async {
         guard !isSavingName else { return }
-        guard let accessToken = app.accessToken else {
+        guard app.accessToken != nil else {
             Logger.debug("[OnboardingView] Cannot save username: No access token available", category: .data)
             return
         }

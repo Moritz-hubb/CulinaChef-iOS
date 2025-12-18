@@ -540,7 +540,6 @@ struct RecipeCompletionView: View {
             } else if let ct = recipe.cooking_time, !ct.isEmpty {
                 body["cooking_time"] = ct
             }
-            body["difficulty"] = difficulty
             if !tags.isEmpty {
                 body["tags"] = tags
             } else if let preset = recipe.tags, !preset.isEmpty {

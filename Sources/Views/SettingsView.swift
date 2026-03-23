@@ -1091,9 +1091,11 @@ private struct ProfileSettingsSheet: View {
         defer { loading = false }
         
         do {
+            print("[Export] Starting recipe export")
             // Fetch all recipes from backend
             guard let token = app.accessToken else {
                 error = L.errorNotLoggedIn.localized
+                print("[Export] Failed: no access token")
                 return
             }
             
@@ -1110,35 +1112,32 @@ private struct ProfileSettingsSheet: View {
             request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
+            print("[Export] Requesting recipes from \(url.absoluteString)")
             let (data, response) = try await SecureURLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
                 error = L.errorExportFailed.localized
+                print("[Export] Failed: HTTP status \((response as? HTTPURLResponse)?.statusCode ?? -1)")
                 return
             }
             
             let recipes = try JSONDecoder().decode([Recipe].self, from: data)
+            print("[Export] Loaded \(recipes.count) recipes from backend")
             
-            // Create export data structure
-            let exportData: [String: Any] = [
-                "export_date": ISO8601DateFormatter().string(from: Date()),
-                "user_email": app.userEmail ?? "unknown",
-                "recipe_count": recipes.count,
-                "recipes": recipes.map { recipe in
-                    [
-                        "id": recipe.id,
-                        "title": recipe.title,
-                        "ingredients": recipe.ingredients as Any,
-                        "instructions": recipe.instructions as Any,
-                        "nutrition": recipe.nutrition as Any,
-                        "created_at": recipe.created_at ?? "unknown"
-                    ]
-                }
-            ]
+            // Create strongly-typed export payload so JSON encoding is always valid
+            let payload = RecipesExportPayload(
+                export_date: ISO8601DateFormatter().string(from: Date()),
+                user_email: app.userEmail ?? "unknown",
+                recipe_count: recipes.count,
+                recipes: recipes
+            )
             
-            // Convert to JSON
-            let jsonData = try JSONSerialization.data(withJSONObject: exportData, options: [.prettyPrinted, .sortedKeys])
+            // Convert to JSON via JSONEncoder (avoids __SwiftValue issues)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let jsonData = try encoder.encode(payload)
+            print("[Export] Encoded export JSON, size: \(jsonData.count) bytes")
             
             // Save to temporary file
             let tempDir = FileManager.default.temporaryDirectory
@@ -1146,6 +1145,7 @@ private struct ProfileSettingsSheet: View {
             let fileURL = tempDir.appendingPathComponent(fileName)
             
             try jsonData.write(to: fileURL)
+            print("[Export] Wrote export file to \(fileURL.path)")
             
             // Share via ShareSheet
             await MainActor.run {
@@ -1161,12 +1161,31 @@ private struct ProfileSettingsSheet: View {
                     activityVC.popoverPresentationController?.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 0, height: 0)
                     activityVC.popoverPresentationController?.permittedArrowDirections = []
                     rootVC.present(activityVC, animated: true)
+                    print("[Export] Presented share sheet for export file")
                 }
             }
             
         } catch {
+            print("[Export] Export failed with error: \(error.localizedDescription)")
             self.error = error.localizedDescription
         }
+    }
+}
+
+// MARK: - Export Models
+
+/// Strongly-typed export payload to ensure JSONEncoder can always serialize it safely.
+private struct RecipesExportPayload: Codable {
+    let export_date: String
+    let user_email: String
+    let recipe_count: Int
+    let recipes: [Recipe]
+    
+    enum CodingKeys: String, CodingKey {
+        case export_date
+        case user_email
+        case recipe_count
+        case recipes
     }
 }
 

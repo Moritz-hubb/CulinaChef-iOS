@@ -21,135 +21,143 @@ struct SignInView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [
-                    Color(red: 0.95, green: 0.5, blue: 0.3),
-                    Color(red: 0.85, green: 0.4, blue: 0.2)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Top illustration section
-                VStack(spacing: 8) {
-                    Spacer().frame(height: 40)
-                    
-                    // Penguin illustration - smaller
-                    if let uiImage = UIImage(named: "penguin-auth") {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 130, height: 130)
-                            .accessibilityHidden(true)
-                    } else {
-                        Image(systemName: "fork.knife.circle.fill")
-                            .font(.system(size: 80))
-                            .foregroundColor(.white)
-                            .accessibilityHidden(true)
-                    }
-                    
-                    Text(L.ui_willkommen_zurück.localized)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Spacer().frame(height: 16)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 20)
+        GeometryReader { geometry in
+            ZStack {
+                // Background gradient
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.95, green: 0.5, blue: 0.3),
+                        Color(red: 0.85, green: 0.4, blue: 0.2)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                .ignoresSafeArea(.keyboard)
                 
-                // White card with form
                 VStack(spacing: 0) {
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            Spacer().frame(height: 1) // Top spacing
-                            // Close button
-                            HStack {
-                                Spacer()
-                                Button {
-                                    dismiss()
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundColor(.gray.opacity(0.6))
-                                }
-                                .accessibilityLabel(L.cancel.localized)
-                                .accessibilityHint("Schließt den Anmeldebildschirm")
-                            }
-                            .padding(.top, 16)
-                            .padding(.trailing, 16)
-                            Text(L.auth_signInButton.localized)
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.black)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            
-                            // Email Field
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L.email.localized)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.gray)
-                                
-                            TextField("", text: $email, prompt: Text(L.emailPlaceholder.localized).foregroundColor(.gray.opacity(0.5)))
-                                .textContentType(.emailAddress)
-                                .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
-                                .focused($focusedField, equals: .email)
-                                .submitLabel(.next)
-                                .onSubmit { focusedField = .password }
-                                .accessibilityLabel(L.email.localized)
-                                .accessibilityHint(L.emailPlaceholder.localized)
-                                .padding(12)
-                                .background(Color(UIColor.systemGray6))
-                                .cornerRadius(10)
-                                .foregroundColor(.black)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(focusedField == .email ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
-                                )
+                    // Top illustration section - reduces when keyboard is visible
+                    VStack(spacing: 8) {
+                        Spacer().frame(height: focusedField == nil ? 40 : 20)
+                        
+                        // Penguin illustration - smaller when keyboard is visible
+                        if let uiImage = UIImage(named: "penguin-auth") {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: focusedField == nil ? 130 : 80, height: focusedField == nil ? 130 : 80)
+                                .accessibilityHidden(true)
+                        } else {
+                            Image(systemName: "fork.knife.circle.fill")
+                                .font(.system(size: focusedField == nil ? 80 : 50))
+                                .foregroundColor(.white)
+                                .accessibilityHidden(true)
                         }
                         
-                        // Password Field
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L.password.localized)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.gray)
-                            
-                            HStack {
-                                if showPassword {
-                                    TextField("", text: $password, prompt: Text(L.passwordPlaceholderDots.localized).foregroundColor(.gray.opacity(0.5)))
-                                        .textContentType(.password)
-                                        .focused($focusedField, equals: .password)
-                                        .submitLabel(.go)
-                                        .onSubmit { Task { await signIn() } }
-                                        .accessibilityLabel(L.password.localized)
-                                } else {
-                                    SecureField("", text: $password, prompt: Text(L.passwordPlaceholderDots.localized).foregroundColor(.gray.opacity(0.5)))
-                                        .textContentType(.password)
-                                        .focused($focusedField, equals: .password)
-                                        .submitLabel(.go)
-                                        .onSubmit { Task { await signIn() } }
-                                        .accessibilityLabel(L.password.localized)
-                                }
-                                
-                                Button { showPassword.toggle() } label: {
-                                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                        .foregroundColor(.gray)
-                                        .font(.system(size: 16))
-                                }
-                                .accessibilityLabel(showPassword ? "Passwort verbergen" : "Passwort anzeigen")
-                            }
-                            .padding(12)
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(10)
-                            .foregroundColor(.black)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(focusedField == .password ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
-                            )
+                        if focusedField == nil {
+                            Text(L.ui_willkommen_zurück.localized)
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white)
                         }
+                        
+                        Spacer().frame(height: focusedField == nil ? 16 : 8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, focusedField == nil ? 20 : 10)
+                    .animation(.easeInOut(duration: 0.2), value: focusedField)
+                    
+                    // White card with form - takes remaining space
+                    VStack(spacing: 0) {
+                        ScrollViewReader { proxy in
+                            ScrollView(.vertical, showsIndicators: false) {
+                            VStack(spacing: 20) {
+                                Spacer().frame(height: 1) // Top spacing
+                                // Close button
+                                HStack {
+                                    Spacer()
+                                    Button {
+                                        dismiss()
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 28))
+                                            .foregroundColor(.gray.opacity(0.6))
+                                    }
+                                    .accessibilityLabel(L.cancel.localized)
+                                    .accessibilityHint("Schließt den Anmeldebildschirm")
+                                }
+                                .padding(.top, 16)
+                                .padding(.trailing, 16)
+                                Text(L.auth_signInButton.localized)
+                                    .font(.system(size: 22, weight: .bold))
+                                    .foregroundColor(.black)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                // Email Field
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(L.email.localized)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.gray)
+                                        
+                                    TextField("", text: $email, prompt: Text(L.emailPlaceholder.localized).foregroundColor(.gray.opacity(0.5)))
+                                        .textContentType(.emailAddress)
+                                        .keyboardType(.emailAddress)
+                                        .autocapitalization(.none)
+                                        .focused($focusedField, equals: .email)
+                                        .submitLabel(.next)
+                                        .onSubmit { focusedField = .password }
+                                        .accessibilityLabel(L.email.localized)
+                                        .accessibilityHint(L.emailPlaceholder.localized)
+                                        .padding(12)
+                                        .background(Color(UIColor.systemGray6))
+                                        .cornerRadius(10)
+                                        .foregroundColor(.black)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(focusedField == .email ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
+                                        )
+                                }
+                                .id("emailField")
+                                
+                                // Password Field
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(L.password.localized)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.gray)
+                                    
+                                    HStack {
+                                        if showPassword {
+                                            TextField("", text: $password, prompt: Text(L.passwordPlaceholderDots.localized).foregroundColor(.gray.opacity(0.5)))
+                                                .textContentType(.password)
+                                                .focused($focusedField, equals: .password)
+                                                .submitLabel(.go)
+                                                .onSubmit { Task { await signIn() } }
+                                                .accessibilityLabel(L.password.localized)
+                                        } else {
+                                            SecureField("", text: $password, prompt: Text(L.passwordPlaceholderDots.localized).foregroundColor(.gray.opacity(0.5)))
+                                                .textContentType(.password)
+                                                .focused($focusedField, equals: .password)
+                                                .submitLabel(.go)
+                                                .onSubmit { Task { await signIn() } }
+                                                .accessibilityLabel(L.password.localized)
+                                        }
+                                        
+                                        Button { showPassword.toggle() } label: {
+                                            Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                                                .foregroundColor(.gray)
+                                                .font(.system(size: 16))
+                                        }
+                                        .accessibilityLabel(showPassword ? "Passwort verbergen" : "Passwort anzeigen")
+                                    }
+                                    .padding(12)
+                                    .background(Color(UIColor.systemGray6))
+                                    .cornerRadius(10)
+                                    .foregroundColor(.black)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(focusedField == .password ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
+                                    )
+                                }
+                                .id("passwordField")
                         
                         // Error Message
                         if let error = errorMessage {
@@ -196,6 +204,7 @@ struct SignInView: View {
                         .accessibilityHint("Meldet sich mit E-Mail und Passwort an")
                         .disabled(app.loading || email.isEmpty || password.isEmpty)
                         .opacity((app.loading || email.isEmpty || password.isEmpty) ? 0.6 : 1)
+                        .id("signInButton")
                         
                         // Divider with "Or"
                         HStack(spacing: 12) {
@@ -278,17 +287,43 @@ struct SignInView: View {
                         .frame(maxWidth: 375) // Prevent constraint conflicts
                         .cornerRadius(8)
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 8)
-                        .padding(.bottom, 40) // Extra bottom padding for keyboard
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                            .padding(.bottom, 400) // Extra bottom padding for keyboard - ensures all content is accessible
+                        }
+                        .scrollDismissesKeyboard(.interactively)
+                        .onChange(of: focusedField) { _, newValue in
+                            if let field = newValue {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    withAnimation {
+                                        switch field {
+                                        case .email:
+                                            proxy.scrollTo("emailField", anchor: .center)
+                                        case .password:
+                                            // When password field is focused, scroll to show sign in button
+                                            proxy.scrollTo("signInButton", anchor: .bottom)
+                                        }
+                                    }
+                                }
+                            } else {
+                                // When keyboard is dismissed, scroll to bottom to show all buttons
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    withAnimation {
+                                        proxy.scrollTo("signInButton", anchor: .bottom)
+                                    }
+                                }
+                            }
+                        }
+                        }
+                        .background(Color.white)
+                        .cornerRadius(30, corners: [.topLeft, .topRight])
+                        .ignoresSafeArea(edges: .bottom)
                     }
-                    .scrollDismissesKeyboard(.interactively)
-                    .background(Color.white)
-                    .cornerRadius(30, corners: [.topLeft, .topRight])
-                    .ignoresSafeArea(edges: .bottom)
+                    .frame(maxHeight: .infinity)
                 }
             }
         }
+        .ignoresSafeArea(.keyboard)
         .sheet(isPresented: $showForgotPassword) {
             ForgotPasswordView()
                 .environmentObject(app)

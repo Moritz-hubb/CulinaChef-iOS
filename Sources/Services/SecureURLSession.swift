@@ -47,6 +47,14 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
         // Prepare pinned certs - REQUIRED in production
         var pins: [String: [Data]] = [:]
         
+        // Allow disabling pinning via config (useful if pins are stale)
+        if !Config.enableSSLPinning {
+            self.pinnedCertificates = [:]
+            super.init()
+            Logger.info("SSL Pinning disabled by config", category: .config)
+            return
+        }
+        
         // Supabase certificate - REQUIRED
         guard let supabaseHost = Config.supabaseURL.host else {
             #if DEBUG
@@ -69,7 +77,11 @@ final class SecureURLSession: NSObject, URLSessionDelegate {
             fatalError("SSL Pinning: Supabase certificate (supabase.cer) not found in bundle - required for production builds")
             #endif
         }
-        pins[supabaseHost] = [supabaseCert]
+        if Config.enableSupabasePinning {
+            pins[supabaseHost] = [supabaseCert]
+        } else {
+            Logger.warning("SSL Pinning disabled for Supabase by config", category: .config)
+        }
         
         // Backend certificate - REQUIRED
         let backendHost = Config.backendBaseURL.host

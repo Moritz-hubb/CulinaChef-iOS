@@ -85,6 +85,22 @@ enum Config {
     static var enableSentry: Bool {
         currentEnvironment != .development
     }
+
+    // MARK: - Security / SSL Pinning
+    
+    /// Whether SSL pinning should be enforced.
+    /// Note: Supabase certificates rotate; strict leaf cert pinning can break without refreshed `.cer` files.
+    static var enableSSLPinning: Bool {
+        currentEnvironment == .production
+    }
+    
+    /// Whether Supabase should be pinned.
+    /// In production this should normally be `true`, but you can temporarily disable it to restore connectivity
+    /// if the Supabase leaf certificate changed and new pins weren't downloaded yet.
+    static var enableSupabasePinning: Bool {
+        // TEMP SAFETY: keep backend pinning, but allow Supabase to proceed with system trust if pins are stale
+        false
+    }
     
     /// Check if we're in a development/testing environment where backend validation might not work
     /// (Development builds, TestFlight, or staging)

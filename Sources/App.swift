@@ -9,67 +9,69 @@ struct CulinaChefApp: App {
     init() {
         UIAppearanceConfigurator.configure()
         
-        // Initialize Sentry for crash reporting and error tracking
-        SentrySDK.start { options in
-            // Load DSN from Info.plist (configured via Secrets.xcconfig)
-            if let dsn = Bundle.main.object(forInfoDictionaryKey: "SentryDSN") as? String,
-               !dsn.isEmpty,
-               !dsn.hasPrefix("$") {
+        // Initialize Sentry only when enabled and a valid DSN is present
+        if Config.enableSentry,
+           let dsn = Bundle.main.object(forInfoDictionaryKey: "SentryDSN") as? String,
+           Self.isValidSentryDSN(dsn) {
+            SentrySDK.start { options in
                 options.dsn = dsn
-            }
-            
-            #if DEBUG
-            options.debug = true // Verbose logging in debug
-            options.tracesSampleRate = 1.0 // 100% sampling in debug
-            options.environment = "debug"
-            // In Debug-Builds Screenshots/View-Hierarchy erlauben
-            options.attachScreenshot = true
-            options.attachViewHierarchy = true
-            #else
-            options.debug = false
-            options.tracesSampleRate = 0.2 // 20% sampling in production (saves quota)
-            options.environment = "production"
-            // In Production-Builds aus Datenschutzgründen deaktivieren
-            options.attachScreenshot = false
-            options.attachViewHierarchy = false
-            #endif
-            
-            options.enableAutoSessionTracking = true
-            
-            // Enable breadcrumbs for better debugging
-            options.enableAutoBreadcrumbTracking = true
-            options.enableNetworkBreadcrumbs = true
-            
-            // GDPR: Scrub PII (Personally Identifiable Information) before sending to Sentry
-            options.beforeSend = { event in
-                // Remove user identifiers to comply with GDPR
-                event.user = nil
                 
-                // Remove sensitive breadcrumbs (tokens, user_ids, emails)
-                if let breadcrumbs = event.breadcrumbs {
-                    event.breadcrumbs = breadcrumbs.filter { crumb in
-                        let message = (crumb.message ?? "").lowercased()
-                        let dataStr = crumb.data?.description.lowercased() ?? ""
-                        let combined = message + " " + dataStr
-                        let sensitive = ["user_id", "token", "email", "password", "consent", "auth", "apikey", "key"]
-                        return !sensitive.contains { combined.contains($0) }
+                #if DEBUG
+                options.debug = true // Verbose logging in debug
+                options.tracesSampleRate = 1.0 // 100% sampling in debug
+                options.environment = "debug"
+                // In Debug-Builds Screenshots/View-Hierarchy erlauben
+                options.attachScreenshot = true
+                options.attachViewHierarchy = true
+                #else
+                options.debug = false
+                options.tracesSampleRate = 0.2 // 20% sampling in production (saves quota)
+                options.environment = "production"
+                // In Production-Builds aus Datenschutzgründen deaktivieren
+                options.attachScreenshot = false
+                options.attachViewHierarchy = false
+                #endif
+                
+                options.enableAutoSessionTracking = true
+                
+                // Enable breadcrumbs for better debugging
+                options.enableAutoBreadcrumbTracking = true
+                options.enableNetworkBreadcrumbs = true
+                
+                // GDPR: Scrub PII (Personally Identifiable Information) before sending to Sentry
+                options.beforeSend = { event in
+                    // Remove user identifiers to comply with GDPR
+                    event.user = nil
+                    
+                    // Remove sensitive breadcrumbs (tokens, user_ids, emails)
+                    if let breadcrumbs = event.breadcrumbs {
+                        event.breadcrumbs = breadcrumbs.filter { crumb in
+                            let message = (crumb.message ?? "").lowercased()
+                            let dataStr = crumb.data?.description.lowercased() ?? ""
+                            let combined = message + " " + dataStr
+                            let sensitive = ["user_id", "token", "email", "password", "consent", "auth", "apikey", "key"]
+                            return !sensitive.contains { combined.contains($0) }
+                        }
                     }
+                    
+                    // Remove sensitive context/extra data
+                    if var extra = event.extra {
+                        ["user_id", "email", "token", "authorization", "auth", "apikey"].forEach { extra.removeValue(forKey: $0) }
+                        event.extra = extra
+                    }
+                    
+                    return event
                 }
-                
-                // Remove sensitive context/extra data
-                if var extra = event.extra {
-                    ["user_id", "email", "token", "authorization", "auth", "apikey"].forEach { extra.removeValue(forKey: $0) }
-                    event.extra = extra
-                }
-                
-                return event
             }
+        } else {
+            Logger.info("Sentry disabled (missing DSN or disabled by config)", category: .config)
         }
     }
 
     var body: some Scene {
         WindowGroup {
             RootView()
+                .preferredColorScheme(.light)
                 .environmentObject(appState)
                 .environment(\.appLanguage, localizationManager.currentLanguage)
                 .id(localizationManager.currentLanguage)
@@ -246,6 +248,21 @@ struct CulinaChefApp: App {
         }
         
         return recipe
+    }
+
+    /// Very small DSN sanity check to avoid Sentry fatal logs when `SENTRY_DSN`
+    /// is unset or malformed in local/TestFlight builds.
+    private static func isValidSentryDSN(_ raw: String) -> Bool {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("$") else { return false }
+        // Sentry DSNs are URLs and must have a host. Common forms: https://<key>@<host>/<project>
+        guard let comps = URLComponents(string: trimmed), let host = comps.host, !host.isEmpty else {
+            return false
+        }
+        guard let scheme = comps.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            return false
+        }
+        return true
     }
 }
 

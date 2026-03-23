@@ -73,6 +73,7 @@ targets:
             CFBundleURLName: com.moritzserrin.culinachef
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        UIUserInterfaceStyle: Light
     settings:
       base:
         PRODUCT_NAME: CulinaChef

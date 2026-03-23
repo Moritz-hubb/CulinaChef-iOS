@@ -89,23 +89,23 @@ struct OnboardingView: View {
     @State private var isSaving = false
     @State private var isSavingName = false
     
-    // MARK: - Save Username to Database
-    private func saveUsernameToDatabase(_ name: String) async {
+    // MARK: - Save Name to Profile (and update username)
+    private func saveNameToProfile(_ name: String) async {
         guard !isSavingName else { return }
         guard app.accessToken != nil else {
-            Logger.debug("[OnboardingView] Cannot save username: No access token available", category: .data)
+            Logger.debug("[OnboardingView] Cannot save name: No access token available", category: .data)
             return
         }
         
         isSavingName = true
         
         do {
-            try await app.saveProfile(fullName: name, email: nil)
-            Logger.debug("[OnboardingView] ✅ Username '\(name)' saved successfully to database", category: .data)
+            try await app.updateUsernameFromOnboardingName(name)
+            Logger.debug("[OnboardingView] ✅ Name + username updated successfully from onboarding", category: .data)
         } catch {
-            Logger.error("[OnboardingView] ❌ Failed to save username '\(name)': \(error.localizedDescription)", category: .data)
+            Logger.error("[OnboardingView] ❌ Failed to update name/username from onboarding: \(error.localizedDescription)", category: .data)
             #if DEBUG
-            print("[OnboardingView] Error saving username: \(error)")
+            print("[OnboardingView] Error updating name/username: \(error)")
             #endif
         }
         
@@ -1053,12 +1053,12 @@ struct OnboardingView: View {
                         let nextStep = currentStep + 1
                         Logger.debug("[OnboardingView] Next button - Moving from step \(currentStep) to \(nextStep)", category: .ui)
                         
-                        // Save username to database when moving from step 1 (username input) to step 2 (greeting)
+                        // Save name to profile (and update username) when moving from step 1 to step 2
                         if currentStep == 1 && nextStep == 2 {
                             let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !trimmedUsername.isEmpty {
                                 Task {
-                                    await saveUsernameToDatabase(trimmedUsername)
+                                    await saveNameToProfile(trimmedUsername)
                                 }
                             }
                         }

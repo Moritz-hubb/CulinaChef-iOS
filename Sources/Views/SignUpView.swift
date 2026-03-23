@@ -7,7 +7,6 @@ struct SignUpView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
 
     @EnvironmentObject var app: AppState
-    @State private var username = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
@@ -23,7 +22,7 @@ struct SignUpView: View {
     var onNavigateToSignIn: (() -> Void)?
     
     enum Field: Hashable {
-        case username, email, password, confirmPassword
+        case email, password, confirmPassword
     }
     
     var passwordsMatch: Bool {
@@ -42,220 +41,200 @@ struct SignUpView: View {
     @State private var appleNonce: String? = nil
     
     var body: some View {
-        ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [
-                    Color(red: 0.95, green: 0.5, blue: 0.3),
-                    Color(red: 0.85, green: 0.4, blue: 0.2)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Top illustration section
-                VStack(spacing: 6) {
-                    Spacer().frame(height: 30)
-                    
-                    // Penguin illustration - smaller
-                    if let uiImage = UIImage(named: "penguin-auth") {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 110, height: 110)
-                            .accessibilityHidden(true)
-                    } else {
-                        Image(systemName: "fork.knife.circle.fill")
-                            .font(.system(size: 70))
-                            .foregroundColor(.white)
-                            .accessibilityHidden(true)
-                    }
-                    
-                    Text(L.letsGetStarted.localized)
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Spacer().frame(height: 12)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 16)
+        GeometryReader { geometry in
+            ZStack {
+                // Background gradient
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.95, green: 0.5, blue: 0.3),
+                        Color(red: 0.85, green: 0.4, blue: 0.2)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                .ignoresSafeArea(.keyboard)
                 
-                // White card with form
                 VStack(spacing: 0) {
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            Spacer().frame(height: 1) // Top spacing
-                            // Close button
-                            HStack {
-                                Spacer()
-                                Button {
-                                    dismiss()
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundColor(.gray.opacity(0.6))
-                                }
-                            }
-                            .padding(.top, 16)
-                            .padding(.trailing, 16)
-                            Text(L.ui_registrieren.localized)
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.black)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                    // Top illustration section - reduces when keyboard is visible
+                    VStack(spacing: 6) {
+                        Spacer().frame(height: focusedField == nil ? 30 : 15)
                         
-                        // Username Field
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L.username.localized)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.gray)
-                            TextField("", text: $username, prompt: Text(L.usernamePlaceholder.localized).foregroundColor(.gray.opacity(0.5)))
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled(true)
-                                .focused($focusedField, equals: .username)
-                                .submitLabel(.next)
-                                .onSubmit { focusedField = .email }
-                                .accessibilityLabel(L.username.localized)
-                                .accessibilityHint(L.usernamePlaceholder.localized)
-                                .padding(10)
-                                .background(Color(UIColor.systemGray6))
-                                .cornerRadius(8)
-                                .foregroundColor(.black)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(focusedField == .username ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
-                                )
-                            if !usernameWarning.isEmpty {
-                                Text(usernameWarning)
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.orange)
-                            }
+                        // Penguin illustration - smaller when keyboard is visible
+                        if let uiImage = UIImage(named: "penguin-auth") {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: focusedField == nil ? 110 : 70, height: focusedField == nil ? 110 : 70)
+                                .accessibilityHidden(true)
+                        } else {
+                            Image(systemName: "fork.knife.circle.fill")
+                                .font(.system(size: focusedField == nil ? 70 : 45))
+                                .foregroundColor(.white)
+                                .accessibilityHidden(true)
                         }
                         
-                        // Email Field
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L.email.localized)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.gray)
-                            
-                            TextField("", text: $email, prompt: Text(L.emailPlaceholder.localized).foregroundColor(.gray.opacity(0.5)))
-                                .textContentType(.emailAddress)
-                                .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
-                                .focused($focusedField, equals: .email)
-                                .submitLabel(.next)
-                                .onSubmit { focusedField = .password }
-                                .accessibilityLabel(L.email.localized)
-                                .accessibilityHint(L.emailPlaceholder.localized)
-                                .padding(10)
-                                .background(Color(UIColor.systemGray6))
-                                .cornerRadius(8)
-                                .foregroundColor(.black)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(focusedField == .email ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
-                                )
+                        if focusedField == nil {
+                            Text(L.letsGetStarted.localized)
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.white)
                         }
                         
-                        // Password Field
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L.password.localized)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.gray)
-                            
-                            HStack {
-                                if showPassword {
-                                    TextField("", text: $password, prompt: Text(L.minCharacters.localized).foregroundColor(.gray.opacity(0.5)))
-                                        .textContentType(.newPassword)
-                                        .focused($focusedField, equals: .password)
-                                        .submitLabel(.next)
-                                        .onSubmit { focusedField = .confirmPassword }
-                                        .accessibilityLabel(L.password.localized)
-                                } else {
-                                    SecureField("", text: $password, prompt: Text(L.minCharacters.localized).foregroundColor(.gray.opacity(0.5)))
-                                        .textContentType(.newPassword)
-                                        .focused($focusedField, equals: .password)
-                                        .submitLabel(.next)
-                                        .onSubmit { focusedField = .confirmPassword }
-                                        .accessibilityLabel(L.password.localized)
-                                }
-                                
-                                Button { showPassword.toggle() } label: {
-                                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                        .foregroundColor(.gray)
-                                        .font(.system(size: 14))
-                                }
-                                .accessibilityLabel(showPassword ? "Passwort verbergen" : "Passwort anzeigen")
-                            }
-                            .padding(10)
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(8)
-                            .foregroundColor(.black)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(focusedField == .password ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
-                            )
-                            
-                            // Password strength indicator
-                            if !password.isEmpty {
-                                HStack(spacing: 3) {
-                                    ForEach(0..<3) { index in
-                                        Rectangle()
-                                            .fill(index < strengthBars ? passwordStrengthColor : Color.gray.opacity(0.2))
-                                            .frame(height: 3)
-                                            .cornerRadius(1.5)
+                        Spacer().frame(height: focusedField == nil ? 12 : 6)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, focusedField == nil ? 16 : 8)
+                    .animation(.easeInOut(duration: 0.2), value: focusedField)
+                    
+                    // White card with form - takes remaining space
+                    VStack(spacing: 0) {
+                        ScrollViewReader { proxy in
+                            ScrollView(.vertical, showsIndicators: false) {
+                            VStack(spacing: 16) {
+                                Spacer().frame(height: 1) // Top spacing
+                                // Title with close button
+                                HStack {
+                                    Text(L.ui_registrieren.localized)
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.black)
+                                    Spacer()
+                                    Button {
+                                        dismiss()
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 28))
+                                            .foregroundColor(.gray.opacity(0.6))
                                     }
                                 }
-                            }
-                        }
-                        
-                        // Confirm Password Field
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L.ui_passwort_bestätigen.localized)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.gray)
-                            
-                            HStack {
-                                if showConfirmPassword {
-                                    TextField("", text: $confirmPassword, prompt: Text(L.ui_wiederholen.localized).foregroundColor(.gray.opacity(0.5)))
-                                        .textContentType(.newPassword)
-                                        .focused($focusedField, equals: .confirmPassword)
-                                        .submitLabel(.go)
-                                        .onSubmit { Task { await signUp() } }
-                                        .accessibilityLabel(L.ui_passwort_bestätigen.localized)
-                                } else {
-                                    SecureField("", text: $confirmPassword, prompt: Text(L.ui_wiederholen.localized).foregroundColor(.gray.opacity(0.5)))
-                                        .textContentType(.newPassword)
-                                        .focused($focusedField, equals: .confirmPassword)
-                                        .submitLabel(.go)
-                                        .onSubmit { Task { await signUp() } }
-                                        .accessibilityLabel(L.ui_passwort_bestätigen.localized)
-                                }
+                                .padding(.top, 16)
+                                .padding(.horizontal, 20)
                                 
-                                Button { showConfirmPassword.toggle() } label: {
-                                    Image(systemName: showConfirmPassword ? "eye.slash.fill" : "eye.fill")
+                                // Email Field
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(L.email.localized)
+                                        .font(.system(size: 12, weight: .semibold))
                                         .foregroundColor(.gray)
-                                        .font(.system(size: 14))
+                                    
+                                    TextField("", text: $email, prompt: Text(L.emailPlaceholder.localized).foregroundColor(.gray.opacity(0.5)))
+                                        .textContentType(.emailAddress)
+                                        .keyboardType(.emailAddress)
+                                        .autocapitalization(.none)
+                                        .focused($focusedField, equals: .email)
+                                        .submitLabel(.next)
+                                        .onSubmit { focusedField = .password }
+                                        .accessibilityLabel(L.email.localized)
+                                        .accessibilityHint(L.emailPlaceholder.localized)
+                                        .padding(10)
+                                        .background(Color(UIColor.systemGray6))
+                                        .cornerRadius(8)
+                                        .foregroundColor(.black)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(focusedField == .email ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
+                                        )
                                 }
-                                .accessibilityLabel(showConfirmPassword ? "Passwort verbergen" : "Passwort anzeigen")
+                                .id("emailField")
                                 
-                                if passwordsMatch {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                        .font(.system(size: 16))
-                                        .accessibilityLabel("Passwörter stimmen überein")
+                                // Password Field
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(L.password.localized)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(.gray)
+                                    
+                                    HStack {
+                                        if showPassword {
+                                            TextField("", text: $password, prompt: Text(L.minCharacters.localized).foregroundColor(.gray.opacity(0.5)))
+                                                .textContentType(.newPassword)
+                                                .focused($focusedField, equals: .password)
+                                                .submitLabel(.next)
+                                                .onSubmit { focusedField = .confirmPassword }
+                                                .accessibilityLabel(L.password.localized)
+                                        } else {
+                                            SecureField("", text: $password, prompt: Text(L.minCharacters.localized).foregroundColor(.gray.opacity(0.5)))
+                                                .textContentType(.newPassword)
+                                                .focused($focusedField, equals: .password)
+                                                .submitLabel(.next)
+                                                .onSubmit { focusedField = .confirmPassword }
+                                                .accessibilityLabel(L.password.localized)
+                                        }
+                                        
+                                        Button { showPassword.toggle() } label: {
+                                            Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                                                .foregroundColor(.gray)
+                                                .font(.system(size: 14))
+                                        }
+                                        .accessibilityLabel(showPassword ? "Passwort verbergen" : "Passwort anzeigen")
+                                    }
+                                    .padding(10)
+                                    .background(Color(UIColor.systemGray6))
+                                    .cornerRadius(8)
+                                    .foregroundColor(.black)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(focusedField == .password ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
+                                    )
+                                    
+                                    // Password strength indicator
+                                    if !password.isEmpty {
+                                        HStack(spacing: 3) {
+                                            ForEach(0..<3) { index in
+                                                Rectangle()
+                                                    .fill(index < strengthBars ? passwordStrengthColor : Color.gray.opacity(0.2))
+                                                    .frame(height: 3)
+                                                    .cornerRadius(1.5)
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                            .padding(10)
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(8)
-                            .foregroundColor(.black)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(focusedField == .confirmPassword ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
-                            )
-                        }
+                                .id("passwordField")
+                                
+                                // Confirm Password Field
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(L.ui_passwort_bestätigen.localized)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(.gray)
+                                    
+                                    HStack {
+                                        if showConfirmPassword {
+                                            TextField("", text: $confirmPassword, prompt: Text(L.ui_wiederholen.localized).foregroundColor(.gray.opacity(0.5)))
+                                                .textContentType(.newPassword)
+                                                .focused($focusedField, equals: .confirmPassword)
+                                                .submitLabel(.go)
+                                                .onSubmit { Task { await signUp() } }
+                                                .accessibilityLabel(L.ui_passwort_bestätigen.localized)
+                                        } else {
+                                            SecureField("", text: $confirmPassword, prompt: Text(L.ui_wiederholen.localized).foregroundColor(.gray.opacity(0.5)))
+                                                .textContentType(.newPassword)
+                                                .focused($focusedField, equals: .confirmPassword)
+                                                .submitLabel(.go)
+                                                .onSubmit { Task { await signUp() } }
+                                                .accessibilityLabel(L.ui_passwort_bestätigen.localized)
+                                        }
+                                        
+                                        Button { showConfirmPassword.toggle() } label: {
+                                            Image(systemName: showConfirmPassword ? "eye.slash.fill" : "eye.fill")
+                                                .foregroundColor(.gray)
+                                                .font(.system(size: 14))
+                                        }
+                                        .accessibilityLabel(showConfirmPassword ? "Passwort verbergen" : "Passwort anzeigen")
+                                        
+                                        if passwordsMatch {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.green)
+                                                .font(.system(size: 16))
+                                                .accessibilityLabel("Passwörter stimmen überein")
+                                        }
+                                    }
+                                    .padding(10)
+                                    .background(Color(UIColor.systemGray6))
+                                    .cornerRadius(8)
+                                    .foregroundColor(.black)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(focusedField == .confirmPassword ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
+                                    )
+                                }
+                                .id("confirmPasswordField")
                         
                         // Terms & Privacy Acceptance
                         VStack(alignment: .leading, spacing: 8) {
@@ -310,6 +289,7 @@ struct SignUpView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 4)
+                        .id("termsSection")
                         
                         // Error Message
                         if showAccountExistsError {
@@ -387,6 +367,7 @@ struct SignUpView: View {
                         .accessibilityHint("Registriert ein neues Konto")
                         .disabled(app.loading || !isFormValid)
                         .opacity((app.loading || !isFormValid) ? 0.6 : 1)
+                        .id("signUpButton")
                         
                         // Divider with "Or"
                         HStack(spacing: 10) {
@@ -474,18 +455,46 @@ struct SignUpView: View {
                         .frame(height: 44)
                         .frame(maxWidth: 375) // Prevent constraint conflicts
                         .cornerRadius(8)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
+                            .padding(.bottom, 400) // Extra bottom padding for keyboard - ensures all content is accessible
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 8)
-                        .padding(.bottom, 40) // Extra bottom padding for keyboard
+                        .scrollDismissesKeyboard(.interactively)
+                        .onChange(of: focusedField) { _, newValue in
+                            if let field = newValue {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    withAnimation {
+                                        switch field {
+                                        case .email:
+                                            proxy.scrollTo("emailField", anchor: .center)
+                                        case .password:
+                                            proxy.scrollTo("passwordField", anchor: .center)
+                                        case .confirmPassword:
+                                            // When confirming password, scroll to terms section so user can see checkboxes
+                                            proxy.scrollTo("termsSection", anchor: .top)
+                                        }
+                                    }
+                                }
+                            } else {
+                                // When keyboard is dismissed, scroll to bottom to show all buttons
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    withAnimation {
+                                        proxy.scrollTo("signUpButton", anchor: .bottom)
+                                    }
+                                }
+                            }
+                        }
+                        }
+                        .background(Color.white)
+                        .cornerRadius(30, corners: [.topLeft, .topRight])
+                        .ignoresSafeArea(edges: .bottom)
                     }
-                    .scrollDismissesKeyboard(.interactively)
-                    .background(Color.white)
-                    .cornerRadius(30, corners: [.topLeft, .topRight])
-                    .ignoresSafeArea(edges: .bottom)
+                    .frame(maxHeight: .infinity)
                 }
             }
         }
+        .ignoresSafeArea(.keyboard)
         .sheet(isPresented: $showTerms) {
             TermsOfServiceView()
         }
@@ -502,10 +511,8 @@ struct SignUpView: View {
     }
     
     private var isFormValid: Bool {
-        let uname = username.trimmed
         let trimmedEmail = email.trimmed
-        return !uname.isEmpty && uname.isValidUsername &&
-        !trimmedEmail.isEmpty && trimmedEmail.isValidEmail &&
+        return !trimmedEmail.isEmpty && trimmedEmail.isValidEmail &&
         password.isValidPassword && passwordsMatch &&
         acceptedTerms && confirmedAge
     }
@@ -516,18 +523,8 @@ struct SignUpView: View {
         focusedField = nil
         
         // Validate input before sending to backend
-        let uname = username.trimmed
         let trimmedEmail = email.trimmed
-        
-        guard !uname.isEmpty else {
-            errorMessage = String.validationError(for: .required)
-            return
-        }
-        
-        guard uname.isValidUsername else {
-            errorMessage = String.validationError(for: .username)
-            return
-        }
+        let derivedUsername = generateUsername(fromEmail: trimmedEmail)
         
         guard !trimmedEmail.isEmpty else {
             errorMessage = String.validationError(for: .required)
@@ -558,7 +555,7 @@ struct SignUpView: View {
             try await app.signUp(
                 email: trimmedEmail,
                 password: password,
-                username: uname
+                username: derivedUsername
             )
         } catch {
             // Check if it's a 422 error (account already exists) or if error message indicates email exists
@@ -642,12 +639,29 @@ struct SignUpView: View {
         let hashed = SHA256.hash(data: inputData)
         return hashed.compactMap { String(format: "%02x", $0) }.joined()
     }
-    private var usernameWarning: String {
-        let uname = username.trimmed
-        if uname.isEmpty { return "" }
-        if uname.count < 3 { return "Mindestens 3 Zeichen" }
-        if !uname.isValidUsername { return "Nur Buchstaben, Zahlen und _ erlaubt" }
-        return ""
+    /// Generates a stable, valid username from an email address.
+    /// Keeps signup minimal (name is collected in onboarding).
+    private func generateUsername(fromEmail email: String) -> String {
+        let localPart = email.split(separator: "@").first.map(String.init) ?? "user"
+        // Allow only letters, numbers and underscore (same rule as `isValidUsername`)
+        let cleaned = localPart
+            .lowercased()
+            .map { ch -> Character in
+                if ch.isLetter || ch.isNumber || ch == "_" { return ch }
+                return "_"
+            }
+        
+        var base = String(cleaned)
+        // Trim underscores and ensure minimum length
+        base = base.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        if base.count < 3 { base = (base + "_user").prefix(12).description }
+        
+        // Hard cap to keep things tidy
+        base = String(base.prefix(20))
+        
+        // Final safety fallback
+        if base.isEmpty { base = "user" }
+        return base
     }
 }
 

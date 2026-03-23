@@ -20,7 +20,8 @@ enum UIAppearanceConfigurator {
         // Tab bar - glass/transparent style
         let tab = UITabBarAppearance()
         tab.configureWithTransparentBackground()
-        tab.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        // Fixed light appearance: blur matches forced UIUserInterfaceStyle Light (no dark-mode variant).
+        tab.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
         tab.backgroundColor = .clear
 // Unselected icons/titles: white; selected icon: peach orange, title remains white
         let normalColor = UIColor.white
@@ -55,7 +56,7 @@ itemAppearance.setTitleTextAttributes(normalAttrs, for: .normal)
         tabBar.standardAppearance = tab
         tabBar.scrollEdgeAppearance = tab
         tabBar.isTranslucent = true
-        tabBar.overrideUserInterfaceStyle = .dark
+        tabBar.overrideUserInterfaceStyle = .light
         tabBar.tintColor = selectedIconColor
         tabBar.unselectedItemTintColor = normalColor
     }

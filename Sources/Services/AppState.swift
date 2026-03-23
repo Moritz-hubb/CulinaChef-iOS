@@ -990,6 +990,16 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     func saveProfile(fullName: String?, email: String?) async throws {
         try await authManager.saveProfile(fullName: fullName, email: email, accessToken: accessToken, userId: KeychainManager.get(key: "user_id"), userEmail: userEmail)
     }
+
+    /// Onboarding: set profile name and update username to match.
+    func updateUsernameFromOnboardingName(_ fullName: String) async throws {
+        try await authManager.updateUsernameFromOnboardingName(
+            fullName: fullName,
+            accessToken: accessToken,
+            userId: KeychainManager.get(key: "user_id"),
+            userEmail: userEmail
+        )
+    }
     
     /// Sendet eine Passwort-Reset-E-Mail an die angegebene E-Mail-Adresse.
     ///

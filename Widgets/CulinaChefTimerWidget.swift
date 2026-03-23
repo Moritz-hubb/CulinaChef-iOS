@@ -15,6 +15,7 @@ struct CulinaChefTimerWidget: Widget {
         StaticConfiguration(kind: kind, provider: TimerProvider()) { entry in
             os_log("[Widget] Widget body rendering with %d timers", log: Self.log, type: .debug, entry.timers.count)
             return TimerWidgetEntryView(entry: entry)
+                .preferredColorScheme(.light)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Koch-Timer")

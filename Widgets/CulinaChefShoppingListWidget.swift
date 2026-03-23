@@ -122,6 +122,7 @@ struct CulinaChefShoppingListWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ShoppingListProvider()) { entry in
             ShoppingListWidgetEntryView(entry: entry)
+                .preferredColorScheme(.light)
                 .containerBackground(
                     LinearGradient(
                         colors: [

@@ -46,11 +46,10 @@ final class AuthenticationManager {
     // MARK: - Sign Up
     
     func signUp(email: String, password: String, username: String) async throws -> SignInResult {
-        // Require non-empty username at app level
-        let uname = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !uname.isEmpty else {
-            throw NSError(domain: "SignUp", code: -1, userInfo: [NSLocalizedDescriptionKey: "Bitte Benutzernamen angeben"])
-        }
+        // Username is required for the `profiles` table, but we keep the signup UI minimal.
+        // If caller passes an empty username, derive a safe fallback from email.
+        let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        let uname = trimmed.isEmpty ? deriveUsername(fromEmail: email) : trimmed
         
         let response = try await auth.signUp(email: email, password: password, username: uname)
         
@@ -79,6 +78,19 @@ final class AuthenticationManager {
             userId: response.user.id,
             email: response.user.email
         )
+    }
+
+    private func deriveUsername(fromEmail email: String) -> String {
+        let localPart = email.split(separator: "@").first.map(String.init) ?? "user"
+        let cleaned = localPart
+            .lowercased()
+            .map { ch -> Character in
+                if ch.isLetter || ch.isNumber || ch == "_" { return ch }
+                return "_"
+            }
+        var base = String(cleaned).trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        if base.count < 3 { base = "user" }
+        return String(base.prefix(20))
     }
     
     // MARK: - Apple Sign-In
@@ -256,6 +268,55 @@ final class AuthenticationManager {
         let uname = current?.username ?? (userEmail?.split(separator: "@").first.map(String.init) ?? "user")
         try await upsertProfile(userId: uid, username: uname, accessToken: token, fullName: fullName?.nilIfBlank(), email: email?.nilIfBlank())
     }
+
+    /// Called from onboarding: user enters their name and we want the profile username to match it.
+    /// If the desired username is already taken, we append a numeric suffix and retry.
+    func updateUsernameFromOnboardingName(
+        fullName: String,
+        accessToken: String?,
+        userId: String?,
+        userEmail: String?
+    ) async throws {
+        guard let token = accessToken, let uid = userId else {
+            throw NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
+        }
+        
+        let desiredBase = sanitizeUsername(fromDisplayName: fullName)
+        let fullNameValue = fullName.nilIfBlank()
+        
+        // Try base first, then with suffixes
+        let candidates: [String] = [desiredBase] + (1...6).map { "\(desiredBase)_\($0)\(Int.random(in: 10...99))" }
+        var lastError: Error?
+        
+        for candidate in candidates {
+            do {
+                try await upsertProfile(
+                    userId: uid,
+                    username: candidate,
+                    accessToken: token,
+                    fullName: fullNameValue,
+                    email: nil
+                )
+                return
+            } catch {
+                lastError = error
+                // If it's a username uniqueness conflict, retry with next candidate.
+                let ns = error as NSError
+                let msg = (ns.userInfo[NSLocalizedDescriptionKey] as? String ?? ns.localizedDescription).lowercased()
+                let looksLikeUniqueViolation =
+                    ns.domain == "Profiles" && (ns.code == 409 || ns.code == 400) &&
+                    (msg.contains("duplicate") || msg.contains("unique") || msg.contains("username"))
+                
+                if looksLikeUniqueViolation {
+                    continue
+                }
+                
+                throw error
+            }
+        }
+        
+        throw lastError ?? NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: "Username konnte nicht aktualisiert werden"])
+    }
     
     private func upsertProfile(userId: String, username: String, accessToken: String, fullName: String? = nil, email: String? = nil) async throws {
         struct Row: Encodable {
@@ -283,9 +344,7 @@ final class AuthenticationManager {
         }
         
         // Accept 200 (OK), 201 (Created), and 204 (No Content) as success
-        // Also accept 409 (Conflict) if profile already exists (upsert should handle this)
         let successCodes = [200, 201, 204]
-        let acceptableCodes = successCodes + [409] // 409 might occur if profile exists but upsert didn't work as expected
         
         if !successCodes.contains(http.statusCode) {
             #if DEBUG
@@ -293,14 +352,6 @@ final class AuthenticationManager {
             print("[AuthenticationManager] Profile upsert response: Status \(http.statusCode)")
             print("[AuthenticationManager] Response body: \(responseBody)")
             #endif
-            
-            if acceptableCodes.contains(http.statusCode) {
-                // 409 Conflict might mean profile already exists - this is actually OK for upsert
-                #if DEBUG
-                print("[AuthenticationManager] Profile upsert returned \(http.statusCode) - treating as success (profile may already exist)")
-                #endif
-                return
-            }
             
             // Try to decode error message from response
             let errorMessage: String
@@ -317,6 +368,28 @@ final class AuthenticationManager {
         #if DEBUG
         print("[AuthenticationManager] Profile successfully saved/updated (Status: \(http.statusCode))")
         #endif
+    }
+
+    private func sanitizeUsername(fromDisplayName name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "user" }
+        
+        // Replace spaces with underscores and allow only [a-z0-9_]
+        let normalized = trimmed
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "_")
+            .map { ch -> Character in
+                if ch.isLetter || ch.isNumber || ch == "_" { return ch }
+                return "_"
+            }
+        
+        var base = String(normalized)
+        // Collapse multiple underscores
+        while base.contains("__") { base = base.replacingOccurrences(of: "__", with: "_") }
+        base = base.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        
+        if base.count < 3 { base = "user" }
+        return String(base.prefix(20))
     }
     
     // MARK: - Onboarding Status

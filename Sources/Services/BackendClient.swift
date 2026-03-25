@@ -372,12 +372,18 @@ final class BackendClient {
         )
         #endif
         let data = try JSONEncoder().encode(body)
-        let (respData, _) = try await request(
+        let (respData, httpResponse) = try await request(
             path: "/ai/import-from-social-url",
             method: "POST",
             token: accessToken,
             jsonBody: data
         )
+        #if DEBUG
+        Logger.debug(
+            "[SocialImport] import HTTP status=\(httpResponse.statusCode) bytes=\(respData.count) snapshot_sent=\(metadataSnapshot != nil)",
+            category: .network
+        )
+        #endif
         struct Resp: Decodable {
             let recipe: Recipe
         }
@@ -388,13 +394,21 @@ final class BackendClient {
             #endif
             return recipe
         } catch {
-            #if DEBUG
-            let preview = String(data: respData.prefix(1500), encoding: .utf8) ?? ""
+            let bodyPrefix = String(data: respData.prefix(2500), encoding: .utf8) ?? ""
             Logger.error(
-                "[SocialImport] importRecipeFromSocialURL JSON decode failed: \(error.localizedDescription) preview=\(preview)",
+                "[SocialImport] import decode FAILED status=\(httpResponse.statusCode) bytes=\(respData.count) describing=\(String(describing: error))",
                 category: .network
             )
-            #endif
+            if let decodingError = error as? DecodingError {
+                Logger.error(
+                    "[SocialImport] import DecodingError: \(culinachefDecodingErrorDescription(decodingError))",
+                    category: .network
+                )
+            }
+            Logger.error(
+                "[SocialImport] import response body prefix: \(bodyPrefix.prefix(1200))",
+                category: .network
+            )
             throw error
         }
     }
@@ -422,5 +436,21 @@ final class BackendClient {
         )
         #endif
         return decoded
+    }
+}
+
+/// Hilfsausgabe für Social-Import-Decode-Fehler (Konsole / Gerätelog).
+private func culinachefDecodingErrorDescription(_ error: DecodingError) -> String {
+    switch error {
+    case let .keyNotFound(key, context):
+        return "keyNotFound(key=\(key.stringValue), \(context.debugDescription)"
+    case let .typeMismatch(type, context):
+        return "typeMismatch(type=\(String(describing: type)), \(context.debugDescription)"
+    case let .valueNotFound(type, context):
+        return "valueNotFound(type=\(String(describing: type)), \(context.debugDescription)"
+    case let .dataCorrupted(context):
+        return "dataCorrupted(\(context.debugDescription)"
+    @unknown default:
+        return String(describing: error)
     }
 }

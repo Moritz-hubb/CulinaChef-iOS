@@ -283,6 +283,12 @@ struct SocialRecipeImportView: View {
 
         let extra = extraText.trimmingCharacters(in: .whitespacesAndNewlines)
         let dietary = app.systemContext()
+        #if DEBUG
+        Logger.debug(
+            "[SocialImport] runImport preflight snapshot=\(metadataSnapshotForImport != nil) url_len=\(trimmedURL.count) preview_url=\(metadataPreview?.url.prefix(120) ?? "nil") urls_match=\(metadataSnapshotForImport != nil)",
+            category: .ui
+        )
+        #endif
         do {
             let recipe = try await app.backend.importRecipeFromSocialURL(
                 url: trimmedURL,
@@ -302,6 +308,10 @@ struct SocialRecipeImportView: View {
             }
         } catch {
             Logger.error("[SocialImport] importRecipeFromSocialURL failed", error: error, category: .network)
+            Logger.error(
+                "[SocialImport] runImport failure detail describing=\(String(describing: error)) localized=\(error.localizedDescription)",
+                category: .network
+            )
             await MainActor.run {
                 self.error = importErrorMessage(
                     for: error,

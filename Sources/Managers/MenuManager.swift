@@ -77,6 +77,38 @@ final class MenuManager {
         return try JSONDecoder().decode([Menu].self, from: data).first!
     }
     
+    /// Menü umbenennen (PATCH auf `menus`)
+    func renameMenu(menuId: String, newTitle: String, accessToken: String) async throws -> Menu {
+        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw URLError(.cannotParseResponse)
+        }
+        struct Patch: Encodable { let title: String }
+        
+        var url = Config.supabaseURL
+        url.append(path: "/rest/v1/menus")
+        url.append(queryItems: [URLQueryItem(name: "id", value: "eq.\(menuId)")])
+        
+        var req = URLRequest(url: url)
+        req.httpMethod = "PATCH"
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        req.addValue("return=representation", forHTTPHeaderField: "Prefer")
+        req.httpBody = try JSONEncoder().encode(Patch(title: trimmed))
+        
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let decoded = try JSONDecoder().decode([Menu].self, from: data)
+        guard let first = decoded.first else {
+            throw URLError(.cannotParseResponse)
+        }
+        return first
+    }
+    
     /// Add a recipe to a menu
     func addRecipeToMenu(menuId: String, recipeId: String, accessToken: String) async throws {
         struct Row: Encodable {

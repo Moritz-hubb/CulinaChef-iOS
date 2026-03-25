@@ -3,49 +3,12 @@ import SwiftUI
 struct RecipesView: View {
     @EnvironmentObject var app: AppState
     @ObservedObject private var localizationManager = LocalizationManager.shared
-    @State private var selectedTab = 0
     @FocusState private var isFocused: Bool
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Custom Tab Selector
-                HStack(spacing: 0) {
-                    TabButton(title: L.myRecipes.localized, isSelected: selectedTab == 0) {
-                        withAnimation(.spring(response: 0.3)) {
-                            selectedTab = 0
-                        }
-                    }
-                    .accessibilityLabel(L.myRecipes.localized)
-                    .accessibilityHint(selectedTab == 0 ? "Aktuell ausgewählt" : "Wechselt zu Meine Rezepte")
-                    TabButton(title: L.community.localized, isSelected: selectedTab == 1) {
-                        withAnimation(.spring(response: 0.3)) {
-                            selectedTab = 1
-                        }
-                    }
-                    .accessibilityLabel(L.community.localized)
-                    .accessibilityHint(selectedTab == 1 ? "Aktuell ausgewählt" : "Wechselt zu Community")
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
-                .background(.white)
-                .overlay(
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.15))
-                        .frame(height: 1),
-                    alignment: .bottom
-                )
-                
-                // Tab Content
-                TabView(selection: $selectedTab) {
+            // MVP: nur persönliche Rezepte (Teilen über Rezept-Detail / Share)
                     PersonalRecipesView()
-                        .tag(0)
-                    CommunityTabView()
-                        .tag(1)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-            }
             .navigationBarHidden(true)
         }
         .navigationViewStyle(.stack)
@@ -196,6 +159,7 @@ private struct MenusBarWithLiked: View {
     @Binding var selected: Menu?
     let likedCount: Int
     var onAdd: () -> Void
+    var onRenameSelected: () -> Void
     var onDeleteSelected: () -> Void
     
     // Virtual "Liked" menu
@@ -232,6 +196,15 @@ private struct MenusBarWithLiked: View {
                 }
             }
             if selected != nil && selected?.id != "__liked__" {
+                Button(action: onRenameSelected) {
+                    Image(systemName: "pencil")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(Color(UIColor.systemGray6))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.recipes_renameMenuHeadline.localized)
                 Button(role: .destructive, action: onDeleteSelected) {
                     Image(systemName: "trash")
                         .font(.caption.weight(.semibold))
@@ -351,71 +324,94 @@ private struct NewMenuSheet: View {
     }
 } 
 
-private struct AverageRatingView: View {
-    @EnvironmentObject var app: AppState
-    let recipeId: String
-    
-    // Get rating from cache (no API call needed)
-    private var ratingStats: (average: Double?, count: Int)? {
-        app.getCachedRatingStats(recipeId: recipeId)
-    }
+private struct RenameMenuSheet: View {
+    @Binding var title: String
+    var onSave: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        HStack(spacing: 6) {
-            let avg = ratingStats?.average
-            let count = ratingStats?.count
-            let full = Int(floor(avg ?? 0))
-            let hasHalf = ((avg ?? 0) - Double(full)) >= 0.5
-            ForEach(1...5, id: \.self) { i in
-                let name: String = {
-                    if avg == nil { return "star" }
-                    if i <= full { return "star.fill" }
-                    if hasHalf && i == full + 1 { return "star.leadinghalf.filled" }
-                    return "star"
-                }()
-                Image(systemName: name)
-                    .font(.system(size: 10))
-                    .foregroundColor(avg == nil ? .gray.opacity(0.4) : .orange)
-            }
-            if let avg = avg {
-                let label: String = {
-                    if let c = count { return String(format: "%.1f (%d)", avg, c) }
-                    else { return String(format: "%.1f", avg) }
-                }()
-                Text(label)
-                    .font(.caption)
-                    .foregroundColor(.black.opacity(0.6))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-        }
-        .fixedSize(horizontal: true, vertical: false)
-    }
-}
+        ZStack {
+            LinearGradient(colors: [
+                Color(red: 0.96, green: 0.78, blue: 0.68),
+                Color(red: 0.95, green: 0.74, blue: 0.64),
+                Color(red: 0.93, green: 0.66, blue: 0.55)
+            ], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .ignoresSafeArea()
 
-// MARK: - Tab Button
-struct TabButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 16, weight: isSelected ? .bold : .medium))
-                    .foregroundColor(isSelected ? Color(red: 0.85, green: 0.4, blue: 0.2) : .black.opacity(0.5))
-                
-                Rectangle()
-                    .fill(isSelected ? 
-                          LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
-                          LinearGradient(colors: [.clear], startPoint: .leading, endPoint: .trailing))
-                    .frame(height: 3)
-                    .cornerRadius(1.5)
+            VStack(spacing: 16) {
+                HStack {
+                    Text(L.recipes_renameMenuHeadline.localized)
+                        .font(.title2.bold())
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(.ultraThinMaterial, in: Circle())
+                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.recipe_menüname.localized)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.9))
+                    TextField(L.placeholder_menuName.localized, text: $title)
+                        .textFieldStyle(.plain)
+                        .foregroundStyle(.white)
+                        .tint(.white)
+                        .padding(12)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+
+                HStack(spacing: 12) {
+                    Button(action: { dismiss() }) {
+                        Text(L.button_cancel.localized)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(.ultraThinMaterial.opacity(0.25))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { onSave(title) }) {
+                        Text(L.button_save.localized)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ), in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1.2)
+                            )
+                            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity)
+            .padding(16)
         }
-        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -435,6 +431,8 @@ struct PersonalRecipesView: View {
     @State private var menuRecipeIdsLoading: Set<String> = [] // Track welche Menüs gerade geladen werden
     @State private var showNewMenuSheet = false
     @State private var newMenuTitle: String = ""
+    @State private var showRenameMenuSheet = false
+    @State private var renameMenuTitle: String = ""
     @State private var assigningRecipe: Recipe? = nil
     @State private var pushRecipe: Recipe? = nil
     @State private var navigationRecipeId: String? = nil
@@ -443,6 +441,7 @@ struct PersonalRecipesView: View {
     @State private var menuPlaceholders: [AppState.MenuSuggestion] = []
     @State private var menuCourseMap: [String: String] = [:]
     @State private var showManualRecipeBuilder = false
+    @State private var showSocialImport = false
     @State private var deletedRecipeIds: Set<String> = [] // Track locally deleted recipes
     
     private var visibleRecipes: [Recipe] {
@@ -508,7 +507,17 @@ struct PersonalRecipesView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         // Menus bar should be available even in empty state
-                        MenusBarWithLiked(menus: menus, selected: $selectedMenu, likedCount: app.likedRecipesManager.likedRecipeIds.count, onAdd: { showNewMenuSheet = true }, onDeleteSelected: { showDeleteMenuAlert = true })
+                        MenusBarWithLiked(
+                            menus: menus,
+                            selected: $selectedMenu,
+                            likedCount: app.likedRecipesManager.likedRecipeIds.count,
+                            onAdd: { showNewMenuSheet = true },
+                            onRenameSelected: {
+                                renameMenuTitle = selectedMenu?.title ?? ""
+                                showRenameMenuSheet = true
+                            },
+                            onDeleteSelected: { showDeleteMenuAlert = true }
+                        )
                             .onChange(of: selectedMenu?.id) { _, _ in
                                 if let mid = selectedMenu?.id {
                                     menuPlaceholders = app.getMenuSuggestions(menuId: mid)
@@ -619,6 +628,22 @@ struct PersonalRecipesView: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
+
+                                Button(action: { showSocialImport = true }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "link.circle.fill")
+                                        Text(L.import_social_title.localized)
+                                    }
+                                    .font(.headline)
+                                    .foregroundColor(Color(red: 0.2, green: 0.45, blue: 0.85))
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                            .stroke(Color(red: 0.2, green: 0.45, blue: 0.85), lineWidth: 2)
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding(.vertical, 40)
@@ -664,12 +689,38 @@ struct PersonalRecipesView: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
+
+                                Button(action: { showSocialImport = true }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "link.circle.fill")
+                                        Text(L.import_social_title.localized)
+                                    }
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(Color(red: 0.2, green: 0.45, blue: 0.85))
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(
+                                        Capsule()
+                                            .stroke(Color(red: 0.2, green: 0.45, blue: 0.85), lineWidth: 1.5)
+                                    )
+                                }
+                                .buttonStyle(.plain)
                                 
                                 Spacer()
                             }
                             
                             // Menus bar with Liked
-                            MenusBarWithLiked(menus: menus, selected: $selectedMenu, likedCount: app.likedRecipesManager.likedRecipeIds.count, onAdd: { showNewMenuSheet = true }, onDeleteSelected: { showDeleteMenuAlert = true })
+                            MenusBarWithLiked(
+                            menus: menus,
+                            selected: $selectedMenu,
+                            likedCount: app.likedRecipesManager.likedRecipeIds.count,
+                            onAdd: { showNewMenuSheet = true },
+                            onRenameSelected: {
+                                renameMenuTitle = selectedMenu?.title ?? ""
+                                showRenameMenuSheet = true
+                            },
+                            onDeleteSelected: { showDeleteMenuAlert = true }
+                        )
                                 .onChange(of: app.lastCreatedRecipe?.id) { _, _ in
                                     if let r = app.lastCreatedRecipe {
                                         // Insert recipe into local list if not present
@@ -703,10 +754,7 @@ struct PersonalRecipesView: View {
                                     }
                                 }
                                 .onChange(of: selectedMenu?.id) { _, newId in
-                                    // Reload recipes if switching to liked menu (to load community recipes)
-                                    if newId == "__liked__" {
-                                        Task { await loadRecipes(keepVisible: true) }
-                                    } else if let menuId = newId, menuId != "__liked__" {
+                                    if let menuId = newId, menuId != "__liked__" {
                                         // Verwende Cache wenn verfügbar, sonst lade
                                         if let token = app.accessToken {
                                             Task { await loadMenuRecipeIds(menuId: menuId, token: token, updateSelected: true) }
@@ -755,7 +803,6 @@ struct PersonalRecipesView: View {
                                             ForEach(group.recipes) { recipe in
                                                 RecipeCard(
                                                     recipe: recipe,
-                                                    isPersonal: true,
                                                     onDelete: { toDelete = recipe; showDeleteAlert = true },
                                                     onAssign: { assigningRecipe = recipe }
                                                 )
@@ -768,7 +815,6 @@ struct PersonalRecipesView: View {
                                     ForEach(visibleRecipes) { recipe in
                                         RecipeCard(
                                             recipe: recipe,
-                                            isPersonal: true,
                                             onDelete: { toDelete = recipe; showDeleteAlert = true },
                                             onAssign: { assigningRecipe = recipe }
                                         )
@@ -842,6 +888,11 @@ struct PersonalRecipesView: View {
                 .presentationDetents([.height(260), .medium])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showRenameMenuSheet) {
+            RenameMenuSheet(title: $renameMenuTitle, onSave: { t in Task { await renameSelectedMenu(title: t) } })
+                .presentationDetents([.height(260), .medium])
+                .presentationDragIndicator(.visible)
+        }
         .confirmationDialog("Zu Menü hinzufügen", isPresented: Binding(get: { assigningRecipe != nil }, set: { if !$0 { assigningRecipe = nil } })) {
             if let r = assigningRecipe {
                 ForEach(menus) { m in
@@ -870,6 +921,13 @@ struct PersonalRecipesView: View {
         .sheet(isPresented: $showManualRecipeBuilder) {
             ManualRecipeBuilderView()
                 .environmentObject(app)
+        }
+        .sheet(isPresented: $showSocialImport) {
+            SocialRecipeImportView(onFinished: { recipe in
+                if !recipes.contains(where: { $0.id == recipe.id }) { recipes.insert(recipe, at: 0) }
+                navigationRecipeId = recipe.id
+            })
+            .environmentObject(app)
         }
     }
     
@@ -996,6 +1054,25 @@ struct PersonalRecipesView: View {
             }
         } catch {
             await MainActor.run { self.error = "Menü konnte nicht erstellt werden" }
+        }
+    }
+    
+    func renameSelectedMenu(title: String) async {
+        guard let token = app.accessToken, let menu = selectedMenu, menu.id != "__liked__" else { return }
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        do {
+            let updated = try await app.renameMenu(menuId: menu.id, newTitle: trimmed, accessToken: token)
+            await MainActor.run {
+                if let idx = menus.firstIndex(where: { $0.id == updated.id }) {
+                    menus[idx] = updated
+                }
+                selectedMenu = updated
+                renameMenuTitle = ""
+                showRenameMenuSheet = false
+            }
+        } catch {
+            await MainActor.run { self.error = L.recipes_renameMenuFailed.localized }
         }
     }
     
@@ -1161,22 +1238,7 @@ struct PersonalRecipesView: View {
             print("📡 [PERFORMANCE] Parallel requests completed in \(String(format: "%.3f", parallelDuration))s")
             print("📡 [PERFORMANCE] Received: \(allRecipes.count) recipes, \(menusResult.count) menus")
             
-            var list = allRecipes
-            
-            // If liked menu is selected, also load liked community recipes
-            if selectedMenu?.id == "__liked__" {
-                let likedIds = app.likedRecipesManager.likedRecipeIds
-                // Filter out own recipes from liked IDs to get community recipe IDs
-                let ownRecipeIds = Set(list.map { $0.id })
-                let communityLikedIds = likedIds.subtracting(ownRecipeIds)
-                
-                // Load community recipes that are liked (parallel zu anderen Tasks)
-                if !communityLikedIds.isEmpty {
-                    if let communityRecipes = try? await loadLikedCommunityRecipes(ids: Array(communityLikedIds), token: token) {
-                        list.append(contentsOf: communityRecipes)
-                    }
-                }
-            }
+            let list = allRecipes
             
             let uiUpdateStartTime = Date()
             await MainActor.run { 
@@ -1300,1570 +1362,9 @@ struct PersonalRecipesView: View {
         
         return recipes
     }
-    
-    // Helper function to load liked community recipes
-    private func loadLikedCommunityRecipes(ids: [String], token: String) async throws -> [Recipe] {
-        var communityUrl = Config.supabaseURL
-        communityUrl.append(path: "/rest/v1/recipes")
-        let idList = "(" + ids.map { "\"\($0)\"" }.joined(separator: ",") + ")"
-        communityUrl.append(queryItems: [
-            URLQueryItem(name: "id", value: "in.\(idList)"),
-            URLQueryItem(name: "is_public", value: "eq.true"),
-            URLQueryItem(name: "select", value: "*")
-        ])
-        
-        var communityRequest = URLRequest(url: communityUrl)
-        communityRequest.httpMethod = "GET"
-        communityRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        communityRequest.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        communityRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        let (communityData, communityResponse) = try await SecureURLSession.shared.data(for: communityRequest)
-        
-        guard let httpResponse = communityResponse as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
-        
-        return try JSONDecoder().decode([Recipe].self, from: communityData)
-    }
 }
 
-// MARK: - My Contributions View (User's public recipes)
-struct MyContributionsView: View {
-    @EnvironmentObject var app: AppState
-    @State private var recipes: [Recipe] = []
-    @State private var loading = true
-    @State private var error: String?
-    @State private var toDelete: Recipe? = nil
-    @State private var showDeleteAlert = false
-    @State private var deleting = false
-    @State private var showShareSheet = false
-    @State private var privateRecipes: [Recipe] = []
-    
-    var body: some View {
-        Group {
-            if loading {
-                ProgressView()
-                    .tint(Color(red: 0.85, green: 0.4, blue: 0.2))
-            }
-            else if let error {
-                VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 40))
-                        .foregroundColor(.red.opacity(0.6))
-                    Text(error)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
-            }
-            else if recipes.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 60))
-                        .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.4))
-                    Text(L.recipe_keine_communitybeiträge.localized)
-                        .font(.title3.bold())
-                        .foregroundColor(.black.opacity(0.7))
-                    Text(L.recipe_teile_deine_rezepte_mit.localized)
-                        .font(.subheadline)
-                        .foregroundColor(.black.opacity(0.5))
-                        .multilineTextAlignment(.center)
-                    
-                    Button(action: {
-                        Task { await loadPrivateRecipes() }
-                        showShareSheet = true
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "square.and.arrow.up")
-                            Text(L.button_shareRecipe.localized)
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 24)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                startPoint: .leading, endPoint: .trailing
-                            ), in: Capsule()
-                        )
-                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding()
-            }
-            else {
-                ScrollView {
-                    VStack(spacing: 12) {
-                        // Share button always visible
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                Task { await loadPrivateRecipes() }
-                                showShareSheet = true
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "square.and.arrow.up")
-                                    Text(L.button_share.localized)
-                                }
-                                .font(.subheadline.bold())
-                                .foregroundColor(.white)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 12)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                        startPoint: .leading, endPoint: .trailing
-                                    ), in: Capsule()
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        
-                        LazyVStack(spacing: 12) {
-                            ForEach(Array(recipes.enumerated()), id: \.element.id) { index, recipe in
-                                RecipeCard(
-                                    recipe: recipe,
-                                    isPersonal: false,
-                                    onDelete: { toDelete = recipe; showDeleteAlert = true }
-                                )
-                                .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .onTapGesture {
-                                    // Navigate to detail
-                                }
-                                .onAppear {
-                                    // Preload images for next 5 recipes when this one appears
-                                    let nextRecipes = recipes.suffix(from: min(index + 1, recipes.count)).prefix(5)
-                                    let nextImageUrls = nextRecipes.compactMap { r -> URL? in
-                                        guard let imageUrl = r.image_url else { return nil }
-                                        return URL(string: imageUrl)
-                                    }
-                                    if !nextImageUrls.isEmpty {
-                                        ImageCache.shared.preload(urls: Array(nextImageUrls))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding(16)
-                }
-            }
-        }
-        .navigationTitle(L.nav_myContributions.localized)
-        .navigationBarTitleDisplayMode(.inline)
-        .task { await loadMyContributions() }
-        .refreshable { await loadMyContributions() }
-        .alert(L.alert_removeContribution.localized, isPresented: $showDeleteAlert) {
-            Button(L.button_remove.localized, role: .destructive) {
-                let r = toDelete
-                Task { await confirmRemove(recipe: r) }
-            }
-            Button(L.button_cancel.localized, role: .cancel) { toDelete = nil }
-        } message: {
-            Text(L.recipe_dieses_rezept_wird_aus.localized)
-        }
-        .sheet(isPresented: $showShareSheet) {
-            ShareRecipeSheet(privateRecipes: privateRecipes, onSelect: { recipe in
-                showShareSheet = false
-                app.selectedRecipeForUpload = recipe
-            })
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(item: $app.selectedRecipeForUpload) { recipe in
-            CommunityUploadSheet(recipe: recipe)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-    }
-    
-    func loadPrivateRecipes() async {
-        guard let userId = KeychainManager.get(key: "user_id"),
-              let token = app.accessToken else { return }
-        
-        do {
-            // Load user's private recipes (not public - either NULL or false)
-            var url = Config.supabaseURL
-            url.append(path: "/rest/v1/recipes")
-            url.append(queryItems: [
-                URLQueryItem(name: "user_id", value: "eq.\(userId)"),
-                URLQueryItem(name: "or", value: "(is_public.is.null,is_public.eq.false)"),
-                URLQueryItem(name: "select", value: "*"),
-                URLQueryItem(name: "order", value: "created_at.desc")
-            ])
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            
-            let (data, response) = try await SecureURLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                return
-            }
-            
-            let list = try JSONDecoder().decode([Recipe].self, from: data)
-            
-            await MainActor.run {
-                self.privateRecipes = list
-            }
-        } catch {
-            Logger.error("Failed to load private recipes", error: error, category: .data)
-        }
-    }
-    
-    func shareRecipe(_ recipe: Recipe) async {
-        guard let token = app.accessToken else { return }
-        
-        do {
-            var url = Config.supabaseURL
-            url.append(path: "/rest/v1/recipes")
-            url.append(queryItems: [URLQueryItem(name: "id", value: "eq.\(recipe.id)")])
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "PATCH"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            
-            let body = ["is_public": true]
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-            
-            let (_, response) = try await SecureURLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                throw URLError(.badServerResponse)
-            }
-            
-            // Reload contributions to show the newly shared recipe
-            await loadMyContributions()
-        } catch {
-            Logger.error("Failed to share recipe", error: error, category: .network)
-        }
-    }
-    
-    func confirmRemove(recipe: Recipe?) async {
-        guard let recipe = recipe else { return }
-        guard let token = app.accessToken else { return }
-        deleting = true
-        defer { deleting = false }
-        
-        // Optimistisches Entfernen aus der UI
-        await MainActor.run {
-            recipes.removeAll { $0.id == recipe.id }
-            toDelete = nil
-            showDeleteAlert = false
-        }
-        
-        // Set is_public to false via PATCH
-        do {
-            var url = Config.supabaseURL
-            url.append(path: "/rest/v1/recipes")
-            url.append(queryItems: [URLQueryItem(name: "id", value: "eq.\(recipe.id)")])
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "PATCH"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            
-            let body = ["is_public": false]
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-            
-            let (_, response) = try await SecureURLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                throw URLError(.badServerResponse)
-            }
-        } catch {
-            Logger.error("Failed to remove recipe from community", error: error, category: .network)
-            // Re-load in case of error
-            await loadMyContributions()
-        }
-    }
-    
-    func loadMyContributions() async {
-        guard let userId = KeychainManager.get(key: "user_id"),
-              let token = app.accessToken else {
-            await MainActor.run {
-                self.error = "Nicht angemeldet"
-                self.loading = false
-            }
-            return
-        }
-        
-        loading = true
-        defer { loading = false }
-        
-        do {
-            // Load user's public recipes
-            var url = Config.supabaseURL
-            url.append(path: "/rest/v1/recipes")
-            url.append(queryItems: [
-                URLQueryItem(name: "user_id", value: "eq.\(userId)"),
-                URLQueryItem(name: "is_public", value: "eq.true"),
-                URLQueryItem(name: "select", value: "*"),
-                URLQueryItem(name: "order", value: "created_at.desc")
-            ])
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            
-            let (data, response) = try await SecureURLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                throw URLError(.badServerResponse)
-            }
-            
-            let list = try JSONDecoder().decode([Recipe].self, from: data)
-            
-            await MainActor.run {
-                self.recipes = list
-                self.error = nil
-            }
-        } catch {
-            Logger.error("Failed to load my contributions", error: error, category: .data)
-            await MainActor.run {
-                if let urlError = error as? URLError {
-                    switch urlError.code {
-                    case .notConnectedToInternet:
-                        self.error = "Keine Internetverbindung"
-                    case .timedOut:
-                        self.error = "Zeitüberschreitung"
-                    default:
-                        self.recipes = []
-                        self.error = nil
-                    }
-                } else {
-                    self.error = error.localizedDescription
-                }
-            }
-        }
-    }
-}
 
-// MARK: - Community Tab View (simplified, no sub-tabs)
-struct CommunityTabView: View {
-    var body: some View {
-        CommunityRecipesView()
-    }
-}
-
-// MARK: - Community Recipes View
-struct CommunityRecipesView: View {
-    @EnvironmentObject var app: AppState
-    @State private var recipes: [Recipe] = []
-    @State private var loading = true
-    @State private var error: String?
-    @State private var query: String = ""
-    @State private var selectedFilters: Set<String> = []
-    @State private var selectedLanguages: Set<String> = []  // Language codes (e.g. "en", "de", "es") - NOT localized names
-    @State private var showLanguageDropdown = false  // Language dropdown state
-    @State private var showMyContributions = false
-    @State private var filterByDietaryPreferences = false  // Toggle für Filter nach Ernährungspräferenzen
-    @State private var showFilters = false  // Toggle für Filter-Anzeige
-    
-    // Pagination state
-    @State private var currentPage = 0
-    @State private var hasMore = true
-    @State private var loadingMore = false
-    // PERFORMANCE: Reduzierte Page-Size für schnellere initiale Ladezeit
-    // Mit optimierten Datenbank-Indizes sollte dies <2 Sekunden dauern
-    private let pageSize = 15 // Optimiert für schnelle erste Anzeige (reduziert von 20)
-    
-    // Filtered recipes (memoized with debouncing for performance)
-    @State private var filteredRecipes: [Recipe] = []
-    @State private var filterTask: Task<Void, Never>?
-    
-    // Navigation state for smooth scrolling
-    @State private var selectedRecipe: Recipe?
-    @State private var navigationRecipeId: String? = nil
-    
-    // Throttling for onAppear events
-    @State private var lastLoadMoreTime: Date = Date()
-    @State private var lastPreloadTime: Date = Date()
-    
-    // Prevent multiple simultaneous load requests
-    @State private var loadTask: Task<Void, Never>?
-    
-    private var availableLanguages: [(code: String, name: String)] {
-        [
-            ("de", L.tag_german.localized),
-            ("en", L.tag_english.localized),
-            ("es", L.tag_spanish.localized),
-            ("fr", L.tag_french.localized),
-            ("it", L.tag_italian.localized)
-        ]
-    }
-    
-    // Map localized UI filter names to English filter tags (used in recipes)
-    // Filter tags in recipes are always in English (vegan, vegetarian, etc.)
-    // This ensures filtering works correctly regardless of UI language
-    private func localizedFilterNameToTag(_ localizedName: String) -> String {
-        // Map all possible localized names to English filter tags
-        // The keys are the localized names that appear in the UI
-        let mapping: [String: String] = [
-            // Map localized UI names to English filter tags
-            L.tag_vegan.localized: "vegan",
-            L.tag_vegetarian.localized: "vegetarian",
-            L.tag_pescetarian.localized: "pescetarian",
-            L.tag_glutenFree.localized: "gluten-free",
-            L.tag_lactoseFree.localized: "lactose-free",
-            L.tag_lowCarb.localized: "low-carb",
-            L.tag_highProtein.localized: "high-protein",
-            L.tag_halal.localized: "halal",
-            L.tag_kosher.localized: "kosher",
-            L.tag_budget.localized: "budget",
-            L.tag_spicy.localized: "spicy",
-            L.tag_quick.localized: "quick"
-        ]
-        // Return the English tag name, or fallback to normalized input
-        if let englishTag = mapping[localizedName] {
-            return englishTag
-        }
-        // Fallback: normalize and return (shouldn't happen with proper mapping)
-        func norm(_ s: String) -> String {
-            s.lowercased().replacingOccurrences(of: "[^a-z0-9]", with: "", options: .regularExpression)
-        }
-        return norm(localizedName)
-    }
-    
-    private var availableFilters: [String] {
-        [
-            L.tag_vegan.localized,
-            L.tag_vegetarian.localized,
-            L.tag_pescetarian.localized,
-            L.tag_glutenFree.localized,
-            L.tag_lactoseFree.localized,
-            L.tag_lowCarb.localized,
-            L.tag_highProtein.localized,
-            L.tag_halal.localized,
-            L.tag_kosher.localized,
-            L.tag_budget.localized,
-            L.tag_spicy.localized,
-            L.tag_quick.localized
-        ]
-    }
-    private let lowCarbThreshold: Double = 25 // g Kohlenhydrate pro Portion
-    private let quickThresholdMinutes: Int = 20 // Minuten für "Schnell" (<= 20 Minuten)
-    
-    // Apply filters to recipes (extracted for reuse)
-    private func applyFilters(to recipes: [Recipe]) -> [Recipe] {
-        let filterStartTime = Date()
-        Logger.debug("[CommunityRecipesView] ⏱️ Starting filter (input: \(recipes.count) recipes, query: '\(query)', languages: \(selectedLanguages.count), filters: \(selectedFilters.count))", category: .data)
-        
-        func norm(_ s: String) -> String {
-            s.lowercased().replacingOccurrences(of: "[^a-z0-9]", with: "", options: .regularExpression)
-        }
-        func parseMinutes(_ s: String?) -> Int? {
-            guard let s = s, let range = s.range(of: "\\d+", options: .regularExpression) else { return nil }
-            return Int(s[range])
-        }
-        // Helper to check if recipe matches a language filter
-        // languageCode is always a language code (e.g. "en", "de", "es")
-        func matchesLanguage(_ recipe: Recipe, _ languageCode: String) -> Bool {
-            let codeLower = languageCode.lowercased()
-            
-            // PRIMARY: Check language field - should contain language code (e.g. "en", "de", "es")
-            if let lang = recipe.language {
-                let langLower = lang.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                // Direct match with language code
-                if langLower == codeLower {
-                    return true
-                }
-            }
-            
-            // SECONDARY: Check tags for language codes (backward compatibility)
-            // Tags may contain codes (e.g. "en", "de") or old format (e.g. "EN", "DE", "English", "Deutsch")
-            if let tags = recipe.tags {
-                for tag in tags {
-                    let tagLower = tag.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                    // Match language code in tags (e.g. "en", "de", "es")
-                    if tagLower == codeLower {
-                        return true
-                    }
-                    // Backward compatibility: match old uppercase format (e.g. "EN" -> "en")
-                    if tagLower.uppercased() == codeLower.uppercased() {
-                        return true
-                    }
-                }
-            }
-            return false
-        }
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let base = recipes.filter { r in
-            if q.isEmpty { return true }
-            if r.title.localizedCaseInsensitiveContains(q) { return true }
-            if let tags = r.tags, tags.contains(where: { $0.localizedCaseInsensitiveContains(q) }) { return true }
-            // Special cases: text queries
-            switch norm(q) {
-            case "highprotein":
-                if let nutrition = r.nutrition, (nutrition.protein_g ?? 0) >= 30 { return true }
-            case "lowcarb":
-                if let nutrition = r.nutrition, let c = nutrition.carbs_g, c < lowCarbThreshold { return true }
-            case "schnell":
-                if let mins = parseMinutes(r.cooking_time), mins < quickThresholdMinutes { return true }
-            default:
-                break
-            }
-            return false
-        }
-        // First apply language filter
-        // selectedLanguages now contains language codes (e.g. "en", "de", "es"), not localized names
-        var languageFiltered = base
-        if !selectedLanguages.isEmpty {
-            Logger.debug("Applying language filter: \(selectedLanguages.count) selected (codes: \(selectedLanguages.joined(separator: ", ")))", category: .ui)
-            languageFiltered = base.filter { recipe in
-                // Check if recipe matches any selected language code
-                for languageCode in selectedLanguages {
-                    if matchesLanguage(recipe, languageCode) {
-                        return true
-                    }
-                }
-                return false
-            }
-            Logger.debug("Language filter resulted in \(languageFiltered.count) recipes", category: .ui)
-        }
-        
-        // Apply dietary preferences filter (allergies and diets check) if enabled
-        var dietaryFiltered = languageFiltered
-        if filterByDietaryPreferences {
-            let allergies = app.dietary.allergies.map { norm($0) }
-            let diets = app.dietary.diets.map { norm($0) }
-            
-            // Helper function to check if recipe matches dietary restrictions
-            func recipeMatchesDietaryPreferences(_ r: Recipe) -> Bool {
-                // Normalize recipe tags for comparison
-                // Include both tags and filter_tags (filter_tags are the hidden tags from AI)
-                let allTags = (r.tags ?? []) + (r.filter_tags ?? [])
-                let tagsNorm = Set(allTags.map { (tag: String) -> String in
-                    let cleaned = tag.hasPrefix("_filter:") ? String(tag.dropFirst(8)) : tag
-                    return norm(cleaned)
-                })
-                
-                // Check allergies first (strict exclusion)
-                if !allergies.isEmpty {
-                    guard let ingredients = r.ingredients, !ingredients.isEmpty else {
-                        // If no ingredients, we can't check - but if recipe has tags indicating it's safe, allow it
-                        // Otherwise, be conservative and exclude if we have allergies set
-                        return false  // Exclude recipes without ingredients if allergies are set
-                    }
-                    
-                    let normalizedIngredients = ingredients.map { norm($0) }
-                    for allergy in allergies {
-                        if normalizedIngredients.contains(where: { ingredient in
-                            ingredient.contains(allergy) || allergy.contains(ingredient)
-                        }) {
-                            Logger.debug("Recipe '\(r.title)' excluded due to allergy: \(allergy)", category: .ui)
-                            return false
-                        }
-                    }
-                }
-                
-                // Check dietary restrictions (diets)
-                if !diets.isEmpty {
-                    // Map localized diet names to tag names
-                    let dietToTagMap: [String: String] = [
-                        "vegan": "vegan",
-                        "vegetarisch": "vegetarian",
-                        "vegetarian": "vegetarian",
-                        "pescetarisch": "pescetarian",
-                        "pescetarian": "pescetarian",
-                        "pescatarian": "pescetarian"
-                    ]
-                    
-                    // Check if recipe matches any of the selected diets
-                    var matchesAnyDiet = false
-                    for diet in diets {
-                        let dietTag = dietToTagMap[diet] ?? diet
-                        
-                        // Check if recipe has the matching tag
-                        if tagsNorm.contains(dietTag) {
-                            matchesAnyDiet = true
-                            break
-                        }
-                    }
-                    
-                    // If user has selected diets, recipe MUST match at least one diet tag
-                    // KI should add appropriate tags to all recipes, so we only check tags
-                    if !matchesAnyDiet {
-                        Logger.debug("Recipe '\(r.title)' excluded - does not match any selected diet tags", category: .ui)
-                        return false
-                    }
-                }
-                
-                return true  // Recipe matches dietary preferences
-            }
-            
-            dietaryFiltered = languageFiltered.filter { recipeMatchesDietaryPreferences($0) }
-            Logger.debug("Dietary filter applied: \(dietaryFiltered.count) recipes remaining (from \(languageFiltered.count))", category: .ui)
-        }
-        
-        // Then apply other filters
-        // Filter tags in recipes are always in English (vegan, vegetarian, gluten-free, etc.)
-        // We need to map the localized UI filter names to the English tag names
-        let finalFiltered: [Recipe]
-        if selectedFilters.isEmpty {
-            finalFiltered = dietaryFiltered
-        } else {
-            // Convert localized filter names to English filter tags
-            let wantedEnglishTags = selectedFilters.map { localizedFilterNameToTag($0) }
-            finalFiltered = dietaryFiltered.filter { r in
-                // Get all filter tags from recipe (both tags and filter_tags)
-                // Filter tags are stored as "_filter:vegan" or just "vegan" in filter_tags array
-                let allTags = (r.tags ?? []) + (r.filter_tags ?? [])
-                let tagsNorm = Set(allTags.map { (tag: String) -> String in
-                    // Remove _filter: prefix if present for filtering comparison
-                    let cleaned = tag.hasPrefix("_filter:") ? String(tag.dropFirst(8)) : tag
-                    return norm(cleaned)
-                })
-                
-                // Check if recipe matches any of the selected filters
-                var matched = false
-                for englishTag in wantedEnglishTags {
-                    let tagNorm = norm(englishTag)
-                    
-                    // Direct tag match (most common case)
-                    if tagsNorm.contains(tagNorm) {
-                        matched = true
-                        break
-                    }
-                    
-                    // Special handling for nutrition-based filters (fallback if tag missing)
-                    if englishTag == "high-protein" {
-                        if let nutrition = r.nutrition, (nutrition.protein_g ?? 0) >= 30 {
-                            matched = true
-                            break
-                        }
-                    } else if englishTag == "low-carb" {
-                        if let nutrition = r.nutrition, let c = nutrition.carbs_g, c < lowCarbThreshold {
-                            matched = true
-                            break
-                        }
-                    } else if englishTag == "quick" {
-                        if let mins = parseMinutes(r.cooking_time), mins < quickThresholdMinutes {
-                            matched = true
-                            break
-                        }
-                    }
-                }
-                return matched
-            }
-        }
-        
-        let filterDuration = Date().timeIntervalSince(filterStartTime)
-        Logger.info("[CommunityRecipesView] ⏱️ Filter completed in \(String(format: "%.3f", filterDuration))s (\(recipes.count) -> \(finalFiltered.count) recipes)", category: .data)
-        
-        return finalFiltered
-    }
-    
-    // MARK: - View Components
-    
-    @ViewBuilder
-    private var recipesListContent: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                // OPTIMIZATION: Use LazyVStack instead of List for better scroll performance
-                ForEach(Array(filteredRecipes.enumerated()), id: \.element.id) { index, recipe in
-                    RecipeCard(recipe: recipe, isPersonal: false)
-                        .id(recipe.id) // CRITICAL: Stable ID prevents view recreation on scroll
-                        .padding(.horizontal, 16)
-                        .onTapGesture {
-                            navigationRecipeId = recipe.id
-                        }
-                        .onAppear {
-                            // CRITICAL: Do minimal work synchronously, defer heavy work
-                            // Defer all heavy work to async task
-                            Task.detached(priority: .utility) {
-                                let now = Date()
-                                
-                                // Read main actor isolated properties
-                                let (currentLastPreloadTime, currentFilteredRecipes, currentLastLoadMoreTime, currentHasMore, currentLoadingMore, currentQuery, currentSelectedFilters, currentSelectedLanguages) = await MainActor.run {
-                                    (lastPreloadTime, filteredRecipes, lastLoadMoreTime, hasMore, loadingMore, query, selectedFilters, selectedLanguages)
-                                }
-                                
-                                // Throttle preloading: Only preload every 300ms to avoid lag
-                                if now.timeIntervalSince(currentLastPreloadTime) > 0.3 {
-                                    await MainActor.run {
-                                        lastPreloadTime = now
-                                    }
-                                    
-                                    // Preload images for next 2 recipes (reduced to minimize work)
-                                    let nextRecipes = currentFilteredRecipes.suffix(from: min(index + 1, currentFilteredRecipes.count)).prefix(2)
-                                    let nextImageUrls = nextRecipes.compactMap { r -> URL? in
-                                        guard let imageUrl = r.image_url,
-                                              !imageUrl.isEmpty,
-                                              !imageUrl.hasPrefix("data:image/"),
-                                              let url = URL(string: imageUrl),
-                                              url.scheme == "http" || url.scheme == "https" else { return nil }
-                                        return url
-                                    }
-                                    if !nextImageUrls.isEmpty {
-                                        await ImageCache.shared.preloadPriority(urls: Array(nextImageUrls), immediateCount: 1)
-                                    }
-                                }
-                                
-                                // Throttle load more: Only check every 500ms
-                                let timeSinceLastLoad = now.timeIntervalSince(currentLastLoadMoreTime)
-                                if timeSinceLastLoad > 0.5 && index >= currentFilteredRecipes.count - 10 && currentHasMore && !currentLoadingMore && currentQuery.isEmpty && currentSelectedFilters.isEmpty && currentSelectedLanguages.isEmpty {
-                                    await MainActor.run {
-                                        lastLoadMoreTime = now
-                                    }
-                                    await loadMoreCommunityRecipes()
-                                }
-                            }
-                        }
-                }
-                
-                // Loading indicator am Ende, wenn weitere Rezepte geladen werden
-                if loadingMore {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                            .tint(Color(red: 0.85, green: 0.4, blue: 0.2))
-                        Spacer()
-                    }
-                    .padding(.vertical, 16)
-                }
-            }
-            .padding(.vertical, 8)
-        }
-        .background(Color.white)
-        // OPTIMIZATION: Disable animations for smoother scrolling
-        .animation(nil, value: filteredRecipes.count)
-    }
-    
-    // Update filtered recipes with debouncing (150ms delay)
-    private func updateFilteredRecipes() {
-        filterTask?.cancel()
-        filterTask = Task { @MainActor in
-            // Debounce: Wait 150ms before applying filters
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            
-            guard !Task.isCancelled else { return }
-            
-            let filtered = applyFilters(to: recipes)
-            self.filteredRecipes = filtered
-            Logger.info("[CommunityRecipesView] Updated filtered recipes: \(filtered.count) from \(recipes.count) total", category: .data)
-        }
-    }
-    
-    var body: some View {
-        Group {
-            if loading && recipes.isEmpty { 
-                ProgressView()
-                    .tint(Color(red: 0.85, green: 0.4, blue: 0.2))
-            }
-            else if let error { 
-                VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 40))
-                        .foregroundColor(.red.opacity(0.6))
-                    Text(error)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
-            }
-            else if recipes.isEmpty && !loading { 
-                VStack(spacing: 16) {
-                    Image(systemName: "person.3")
-                        .font(.system(size: 60))
-                        .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.4))
-                    Text(L.recipe_noch_keine_communityrezepte.localized)
-                        .font(.title3.bold())
-                        .foregroundColor(.black.opacity(0.7))
-                    Text(L.recipe_sei_der_erste_und.localized)
-                        .font(.subheadline)
-                        .foregroundColor(.black.opacity(0.5))
-                }
-                .padding()
-            }
-            else if !recipes.isEmpty {
-                // Use VStack with List - List has its own scrolling, so we don't need ScrollView
-                VStack(spacing: 0) {
-                    // Header mit Suchbar, Ernährungspräferenzen-Toggle und Meine Beiträge Button
-                    VStack(spacing: 12) {
-                        HStack(spacing: 8) {
-                            SearchBar(query: $query, placeholder: L.placeholder_searchCommunityLong.localized)
-                            
-                            // Filter Button - zeigt/versteckt die Filter
-                            Button(action: {
-                                withAnimation {
-                                    showFilters.toggle()
-                                }
-                            }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "line.3.horizontal.decrease.circle\(showFilters ? ".fill" : "")")
-                                        .font(.system(size: 16))
-                                    Text(L.recipe_filter.localized)
-                                        .font(.caption2)
-                                    if !selectedFilters.isEmpty || !selectedLanguages.isEmpty || filterByDietaryPreferences {
-                                        let count = selectedFilters.count + selectedLanguages.count + (filterByDietaryPreferences ? 1 : 0)
-                                        Text("(\(count))")
-                                            .font(.caption2)
-                                    }
-                                }
-                                .foregroundColor(showFilters || !selectedFilters.isEmpty || !selectedLanguages.isEmpty || filterByDietaryPreferences ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(showFilters || !selectedFilters.isEmpty || !selectedLanguages.isEmpty || filterByDietaryPreferences ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            }
-                            .buttonStyle(.plain)
-                            
-                            // Link zu eigenen hochgeladenen Rezepten - nur Icon
-                            NavigationLink(destination: MyContributionsView()) {
-                                Image(systemName: "person.crop.square")
-                                    .font(.system(size: 18))
-                                    .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 6)
-                                    .background(Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        
-                        // Filter Section - nur sichtbar wenn showFilters = true
-                        if showFilters {
-                            VStack(spacing: 12) {
-                                // Toggle für Filter nach Ernährungspräferenzen
-                                Button(action: {
-                                    withAnimation {
-                                        filterByDietaryPreferences.toggle()
-                                    }
-                                }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: filterByDietaryPreferences ? "checkmark.shield.fill" : "shield")
-                                            .font(.system(size: 16))
-                                        Text(L.recipe_filterByDietaryPreferences.localized)
-                                            .font(.subheadline.weight(.semibold))
-                                        Spacer()
-                                        if filterByDietaryPreferences {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .font(.system(size: 16))
-                                                .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                        }
-                                    }
-                                    .foregroundColor(filterByDietaryPreferences ? .white : Color(red: 0.85, green: 0.4, blue: 0.2))
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 10)
-                                    .background(filterByDietaryPreferences ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                }
-                                .buttonStyle(.plain)
-                                
-                                // Filter Chips with Language Dropdown
-                                FilterChipsBarWithLanguage(
-                                    availableLanguages: availableLanguages,
-                                    selectedLanguages: $selectedLanguages,
-                                    filterOptions: availableFilters,
-                                    selectedFilters: $selectedFilters,
-                                    showLanguageDropdown: $showLanguageDropdown
-                                )
-                            }
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
-                    }
-                    .padding(16)
-                    .background(Color.white)
-                    
-                    // OPTIMIZATION: Use List instead of ScrollView+LazyVStack for better view recycling
-                    // List has native view recycling and better scroll performance
-                    if filteredRecipes.isEmpty && !loading {
-                        VStack(spacing: 8) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 28))
-                                .foregroundColor(.gray.opacity(0.6))
-                            Text(query.isEmpty ? "Keine Rezepte gefunden" : "Keine Treffer für \"\(query)\"")
-                                .font(.caption)
-                                .foregroundColor(.black.opacity(0.5))
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.vertical, 16)
-                    } else {
-                        recipesListContent
-                    }
-                }
-            }
-        }
-        .overlay(alignment: .topLeading) {
-            // Language Dropdown Overlay (at top level)
-            if showLanguageDropdown {
-                // Transparent background to close dropdown when tapping outside
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation {
-                            showLanguageDropdown = false
-                        }
-                    }
-                    .overlay(alignment: .topLeading) {
-                        VStack(spacing: 6) {
-                            ForEach(availableLanguages, id: \.code) { language in
-                                // CRITICAL FIX: Use language code, not localized name for filtering
-                                let isSelected = selectedLanguages.contains(language.code)
-                                Button(action: {
-                                    Logger.debug("Language selection toggled: \(language.name) (code: \(language.code))", category: .ui)
-                                    withAnimation {
-                                        if isSelected {
-                                            selectedLanguages.remove(language.code)
-                                        } else {
-                                            selectedLanguages.insert(language.code)
-                                        }
-                                    }
-                                }) {
-                                    Text(language.name)
-                                        .font(.caption.weight(.semibold))
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
-                                        .foregroundColor(isSelected ? .white : .black.opacity(0.7))
-                                        .clipShape(Capsule())
-                                        .overlay(Capsule().stroke(Color.black.opacity(0.07), lineWidth: 0.5))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-                        )
-                        .offset(x: 16, y: showFilters ? 110 : 60)  // Position below filter bar (adjusts based on filter visibility)
-                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
-                        .zIndex(999)
-                    }
-            }
-        }
-        .navigationBarHidden(true)
-        .onAppear {
-            let appearTime = Date()
-            print("📱 [PERFORMANCE] CommunityRecipesView APPEARED at \(appearTime)")
-            print("📱 [PERFORMANCE] Current state: loading=\(loading), recipes=\(recipes.count), filtered=\(filteredRecipes.count)")
-        }
-        .task { 
-            let taskStartTime = Date()
-            print("📱 [PERFORMANCE] CommunityRecipesView .task STARTED at \(taskStartTime)")
-            await loadCommunityRecipes()
-            let taskDuration = Date().timeIntervalSince(taskStartTime)
-            print("✅ [PERFORMANCE] CommunityRecipesView .task COMPLETED in \(String(format: "%.3f", taskDuration))s")
-        }
-        .background(
-            // Hidden NavigationLink for smooth navigation (outside list for better performance)
-            Group {
-                if let recipeId = navigationRecipeId, let recipe = filteredRecipes.first(where: { $0.id == recipeId }) {
-                    NavigationLink(
-                        destination: RecipeDetailView(recipe: recipe),
-                        isActive: Binding(
-                            get: { navigationRecipeId == recipeId },
-                            set: { if !$0 { navigationRecipeId = nil } }
-                        )
-                    ) {
-                        EmptyView()
-                    }
-                    .hidden()
-                }
-            }
-        )
-        .onChange(of: query) { _, _ in updateFilteredRecipes() }
-        .onChange(of: selectedFilters) { _, _ in updateFilteredRecipes() }
-        .onChange(of: selectedLanguages) { _, _ in updateFilteredRecipes() }
-        .onChange(of: filterByDietaryPreferences) { _, _ in updateFilteredRecipes() }
-        .onChange(of: recipes) { oldValue, newValue in
-            // Only update filtered recipes if recipes actually changed
-            // This prevents unnecessary updates when recipes are set to the same value
-            if oldValue.count != newValue.count || oldValue.map(\.id) != newValue.map(\.id) {
-                updateFilteredRecipes()
-            }
-        }
-    }
-    
-    func loadCommunityRecipes(forceRefresh: Bool = false) async {
-        let tabOpenTime = Date()
-        print("🌍 [PERFORMANCE] ========================================")
-        print("🌍 [PERFORMANCE] 'Community Library' Tab OPENED at \(tabOpenTime)")
-        print("🌍 [PERFORMANCE] forceRefresh: \(forceRefresh)")
-        
-        // If forceRefresh is true (e.g., from pull-to-refresh), cancel existing task
-        // Otherwise, if already loading, wait for it to finish to prevent race conditions
-        if forceRefresh {
-            loadTask?.cancel()
-            print("🔄 [PERFORMANCE] Force refresh - cancelled existing task")
-        } else if let existingTask = loadTask, !existingTask.isCancelled {
-            // Wait for existing task to complete instead of cancelling
-            // This prevents race conditions where multiple calls cancel each other
-            print("⏳ [PERFORMANCE] Waiting for existing load task to complete...")
-            await existingTask.value
-            return
-        }
-        
-        guard let token = app.accessToken else {
-            await MainActor.run { 
-                self.error = "Nicht angemeldet"
-                self.loading = false
-            }
-            print("❌ [PERFORMANCE] Not authenticated")
-            return
-        }
-        
-        // OPTIMIZATION: Wenn Cache vorhanden ist UND Rezepte enthält, zeige Cache sofort
-        // Wenn Cache leer ist, versuche trotzdem zu laden (kann temporäres Problem sein)
-        if !forceRefresh && !app.cachedCommunityRecipes.isEmpty {
-            let cacheAge = app.communityRecipesCacheTimestamp.map { Date().timeIntervalSince($0) } ?? 0
-            let cacheRecipes = app.cachedCommunityRecipes
-            print("💾 [PERFORMANCE] Cache found: \(cacheRecipes.count) recipes")
-            print("💾 [PERFORMANCE] Cache age: \(String(format: "%.1f", cacheAge))s")
-            
-            let uiUpdateStartTime = Date()
-            await MainActor.run {
-                // Use first pageSize recipes from cache for instant display
-                let displayRecipes = Array(cacheRecipes.prefix(pageSize))
-                self.recipes = displayRecipes
-                
-                let filterStartTime = Date()
-                self.filteredRecipes = self.applyFilters(to: displayRecipes)
-                let filterDuration = Date().timeIntervalSince(filterStartTime)
-                
-                self.loading = false // Seite sofort anzeigen!
-                self.currentPage = 1 // Nächste Seite ist 1
-                self.hasMore = cacheRecipes.count >= pageSize
-                
-                // PERFORMANCE: Preload images IMMEDIATELY for first visible recipes
-                // This prevents lag when user starts scrolling
-                Task.detached(priority: .userInitiated) {
-                    // Preload first 10 images immediately (visible + next few)
-                    await self.preloadRecipeImages(recipes: displayRecipes, immediateCount: 10)
-                }
-                
-                let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
-                let totalDuration = Date().timeIntervalSince(tabOpenTime)
-                print("⚡ [PERFORMANCE] UI updated from cache in \(String(format: "%.3f", uiUpdateDuration))s")
-                print("⚡ [PERFORMANCE] Filtering took \(String(format: "%.3f", filterDuration))s")
-                print("⚡ [PERFORMANCE] Total time to display: \(String(format: "%.3f", totalDuration))s")
-                print("✅ [PERFORMANCE] Recipes displayed INSTANTLY from cache (\(displayRecipes.count) recipes)")
-                Logger.info("[CommunityRecipesView] Using cache (\(displayRecipes.count) recipes) - instant display", category: .data)
-            }
-            
-            // Lade im Hintergrund aktualisiert (nur wenn Cache alt genug)
-            if cacheAge > 60 { // Nur refreshen wenn Cache > 1 Minute alt
-                print("🔄 [PERFORMANCE] Starting background refresh (cache age: \(String(format: "%.1f", cacheAge))s)...")
-                Task.detached(priority: .utility) {
-                    await self.performLoadCommunityRecipes(token: token)
-                }
-            } else {
-                print("✅ [PERFORMANCE] Cache is fresh - skipping background refresh")
-            }
-            return
-        } else {
-            print("⚠️ [PERFORMANCE] No cache available or cache is empty - loading from network")
-        }
-        
-        // Reset pagination when loading fresh
-        await MainActor.run {
-            loading = true
-            currentPage = 0
-            hasMore = true
-            recipes = []
-            print("⏳ [PERFORMANCE] Loading state set to true - showing loading indicator")
-        }
-        
-        // Create new load task
-        loadTask = Task {
-            await performLoadCommunityRecipes(token: token)
-        }
-        await loadTask?.value
-    }
-    
-    private func performLoadCommunityRecipes(token: String) async {
-        // PERFORMANCE DEBUGGING: Start-Zeitpunkt
-        let totalStartTime = Date()
-        print("🌍 [PERFORMANCE] performLoadCommunityRecipes STARTED at \(totalStartTime)")
-        
-        do {
-            // Check if task was cancelled
-            try Task.checkCancellation()
-            
-            // PERFORMANCE OPTIMIZATION: Lade sofort die erste Seite (15 Rezepte) für schnelle Anzeige
-            // Mit optimierten Datenbank-Indizes sollte dies <2 Sekunden dauern
-            let networkStartTime = Date()
-            print("📡 [PERFORMANCE] Loading first page (pageSize: \(pageSize))...")
-            
-            let firstPage = try await loadCommunityRecipesPage(page: 0, pageSize: pageSize, token: token)
-            
-            let networkDuration = Date().timeIntervalSince(networkStartTime)
-            print("📡 [PERFORMANCE] First page loaded in \(String(format: "%.3f", networkDuration))s (\(firstPage.count) recipes)")
-            
-            // PERFORMANCE: Preload images IMMEDIATELY after loading recipes
-            // Preload first 12 images immediately to prevent lag on first scroll
-            Task.detached(priority: .userInitiated) {
-                await self.preloadRecipeImages(recipes: firstPage, immediateCount: 12)
-            }
-            
-            // Check again after load
-            try Task.checkCancellation()
-            
-            let uiUpdateStartTime = Date()
-            print("⚡ [PERFORMANCE] Starting UI update...")
-            
-            await MainActor.run {
-                if !firstPage.isEmpty {
-                    let filterStartTime = Date()
-                    // Set recipes first
-                    self.recipes = firstPage
-                    // Initialize filtered recipes immediately (no debounce on initial load)
-                    // This must happen BEFORE setting loading = false to ensure UI updates correctly
-                    self.filteredRecipes = self.applyFilters(to: firstPage)
-                    let filterDuration = Date().timeIntervalSince(filterStartTime)
-                    
-                    self.loading = false // Seite sofort anzeigen!
-                    self.currentPage = 1 // Nächste Seite ist 1
-                    self.hasMore = firstPage.count >= pageSize
-                    
-                    let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
-                    let totalDuration = Date().timeIntervalSince(totalStartTime)
-                    print("⚡ [PERFORMANCE] UI update completed in \(String(format: "%.3f", uiUpdateDuration))s")
-                    print("⚡ [PERFORMANCE] Filtering took \(String(format: "%.3f", filterDuration))s (\(firstPage.count) -> \(self.filteredRecipes.count))")
-                    print("✅ [PERFORMANCE] Displaying \(firstPage.count) recipes (filtered: \(self.filteredRecipes.count))")
-                    print("✅ [PERFORMANCE] Total load time: \(String(format: "%.3f", totalDuration))s")
-                    print("✅ [PERFORMANCE] Breakdown: Network=\(String(format: "%.3f", networkDuration))s, Filter=\(String(format: "%.3f", filterDuration))s, UI=\(String(format: "%.3f", uiUpdateDuration))s")
-                    Logger.info("[CommunityRecipesView] ✅ Displaying \(firstPage.count) recipes immediately (filtered: \(self.filteredRecipes.count))", category: .data)
-                } else {
-                    self.loading = false
-                    self.filteredRecipes = []
-                    let totalDuration = Date().timeIntervalSince(totalStartTime)
-                    print("⚠️ [PERFORMANCE] No recipes found - displaying empty state")
-                    print("✅ [PERFORMANCE] Total load time: \(String(format: "%.3f", totalDuration))s")
-                    Logger.info("[CommunityRecipesView] No recipes found, displaying empty state", category: .data)
-                }
-            }
-            
-            // OPTIMIZATION: Update cache with loaded recipes for next time
-            // This ensures future tab switches are instant
-            let cacheUpdateStartTime = Date()
-            await MainActor.run {
-                // Merge with existing cache (avoid duplicates)
-                var existingIds = Set(app.cachedCommunityRecipes.map { $0.id })
-                var updatedCache = app.cachedCommunityRecipes
-                var newRecipesAdded = 0
-                for recipe in firstPage {
-                    if !existingIds.contains(recipe.id) {
-                        updatedCache.append(recipe)
-                        existingIds.insert(recipe.id)
-                        newRecipesAdded += 1
-                    }
-                }
-                app.cachedCommunityRecipes = updatedCache
-                app.communityRecipesCacheTimestamp = Date()
-                let cacheUpdateDuration = Date().timeIntervalSince(cacheUpdateStartTime)
-                print("💾 [PERFORMANCE] Cache updated in \(String(format: "%.3f", cacheUpdateDuration))s")
-                print("💾 [PERFORMANCE] Cache now contains \(updatedCache.count) recipes (+\(newRecipesAdded) new)")
-            }
-            
-            let totalDuration = Date().timeIntervalSince(totalStartTime)
-            Logger.info("[CommunityRecipesView] ⏱️ ⏱️ ⏱️ TOTAL LOAD TIME: \(String(format: "%.3f", totalDuration))s ⏱️ ⏱️ ⏱️", category: .data)
-            Logger.info("[CommunityRecipesView] ⏱️ Breakdown: Network=\(String(format: "%.3f", networkDuration))s, UI=\(String(format: "%.3f", Date().timeIntervalSince(uiUpdateStartTime)))s", category: .data)
-            
-            // OPTIMIZATION: Preload images with priority - first 8 immediately, rest in background
-            // This prevents lag when scrolling immediately after load
-            let imagePreloadStartTime = Date()
-            let imageUrls = firstPage.compactMap { recipe -> URL? in
-                guard let imageUrl = recipe.image_url, !imageUrl.isEmpty else { return nil }
-                return URL(string: imageUrl)
-            }
-            Logger.info("[CommunityRecipesView] ⏱️ Found \(imageUrls.count) images to preload", category: .data)
-            if !imageUrls.isEmpty {
-                // Load first 8 images immediately (visible on screen) with high priority
-                // This ensures smooth scrolling right after load
-                await ImageCache.shared.preloadPriority(urls: imageUrls, immediateCount: 8)
-                let imagePreloadDuration = Date().timeIntervalSince(imagePreloadStartTime)
-                Logger.info("[CommunityRecipesView] ⏱️ Image preload completed (immediate: 8, total: \(imageUrls.count), duration: \(String(format: "%.3f", imagePreloadDuration))s)", category: .data)
-            }
-            
-            // Load batch ratings for first page in background
-            let ratingsStartTime = Date()
-            let recipeIds = firstPage.map { $0.id }
-            if let token = app.accessToken {
-                Task {
-                    await app.loadBatchRatings(recipeIds: recipeIds, accessToken: token)
-                    let ratingsDuration = Date().timeIntervalSince(ratingsStartTime)
-                    Logger.info("[CommunityRecipesView] ⏱️ Batch ratings loaded in \(String(format: "%.3f", ratingsDuration))s", category: .data)
-                }
-            }
-        } catch is CancellationError {
-            // Task was cancelled - don't show error, just return
-            Logger.info("[CommunityRecipesView] Load task cancelled", category: .data)
-            return
-        } catch let error as URLError where error.code == .timedOut {
-            // Timeout error - zeige leeren State, aber setze KEINEN Cache
-            // So kann beim nächsten Tab-Wechsel erneut versucht werden
-            Logger.error("Failed to load community recipes: Timeout (check database indexes and connection)", error: error, category: .data)
-            await MainActor.run {
-                // Zeige leeren State statt Fehler - App bleibt nutzbar
-                self.recipes = []
-                self.filteredRecipes = []
-                self.loading = false
-                self.error = nil // Kein Fehler, nur leere Liste
-                print("⚠️ [PERFORMANCE] Community recipes timed out - showing empty state (no cache set, will retry)")
-            }
-        } catch {
-            Logger.error("Failed to load community recipes", error: error, category: .data)
-            Logger.error("Error details: \(error.localizedDescription)", category: .data)
-            if let nsError = error as NSError? {
-                Logger.error("NSError domain: \(nsError.domain), code: \(nsError.code), userInfo: \(nsError.userInfo)", category: .data)
-            }
-            await MainActor.run {
-                if let urlError = error as? URLError {
-                    switch urlError.code {
-                    case .notConnectedToInternet:
-                        self.error = "Keine Internetverbindung"
-                    case .timedOut:
-                        self.error = "Zeitüberschreitung"
-                    case .badServerResponse:
-                        self.error = "Server-Fehler beim Laden der Rezepte. Bitte versuche es später erneut."
-                    default:
-                        if self.recipes.isEmpty {
-                            self.error = "Rezepte konnten nicht geladen werden: \(urlError.localizedDescription)"
-                        }
-                    }
-                } else if let nsError = error as NSError? {
-                    if self.recipes.isEmpty {
-                        let errorMsg = nsError.userInfo[NSLocalizedDescriptionKey] as? String ?? error.localizedDescription
-                        self.error = "Fehler: \(errorMsg)"
-                    }
-                } else {
-                    if self.recipes.isEmpty {
-                        self.error = error.localizedDescription
-                    }
-                }
-                self.loading = false
-            }
-        }
-    }
-    
-    // OPTIMIZATION: Lade weitere Rezepte mit Pagination
-    func loadMoreCommunityRecipes() async {
-        guard let token = app.accessToken,
-              hasMore,
-              !loadingMore else { return }
-        
-        let loadMoreStartTime = Date()
-        print("📄 [PERFORMANCE] Load More STARTED (page \(currentPage))")
-        Logger.info("[CommunityRecipesView] ⏱️ Starting to load more recipes (page \(currentPage))", category: .data)
-        
-        await MainActor.run { loadingMore = true }
-        
-        do {
-            // OPTIMIZATION: Lade 2 Seiten parallel für schnellere Ladezeiten (100 Rezepte auf einmal)
-            let parallelStartTime = Date()
-            print("📡 [PERFORMANCE] Loading pages \(currentPage) and \(currentPage + 1) in parallel...")
-            async let page1Task = loadCommunityRecipesPage(page: currentPage, pageSize: pageSize, token: token)
-            async let page2Task = loadCommunityRecipesPage(page: currentPage + 1, pageSize: pageSize, token: token)
-            
-            let (page1Recipes, page2Recipes) = try await (page1Task, page2Task)
-            let parallelDuration = Date().timeIntervalSince(parallelStartTime)
-            print("📡 [PERFORMANCE] Parallel pages loaded in \(String(format: "%.3f", parallelDuration))s (page1: \(page1Recipes.count), page2: \(page2Recipes.count))")
-            Logger.info("[CommunityRecipesView] ⏱️ Parallel page loading completed in \(String(format: "%.3f", parallelDuration))s (page1: \(page1Recipes.count), page2: \(page2Recipes.count))", category: .data)
-            
-            let allNewRecipes = page1Recipes + page2Recipes
-            
-            await MainActor.run {
-                if allNewRecipes.count < pageSize * 2 {
-                    hasMore = false // Keine weiteren Rezepte verfügbar
-                }
-                
-                // Füge neue Rezepte hinzu (vermeide Duplikate)
-                let existingIds = Set(recipes.map { $0.id })
-                let uniqueNewRecipes = allNewRecipes.filter { !existingIds.contains($0.id) }
-                recipes.append(contentsOf: uniqueNewRecipes)
-                
-                currentPage += 2 // 2 Seiten geladen
-                loadingMore = false
-                
-                // Update filtered recipes after adding new ones
-                updateFilteredRecipes()
-                
-                let loadMoreDuration = Date().timeIntervalSince(loadMoreStartTime)
-                print("✅ [PERFORMANCE] Load More COMPLETED in \(String(format: "%.3f", loadMoreDuration))s")
-                print("✅ [PERFORMANCE] Added \(uniqueNewRecipes.count) new recipes (total: \(recipes.count), filtered: \(filteredRecipes.count))")
-                Logger.info("[CommunityRecipesView] ⏱️ Load more completed in \(String(format: "%.3f", loadMoreDuration))s", category: .data)
-                Logger.info("[CommunityRecipesView] Loaded pages \(currentPage - 1)-\(currentPage) with \(allNewRecipes.count) recipes. Total: \(recipes.count)", category: .data)
-                
-                // Preload images for new recipes with priority (first few immediately)
-                let imageUrls = uniqueNewRecipes.compactMap { recipe -> URL? in
-                    guard let imageUrl = recipe.image_url, !imageUrl.isEmpty else { return nil }
-                    return URL(string: imageUrl)
-                }
-                if !imageUrls.isEmpty {
-                    Task { @MainActor in
-                        await ImageCache.shared.preloadPriority(urls: imageUrls, immediateCount: 5)
-                    }
-                }
-                
-                // Load batch ratings for new recipes in background
-                let newRecipeIds = uniqueNewRecipes.map { $0.id }
-                Task {
-                    await app.loadBatchRatings(recipeIds: newRecipeIds, accessToken: token)
-                }
-            }
-        } catch {
-            let errorDuration = Date().timeIntervalSince(loadMoreStartTime)
-            print("❌ [PERFORMANCE] Load More FAILED after \(String(format: "%.3f", errorDuration))s: \(error.localizedDescription)")
-            Logger.error("Failed to load more community recipes", error: error, category: .data)
-            await MainActor.run {
-                loadingMore = false
-                // Bei Fehler: Markiere als keine weiteren Rezepte, um endlose Retries zu vermeiden
-                if currentPage == 0 {
-                    hasMore = false
-                }
-            }
-        }
-    }
-    
-    // Helper function to load a page of community recipes with pagination
-    private func loadCommunityRecipesPage(page: Int, pageSize: Int, token: String) async throws -> [Recipe] {
-        let requestStartTime = Date()
-        var url = Config.supabaseURL
-        // PERFORMANCE FIX: Verwende Materialized View statt Tabelle
-        // Die View enthält nur die benötigten Felder und ist bereits gefiltert (is_public = true)
-        // Dies reduziert die Response-Größe von 24MB auf <10KB
-        url.append(path: "/rest/v1/recipes_preview")
-        
-        // Calculate offset for pagination
-        let offset = page * pageSize
-        
-        // Manuelle URL-Konstruktion für Pagination
-        // Die View hat bereits is_public = true gefiltert, daher brauchen wir diesen Filter nicht
-        var urlString = url.absoluteString
-        urlString += "?order=created_at.desc"
-        urlString += "&limit=\(pageSize)"
-        urlString += "&offset=\(offset)"
-        
-        guard let finalURL = URL(string: urlString) else {
-            Logger.error("[CommunityRecipesView] Failed to construct URL", category: .network)
-            throw URLError(.badURL)
-        }
-        
-        url = finalURL
-        
-        // DEBUG: Log the actual URL being used
-        Logger.info("[CommunityRecipesView] Request URL: \(url.absoluteString)", category: .network)
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        // KRITISCH: Prefer Header erzwingt, dass Supabase nur die angeforderten Felder zurückgibt
-        // Ohne diesen Header könnte Supabase alle Felder zurückgeben (auch ingredients, instructions, etc.)
-        request.addValue("return=representation", forHTTPHeaderField: "Prefer")
-        
-        // PERFORMANCE: Timeout erhöht auf 30s, da Netzwerk manchmal langsam ist
-        // Aber mit korrekter select-Query sollte die Response <1s dauern
-        request.timeoutInterval = 30.0
-        
-        // PERFORMANCE: Cache-Control Header für bessere Performance bei wiederholten Requests
-        // Browser/Client kann Antworten cachen, aber wir wollen keine stale Daten
-        request.cachePolicy = .reloadIgnoringLocalCacheData // Immer frische Daten laden
-        
-        let networkStartTime = Date()
-        print("📡 [PERFORMANCE] Community page \(page) request STARTED (offset: \(offset), limit: \(pageSize))")
-        
-        let (data, response) = try await SecureURLSession.shared.data(for: request)
-        
-        let networkDuration = Date().timeIntervalSince(networkStartTime)
-        let dataSizeKB = Double(data.count) / 1024.0
-        print("📡 [PERFORMANCE] Community page \(page) response received in \(String(format: "%.3f", networkDuration))s (size: \(String(format: "%.2f", dataSizeKB))KB)")
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            Logger.error("[CommunityRecipesView] Invalid response type", category: .network)
-            throw URLError(.badServerResponse)
-        }
-        
-        Logger.info("[CommunityRecipesView] ⏱️ HTTP Status: \(httpResponse.statusCode)", category: .data)
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
-            Logger.error("[CommunityRecipesView] HTTP \(httpResponse.statusCode): \(errorBody)", category: .network)
-            throw URLError(.badServerResponse)
-        }
-        
-        let decodeStartTime = Date()
-        Logger.info("[CommunityRecipesView] ⏱️ Starting JSON decoding...", category: .data)
-        
-        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
-        
-        let decodeDuration = Date().timeIntervalSince(decodeStartTime)
-        let totalDuration = Date().timeIntervalSince(requestStartTime)
-        Logger.info("[CommunityRecipesView] ⏱️ JSON decoding completed in \(String(format: "%.3f", decodeDuration))s (decoded \(recipes.count) recipes)", category: .data)
-        Logger.info("[CommunityRecipesView] ⏱️ Total request time: \(String(format: "%.3f", totalDuration))s (Network: \(String(format: "%.3f", networkDuration))s, Decode: \(String(format: "%.3f", decodeDuration))s)", category: .data)
-        
-        // PERFORMANCE: Preload images IMMEDIATELY after loading recipes
-        // Preload first 12 images immediately (visible + next few) to prevent lag on first scroll
-        Task.detached(priority: .userInitiated) {
-            await self.preloadRecipeImages(recipes: recipes, immediateCount: 12)
-        }
-        
-        // DEBUGGING: Prüfe, ob die Response wirklich nur die angeforderten Felder enthält
-        // Nach dem Dekodieren, damit wir recipes.count verwenden können
-        if dataSizeKB > 100 { // Wenn größer als 100 KB, ist etwas falsch
-            Logger.error("[CommunityRecipesView] ⚠️ CRITICAL: Response is \(String(format: "%.2f", dataSizeKB)) KB for only \(recipes.count) recipes! Should be <10 KB!", category: .data)
-            
-            // Analysiere die tatsächliche Response
-            if let jsonString = String(data: data, encoding: .utf8) {
-                // Prüfe, welche Felder tatsächlich enthalten sind
-                let fieldsToCheck = ["ingredients", "instructions", "nutrition", "steps", "description"]
-                var foundFields: [String] = []
-                for field in fieldsToCheck {
-                    if jsonString.contains("\"\(field)\"") {
-                        foundFields.append(field)
-                    }
-                }
-                
-                if !foundFields.isEmpty {
-                    Logger.error("[CommunityRecipesView] ⚠️ CRITICAL: Response contains unwanted fields: \(foundFields.joined(separator: ", "))", category: .data)
-                }
-                
-                // Zeige ersten Recipe-Objekt als Beispiel
-                if let firstRecipeStart = jsonString.range(of: "\"id\""),
-                   let firstRecipeEnd = jsonString.range(of: "}", range: firstRecipeStart.upperBound..<jsonString.endIndex) {
-                    let firstRecipe = String(jsonString[firstRecipeStart.lowerBound..<firstRecipeEnd.upperBound])
-                    Logger.error("[CommunityRecipesView] ⚠️ First recipe fields: \(firstRecipe.prefix(1000))", category: .data)
-                }
-            }
-            
-            // Zeige die tatsächliche URL, die verwendet wurde
-            Logger.error("[CommunityRecipesView] ⚠️ Request URL was: \(request.url?.absoluteString ?? "unknown")", category: .data)
-        }
-        
-        return recipes
-    }
-    
-    // PERFORMANCE: Preload images for recipes to prevent reloading when scrolling
-    private func preloadRecipeImages(recipes: [Recipe], immediateCount: Int = 8) async {
-        // Extract all image URLs from recipes
-        let imageUrls = recipes.compactMap { recipe -> URL? in
-            guard let imageUrl = recipe.image_url,
-                  !imageUrl.isEmpty,
-                  !imageUrl.hasPrefix("data:image/"),
-                  let url = URL(string: imageUrl),
-                  url.scheme == "http" || url.scheme == "https" else {
-                return nil
-            }
-            return url
-        }
-        
-        guard !imageUrls.isEmpty else { return }
-        
-        Logger.debug("[CommunityRecipesView] Preloading \(imageUrls.count) images (immediate: \(immediateCount))", category: .data)
-        
-        // Preload images with priority - first N immediately, rest in background
-        // Higher immediateCount for first load to prevent lag on initial scroll
-        await ImageCache.shared.preloadPriority(urls: imageUrls, immediateCount: immediateCount)
-    }
-}
-
-// MARK: - Filter Chips Bar with Language Dropdown
-private struct FilterChipsBarWithLanguage: View {
-    let availableLanguages: [(code: String, name: String)]
-    @Binding var selectedLanguages: Set<String>
-    let filterOptions: [String]
-    @Binding var selectedFilters: Set<String>
-    @Binding var showLanguageDropdown: Bool
-    
-    private var languageChipText: String {
-        if selectedLanguages.isEmpty {
-            return L.recipe_sprache.localized
-        } else if selectedLanguages.count == 1 {
-            // Find localized name for the selected language code
-            if let code = selectedLanguages.first,
-               let language = availableLanguages.first(where: { $0.code == code }) {
-                return language.name
-            }
-            return selectedLanguages.first ?? L.recipe_sprache.localized
-        } else {
-            return "\(selectedLanguages.count) " + L.recipe_sprachen.localized
-        }
-    }
-    
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                // Language Dropdown Chip (always first)
-                Button(action: { 
-                    Logger.debug("Language dropdown toggled", category: .ui)
-                    withAnimation {
-                        showLanguageDropdown.toggle() 
-                    } 
-                }) {
-                    HStack(spacing: 4) {
-                        Text(languageChipText)
-                        Image(systemName: showLanguageDropdown ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 10, weight: .bold))
-                    }
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    // CRITICAL FIX: Check if any language codes are selected (not localized names)
-                    .background(!selectedLanguages.isEmpty ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
-                    .foregroundColor(!selectedLanguages.isEmpty ? .white : .black.opacity(0.7))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color.black.opacity(0.07), lineWidth: 0.5))
-                }
-                .buttonStyle(.plain)
-                
-                // Regular Filter Chips
-                ForEach(filterOptions, id: \.self) { opt in
-                    let isOn = selectedFilters.contains(opt)
-                    Text(opt)
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(isOn ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
-                        .foregroundColor(isOn ? .white : .black.opacity(0.7))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.black.opacity(0.07), lineWidth: 0.5))
-                        .onTapGesture {
-                            if isOn { selectedFilters.remove(opt) } else { selectedFilters.insert(opt) }
-                        }
-                }
-                
-                // Clear All Button
-                if !selectedFilters.isEmpty || !selectedLanguages.isEmpty {
-                    Button(action: {
-                        selectedFilters.removeAll()
-                        selectedLanguages.removeAll()
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "xmark.circle.fill")
-                            Text(L.recipe_filter_löschen.localized)
-                        }
-                        .font(.caption)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color(UIColor.systemGray5))
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.vertical, 2)
-        }
-    }
-}
 
 // MARK: - Share Recipe Sheet
 private struct ShareRecipeSheet: View {
@@ -3005,16 +1506,8 @@ private struct LikeButton: View {
 struct RecipeCard: View {
     @EnvironmentObject var app: AppState
     let recipe: Recipe
-    let isPersonal: Bool
     var onDelete: (() -> Void)? = nil
     var onAssign: (() -> Void)? = nil
-    
-    @State private var showReportSheet = false
-    
-    // OPTIMIZATION: Cache computed values to avoid recalculation on every render
-    private var isLiked: Bool {
-        app.likedRecipesManager.isLiked(recipeId: recipe.id)
-    }
     
     // OPTIMIZATION: Pre-compute image URLs once (lazy evaluation)
     private var imageURLs: [URL] {
@@ -3112,22 +1605,6 @@ struct RecipeCard: View {
                 
                 // Buttons overlay (top right)
                 HStack(spacing: 8) {
-                    // Report button (nur für Community-Rezepte)
-                    if !isPersonal {
-                        Button(action: { showReportSheet = true }) {
-                            Image(systemName: "exclamationmark.bubble")
-                                .font(.system(size: 16))
-                                .foregroundColor(.white)
-                                .padding(10)
-                                .background(
-                                    Circle()
-                                        .fill(.ultraThinMaterial)
-                                        .shadow(color: .black.opacity(0.1), radius: 4)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    
                     LikeButton(recipeId: recipe.id, likedManager: app.likedRecipesManager)
                 }
                 .padding(12)
@@ -3161,9 +1638,6 @@ struct RecipeCard: View {
                     
                     Spacer()
                     
-                    if !isPersonal && onDelete == nil {
-                        AverageRatingView(recipeId: recipe.id)
-                    } else {
                         HStack(spacing: 6) {
                             if let onAssign {
                                 Button(action: onAssign) {
@@ -3189,14 +1663,6 @@ struct RecipeCard: View {
                             }
                         }
                         .buttonStyle(.plain)
-                    }
-                }
-                
-                if !isPersonal, let username = recipe.user_email?.components(separatedBy: "@").first {
-                    Label(username, systemImage: "person")
-                        .font(.caption2)
-                        .foregroundColor(.black.opacity(0.5))
-                        .lineLimit(1)
                 }
             }
             .padding(12)
@@ -3204,11 +1670,6 @@ struct RecipeCard: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
-        .sheet(isPresented: $showReportSheet) {
-            ReportReasonSheet(recipe: recipe, onReported: {})
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
     }
     
     private var placeholderImage: some View {

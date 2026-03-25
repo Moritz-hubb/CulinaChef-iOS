@@ -1808,6 +1808,18 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         try await menuManager.createMenu(title: title, accessToken: accessToken, userId: userId)
     }
     
+    /// Menü umbenennen und `cachedMenus` + Disk-Cache aktualisieren
+    func renameMenu(menuId: String, newTitle: String, accessToken: String) async throws -> Menu {
+        let updated = try await menuManager.renameMenu(menuId: menuId, newTitle: newTitle, accessToken: accessToken)
+        if let idx = cachedMenus.firstIndex(where: { $0.id == menuId }) {
+            cachedMenus[idx] = updated
+        } else if !cachedMenus.contains(where: { $0.id == updated.id }) {
+            cachedMenus.append(updated)
+        }
+        saveCachedRecipesToDisk(recipes: cachedRecipes, menus: cachedMenus)
+        return updated
+    }
+    
     func addRecipeToMenu(menuId: String, recipeId: String, accessToken: String) async throws {
         try await menuManager.addRecipeToMenu(menuId: menuId, recipeId: recipeId, accessToken: accessToken)
     }

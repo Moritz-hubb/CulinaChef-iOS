@@ -119,6 +119,37 @@ final class BackendClient {
         return try JSONDecoder().decode(Recipe.self, from: respData)
     }
 
+    /// Lässt das Backend ein bestehendes Rezept KI-gestützt überarbeiten und als **neue** Kopie speichern.
+    ///
+    /// - Parameters:
+    ///   - sourceRecipeId: UUID des Ausgangsrezepts (eigenes oder öffentliches Community-Rezept).
+    ///   - goals: Kurze Ziele (z. B. vegan, glutenfrei); leer erlaubt nur mit `freeText`.
+    ///   - freeText: Optionaler Freitext (max. 500 Zeichen serverseitig).
+    ///   - language: Ausgabesprache (`de`, `en`, …); nil = Gerät/App-Logik.
+    func reviseRecipe(
+        sourceRecipeId: String,
+        goals: [String],
+        freeText: String?,
+        language: String?,
+        accessToken: String
+    ) async throws -> Recipe {
+        struct Body: Encodable {
+            let source_recipe_id: String
+            let goals: [String]
+            let free_text: String?
+            let language: String?
+        }
+        let body = Body(
+            source_recipe_id: sourceRecipeId,
+            goals: goals,
+            free_text: freeText,
+            language: language
+        )
+        let data = try JSONEncoder().encode(body)
+        let (respData, _) = try await request(path: "/ai/revise_recipe", method: "POST", token: accessToken, jsonBody: data)
+        return try JSONDecoder().decode(Recipe.self, from: respData)
+    }
+
     /// Markiert ein Rezept als Favorit bzw. hebt die Markierung auf.
     ///
     /// - Parameters:
@@ -256,5 +287,46 @@ final class BackendClient {
         let data = try JSONEncoder().encode(Body(recipe_ids: recipeIds))
         let (respData, _) = try await request(path: "/recipes/ratings/batch", method: "POST", token: accessToken, jsonBody: data)
         return try JSONDecoder().decode(BatchRatingsResponse.self, from: respData)
+    }
+
+    // MARK: - Social import (URL → Metadaten + KI → gespeichertes Rezept)
+
+    /// Importiert ein Rezept aus einem Social-Media-Link (Backend).
+    func importRecipeFromSocialURL(
+        url: String,
+        extraText: String?,
+        dietaryContext: String?,
+        accessToken: String
+    ) async throws -> Recipe {
+        struct Body: Encodable {
+            let url: String
+            let extra_text: String?
+            let language: String?
+            let dietary_context: String?
+        }
+        let langCode: String = {
+            let lang = Locale.current.language.languageCode?.identifier ?? "de"
+            switch lang {
+            case "de", "en", "es", "fr", "it": return lang
+            default: return "de"
+            }
+        }()
+        let body = Body(
+            url: url,
+            extra_text: extraText,
+            language: langCode,
+            dietary_context: dietaryContext
+        )
+        let data = try JSONEncoder().encode(body)
+        let (respData, _) = try await request(
+            path: "/ai/import-from-social-url",
+            method: "POST",
+            token: accessToken,
+            jsonBody: data
+        )
+        struct Resp: Decodable {
+            let recipe: Recipe
+        }
+        return try JSONDecoder().decode(Resp.self, from: respData).recipe
     }
 }

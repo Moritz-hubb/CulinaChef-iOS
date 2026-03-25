@@ -148,7 +148,7 @@ struct RecipeDetailView: View {
                     .accessibilityLabel("Rezept teilen")
                     .accessibilityHint("Teilt das Rezept über das Teilen-Menü")
                     
-                    // AI Button
+                    // KI: ein Button — Sheet mit Chat / Überarbeiten (Segment)
                     Button(action: { showAISheet = true }) {
                         Image(systemName: "wand.and.stars")
                             .font(.system(size: 18, weight: .semibold))
@@ -158,7 +158,7 @@ struct RecipeDetailView: View {
                             .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
                     .accessibilityLabel("KI-Assistent")
-                    .accessibilityHint("Öffnet den KI-Assistenten für dieses Rezept")
+                    .accessibilityHint("Chat und Rezept überarbeiten (Tabs)")
                 }
             }
         }
@@ -200,7 +200,10 @@ struct RecipeDetailView: View {
             }
         }
         .sheet(isPresented: $showAISheet) {
-            RecipeAISheetForSavedRecipe(recipe: displayRecipe, currentStepIndex: max(currentPage - 1, -1))
+            RecipeAISheetForSavedRecipe(
+                recipe: displayRecipe,
+                currentStepIndex: max(currentPage - 1, -1)
+            )
                 .environmentObject(app)
                 .presentationDetents([.fraction(0.6), .large])
                 .presentationDragIndicator(.visible)
@@ -298,6 +301,22 @@ struct RecipeDetailView: View {
             VStack(spacing: 16) {
                 // Header Image with Title
                 headerImageSection
+
+                if displayRecipe.isRevisionCopy {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.caption.weight(.semibold))
+                        Text(L.recipe_revise_badge.localized)
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+                }
                 
                 // Ingredients Section
                 VStack(alignment: .leading, spacing: 12) {
@@ -377,11 +396,16 @@ struct RecipeDetailView: View {
                 .padding(16)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 
-                // Nutrition Section
+                // Nutrition: KI-Standard 4 Portionen; Werte pro Portion = Schätzung Gesamtzutaten ÷ 4
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(L.recipe_nährwerte.localized)
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(L.recipe_nährwerte.localized)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text(L.recipe_nährwerte_pro_portion.localized)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.78))
+                    }
                     
                     HStack(spacing: 20) {
                         NutritionItem(label: L.label_calories.localized, value: "\(displayRecipe.nutrition?.calories ?? 0)")
@@ -390,7 +414,6 @@ struct RecipeDetailView: View {
                         NutritionItem(label: L.label_fat.localized, value: String(format: "%.1fg", displayRecipe.nutrition?.fat_g ?? 0))
                     }
                     
-                    // Nutrition disclaimer
                     Text(L.recipe_nährwerte_hinweis.localized)
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.6))
@@ -414,28 +437,24 @@ struct RecipeDetailView: View {
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
                 
-                if let tags = displayRecipe.tags, !tags.isEmpty {
-                    // Filter out invisible tags (those starting with _filter:)
-                    let visibleTags = tags.filter { !$0.hasPrefix("_filter:") }
-                    if !visibleTags.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L.label_tags.localized)
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                            RecipeDetailFlowLayout(spacing: 8) {
-                                ForEach(visibleTags, id: \.self) { tag in
-                                    Text(tag)
-                                        .font(.caption)
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.white.opacity(0.2), in: Capsule())
-                                }
+                if !displayRecipe.tagsForDisplay.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(L.label_tags.localized)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        RecipeDetailFlowLayout(spacing: 8) {
+                            ForEach(displayRecipe.tagsForDisplay, id: \.self) { tag in
+                                Text(tag)
+                                    .font(.caption)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.white.opacity(0.2), in: Capsule())
                             }
                         }
-                        .padding(16)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
+                    .padding(16)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
             }
             .padding(16)
@@ -1272,8 +1291,9 @@ struct RecipeDetailView: View {
         if let cookTime = displayRecipe.cooking_time {
             md += "**Kochzeit:** \(cookTime)\n\n"
         }
-        if let tags = displayRecipe.tags, !tags.isEmpty {
-            md += "**Tags:** \(tags.joined(separator: ", "))\n\n"
+        let exportTags = displayRecipe.tagsForDisplay
+        if !exportTags.isEmpty {
+            md += "**Tags:** \(exportTags.joined(separator: ", "))\n\n"
         }
         
         // Ingredients
@@ -1294,8 +1314,9 @@ struct RecipeDetailView: View {
             md += "\(cleanText)\n\n"
         }
         
-        // Nutrition
-        md += "## Nährwerte (pro Portion)\n\n"
+        // Nutrition (gleiche Logik wie KI: 4 Portionen, Werte = ÷ 4)
+        md += "## \(L.recipe_nährwerte.localized) (\(L.recipe_nährwerte_pro_portion.localized))\n\n"
+        md += "\(L.recipe_nährwerte_export_einleitung.localized)\n"
         if let nutrition = displayRecipe.nutrition {
             if let calories = nutrition.calories {
             md += "- **Kalorien:** \(calories) kcal\n"
@@ -1438,6 +1459,29 @@ private struct RecipeAISheetForSavedRecipe: View {
     @State private var showConsentDialog = false
     @State private var showPaywallSheet = false
 
+    private enum AISheetTab: String, CaseIterable {
+        case chat
+        case revise
+    }
+
+    @State private var sheetTab: AISheetTab
+
+    init(recipe: Recipe, currentStepIndex: Int, openOnReviseTab: Bool = false) {
+        self.recipe = recipe
+        self.currentStepIndex = currentStepIndex
+        _sheetTab = State(initialValue: openOnReviseTab ? .revise : .chat)
+    }
+
+    @State private var goalVegan = false
+    @State private var goalVegetarian = false
+    @State private var goalGlutenFree = false
+    @State private var goalLactoseFree = false
+    @State private var goalLowCarb = false
+    @State private var goalLowSalt = false
+    @State private var reviseFreeText = ""
+    @State private var revising = false
+    @State private var reviseError: String?
+
     var body: some View {
         // DEVELOPMENT MODE: Paywall disabled - always show chat content
         chatContent
@@ -1487,92 +1531,256 @@ private struct RecipeAISheetForSavedRecipe: View {
                     }
                     .buttonStyle(.plain)
                 }
-.padding(.horizontal, 16)
+                .padding(.horizontal, 16)
                 .padding(.top, 18)
+                .padding(.bottom, 6)
+
+                Picker("", selection: $sheetTab) {
+                    Text(L.recipe_revise_tab_chat.localized).tag(AISheetTab.chat)
+                    Text(L.recipe_revise_tab_revise.localized).tag(AISheetTab.revise)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
                 .padding(.bottom, 10)
 
-                // Chat list
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            if messages.isEmpty {
-                                VStack(spacing: 10) {
-                                    Text(L.recipe_stell_mir_fragen_zu.localized)
-                                        .foregroundStyle(.white.opacity(0.9))
-                                    Text(L.recipe_zb_garzeiten_anpassen_ersatzzutaten.localized)
-                                        .font(.footnote)
-                                        .foregroundStyle(.white.opacity(0.7))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 40)
-                            } else {
-                                ForEach(messages) { msg in
-                                    SavedRecipeChatBubble(message: msg)
-                                }
-                                if sending {
-                                    CulinaThinkingPenguinView()
+                if sheetTab == .chat {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 12) {
+                                if messages.isEmpty {
+                                    VStack(spacing: 10) {
+                                        Text(L.recipe_stell_mir_fragen_zu.localized)
+                                            .foregroundStyle(.white.opacity(0.9))
+                                        Text(L.recipe_zb_garzeiten_anpassen_ersatzzutaten.localized)
+                                            .font(.footnote)
+                                            .foregroundStyle(.white.opacity(0.7))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 40)
+                                } else {
+                                    ForEach(messages) { msg in
+                                        SavedRecipeChatBubble(message: msg)
+                                    }
+                                    if sending {
+                                        CulinaThinkingPenguinView()
+                                    }
                                 }
                             }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 12)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 12)
+                        .onChange(of: messages.count) { _, _ in
+                            withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
+                        }
                     }
-                    .onChange(of: messages.count) { _, _ in
-                        withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
-                    }
+                } else {
+                    reviseTabBody
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 12) {
-                ZStack(alignment: .leading) {
-                    if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(L.messagePlaceholder.localized).foregroundStyle(.white.opacity(0.5))
-                    }
-                    TextField("", text: $inputText, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .foregroundStyle(.white)
-                        .tint(.white)
-                        .onChange(of: inputText) { _, newValue in
-                            if newValue.count > 5000 {
-                                inputText = String(newValue.prefix(5000))
+            Group {
+                if sheetTab == .chat {
+                    HStack(spacing: 12) {
+                        ZStack(alignment: .leading) {
+                            if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text(L.messagePlaceholder.localized).foregroundStyle(.white.opacity(0.5))
                             }
+                            TextField("", text: $inputText, axis: .vertical)
+                                .textFieldStyle(.plain)
+                                .foregroundStyle(.white)
+                                .tint(.white)
+                                .onChange(of: inputText) { _, newValue in
+                                    if newValue.count > 5000 {
+                                        inputText = String(newValue.prefix(5000))
+                                    }
+                                }
                         }
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
-                .background(.clear)
-                .frame(minHeight: 42)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
+                        .background(.clear)
+                        .frame(minHeight: 42)
 
-                Button(action: { Task { await sendText() } }) {
-                    Group { if sending { ProgressView().tint(.white) } else { Image(systemName: "paperplane.fill").foregroundStyle(.white) } }
-                        .frame(width: 42, height: 42)
-                        .background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                        .shadow(color: Color.orange.opacity(0.35), radius: 12, x: 0, y: 6)
-                }
-                .disabled(sending || inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.88)
-                    .overlay(
+                        Button(action: { Task { await sendText() } }) {
+                            Group { if sending { ProgressView().tint(.white) } else { Image(systemName: "paperplane.fill").foregroundStyle(.white) } }
+                                .frame(width: 42, height: 42)
+                                .background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())
+                                .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                                .shadow(color: Color.orange.opacity(0.35), radius: 12, x: 0, y: 6)
+                        }
+                        .disabled(sending || inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(10)
+                    .background(
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                            .opacity(0.6)
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.88)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                                    .opacity(0.6)
+                            )
+                            .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 10)
+                            .shadow(color: .purple.opacity(0.25), radius: 30, x: 0, y: 12)
                     )
-                    .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 10)
-                    .shadow(color: .purple.opacity(0.25), radius: 30, x: 0, y: 12)
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                }
+            }
         }
         .onAppear {
             if messages.isEmpty {
                 messages.append(.init(role: .assistant, text: L.chatWelcomeMessage.localized))
             }
+        }
+    }
+
+    private var reviseTabBody: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text(L.recipe_revise_headline.localized)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text(L.recipe_revise_subtitle.localized)
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.85))
+
+                if recipe.isPreview {
+                    Text(L.recipe_revise_need_full_recipe.localized)
+                        .font(.footnote)
+                        .foregroundStyle(.yellow.opacity(0.95))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(L.recipe_revise_goal_vegan.localized, isOn: $goalVegan).tint(.orange)
+                    Toggle(L.recipe_revise_goal_vegetarian.localized, isOn: $goalVegetarian).tint(.orange)
+                    Toggle(L.recipe_revise_goal_gluten_free.localized, isOn: $goalGlutenFree).tint(.orange)
+                    Toggle(L.recipe_revise_goal_lactose_free.localized, isOn: $goalLactoseFree).tint(.orange)
+                    Toggle(L.recipe_revise_goal_low_carb.localized, isOn: $goalLowCarb).tint(.orange)
+                    Toggle(L.recipe_revise_goal_low_salt.localized, isOn: $goalLowSalt).tint(.orange)
+                }
+                .foregroundStyle(.white)
+
+                ZStack(alignment: .topLeading) {
+                    if reviseFreeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(L.recipe_revise_free_text_placeholder.localized)
+                            .foregroundStyle(.white.opacity(0.45))
+                            .padding(.top, 8)
+                            .padding(.leading, 4)
+                    }
+                    TextField("", text: $reviseFreeText, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .foregroundStyle(.white)
+                        .tint(.white)
+                        .lineLimit(3...6)
+                        .onChange(of: reviseFreeText) { _, newValue in
+                            if newValue.count > 500 {
+                                reviseFreeText = String(newValue.prefix(500))
+                            }
+                        }
+                }
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.12)))
+
+                if let reviseError {
+                    Text(reviseError)
+                        .font(.footnote)
+                        .foregroundStyle(.red.opacity(0.95))
+                }
+
+                Button(action: { Task { await runReviseRecipe() } }) {
+                    HStack {
+                        if revising {
+                            ProgressView().tint(.white)
+                            Text(L.recipe_revise_loading.localized)
+                        } else {
+                            Image(systemName: "sparkles")
+                            Text(L.recipe_revise_button.localized)
+                        }
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    )
+                }
+                .disabled(revising || recipe.isPreview)
+                .opacity((revising || recipe.isPreview) ? 0.55 : 1)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
+        }
+    }
+
+    private func runReviseRecipe() async {
+        reviseError = nil
+        if recipe.isPreview {
+            reviseError = L.recipe_revise_need_full_recipe.localized
+            return
+        }
+        if app.isJailbroken {
+            reviseError = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
+            return
+        }
+        guard OpenAIConsentManager.hasConsent else {
+            await MainActor.run { showConsentDialog = true }
+            return
+        }
+        var goals: [String] = []
+        if goalVegan { goals.append("vegan") }
+        if goalVegetarian { goals.append("vegetarian") }
+        if goalGlutenFree { goals.append("gluten-free") }
+        if goalLactoseFree { goals.append("lactose-free") }
+        if goalLowCarb { goals.append("low-carb") }
+        if goalLowSalt { goals.append("less salt") }
+        let free = reviseFreeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if goals.isEmpty && free.isEmpty {
+            reviseError = L.recipe_revise_need_goal_or_text.localized
+            return
+        }
+        await MainActor.run { revising = true }
+        do {
+            guard let token = app.accessToken else {
+                throw NSError(domain: "auth", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
+            }
+            let lang = deviceLanguageCodeForBackend()
+            let newRecipe = try await app.backend.reviseRecipe(
+                sourceRecipeId: recipe.id,
+                goals: goals,
+                freeText: free.isEmpty ? nil : free,
+                language: lang,
+                accessToken: token
+            )
+            await MainActor.run {
+                if !app.cachedRecipes.contains(where: { $0.id == newRecipe.id }) {
+                    app.cachedRecipes.insert(newRecipe, at: 0)
+                }
+                app.saveCachedRecipesToDisk(recipes: app.cachedRecipes, menus: app.cachedMenus)
+                app.deepLinkRecipe = newRecipe
+                app.selectedTab = 2
+                revising = false
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                revising = false
+                reviseError = userFriendlyErrorMessage(from: error)
+            }
+        }
+    }
+
+    private func deviceLanguageCodeForBackend() -> String? {
+        let code = Locale.current.language.languageCode?.identifier ?? "de"
+        switch code {
+        case "de", "en", "es", "fr", "it": return code
+        default: return "de"
         }
     }
 

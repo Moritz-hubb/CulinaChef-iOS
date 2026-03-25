@@ -18,6 +18,22 @@ struct Recipe: Identifiable, Codable, Equatable {
     var filter_tags: [String]? // Hidden filter tags from AI (vegan, vegetarian, gluten-free, etc.)
     var rating: Int? // 1-5 stars
     var language: String? // Recipe language ("de", "en", "es", "fr", "it")
+    /// Wenn gesetzt: KI-Überarbeitungskopie dieses Ursprungsrezepts (Backend: `derived_from_recipe_id`)
+    var derived_from_recipe_id: String?
+    var revision_note: String?
+    
+    /// Kurzinfo: stammt von einer KI-Überarbeitung
+    var isRevisionCopy: Bool {
+        derived_from_recipe_id != nil && !derived_from_recipe_id!.isEmpty
+    }
+    
+    /// Sichtbare Tags (ohne Backend-Meta: `_filter:…`, `_revision:…` — letztere nur für Logik/Badge)
+    var tagsForDisplay: [String] {
+        guard let tags = tags else { return [] }
+        return tags.filter { tag in
+            !tag.hasPrefix("_filter:") && !tag.hasPrefix("_revision:")
+        }
+    }
     
     // Check if this is a preview (missing full data)
     var isPreview: Bool {
@@ -43,6 +59,8 @@ struct Recipe: Identifiable, Codable, Equatable {
         case filter_tags
         case rating
         case language
+        case derived_from_recipe_id
+        case revision_note
     }
     
     // Normal initializer (required since we have custom decoder)
@@ -63,7 +81,9 @@ struct Recipe: Identifiable, Codable, Equatable {
         tags: [String]? = nil,
         filter_tags: [String]? = nil,
         rating: Int? = nil,
-        language: String? = nil
+        language: String? = nil,
+        derived_from_recipe_id: String? = nil,
+        revision_note: String? = nil
     ) {
         self.id = id
         self.user_id = user_id
@@ -82,6 +102,8 @@ struct Recipe: Identifiable, Codable, Equatable {
         self.filter_tags = filter_tags
         self.rating = rating
         self.language = language
+        self.derived_from_recipe_id = derived_from_recipe_id
+        self.revision_note = revision_note
     }
     
     // Custom decoder to handle missing fields gracefully (for preview recipes)
@@ -107,6 +129,8 @@ struct Recipe: Identifiable, Codable, Equatable {
         filter_tags = try? container.decode([String].self, forKey: .filter_tags)
         rating = try? container.decode(Int.self, forKey: .rating)
         language = try? container.decode(String.self, forKey: .language)
+        derived_from_recipe_id = try? container.decode(String.self, forKey: .derived_from_recipe_id)
+        revision_note = try? container.decode(String.self, forKey: .revision_note)
     }
     
     // Custom encoder (standard implementation, but explicit for clarity)
@@ -129,6 +153,8 @@ struct Recipe: Identifiable, Codable, Equatable {
         try container.encodeIfPresent(filter_tags, forKey: .filter_tags)
         try container.encodeIfPresent(rating, forKey: .rating)
         try container.encodeIfPresent(language, forKey: .language)
+        try container.encodeIfPresent(derived_from_recipe_id, forKey: .derived_from_recipe_id)
+        try container.encodeIfPresent(revision_note, forKey: .revision_note)
     }
 }
 

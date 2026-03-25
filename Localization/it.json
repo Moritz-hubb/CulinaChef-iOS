@@ -334,7 +334,7 @@
   "recipe.menüname": "Nome del menu",
   "recipe.mit_ki_erstellen": "Crea con IA",
   "import.social_title": "Da social media",
-  "import.social_subtitle": "Incolla un link da YouTube, TikTok, Instagram, Pinterest, Facebook o Reddit. Puoi incollare la descrizione se viene rilevato poco testo.",
+  "import.social_subtitle": "Condividi il link con l’app o incollalo qui. Leggiamo i metadati; l’IA crea una ricetta completa come le altre — con i passi del testo se ci sono. Poi visualizzi e salvi come al solito. Puoi incollare la descrizione se viene rilevato poco testo.",
   "import.social_url_label": "Link al video o al post",
   "import.social_url_placeholder": "https://…",
   "import.social_extra_label": "Testo aggiuntivo (opzionale)",

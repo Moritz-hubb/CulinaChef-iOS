@@ -334,7 +334,7 @@
   "recipe.menüname": "Menu Name",
   "recipe.mit_ki_erstellen": "Create with AI",
   "import.social_title": "From social media",
-  "import.social_subtitle": "Paste a link from YouTube, TikTok, Instagram, Pinterest, Facebook, or Reddit. You can paste the caption if little text is detected.",
+  "import.social_subtitle": "Share a link to the app or paste it here. We read the metadata; the AI builds a full recipe in the same format as other AI recipes — using steps from the text when present. Then view and save as usual. You can paste a caption if little text is detected.",
   "import.social_url_label": "Link to video or post",
   "import.social_url_placeholder": "https://…",
   "import.social_extra_label": "Extra text (optional)",

@@ -333,7 +333,7 @@
   "recipe.menüname": "Menüname",
   "recipe.mit_ki_erstellen": "Mit KI erstellen",
   "import.social_title": "Aus Social Media",
-  "import.social_subtitle": "Füge einen Link von YouTube, TikTok, Instagram, Pinterest, Facebook oder Reddit ein. Optional kannst du die Beschreibung aus dem Video einfügen, wenn wenig Text erkannt wird.",
+  "import.social_subtitle": "Link mit der App teilen oder hier einfügen. Wir lesen die Metadaten ein, die KI erstellt daraus ein vollständiges Rezept wie bei anderen KI-Rezepten — mit den Schritten aus dem Text, falls vorhanden. Danach wie gewohnt anzeigen und speichern. Optional kannst du die Beschreibung ergänzen, wenn wenig Text erkannt wird.",
   "import.social_url_label": "Link zum Video oder Beitrag",
   "import.social_url_placeholder": "https://…",
   "import.social_extra_label": "Zusätzlicher Text (optional)",

@@ -301,9 +301,11 @@ struct SocialRecipeImportView: View {
             }
         } catch {
             Logger.error("[SocialImport] importRecipeFromSocialURL failed", error: error, category: .network)
-            let hasTitle = metadataPreview?.title?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
             await MainActor.run {
-                self.error = importErrorMessage(for: error, hasMetadataTitle: hasTitle)
+                self.error = importErrorMessage(
+                    for: error,
+                    hasUsableMetadataPreview: hasRecognizedMetadataForDisplay
+                )
             }
         }
     }
@@ -317,8 +319,8 @@ struct SocialRecipeImportView: View {
         return false
     }
 
-    private func importErrorMessage(for error: Error, hasMetadataTitle: Bool) -> String {
-        if hasMetadataTitle {
+    private func importErrorMessage(for error: Error, hasUsableMetadataPreview: Bool) -> String {
+        if hasUsableMetadataPreview {
             return L.import_social_import_failed_hint.localized
         }
         return error.localizedDescription

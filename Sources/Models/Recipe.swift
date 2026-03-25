@@ -163,6 +163,52 @@ struct Nutrition: Codable, Equatable {
     let protein_g: Double?
     let carbs_g: Double?
     let fat_g: Double?
+
+    init(calories: Int? = nil, protein_g: Double? = nil, carbs_g: Double? = nil, fat_g: Double? = nil) {
+        self.calories = calories
+        self.protein_g = protein_g
+        self.carbs_g = carbs_g
+        self.fat_g = fat_g
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case calories
+        case protein_g
+        case carbs_g
+        case fat_g
+    }
+
+    /// Backend/JSON kann Kalorien als Ganzzahl oder als Zahl mit Nachkommastellen liefern.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        if let i = try? c.decode(Int.self, forKey: .calories) {
+            calories = i
+        } else if let d = try? c.decode(Double.self, forKey: .calories) {
+            calories = Int(d.rounded())
+        } else {
+            calories = nil
+        }
+        protein_g = try Self.decodeMacro(c, key: .protein_g)
+        carbs_g = try Self.decodeMacro(c, key: .carbs_g)
+        fat_g = try Self.decodeMacro(c, key: .fat_g)
+    }
+
+    private static func decodeMacro(
+        _ container: KeyedDecodingContainer<CodingKeys>,
+        key: CodingKeys
+    ) throws -> Double? {
+        if let d = try? container.decode(Double.self, forKey: key) { return d }
+        if let i = try? container.decode(Int.self, forKey: key) { return Double(i) }
+        return nil
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(calories, forKey: .calories)
+        try c.encodeIfPresent(protein_g, forKey: .protein_g)
+        try c.encodeIfPresent(carbs_g, forKey: .carbs_g)
+        try c.encodeIfPresent(fat_g, forKey: .fat_g)
+    }
 }
 
 struct FavoriteResponse: Codable {

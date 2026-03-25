@@ -197,8 +197,7 @@ final class BackendClient {
         let jsonBody = try JSONEncoder().encode(body)
 
         let (data, _) = try await request(path: "/ai/usage/increment", method: "POST", token: accessToken, jsonBody: jsonBody)
-        struct Counts: Decodable { let daily_count: Int; let monthly_count: Int }
-        let c = try JSONDecoder().decode(Counts.self, from: data)
+        let c = try JSONDecoder().decode(AIUsageIncrementCounts.self, from: data)
         return (c.daily_count, c.monthly_count)
     }
 
@@ -436,6 +435,36 @@ final class BackendClient {
         )
         #endif
         return decoded
+    }
+}
+
+/// Antwort von `POST /ai/usage/increment` — tolerant gegen fehlende Keys oder Zahl-Typen im JSON.
+private struct AIUsageIncrementCounts: Decodable {
+    let daily_count: Int
+    let monthly_count: Int
+
+    enum CodingKeys: String, CodingKey {
+        case daily_count
+        case monthly_count
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        daily_count = Self.decodeIntLenient(container, key: .daily_count)
+        monthly_count = Self.decodeIntLenient(container, key: .monthly_count)
+    }
+
+    private static func decodeIntLenient(
+        _ container: KeyedDecodingContainer<CodingKeys>,
+        key: CodingKeys
+    ) -> Int {
+        if let v = try? container.decode(Int.self, forKey: key) { return v }
+        if let v = try? container.decode(Double.self, forKey: key) { return Int(v.rounded()) }
+        if let s = try? container.decode(String.self, forKey: key) {
+            if let i = Int(s) { return i }
+            if let d = Double(s) { return Int(d.rounded()) }
+        }
+        return 0
     }
 }
 

@@ -347,11 +347,22 @@ final class BackendClient {
         struct Resp: Decodable {
             let recipe: Recipe
         }
-        let recipe = try JSONDecoder().decode(Resp.self, from: respData).recipe
-        #if DEBUG
-        Logger.debug("[SocialImport] importRecipeFromSocialURL ok recipeId=\(recipe.id)", category: .network)
-        #endif
-        return recipe
+        do {
+            let recipe = try JSONDecoder().decode(Resp.self, from: respData).recipe
+            #if DEBUG
+            Logger.debug("[SocialImport] importRecipeFromSocialURL ok recipeId=\(recipe.id)", category: .network)
+            #endif
+            return recipe
+        } catch {
+            #if DEBUG
+            let preview = String(data: respData.prefix(1500), encoding: .utf8) ?? ""
+            Logger.error(
+                "[SocialImport] importRecipeFromSocialURL JSON decode failed: \(error.localizedDescription) preview=\(preview)",
+                category: .network
+            )
+            #endif
+            throw error
+        }
     }
 
     /// Lädt nur Metadaten (Titel/Beschreibung/Creator) für einen Social-Link – ohne KI.

@@ -291,7 +291,8 @@ struct SocialRecipeImportView: View {
                 accessToken: token,
                 prefetchedTitle: metadataPreview?.title,
                 prefetchedDescription: metadataPreview?.description,
-                prefetchedAuthor: metadataPreview?.author_name
+                prefetchedAuthor: metadataPreview?.author_name,
+                metadataSnapshot: metadataSnapshotForImport
             )
             Logger.info("[SocialImport] runImport success recipeId=\(recipe.id)", category: .data)
             await MainActor.run {
@@ -308,6 +309,19 @@ struct SocialRecipeImportView: View {
                 )
             }
         }
+    }
+
+    /// Wenn die Vorschau zur aktuellen URL passt, senden wir dieselbe Payload wie `preview-social-metadata` —
+    /// das Backend nutzt sie dann ohne zweiten Metadaten-Fetch (identisch zum Test-Bereich).
+    private var metadataSnapshotForImport: SocialMetadataPreview? {
+        guard let preview = metadataPreview else { return nil }
+        let current = normalizedSocialURL(urlText)
+        guard !current.isEmpty, normalizedSocialURL(preview.url) == current else { return nil }
+        return preview
+    }
+
+    private func normalizedSocialURL(_ s: String) -> String {
+        s.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Mindestens Titel, Beschreibung oder Snippet aus der Vorschau — dann keine orange „Metadaten“-Warnung.

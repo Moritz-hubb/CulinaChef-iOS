@@ -1,7 +1,8 @@
 import Foundation
 
 /// Antwort von `POST /ai/preview-social-metadata` (nur Metadaten, keine KI).
-struct SocialMetadataPreview: Decodable {
+/// Wird optional als `metadata_snapshot` beim Import mitgeschickt (gleiche Daten, kein zweiter Fetch).
+struct SocialMetadataPreview: Codable {
     let url: String
     let platform: String
     let title: String?
@@ -316,8 +317,17 @@ final class BackendClient {
         accessToken: String,
         prefetchedTitle: String? = nil,
         prefetchedDescription: String? = nil,
-        prefetchedAuthor: String? = nil
+        prefetchedAuthor: String? = nil,
+        metadataSnapshot: SocialMetadataPreview? = nil
     ) async throws -> Recipe {
+        struct MetadataSnapshotPayload: Encodable {
+            let url: String
+            let platform: String
+            let title: String?
+            let description: String?
+            let author_name: String?
+            let raw_snippet: String?
+        }
         struct Body: Encodable {
             let url: String
             let extra_text: String?
@@ -326,6 +336,7 @@ final class BackendClient {
             let prefetched_title: String?
             let prefetched_description: String?
             let prefetched_author: String?
+            let metadata_snapshot: MetadataSnapshotPayload?
         }
         let langCode: String = {
             let lang = Locale.current.language.languageCode?.identifier ?? "de"
@@ -334,6 +345,16 @@ final class BackendClient {
             default: return "de"
             }
         }()
+        let snapshotPayload: MetadataSnapshotPayload? = metadataSnapshot.map {
+            MetadataSnapshotPayload(
+                url: $0.url,
+                platform: $0.platform,
+                title: $0.title,
+                description: $0.description,
+                author_name: $0.author_name,
+                raw_snippet: $0.raw_snippet
+            )
+        }
         let body = Body(
             url: url,
             extra_text: extraText,
@@ -341,10 +362,14 @@ final class BackendClient {
             dietary_context: dietaryContext,
             prefetched_title: prefetchedTitle,
             prefetched_description: prefetchedDescription,
-            prefetched_author: prefetchedAuthor
+            prefetched_author: prefetchedAuthor,
+            metadata_snapshot: snapshotPayload
         )
         #if DEBUG
-        Logger.debug("[SocialImport] importRecipeFromSocialURL start url=\(url.prefix(160)) extra=\(extraText != nil)", category: .network)
+        Logger.debug(
+            "[SocialImport] importRecipeFromSocialURL start url=\(url.prefix(160)) extra=\(extraText != nil) metadata_snapshot=\(metadataSnapshot != nil)",
+            category: .network
+        )
         #endif
         let data = try JSONEncoder().encode(body)
         let (respData, _) = try await request(

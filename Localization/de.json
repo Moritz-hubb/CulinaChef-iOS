@@ -351,6 +351,7 @@
   "import.social_metadata_loading": "Lade Metadaten …",
   "import.social_metadata_empty": "—",
   "import.social_metadata_need_login": "Zum Anzeigen der Metadaten anmelden.",
+  "import.social_import_failed_hint": "Der Import ist fehlgeschlagen. Dein Link/Titel wurde erkannt — bitte kurz warten und erneut versuchen.",
   "recipe.neues_menü": "Neues Menü",
   "recipe.noch_keine_communityrezepte": "Noch keine Community-Rezepte",
   "recipe.nur_für_dich_sichtbar": "Nur für dich sichtbar",

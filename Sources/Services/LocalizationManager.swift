@@ -1075,6 +1075,7 @@ enum L {
     static let import_social_metadata_loading = "import.social_metadata_loading"
     static let import_social_metadata_empty = "import.social_metadata_empty"
     static let import_social_metadata_need_login = "import.social_metadata_need_login"
+    static let import_social_import_failed_hint = "import.social_import_failed_hint"
     static let recipe_ich_bin_dabei_deine_d9e2 = "recipe.ich_bin_dabei_deine_d9e2"
     static let recipe_dieses_rezept_wird_dauerhaft = "recipe.dieses_rezept_wird_dauerhaft"
     static let recipe_dieses_menü_ohne_rezepte = "recipe.dieses_menü_ohne_rezepte"

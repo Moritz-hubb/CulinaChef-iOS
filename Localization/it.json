@@ -352,6 +352,7 @@
   "import.social_metadata_loading": "Caricamento metadati…",
   "import.social_metadata_empty": "—",
   "import.social_metadata_need_login": "Accedi per vedere i metadati.",
+  "import.social_import_failed_hint": "Importazione non riuscita. Link/titolo riconosciuti — riprova tra un attimo.",
   "recipe.neues_menü": "Nuovo menu",
   "recipe.noch_keine_communityrezepte": "Ancora nessuna ricetta della comunità",
   "recipe.nur_für_dich_sichtbar": "Visibile solo a te",

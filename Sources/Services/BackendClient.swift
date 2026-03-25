@@ -313,13 +313,19 @@ final class BackendClient {
         url: String,
         extraText: String?,
         dietaryContext: String?,
-        accessToken: String
+        accessToken: String,
+        prefetchedTitle: String? = nil,
+        prefetchedDescription: String? = nil,
+        prefetchedAuthor: String? = nil
     ) async throws -> Recipe {
         struct Body: Encodable {
             let url: String
             let extra_text: String?
             let language: String?
             let dietary_context: String?
+            let prefetched_title: String?
+            let prefetched_description: String?
+            let prefetched_author: String?
         }
         let langCode: String = {
             let lang = Locale.current.language.languageCode?.identifier ?? "de"
@@ -332,7 +338,10 @@ final class BackendClient {
             url: url,
             extra_text: extraText,
             language: langCode,
-            dietary_context: dietaryContext
+            dietary_context: dietaryContext,
+            prefetched_title: prefetchedTitle,
+            prefetched_description: prefetchedDescription,
+            prefetched_author: prefetchedAuthor
         )
         #if DEBUG
         Logger.debug("[SocialImport] importRecipeFromSocialURL start url=\(url.prefix(160)) extra=\(extraText != nil)", category: .network)

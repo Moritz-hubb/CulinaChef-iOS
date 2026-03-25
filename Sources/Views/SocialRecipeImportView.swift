@@ -154,7 +154,8 @@ struct SocialRecipeImportView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            if let metaErr = metadataError {
+            // Keine Warnung, wenn bereits Titel (o. ä.) aus der Vorschau da ist — Beschreibung ist optional.
+            if let metaErr = metadataError, !hasRecognizedMetadataForDisplay {
                 Text(metaErr)
                     .font(.footnote)
                     .foregroundColor(.orange)
@@ -224,7 +225,10 @@ struct SocialRecipeImportView: View {
         }
         do {
             let preview = try await app.backend.previewSocialMetadata(url: trimmed, accessToken: token)
-            await MainActor.run { metadataPreview = preview }
+            await MainActor.run {
+                metadataPreview = preview
+                metadataError = nil
+            }
             #if DEBUG
             Logger.debug(
                 "[SocialImport] loadMetadataPreview success platform=\(preview.platform) title=\(preview.title?.prefix(80) ?? "nil") desc_len=\(preview.description?.count ?? 0)",
@@ -284,7 +288,10 @@ struct SocialRecipeImportView: View {
                 url: trimmedURL,
                 extraText: extra.isEmpty ? nil : extra,
                 dietaryContext: dietary.isEmpty ? nil : dietary,
-                accessToken: token
+                accessToken: token,
+                prefetchedTitle: metadataPreview?.title,
+                prefetchedDescription: metadataPreview?.description,
+                prefetchedAuthor: metadataPreview?.author_name
             )
             Logger.info("[SocialImport] runImport success recipeId=\(recipe.id)", category: .data)
             await MainActor.run {
@@ -294,9 +301,26 @@ struct SocialRecipeImportView: View {
             }
         } catch {
             Logger.error("[SocialImport] importRecipeFromSocialURL failed", error: error, category: .network)
+            let hasTitle = metadataPreview?.title?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
             await MainActor.run {
-                self.error = error.localizedDescription
+                self.error = importErrorMessage(for: error, hasMetadataTitle: hasTitle)
             }
         }
+    }
+
+    /// Mindestens Titel, Beschreibung oder Snippet aus der Vorschau — dann keine orange „Metadaten“-Warnung.
+    private var hasRecognizedMetadataForDisplay: Bool {
+        guard let p = metadataPreview else { return false }
+        if let t = p.title?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty { return true }
+        if let d = p.description?.trimmingCharacters(in: .whitespacesAndNewlines), !d.isEmpty { return true }
+        if let s = p.raw_snippet?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty { return true }
+        return false
+    }
+
+    private func importErrorMessage(for error: Error, hasMetadataTitle: Bool) -> String {
+        if hasMetadataTitle {
+            return L.import_social_import_failed_hint.localized
+        }
+        return error.localizedDescription
     }
 }

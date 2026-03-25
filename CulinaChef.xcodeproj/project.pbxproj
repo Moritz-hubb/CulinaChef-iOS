@@ -88,6 +88,7 @@
 		BF5CFEAC2EDB9529000A4330 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF5CFEAB2EDB9529000A4330 /* StoreKit.framework */; };
 		BF5CFEB02EDB988D000A4330 /* supabase.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF5CFEAE2EDB988D000A4330 /* supabase.cer */; };
 		BF5CFEB12EDB988D000A4330 /* backend.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF5CFEAD2EDB988D000A4330 /* backend.cer */; };
+		BF63E83D2F743677008421D9 /* SocialRecipeImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF63E83C2F743677008421D9 /* SocialRecipeImportView.swift */; };
 		BF9B99F32EF0093800F2E7EC /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99F12EF0093800F2E7EC /* it.json */; };
 		BF9B99F42EF0093800F2E7EC /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99EF2EF0093800F2E7EC /* es.json */; };
 		BF9B99F52EF0093800F2E7EC /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99ED2EF0093800F2E7EC /* de.json */; };
@@ -122,6 +123,8 @@
 		FEC6CC21CDE44482D442F073 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BCF3CADE470585536DC39E5 /* PaywallView.swift */; };
 		FEFFEAEA8B96327DDA8F7462 /* View+RoundedCorners.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845FFFA8D16431609BA3F692 /* View+RoundedCorners.swift */; };
 		FFF8F29956D8F6369821BC24 /* KeychainManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 174E397B5850F0459C63D384 /* KeychainManagerTests.swift */; };
+		F00000000000000000000006 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000001 /* ShareViewController.swift */; };
+		F00000000000000000000007 /* CulinaShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F00000000000000000000002 /* CulinaShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -139,6 +142,13 @@
 			remoteGlobalIDString = FFADC5FD5D5C094834C6F95E;
 			remoteInfo = CulinaChef;
 		};
+		F0000000000000000000000A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4DF7A8FB47235C9D8D37D68C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F00000000000000000000009;
+			remoteInfo = CulinaShare;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -149,6 +159,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				B49FC98E18188BF38E08E720 /* CulinaChefTimerWidget.appex in Embed Foundation Extensions */,
+				F00000000000000000000007 /* CulinaShare.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -247,6 +258,7 @@
 		BF5CFEAB2EDB9529000A4330 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		BF5CFEAD2EDB988D000A4330 /* backend.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = backend.cer; sourceTree = "<group>"; };
 		BF5CFEAE2EDB988D000A4330 /* supabase.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = supabase.cer; sourceTree = "<group>"; };
+		BF63E83C2F743677008421D9 /* SocialRecipeImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRecipeImportView.swift; sourceTree = "<group>"; };
 		BF9B99ED2EF0093800F2E7EC /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
 		BF9B99EE2EF0093800F2E7EC /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
 		BF9B99EF2EF0093800F2E7EC /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
@@ -273,6 +285,10 @@
 		FCF1AFB82F4D6DC0FBEADEC2 /* TermsOfServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceView.swift; sourceTree = "<group>"; };
 		FD97221B4FA2497E34222673 /* RecipeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeDetailView.swift; sourceTree = "<group>"; };
 		FFD0B42FC2F1FB98BC6CC86F /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		F00000000000000000000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		F00000000000000000000002 /* CulinaShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CulinaShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F00000000000000000000004 /* CulinaShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CulinaShare.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -342,6 +358,7 @@
 				9A787DBC0B50C38AFCD7641B /* Sources */,
 				0B4517B2259DC6F3B5AA8263 /* Tests */,
 				5314B2659F42242E58604121 /* Widgets */,
+				F00000000000000000000005 /* CulinaShare */,
 				DB8C1F848D9255B8F1A42A68 /* Products */,
 				BF5CFEAA2EDB9529000A4330 /* Frameworks */,
 			);
@@ -523,6 +540,7 @@
 			children = (
 				21B76FF23B7C59DF68BE67EA /* CulinaChef.app */,
 				3F0982C606E537CF58C2E853 /* CulinaChefTests.xctest */,
+				F00000000000000000000002 /* CulinaShare.appex */,
 				92133B524A6E41594887E31B /* CulinaChefTimerWidget.appex */,
 			);
 			name = Products;
@@ -533,6 +551,7 @@
 			children = (
 				934D731D9C9DB74BCD4F1AA4 /* Components */,
 				AEFC116B45F42B7AC65DE574 /* AuthView.swift */,
+				BF63E83C2F743677008421D9 /* SocialRecipeImportView.swift */,
 				AE78D545F2774E763E6161F4 /* ChatView.swift */,
 				92B1BCA2734FC21410A3C558 /* CommunityUploadSheet.swift */,
 				92DE198B243F082E04F8061A /* DietarySettingsView.swift */,
@@ -568,6 +587,7 @@
 			isa = PBXGroup;
 			children = (
 				4F800ACD7DA8C23D84AF197D /* Secrets.xcconfig */,
+				F00000000000000000000004 /* CulinaShare.entitlements */,
 			);
 			path = Configs;
 			sourceTree = "<group>";
@@ -579,6 +599,15 @@
 				51332C2C5A0C81681930CB91 /* MockURLProtocol.swift */,
 			);
 			path = Mocks;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000005 /* CulinaShare */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000001 /* ShareViewController.swift */,
+				F00000000000000000000003 /* Info.plist */,
+			);
+			path = CulinaShare;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -634,6 +663,7 @@
 			dependencies = (
 				BF5CFEA92EDB946F000A4330 /* PBXTargetDependency */,
 				0BB5974317FF8A3FC9E60BA0 /* PBXTargetDependency */,
+				F0000000000000000000000B /* PBXTargetDependency */,
 			);
 			name = CulinaChef;
 			packageProductDependencies = (
@@ -643,6 +673,23 @@
 			productName = CulinaChef;
 			productReference = 21B76FF23B7C59DF68BE67EA /* CulinaChef.app */;
 			productType = "com.apple.product-type.application";
+		};
+		F00000000000000000000009 /* CulinaShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F0000000000000000000000E /* Build configuration list for PBXNativeTarget "CulinaShare" */;
+			buildPhases = (
+				F00000000000000000000008 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CulinaShare;
+			packageProductDependencies = (
+			);
+			productName = CulinaShare;
+			productReference = F00000000000000000000002 /* CulinaShare.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -690,6 +737,7 @@
 				FFADC5FD5D5C094834C6F95E /* CulinaChef */,
 				04E5CB28410783D7A485F9BF /* CulinaChefTests */,
 				CC1691148AD5DAFF0660DAA0 /* CulinaChefTimerWidget */,
+				F00000000000000000000009 /* CulinaShare */,
 			);
 		};
 /* End PBXProject section */
@@ -772,6 +820,7 @@
 				9B7CBB45C82AABE831AC1838 /* RecipeCreatorView.swift in Sources */,
 				A87DEB86EF1AB56F87377362 /* RecipeDetailView.swift in Sources */,
 				9D8A291F3DBC97C28CD95A08 /* RecipeManager.swift in Sources */,
+				BF63E83D2F743677008421D9 /* SocialRecipeImportView.swift in Sources */,
 				315BFED8453D8F82AC7A274B /* RecipePlan.swift in Sources */,
 				87AA84491856EA9895171924 /* RecipeResultView.swift in Sources */,
 				59E6066EEE66DB8FBA7CB2EB /* RecipesView.swift in Sources */,
@@ -844,6 +893,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F00000000000000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F00000000000000000000006 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -860,6 +917,11 @@
 		BF5CFEA92EDB946F000A4330 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			productRef = BF5CFEA82EDB946F000A4330 /* RevenueCat */;
+		};
+		F0000000000000000000000B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F00000000000000000000009 /* CulinaShare */;
+			targetProxy = F0000000000000000000000A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1025,6 +1087,46 @@
 			};
 			name = Release;
 		};
+		F0000000000000000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Configs/CulinaShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4Q33QP9G7Z;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CulinaShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CulinaChef;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef.share;
+				PRODUCT_NAME = CulinaShare;
+				SKIP_INSTALL = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		F0000000000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Configs/CulinaShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4Q33QP9G7Z;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CulinaShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CulinaChef;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef.share;
+				PRODUCT_NAME = CulinaShare;
+				SKIP_INSTALL = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1060,6 +1162,15 @@
 			buildConfigurations = (
 				ABFA6710B1B66DFF5B675044 /* Debug */,
 				D886F8789CE72C57B5CD385A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F0000000000000000000000E /* Build configuration list for PBXNativeTarget "CulinaShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F0000000000000000000000C /* Debug */,
+				F0000000000000000000000D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

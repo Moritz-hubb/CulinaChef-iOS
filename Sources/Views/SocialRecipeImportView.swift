@@ -5,6 +5,10 @@ struct SocialRecipeImportView: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
 
+    /// Vom Share Sheet gesetzt (TikTok → CulinaChef)
+    var initialURL: String? = nil
+    var initialExtra: String? = nil
+
     var onFinished: (Recipe) -> Void
 
     @State private var urlText: String = ""
@@ -89,6 +93,14 @@ struct SocialRecipeImportView: View {
                 }
             } message: {
                 Text(L.consent_subtitle.localized)
+            }
+            .onAppear {
+                if urlText.isEmpty, let u = initialURL, !u.isEmpty {
+                    urlText = u
+                }
+                if extraText.isEmpty, let e = initialExtra, !e.isEmpty {
+                    extraText = e
+                }
             }
         }
     }

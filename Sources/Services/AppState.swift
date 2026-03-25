@@ -109,6 +109,11 @@ final class AppState: ObservableObject {
     
     // Deep link recipe navigation
     @Published var deepLinkRecipe: Recipe? = nil
+
+    /// Share Extension (TikTok → Teilen → CulinaChef): vorausgefüllter Import
+    @Published var pendingSocialImportURL: String?
+    @Published var pendingSocialImportExtra: String?
+    @Published var showSocialImportFromShare: Bool = false
     
     // Recipe state preservation (for app backgrounding)
     @Published var preservedRecipeId: String? = nil

@@ -99,6 +99,17 @@ struct CulinaChefApp: App {
     }
     
     private func handleCulinaChefURL(_ url: URL) {
+        // culinachef://import?url=…  (Share Extension von TikTok & Co.)
+        if url.scheme == "culinachef", url.host == "import" {
+            openSocialImport(from: url)
+            return
+        }
+        // https://culinachef.app/import?url=…
+        if url.host == "culinachef.app", url.path.contains("import") {
+            openSocialImport(from: url)
+            return
+        }
+
         let pathComponents = url.pathComponents.filter { $0 != "/" }
         
         // Check for /recipe/{id} pattern
@@ -114,6 +125,23 @@ struct CulinaChefApp: App {
         // Also check if URL contains reset-password (for Universal Links or different URL structures)
         else if url.absoluteString.contains("reset-password") {
             handlePasswordResetLink(url: url)
+        }
+    }
+
+    private func openSocialImport(from url: URL) {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let items = components.queryItems,
+              let raw = items.first(where: { $0.name == "url" })?.value else {
+            Logger.error("Social import deep link missing url query: \(url.absoluteString)", category: .ui)
+            return
+        }
+        let decoded = raw.removingPercentEncoding ?? raw
+        let extra = items.first(where: { $0.name == "extra" })?.value.map { $0.removingPercentEncoding ?? $0 }
+        Task { @MainActor in
+            appState.pendingSocialImportURL = decoded
+            appState.pendingSocialImportExtra = extra
+            appState.selectedTab = 2
+            appState.showSocialImportFromShare = true
         }
     }
     

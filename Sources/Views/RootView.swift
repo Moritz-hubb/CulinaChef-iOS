@@ -362,15 +362,37 @@ LinearGradient(
                 }
             }
         }
+        .sheet(isPresented: $app.showSocialImportFromShare, onDismiss: {
+            app.pendingSocialImportURL = nil
+            app.pendingSocialImportExtra = nil
+        }) {
+            SocialRecipeImportView(
+                initialURL: app.pendingSocialImportURL,
+                initialExtra: app.pendingSocialImportExtra,
+                onFinished: { recipe in
+                    app.cachedRecipes = [recipe] + app.cachedRecipes.filter { $0.id != recipe.id }
+                    app.deepLinkRecipe = recipe
+                    app.showSocialImportFromShare = false
+                }
+            )
+            .environmentObject(app)
+        }
+        .onAppear {
+            previousTab = app.selectedTab
+            if let defaults = UserDefaults(suiteName: "group.com.moritzserrin.culinachef.share"),
+               let pending = defaults.string(forKey: "pending_social_import_url") {
+                defaults.removeObject(forKey: "pending_social_import_url")
+                app.pendingSocialImportURL = pending
+                app.selectedTab = 2
+                app.showSocialImportFromShare = true
+            }
+        }
         .onChange(of: app.selectedTab) { oldValue, newValue in
             // Trigger rebuild when tab changes
             if oldValue != newValue {
                 previousTab = oldValue
                 animationTrigger = UUID()
             }
-        }
-        .onAppear {
-            previousTab = app.selectedTab
         }
     }
 }

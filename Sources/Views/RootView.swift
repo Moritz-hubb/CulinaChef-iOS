@@ -381,6 +381,12 @@ LinearGradient(
             previousTab = app.selectedTab
             if let defaults = UserDefaults(suiteName: "group.com.moritzserrin.culinachef.share"),
                let pending = defaults.string(forKey: "pending_social_import_url") {
+                #if DEBUG
+                Logger.debug(
+                    "[SocialImport] App Group fallback: recovered pending url len=\(pending.count) preview=\(pending.prefix(100))",
+                    category: .ui
+                )
+                #endif
                 defaults.removeObject(forKey: "pending_social_import_url")
                 app.pendingSocialImportURL = pending
                 app.selectedTab = 2

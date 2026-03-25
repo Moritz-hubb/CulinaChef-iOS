@@ -1,5 +1,15 @@
 import Foundation
 
+/// Antwort von `POST /ai/preview-social-metadata` (nur Metadaten, keine KI).
+struct SocialMetadataPreview: Decodable {
+    let url: String
+    let platform: String
+    let title: String?
+    let description: String?
+    let author_name: String?
+    let raw_snippet: String?
+}
+
 /// Client für alle HTTP-Aufrufe an das CulinaAI-Backend.
 ///
 /// - Hinweis: Diese Klasse ist bewusst schlank gehalten und enthält keine
@@ -50,6 +60,13 @@ final class BackendClient {
             #endif
         guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         if !(200...299).contains(http.statusCode) {
+            #if DEBUG
+            let preview = String(data: data.prefix(900), encoding: .utf8) ?? ""
+            Logger.error(
+                "[BackendClient] HTTP \(http.statusCode) \(method) \(url.path) body preview: \(preview)",
+                category: .network
+            )
+            #endif
             struct ServerError: Decodable { let detail: String? }
             if let err = try? JSONDecoder().decode(ServerError.self, from: data), let msg = err.detail, !msg.isEmpty {
                 throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
@@ -317,6 +334,9 @@ final class BackendClient {
             language: langCode,
             dietary_context: dietaryContext
         )
+        #if DEBUG
+        Logger.debug("[SocialImport] importRecipeFromSocialURL start url=\(url.prefix(160)) extra=\(extraText != nil)", category: .network)
+        #endif
         let data = try JSONEncoder().encode(body)
         let (respData, _) = try await request(
             path: "/ai/import-from-social-url",
@@ -327,6 +347,35 @@ final class BackendClient {
         struct Resp: Decodable {
             let recipe: Recipe
         }
-        return try JSONDecoder().decode(Resp.self, from: respData).recipe
+        let recipe = try JSONDecoder().decode(Resp.self, from: respData).recipe
+        #if DEBUG
+        Logger.debug("[SocialImport] importRecipeFromSocialURL ok recipeId=\(recipe.id)", category: .network)
+        #endif
+        return recipe
+    }
+
+    /// Lädt nur Metadaten (Titel/Beschreibung/Creator) für einen Social-Link – ohne KI.
+    func previewSocialMetadata(url: String, accessToken: String) async throws -> SocialMetadataPreview {
+        struct Body: Encodable {
+            let url: String
+        }
+        #if DEBUG
+        Logger.debug("[SocialImport] previewSocialMetadata start url=\(url.prefix(160))", category: .network)
+        #endif
+        let data = try JSONEncoder().encode(Body(url: url))
+        let (respData, _) = try await request(
+            path: "/ai/preview-social-metadata",
+            method: "POST",
+            token: accessToken,
+            jsonBody: data
+        )
+        let decoded = try JSONDecoder().decode(SocialMetadataPreview.self, from: respData)
+        #if DEBUG
+        Logger.debug(
+            "[SocialImport] previewSocialMetadata ok platform=\(decoded.platform) title_len=\(decoded.title?.count ?? 0) desc_len=\(decoded.description?.count ?? 0) author=\(decoded.author_name ?? "nil")",
+            category: .network
+        )
+        #endif
+        return decoded
     }
 }

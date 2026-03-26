@@ -368,7 +368,6 @@ LinearGradient(
         }) {
             SocialRecipeImportView(
                 initialURL: app.pendingSocialImportURL,
-                initialExtra: app.pendingSocialImportExtra,
                 onFinished: { recipe in
                     app.cachedRecipes = [recipe] + app.cachedRecipes.filter { $0.id != recipe.id }
                     app.deepLinkRecipe = recipe

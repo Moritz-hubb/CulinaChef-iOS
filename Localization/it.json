@@ -336,6 +336,7 @@
   "import.social_title": "Da social media",
   "import.social_subtitle": "Condividi il link con l’app o incollalo qui. L’IA crea la ricetta nella lingua dell’app, anche se il video è in un’altra lingua.",
   "import.social_insufficient_info": "Non abbiamo potuto raccogliere abbastanza informazioni da questo video per creare una ricetta.",
+  "import.social_processing": "Elaborazione del video …\nCreazione della ricetta.",
   "import.social_url_label": "Link al video o al post",
   "import.social_url_placeholder": "https://…",
   "import.social_extra_label": "Testo aggiuntivo (opzionale)",

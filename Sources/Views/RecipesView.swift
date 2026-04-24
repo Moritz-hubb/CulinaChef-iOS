@@ -59,8 +59,7 @@ private struct TagChips: View {
     let tags: [String]
     var body: some View {
         HStack(spacing: 6) {
-            // Filter out invisible tags (those starting with _filter:)
-            ForEach(tags.filter { !$0.hasPrefix("_filter:") }, id: \.self) { tag in
+            ForEach(tags.filter { !$0.hasPrefix("_") }, id: \.self) { tag in
                 Text(tag)
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
@@ -120,6 +119,7 @@ private struct MenusBar: View {
     let menus: [Menu]
     @Binding var selected: Menu?
     var onAdd: () -> Void
+    var onRenameSelected: () -> Void
     var onDeleteSelected: () -> Void
     var body: some View {
         HStack(spacing: 8) {
@@ -140,62 +140,6 @@ private struct MenusBar: View {
                 }
             }
             if selected != nil {
-                Button(role: .destructive, action: onDeleteSelected) {
-                    Image(systemName: "trash")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 6)
-                        .background(Color(UIColor.systemGray6))
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-}
-
-// MARK: - Menus Bar With Liked (Pinned)
-private struct MenusBarWithLiked: View {
-    let menus: [Menu]
-    @Binding var selected: Menu?
-    let likedCount: Int
-    var onAdd: () -> Void
-    var onRenameSelected: () -> Void
-    var onDeleteSelected: () -> Void
-    
-    // Virtual "Liked" menu
-    private var likedMenu: Menu {
-        Menu(id: "__liked__", user_id: "", title: "Likes", created_at: nil)
-    }
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            Button(action: onAdd) {
-                HStack(spacing: 6) { Image(systemName: "plus"); Text(L.recipe_menü_539e.localized) }
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10).padding(.vertical, 6)
-                    .background(Color(UIColor.systemGray6))
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    MenuChip(title: L.label_all.localized, isOn: selected == nil) { selected = nil }
-                    
-                    // Pinned Liked menu (always first)
-                    Text(L.label_likes.localized)
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 6)
-                        .background(selected?.id == likedMenu.id ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
-                        .foregroundColor(selected?.id == likedMenu.id ? .white : .black.opacity(0.7))
-                        .clipShape(Capsule())
-                        .onTapGesture { selected = likedMenu }
-                    
-                    ForEach(menus) { m in
-                        MenuChip(title: m.title, isOn: selected?.id == m.id) { selected = m }
-                    }
-                }
-            }
-            if selected != nil && selected?.id != "__liked__" {
                 Button(action: onRenameSelected) {
                     Image(systemName: "pencil")
                         .font(.caption.weight(.semibold))
@@ -445,14 +389,7 @@ struct PersonalRecipesView: View {
     @State private var deletedRecipeIds: Set<String> = [] // Track locally deleted recipes
     
     private var visibleRecipes: [Recipe] {
-        // Filter out deleted recipes
         let filteredRecipes = recipes.filter { !deletedRecipeIds.contains($0.id) }
-        
-        // Special case: Liked recipes menu
-        if selectedMenu?.id == "__liked__" {
-            let likedIds = app.likedRecipesManager.likedRecipeIds
-            return filteredRecipes.filter { likedIds.contains($0.id) }
-        }
         
         if let menuId = selectedMenu?.id {
             // Verwende Cache, wenn verfügbar, sonst selectedMenuRecipeIds (für Backward Compatibility)
@@ -506,11 +443,9 @@ struct PersonalRecipesView: View {
     private var emptyStateView: some View {
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Menus bar should be available even in empty state
-                        MenusBarWithLiked(
+                        MenusBar(
                             menus: menus,
                             selected: $selectedMenu,
-                            likedCount: app.likedRecipesManager.likedRecipeIds.count,
                             onAdd: { showNewMenuSheet = true },
                             onRenameSelected: {
                                 renameMenuTitle = selectedMenu?.title ?? ""
@@ -630,20 +565,18 @@ struct PersonalRecipesView: View {
                                 .buttonStyle(.plain)
 
                                 Button(action: { showSocialImport = true }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "link.circle.fill")
-                                        Text(L.import_social_title.localized)
-                                    }
-                                    .font(.headline)
-                                    .foregroundColor(Color(red: 0.2, green: 0.45, blue: 0.85))
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal, 14)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                            .stroke(Color(red: 0.2, green: 0.45, blue: 0.85), lineWidth: 2)
-                                    )
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.headline)
+                                        .foregroundColor(Color(red: 0.2, green: 0.45, blue: 0.85))
+                                        .padding(.vertical, 10)
+                                        .padding(.horizontal, 12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                                .stroke(Color(red: 0.2, green: 0.45, blue: 0.85), lineWidth: 2)
+                                        )
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(L.import_social_title.localized)
                             }
                         }
                         .padding(.vertical, 40)
@@ -691,29 +624,25 @@ struct PersonalRecipesView: View {
                                 .buttonStyle(.plain)
 
                                 Button(action: { showSocialImport = true }) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "link.circle.fill")
-                                        Text(L.import_social_title.localized)
-                                    }
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(Color(red: 0.2, green: 0.45, blue: 0.85))
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 12)
-                                    .background(
-                                        Capsule()
-                                            .stroke(Color(red: 0.2, green: 0.45, blue: 0.85), lineWidth: 1.5)
-                                    )
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(Color(red: 0.2, green: 0.45, blue: 0.85))
+                                        .padding(.vertical, 8)
+                                        .padding(.horizontal, 10)
+                                        .background(
+                                            Capsule()
+                                                .stroke(Color(red: 0.2, green: 0.45, blue: 0.85), lineWidth: 1.5)
+                                        )
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(L.import_social_title.localized)
                                 
                                 Spacer()
                             }
                             
-                            // Menus bar with Liked
-                            MenusBarWithLiked(
+                            MenusBar(
                             menus: menus,
                             selected: $selectedMenu,
-                            likedCount: app.likedRecipesManager.likedRecipeIds.count,
                             onAdd: { showNewMenuSheet = true },
                             onRenameSelected: {
                                 renameMenuTitle = selectedMenu?.title ?? ""
@@ -754,7 +683,7 @@ struct PersonalRecipesView: View {
                                     }
                                 }
                                 .onChange(of: selectedMenu?.id) { _, newId in
-                                    if let menuId = newId, menuId != "__liked__" {
+                                    if let menuId = newId {
                                         // Verwende Cache wenn verfügbar, sonst lade
                                         if let token = app.accessToken {
                                             Task { await loadMenuRecipeIds(menuId: menuId, token: token, updateSelected: true) }
@@ -793,7 +722,7 @@ struct PersonalRecipesView: View {
                             }
                             
                             LazyVStack(spacing: 12) {
-                                if let mid = selectedMenu?.id, mid != "__liked__" {
+                                if let mid = selectedMenu?.id {
                                     let groups = groupedByCourse(menuId: mid)
                                     ForEach(groups, id: \.course) { group in
                                         VStack(alignment: .leading, spacing: 8) {
@@ -823,11 +752,9 @@ struct PersonalRecipesView: View {
                                     }
                                 }
                             }
-                            .id(app.likedRecipesManager.likedRecipeIds)
-                            // NavigationLink using isActive pattern (compatible with NavigationView)
                             if let recipeId = navigationRecipeId {
                                 let allRecipes: [Recipe] = {
-                                    if let menuId = selectedMenu?.id, menuId != "__liked__" {
+                                    if let menuId = selectedMenu?.id {
                                         return groupedByCourse(menuId: menuId).flatMap { $0.recipes }
                                     } else {
                                         return visibleRecipes
@@ -1026,7 +953,7 @@ struct PersonalRecipesView: View {
     
     // Preload Menü-Rezept-IDs für alle Menüs parallel
     private func preloadAllMenuRecipeIds(token: String) async {
-        let menuIds = menus.filter { $0.id != "__liked__" }.map { $0.id }
+        let menuIds = menus.map { $0.id }
         
         // Lade alle IDs parallel
         await withTaskGroup(of: Void.self) { group in
@@ -1058,7 +985,7 @@ struct PersonalRecipesView: View {
     }
     
     func renameSelectedMenu(title: String) async {
-        guard let token = app.accessToken, let menu = selectedMenu, menu.id != "__liked__" else { return }
+        guard let token = app.accessToken, let menu = selectedMenu else { return }
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         do {
@@ -1287,7 +1214,7 @@ struct PersonalRecipesView: View {
             }
             
             // Lade sofort IDs für das aktuell ausgewählte Menü (falls vorhanden)
-            if let menuId = selectedMenu?.id, menuId != "__liked__" {
+            if let menuId = selectedMenu?.id {
                 await loadMenuRecipeIds(menuId: menuId, token: token, updateSelected: true)
             }
         } catch {
@@ -1423,8 +1350,7 @@ private struct ShareRecipeSheet: View {
                                                 .lineLimit(2)
                                                 .multilineTextAlignment(.leading)
                                             if let tags = recipe.tags, !tags.isEmpty {
-                                                // Filter out invisible tags (those starting with _filter:)
-                                                let visibleTags = tags.filter { !$0.hasPrefix("_filter:") }
+                                                let visibleTags = tags.filter { !$0.hasPrefix("_") }
                                                 if !visibleTags.isEmpty {
                                                     Text(visibleTags.prefix(2).joined(separator: ", "))
                                                         .font(.caption)
@@ -1472,36 +1398,6 @@ private struct ShareRecipeSheet: View {
     }
 }
 
-// MARK: - Like Button Component
-private struct LikeButton: View {
-    let recipeId: String
-    @ObservedObject var likedManager: LikedRecipesManager
-    
-    private var isLiked: Bool {
-        likedManager.isLiked(recipeId: recipeId)
-    }
-    
-    var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3)) {
-                likedManager.toggleLike(recipeId: recipeId)
-            }
-        }) {
-            Image(systemName: isLiked ? "heart.fill" : "heart")
-                .font(.system(size: 20))
-                .foregroundColor(isLiked ? .pink : .white)
-                .padding(12)
-                .background(
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .shadow(color: .black.opacity(0.1), radius: 4)
-                )
-                .padding(12)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 // MARK: - Recipe Card
 struct RecipeCard: View {
     @EnvironmentObject var app: AppState
@@ -1537,10 +1433,9 @@ struct RecipeCard: View {
         return [first]
     }
     
-    // OPTIMIZATION: Pre-compute visible tags
     private var visibleTags: [String] {
         guard let tags = recipe.tags, !tags.isEmpty else { return [] }
-        return tags.filter { !$0.hasPrefix("_filter:") }
+        return tags.filter { !$0.hasPrefix("_") }
     }
     
     var body: some View {
@@ -1603,11 +1498,6 @@ struct RecipeCard: View {
                         .padding(12)
                 }
                 
-                // Buttons overlay (top right)
-                HStack(spacing: 8) {
-                    LikeButton(recipeId: recipe.id, likedManager: app.likedRecipesManager)
-                }
-                .padding(12)
             }
             .frame(height: 180)
             .frame(maxWidth: .infinity)

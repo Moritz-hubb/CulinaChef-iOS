@@ -717,5 +717,15 @@
   "auth.resetPasswordLinkClicked": "Veuillez cliquer sur le lien dans l'e-mail. Si le lien ouvre un site Web, copiez l'URL de la barre d'adresse et ouvrez-la dans l'application.",
   "legal.fairUseCheckbox": "J'ai lu et j'accepte la Politique d'utilisation équitable",
   "legal.fairUseCheckboxLink": "Politique d'utilisation équitable",
-  "legal.fairUseCheckboxRequired": "Veuillez accepter la Politique d'utilisation équitable avant de continuer"
+  "legal.fairUseCheckboxRequired": "Veuillez accepter la Politique d'utilisation équitable avant de continuer",
+  "import.social_title": "Importer une recette",
+  "import.social_subtitle": "Collez un lien TikTok, Instagram, YouTube ou d'autres plateformes pour créer une recette.",
+  "import.social_url_label": "Lien vers la recette",
+  "import.social_url_placeholder": "https://www.tiktok.com/…",
+  "import.social_submit": "Importer la recette",
+  "import.social_processing": "Création de la recette …",
+  "import.social_insufficient_info": "Le lien ne contient pas assez d'informations pour créer une recette. Essayez un autre lien.",
+  "import.social_tweak_title": "Adapter la recette",
+  "import.social_tweak_subtitle": "Optionnel : L'IA adaptera la recette selon vos préférences.",
+  "import.social_tweak_prompt_placeholder": "p. ex. utiliser du lait de coco au lieu de la crème …"
 }

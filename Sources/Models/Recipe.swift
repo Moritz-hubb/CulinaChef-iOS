@@ -8,7 +8,6 @@ struct Recipe: Identifiable, Codable, Equatable {
     let instructions: [String]? // Optional for preview recipes
     let nutrition: Nutrition? // Optional for preview recipes
     let created_at: String?
-    var is_favorite: Bool?
     var user_email: String? // For community recipes
     var is_public: Bool? // Flag if recipe is shared publicly
     var image_url: String? // Photo URL
@@ -27,12 +26,10 @@ struct Recipe: Identifiable, Codable, Equatable {
         derived_from_recipe_id != nil && !derived_from_recipe_id!.isEmpty
     }
     
-    /// Sichtbare Tags (ohne Backend-Meta: `_filter:…`, `_revision:…` — letztere nur für Logik/Badge)
+    /// Sichtbare Tags (ohne Backend-Meta: `_filter:…`, `_revision:…`, `_import:…` etc.)
     var tagsForDisplay: [String] {
         guard let tags = tags else { return [] }
-        return tags.filter { tag in
-            !tag.hasPrefix("_filter:") && !tag.hasPrefix("_revision:")
-        }
+        return tags.filter { !$0.hasPrefix("_") }
     }
     
     // Check if this is a preview (missing full data)
@@ -49,7 +46,6 @@ struct Recipe: Identifiable, Codable, Equatable {
         case instructions
         case nutrition
         case created_at
-        case is_favorite
         case user_email
         case is_public
         case image_url
@@ -72,7 +68,6 @@ struct Recipe: Identifiable, Codable, Equatable {
         instructions: [String]? = nil,
         nutrition: Nutrition? = nil,
         created_at: String? = nil,
-        is_favorite: Bool? = nil,
         user_email: String? = nil,
         is_public: Bool? = nil,
         image_url: String? = nil,
@@ -92,7 +87,6 @@ struct Recipe: Identifiable, Codable, Equatable {
         self.instructions = instructions
         self.nutrition = nutrition
         self.created_at = created_at
-        self.is_favorite = is_favorite
         self.user_email = user_email
         self.is_public = is_public
         self.image_url = image_url
@@ -119,7 +113,6 @@ struct Recipe: Identifiable, Codable, Equatable {
         nutrition = try? container.decode(Nutrition.self, forKey: .nutrition)
         
         created_at = try? container.decode(String.self, forKey: .created_at)
-        is_favorite = try? container.decode(Bool.self, forKey: .is_favorite)
         user_email = try? container.decode(String.self, forKey: .user_email)
         is_public = try? container.decode(Bool.self, forKey: .is_public)
         image_url = try? container.decode(String.self, forKey: .image_url)
@@ -143,7 +136,6 @@ struct Recipe: Identifiable, Codable, Equatable {
         try container.encodeIfPresent(instructions, forKey: .instructions)
         try container.encodeIfPresent(nutrition, forKey: .nutrition)
         try container.encodeIfPresent(created_at, forKey: .created_at)
-        try container.encodeIfPresent(is_favorite, forKey: .is_favorite)
         try container.encodeIfPresent(user_email, forKey: .user_email)
         try container.encodeIfPresent(is_public, forKey: .is_public)
         try container.encodeIfPresent(image_url, forKey: .image_url)
@@ -211,7 +203,3 @@ struct Nutrition: Codable, Equatable {
     }
 }
 
-struct FavoriteResponse: Codable {
-    let recipe_id: String
-    let favorited: Bool
-}

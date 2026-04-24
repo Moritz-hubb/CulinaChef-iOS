@@ -335,6 +335,7 @@
   "import.social_title": "Aus Social Media",
   "import.social_subtitle": "Teile einen Link mit der App oder füge ihn hier ein. Die KI erstellt daraus ein Rezept in deiner App-Sprache — unabhängig davon, in welcher Sprache Titel oder Beschreibung des Videos sind.",
   "import.social_insufficient_info": "Wir konnten nicht genug Informationen zu diesem Video sammeln, um ein Rezept zu erstellen.",
+  "import.social_processing": "Das Video wird verarbeitet …\nDein Rezept wird erstellt.",
   "import.social_url_label": "Link zum Video oder Beitrag",
   "import.social_url_placeholder": "https://…",
   "import.social_extra_label": "Zusätzlicher Text (optional)",

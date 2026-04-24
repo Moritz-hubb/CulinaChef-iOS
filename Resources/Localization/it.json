@@ -717,5 +717,15 @@
   "auth.resetPasswordLinkClicked": "Fai clic sul link nell'email. Se il link apre un sito web, copia l'URL dalla barra degli indirizzi e aprilo nell'app.",
   "legal.fairUseCheckbox": "Ho letto e accetto la Politica di utilizzo equo",
   "legal.fairUseCheckboxLink": "Politica di utilizzo equo",
-  "legal.fairUseCheckboxRequired": "Si prega di accettare la Politica di utilizzo equo prima di continuare"
+  "legal.fairUseCheckboxRequired": "Si prega di accettare la Politica di utilizzo equo prima di continuare",
+  "import.social_title": "Importa ricetta",
+  "import.social_subtitle": "Incolla un link da TikTok, Instagram, YouTube o altre piattaforme per creare una ricetta.",
+  "import.social_url_label": "Link alla ricetta",
+  "import.social_url_placeholder": "https://www.tiktok.com/…",
+  "import.social_submit": "Importa ricetta",
+  "import.social_processing": "Creazione ricetta …",
+  "import.social_insufficient_info": "Il link non contiene informazioni sufficienti per creare una ricetta. Prova con un altro link.",
+  "import.social_tweak_title": "Adatta ricetta",
+  "import.social_tweak_subtitle": "Opzionale: L'IA adatterà la ricetta alle tue preferenze.",
+  "import.social_tweak_prompt_placeholder": "es. usare latte di cocco al posto della panna …"
 }

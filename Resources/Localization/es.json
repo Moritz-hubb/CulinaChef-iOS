@@ -717,5 +717,15 @@
   "auth.resetPasswordLinkClicked": "Por favor, haz clic en el enlace del correo. Si el enlace abre un sitio web, copia la URL de la barra de direcciones y ábrela en la aplicación.",
   "legal.fairUseCheckbox": "He leído y acepto la Política de uso justo",
   "legal.fairUseCheckboxLink": "Política de uso justo",
-  "legal.fairUseCheckboxRequired": "Por favor, acepta la Política de uso justo antes de continuar"
+  "legal.fairUseCheckboxRequired": "Por favor, acepta la Política de uso justo antes de continuar",
+  "import.social_title": "Importar receta",
+  "import.social_subtitle": "Pega un enlace de TikTok, Instagram, YouTube u otras plataformas para crear una receta.",
+  "import.social_url_label": "Enlace a la receta",
+  "import.social_url_placeholder": "https://www.tiktok.com/…",
+  "import.social_submit": "Importar receta",
+  "import.social_processing": "Creando receta …",
+  "import.social_insufficient_info": "El enlace no contiene suficiente información para crear una receta. Prueba con otro enlace.",
+  "import.social_tweak_title": "Adaptar receta",
+  "import.social_tweak_subtitle": "Opcional: La IA adaptará la receta a tus preferencias.",
+  "import.social_tweak_prompt_placeholder": "p. ej. usar leche de coco en vez de nata …"
 }

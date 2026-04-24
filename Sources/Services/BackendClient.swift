@@ -35,7 +35,13 @@ final class BackendClient {
     /// - Returns: Antwortdaten und zugehörige `HTTPURLResponse`.
     /// - Throws: `URLError` bei Transport-/Statusfehlern oder `NSError` mit
     ///   Backend-Fehlermeldung im `NSLocalizedDescriptionKey`.
-    private func request(path: String, method: String = "GET", token: String?, jsonBody: Data? = nil) async throws -> (Data, HTTPURLResponse) {
+    private func request(
+        path: String,
+        method: String = "GET",
+        token: String?,
+        jsonBody: Data? = nil,
+        timeoutInterval: TimeInterval? = nil
+    ) async throws -> (Data, HTTPURLResponse) {
         var url = baseURL
         url.append(path: path)
         #if DEBUG
@@ -43,6 +49,9 @@ final class BackendClient {
         print("🌐 [DEBUG] Backend Request: \(method) \(url.absoluteString)") // Direct print for visibility
         #endif
         var req = URLRequest(url: url)
+        if let t = timeoutInterval, t > 0 {
+            req.timeoutInterval = t
+        }
         req.httpMethod = method
         if let token = token { req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         if let body = jsonBody {
@@ -166,19 +175,6 @@ final class BackendClient {
         let data = try JSONEncoder().encode(body)
         let (respData, _) = try await request(path: "/ai/revise_recipe", method: "POST", token: accessToken, jsonBody: data)
         return try JSONDecoder().decode(Recipe.self, from: respData)
-    }
-
-    /// Markiert ein Rezept als Favorit bzw. hebt die Markierung auf.
-    ///
-    /// - Parameters:
-    ///   - recipeId: ID des Rezepts.
-    ///   - accessToken: Supabase-Access-Token.
-    /// - Returns: Serverantwort mit dem neuen Favoritenstatus.
-    func toggleFavorite(recipeId: String, accessToken: String) async throws -> FavoriteResponse {
-        struct Body: Encodable { let recipe_id: String }
-        let data = try JSONEncoder().encode(Body(recipe_id: recipeId))
-        let (respData, _) = try await request(path: "/favorites/toggle", method: "POST", token: accessToken, jsonBody: data)
-        return try JSONDecoder().decode(FavoriteResponse.self, from: respData)
     }
 
     // Rate limiting: increment and check server-side counters
@@ -314,12 +310,16 @@ final class BackendClient {
         url: String,
         recipeLanguage: String,
         dietaryContext: String?,
+        recipeTweaks: [String]?,
+        tweakText: String?,
         accessToken: String
     ) async throws -> Recipe {
         struct Body: Encodable {
             let url: String
             let language: String?
             let dietary_context: String?
+            let recipe_tweaks: [String]?
+            let tweak_text: String?
         }
         let lang: String = {
             switch recipeLanguage.lowercased() {
@@ -327,10 +327,13 @@ final class BackendClient {
             default: return "de"
             }
         }()
+        let trimmedTweakText = tweakText?.trimmingCharacters(in: .whitespacesAndNewlines)
         let body = Body(
             url: url,
             language: lang,
-            dietary_context: dietaryContext
+            dietary_context: dietaryContext,
+            recipe_tweaks: recipeTweaks?.isEmpty == true ? nil : recipeTweaks,
+            tweak_text: (trimmedTweakText?.isEmpty == true) ? nil : trimmedTweakText
         )
         #if DEBUG
         Logger.debug(
@@ -343,7 +346,8 @@ final class BackendClient {
             path: "/ai/import-from-social-url",
             method: "POST",
             token: accessToken,
-            jsonBody: data
+            jsonBody: data,
+            timeoutInterval: Config.socialImportAPITimeout
         )
         #if DEBUG
         Logger.debug(
@@ -393,7 +397,8 @@ final class BackendClient {
             path: "/ai/preview-social-metadata",
             method: "POST",
             token: accessToken,
-            jsonBody: data
+            jsonBody: data,
+            timeoutInterval: Config.socialImportAPITimeout
         )
         let decoded = try JSONDecoder().decode(SocialMetadataPreview.self, from: respData)
         #if DEBUG

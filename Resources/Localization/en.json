@@ -717,5 +717,15 @@
   "auth.resetPasswordLinkClicked": "Please click the link in the email. If the link opens a website, copy the URL from the address bar and open it in the app.",
   "legal.fairUseCheckbox": "I have read and accept the Fair Use Policy",
   "legal.fairUseCheckboxLink": "Fair Use Policy",
-  "legal.fairUseCheckboxRequired": "Please accept the Fair Use Policy before continuing"
+  "legal.fairUseCheckboxRequired": "Please accept the Fair Use Policy before continuing",
+  "import.social_title": "Import recipe",
+  "import.social_subtitle": "Paste a link from TikTok, Instagram, YouTube or other platforms to create a recipe.",
+  "import.social_url_label": "Link to recipe",
+  "import.social_url_placeholder": "https://www.tiktok.com/…",
+  "import.social_submit": "Import recipe",
+  "import.social_processing": "Creating recipe …",
+  "import.social_insufficient_info": "The link doesn't contain enough information to create a recipe. Try a different link.",
+  "import.social_tweak_title": "Adapt recipe",
+  "import.social_tweak_subtitle": "Optional: The AI will adapt the recipe to your preferences.",
+  "import.social_tweak_prompt_placeholder": "e.g. use coconut milk instead of cream …"
 }

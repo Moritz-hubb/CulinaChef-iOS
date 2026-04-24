@@ -716,5 +716,15 @@
   "auth.resetPasswordLinkClicked": "Bitte klicke auf den Link in der E-Mail. Falls der Link zu einer Webseite führt, kopiere die URL aus der Adressleiste und öffne sie in der App.",
   "legal.fairUseCheckbox": "Ich habe die Fair Use Policy gelesen und akzeptiere sie",
   "legal.fairUseCheckboxLink": "Fair Use Policy",
-  "legal.fairUseCheckboxRequired": "Bitte akzeptiere die Fair Use Policy, bevor du fortfährst"
+  "legal.fairUseCheckboxRequired": "Bitte akzeptiere die Fair Use Policy, bevor du fortfährst",
+  "import.social_title": "Rezept importieren",
+  "import.social_subtitle": "Füge einen Link von TikTok, Instagram, YouTube oder anderen Plattformen ein, um ein Rezept zu erstellen.",
+  "import.social_url_label": "Link zum Rezept",
+  "import.social_url_placeholder": "https://www.tiktok.com/…",
+  "import.social_submit": "Rezept importieren",
+  "import.social_processing": "Rezept wird erstellt …",
+  "import.social_insufficient_info": "Der Link enthält nicht genug Informationen, um ein Rezept zu erstellen. Versuche einen anderen Link.",
+  "import.social_tweak_title": "Rezept anpassen",
+  "import.social_tweak_subtitle": "Optional: Die KI passt das Rezept an deine Wünsche an.",
+  "import.social_tweak_prompt_placeholder": "z. B. Kokosmilch statt Sahne verwenden …"
 }

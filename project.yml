@@ -47,6 +47,10 @@ targets:
         embed: true
         codeSignOnCopy: true
         removeHeadersOnCopy: true
+      - target: CulinaShare
+        embed: true
+        codeSignOnCopy: true
+        removeHeadersOnCopy: true
     configFiles:
       Debug: Configs/Secrets.xcconfig
       Release: Configs/Secrets.xcconfig
@@ -139,3 +143,29 @@ targets:
       runAction:
         executable: ""
         askForAppToLaunch: false
+
+  CulinaShare:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: CulinaShare
+        excludes:
+          - "**/Info.plist"
+    entitlements:
+      path: Configs/CulinaShare.entitlements
+    info:
+      path: CulinaShare/Info.plist
+    settings:
+      base:
+        PRODUCT_NAME: CulinaShare
+        PRODUCT_BUNDLE_IDENTIFIER: com.moritzserrin.culinachef.share
+        CODE_SIGN_STYLE: Automatic
+        INFOPLIST_KEY_CFBundleDisplayName: CulinaChef
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: NO
+    scheme:
+      testTargets: []
+      buildAction:
+        targets:
+          - CulinaShare

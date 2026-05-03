@@ -71,6 +71,26 @@ private struct RootViewModifiers: ViewModifier {
             AppStoreReviewManager.incrementLaunchCount()
             hasTrackedLaunch = true
         }
+        if newPhase == .active {
+            checkPendingSocialImport()
+        }
+    }
+
+    private func checkPendingSocialImport() {
+        guard !app.showSocialImportFromShare else { return }
+        guard let defaults = UserDefaults(suiteName: "group.com.moritzserrin.culinachef.share"),
+              let pending = defaults.string(forKey: "pending_social_import_url"),
+              !pending.isEmpty else { return }
+        #if DEBUG
+        Logger.debug(
+            "[SocialImport] scenePhase fallback: recovered pending url len=\(pending.count) preview=\(pending.prefix(100))",
+            category: .ui
+        )
+        #endif
+        defaults.removeObject(forKey: "pending_social_import_url")
+        app.pendingSocialImportURL = pending
+        app.selectedTab = 2
+        app.showSocialImportFromShare = true
     }
     
     private func handlePasswordResetChange(_ shouldShow: Bool) {
@@ -368,6 +388,7 @@ LinearGradient(
         }) {
             SocialRecipeImportView(
                 initialURL: app.pendingSocialImportURL,
+                autoStartFromShare: true,
                 onFinished: { recipe in
                     app.cachedRecipes = [recipe] + app.cachedRecipes.filter { $0.id != recipe.id }
                     app.deepLinkRecipe = recipe
@@ -496,4 +517,3 @@ private struct LegalPlaceholderView: View {
         }
     }
 }
-

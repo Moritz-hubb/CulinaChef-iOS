@@ -20,10 +20,16 @@ struct Recipe: Identifiable, Codable, Equatable {
     /// Wenn gesetzt: KI-Überarbeitungskopie dieses Ursprungsrezepts (Backend: `derived_from_recipe_id`)
     var derived_from_recipe_id: String?
     var revision_note: String?
+    var source_url: String?
     
     /// Kurzinfo: stammt von einer KI-Überarbeitung
     var isRevisionCopy: Bool {
         derived_from_recipe_id != nil && !derived_from_recipe_id!.isEmpty
+    }
+    
+    /// Stammt aus einem Social-Media-Import
+    var isSocialImport: Bool {
+        tags?.contains("_import:social") == true
     }
     
     /// Sichtbare Tags (ohne Backend-Meta: `_filter:…`, `_revision:…`, `_import:…` etc.)
@@ -57,6 +63,7 @@ struct Recipe: Identifiable, Codable, Equatable {
         case language
         case derived_from_recipe_id
         case revision_note
+        case source_url
     }
     
     // Normal initializer (required since we have custom decoder)
@@ -78,7 +85,8 @@ struct Recipe: Identifiable, Codable, Equatable {
         rating: Int? = nil,
         language: String? = nil,
         derived_from_recipe_id: String? = nil,
-        revision_note: String? = nil
+        revision_note: String? = nil,
+        source_url: String? = nil
     ) {
         self.id = id
         self.user_id = user_id
@@ -98,6 +106,7 @@ struct Recipe: Identifiable, Codable, Equatable {
         self.language = language
         self.derived_from_recipe_id = derived_from_recipe_id
         self.revision_note = revision_note
+        self.source_url = source_url
     }
     
     // Custom decoder to handle missing fields gracefully (for preview recipes)
@@ -124,6 +133,7 @@ struct Recipe: Identifiable, Codable, Equatable {
         language = try? container.decode(String.self, forKey: .language)
         derived_from_recipe_id = try? container.decode(String.self, forKey: .derived_from_recipe_id)
         revision_note = try? container.decode(String.self, forKey: .revision_note)
+        source_url = try? container.decode(String.self, forKey: .source_url)
     }
     
     // Custom encoder (standard implementation, but explicit for clarity)
@@ -147,6 +157,7 @@ struct Recipe: Identifiable, Codable, Equatable {
         try container.encodeIfPresent(language, forKey: .language)
         try container.encodeIfPresent(derived_from_recipe_id, forKey: .derived_from_recipe_id)
         try container.encodeIfPresent(revision_note, forKey: .revision_note)
+        try container.encodeIfPresent(source_url, forKey: .source_url)
     }
 }
 

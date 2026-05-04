@@ -358,6 +358,8 @@
   "import.social_tweak_title": "Adapt recipe",
   "import.social_tweak_subtitle": "Optional: The AI will adapt the recipe to your preferences.",
   "import.social_tweak_prompt_placeholder": "e.g. use coconut milk instead of cream …",
+  "import.social_source_link": "Original source",
+  "import.social_open_original": "Open original recipe",
   "recipe.neues_menü": "New Menu",
   "recipe.noch_keine_communityrezepte": "Noch keine Community-Rezepte",
   "recipe.nur_für_dich_sichtbar": "Only visible to you",

@@ -358,6 +358,8 @@
   "import.social_tweak_title": "Adaptar receta",
   "import.social_tweak_subtitle": "Opcional: La IA adaptará la receta a tus preferencias.",
   "import.social_tweak_prompt_placeholder": "p. ej. usar leche de coco en vez de nata …",
+  "import.social_source_link": "Fuente original",
+  "import.social_open_original": "Abrir receta original",
   "recipe.neues_menü": "Nuevo menú",
   "recipe.noch_keine_communityrezepte": "Aún no hay recetas de la comunidad",
   "recipe.nur_für_dich_sichtbar": "Visible solo para ti",

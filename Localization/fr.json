@@ -358,6 +358,8 @@
   "import.social_tweak_title": "Adapter la recette",
   "import.social_tweak_subtitle": "Optionnel : L’IA adaptera la recette selon vos préférences.",
   "import.social_tweak_prompt_placeholder": "p. ex. utiliser du lait de coco au lieu de la crème …",
+  "import.social_source_link": "Source originale",
+  "import.social_open_original": "Ouvrir la recette originale",
   "recipe.neues_menü": "Nouveau menu",
   "recipe.noch_keine_communityrezepte": "Pas encore de recettes communautaires",
   "recipe.nur_für_dich_sichtbar": "Visible uniquement par vous",

@@ -358,6 +358,8 @@
   "import.social_tweak_title": "Adatta ricetta",
   "import.social_tweak_subtitle": "Opzionale: L'IA adatterà la ricetta alle tue preferenze.",
   "import.social_tweak_prompt_placeholder": "es. usare latte di cocco al posto della panna …",
+  "import.social_source_link": "Fonte originale",
+  "import.social_open_original": "Apri ricetta originale",
   "recipe.neues_menü": "Nuovo menu",
   "recipe.noch_keine_communityrezepte": "Ancora nessuna ricetta della comunità",
   "recipe.nur_für_dich_sichtbar": "Visibile solo a te",

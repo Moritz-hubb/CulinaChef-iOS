@@ -456,6 +456,51 @@ struct RecipeDetailView: View {
                     .padding(16)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
+                
+                if let sourceUrl = displayRecipe.source_url,
+                   let url = URL(string: sourceUrl) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(L.import_social_source_link.localized)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        
+                        Link(destination: url) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "link")
+                                    .font(.body.weight(.semibold))
+                                Text(L.import_social_open_original.localized)
+                                    .font(.subheadline.weight(.medium))
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                        }
+                        
+                        Text(sourceUrl)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .padding(16)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
             }
             .padding(16)
         }

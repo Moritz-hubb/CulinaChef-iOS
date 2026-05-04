@@ -357,6 +357,8 @@
   "import.social_tweak_title": "Rezept anpassen",
   "import.social_tweak_subtitle": "Optional: Die KI passt das Rezept an deine Wünsche an.",
   "import.social_tweak_prompt_placeholder": "z. B. Kokosmilch statt Sahne verwenden …",
+  "import.social_source_link": "Originalquelle",
+  "import.social_open_original": "Originalrezept öffnen",
   "recipe.neues_menü": "Neues Menü",
   "recipe.noch_keine_communityrezepte": "Noch keine Community-Rezepte",
   "recipe.nur_für_dich_sichtbar": "Nur für dich sichtbar",

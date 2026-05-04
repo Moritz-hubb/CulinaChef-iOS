@@ -1081,6 +1081,8 @@ enum L {
     static let import_social_tweak_title = "import.social_tweak_title"
     static let import_social_tweak_subtitle = "import.social_tweak_subtitle"
     static let import_social_tweak_prompt_placeholder = "import.social_tweak_prompt_placeholder"
+    static let import_social_source_link = "import.social_source_link"
+    static let import_social_open_original = "import.social_open_original"
     static let recipe_ich_bin_dabei_deine_d9e2 = "recipe.ich_bin_dabei_deine_d9e2"
     static let recipe_dieses_rezept_wird_dauerhaft = "recipe.dieses_rezept_wird_dauerhaft"
     static let recipe_dieses_menü_ohne_rezepte = "recipe.dieses_menü_ohne_rezepte"

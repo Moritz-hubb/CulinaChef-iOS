@@ -895,7 +895,7 @@ private struct MenuPickerSheet: View {
             instructions: ["Kochen", "Mischen"],
             nutrition: Nutrition(calories: 500, protein_g: 20, carbs_g: 60, fat_g: 15),
             created_at: nil,
-            is_favorite: false
+         
         ),
         onCloseRecipe: {}
     )

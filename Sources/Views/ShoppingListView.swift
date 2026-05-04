@@ -38,23 +38,19 @@ struct ShoppingListView: View {
                         // Action buttons
                         HStack(spacing: 12) {
                             Button(action: { showAddItemSheet = true }) {
-                                HStack {
-                                    Image(systemName: "plus")
-                                    Text(L.shopping_hinzufügen.localized)
-                                }
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    ),
-                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                )
-                                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                                Image(systemName: "plus")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                    .frame(width: 44, height: 44)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ),
+                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    )
+                                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
                             }
                             .accessibilityLabel(L.shopping_hinzufügen.localized)
                             .accessibilityHint("Fügt einen neuen Eintrag zur Einkaufsliste hinzu")
@@ -79,6 +75,27 @@ struct ShoppingListView: View {
                             }
                             .accessibilityLabel(L.shopping_erledigte_löschen.localized)
                             .accessibilityHint("Löscht alle erledigten Einträge")
+                            
+                            Button(action: { showClearConfirmation = true }) {
+                                HStack {
+                                    Image(systemName: "trash")
+                                    Text(L.shopping_alle_löschen.localized)
+                                }
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(.ultraThinMaterial.opacity(0.5))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                            }
+                            .accessibilityLabel(L.shopping_alle_löschen.localized)
+                            .accessibilityHint("Löscht alle Einträge aus der Einkaufsliste")
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
@@ -94,27 +111,28 @@ struct ShoppingListView: View {
                         .id(refreshID)
                         .id(categories.map { $0.rawValue }.sorted().joined(separator: "-"))
                         
-                        // Clear all button
-                        Button(action: { showClearConfirmation = true }) {
+                        // Add entry button
+                        Button(action: { showAddItemSheet = true }) {
                             HStack {
-                                Image(systemName: "trash")
-                                Text(L.shopping_alle_löschen.localized)
+                                Image(systemName: "plus")
+                                Text(L.shopping_hinzufügen.localized)
                             }
                             .font(.subheadline.bold())
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                             .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(.ultraThinMaterial.opacity(0.3))
+                                LinearGradient(
+                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                             )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
+                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
                         }
-                        .accessibilityLabel(L.shopping_alle_löschen.localized)
-                        .accessibilityHint("Löscht alle Einträge aus der Einkaufsliste")
+                        .accessibilityLabel(L.shopping_hinzufügen.localized)
+                        .accessibilityHint("Fügt einen neuen Eintrag zur Einkaufsliste hinzu")
                         .padding(.horizontal, 16)
                         .padding(.bottom, 16)
                     }

@@ -1146,6 +1146,22 @@ struct RecipeDetailView: View {
         
         var result = text
         
+        // Normalize old marker format (marker between number and unit) to new format (marker after unit)
+        // Old: "200⟦ingredient_qty:⟧ g" → New: "200 g⟦ingredient_qty:⟧"
+        let normalizePattern = #"(?i)(\d+(?:\/\d+|[\.,]\d+)?)\s*⟦ingredient_qty:⟧\s*(\p{L}+)"#
+        if let normalizeRegex = try? NSRegularExpression(pattern: normalizePattern, options: []) {
+            let ns = result as NSString
+            let normalizeMatches = normalizeRegex.matches(in: result, options: [], range: NSRange(location: 0, length: ns.length))
+            for m in normalizeMatches.reversed() {
+                guard m.numberOfRanges >= 3 else { continue }
+                guard let numStr = Range(m.range(at: 1), in: result).map({ String(result[$0]) }),
+                      let unitStr = Range(m.range(at: 2), in: result).map({ String(result[$0]) }) else { continue }
+                let normalized = numStr + " " + unitStr + "⟦ingredient_qty:⟧"
+                guard let swiftRange = Range(m.range, in: result) else { continue }
+                result.replaceSubrange(swiftRange, with: normalized)
+            }
+        }
+        
         // First, handle labeled quantities (⟦ingredient_qty:⟧) - these are explicitly marked by AI
         // Pattern: number + optional space + unit + ⟦ingredient_qty:⟧
         let labeledPattern = #"(?i)(\b\d+\/\d+|\b\d+[\.,]\d+|\b\d+)\s*(\p{L}+)\s*⟦ingredient_qty:⟧"#
@@ -1309,7 +1325,7 @@ struct RecipeDetailView: View {
         md += "## Zubereitung\n\n"
         for (index, instruction) in (displayRecipe.instructions ?? []).enumerated() {
             let split = splitInstruction(instruction)
-            let cleanText = split.body
+            let cleanText = split.body.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
             md += "**Schritt \(index + 1)**\n\n"
             md += "\(cleanText)\n\n"
         }
@@ -2033,6 +2049,8 @@ struct NutritionItem: View {
             Text(label)
                 .font(.system(size: 11))
                 .foregroundColor(.white.opacity(0.7))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity)
     }

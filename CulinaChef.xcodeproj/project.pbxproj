@@ -89,11 +89,11 @@
 		BF5CFEB02EDB988D000A4330 /* supabase.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF5CFEAE2EDB988D000A4330 /* supabase.cer */; };
 		BF5CFEB12EDB988D000A4330 /* backend.cer in Resources */ = {isa = PBXBuildFile; fileRef = BF5CFEAD2EDB988D000A4330 /* backend.cer */; };
 		BF63E83D2F743677008421D9 /* SocialRecipeImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF63E83C2F743677008421D9 /* SocialRecipeImportView.swift */; };
-		BF9B99F32EF0093800F2E7EC /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99F12EF0093800F2E7EC /* it.json */; };
-		BF9B99F42EF0093800F2E7EC /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99EF2EF0093800F2E7EC /* es.json */; };
-		BF9B99F52EF0093800F2E7EC /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99ED2EF0093800F2E7EC /* de.json */; };
-		BF9B99F62EF0093800F2E7EC /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99EE2EF0093800F2E7EC /* en.json */; };
-		BF9B99F72EF0093800F2E7EC /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99F02EF0093800F2E7EC /* fr.json */; };
+		BF80EE1A2F9B7B4D00209D23 /* de.json in Resources */ = {isa = PBXBuildFile; fileRef = BF80EE142F9B7B4D00209D23 /* de.json */; };
+		BF80EE1B2F9B7B4D00209D23 /* fr.json in Resources */ = {isa = PBXBuildFile; fileRef = BF80EE172F9B7B4D00209D23 /* fr.json */; };
+		BF80EE1C2F9B7B4D00209D23 /* es.json in Resources */ = {isa = PBXBuildFile; fileRef = BF80EE162F9B7B4D00209D23 /* es.json */; };
+		BF80EE1D2F9B7B4D00209D23 /* it.json in Resources */ = {isa = PBXBuildFile; fileRef = BF80EE182F9B7B4D00209D23 /* it.json */; };
+		BF80EE1E2F9B7B4D00209D23 /* en.json in Resources */ = {isa = PBXBuildFile; fileRef = BF80EE152F9B7B4D00209D23 /* en.json */; };
 		BF9B9A042EF00A1300F2E7EC /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99FF2EF00A1300F2E7EC /* Localizable.strings */; };
 		BF9B9A052EF00A1300F2E7EC /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = BF9B99F92EF00A1300F2E7EC /* Localizable.strings */; };
 		BF9B9A062EF00A1300F2E7EC /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = BF9B9A022EF00A1300F2E7EC /* Localizable.strings */; };
@@ -119,12 +119,12 @@
 		E9024322447EF2B8086445F5 /* ShoppingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE9CBB4591C8A19859D11DBE /* ShoppingListView.swift */; };
 		E9A27A948CF2AE019F73144D /* LocalizationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7675AB2EAF24B0AEC5A02AED /* LocalizationManagerTests.swift */; };
 		EC9915DFDE1D29CCAAD0B702 /* ringtone-031-437514.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0E40B94362D780F677CD5609 /* ringtone-031-437514.mp3 */; };
+		F00000000000000000000006 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000001 /* ShareViewController.swift */; };
+		F00000000000000000000007 /* CulinaShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F00000000000000000000002 /* CulinaShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F02FDD1C624470B95790160F /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */; };
 		FEC6CC21CDE44482D442F073 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BCF3CADE470585536DC39E5 /* PaywallView.swift */; };
 		FEFFEAEA8B96327DDA8F7462 /* View+RoundedCorners.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845FFFA8D16431609BA3F692 /* View+RoundedCorners.swift */; };
 		FFF8F29956D8F6369821BC24 /* KeychainManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 174E397B5850F0459C63D384 /* KeychainManagerTests.swift */; };
-		F00000000000000000000006 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000001 /* ShareViewController.swift */; };
-		F00000000000000000000007 /* CulinaShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F00000000000000000000002 /* CulinaShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -259,11 +259,11 @@
 		BF5CFEAD2EDB988D000A4330 /* backend.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = backend.cer; sourceTree = "<group>"; };
 		BF5CFEAE2EDB988D000A4330 /* supabase.cer */ = {isa = PBXFileReference; lastKnownFileType = file; path = supabase.cer; sourceTree = "<group>"; };
 		BF63E83C2F743677008421D9 /* SocialRecipeImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRecipeImportView.swift; sourceTree = "<group>"; };
-		BF9B99ED2EF0093800F2E7EC /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
-		BF9B99EE2EF0093800F2E7EC /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
-		BF9B99EF2EF0093800F2E7EC /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
-		BF9B99F02EF0093800F2E7EC /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
-		BF9B99F12EF0093800F2E7EC /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
+		BF80EE142F9B7B4D00209D23 /* de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = de.json; sourceTree = "<group>"; };
+		BF80EE152F9B7B4D00209D23 /* en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en.json; sourceTree = "<group>"; };
+		BF80EE162F9B7B4D00209D23 /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
+		BF80EE172F9B7B4D00209D23 /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
+		BF80EE182F9B7B4D00209D23 /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
 		BF9B99F82EF00A1300F2E7EC /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = Localizable.strings; sourceTree = "<group>"; };
 		BF9B99FB2EF00A1300F2E7EC /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Localizable.strings; sourceTree = "<group>"; };
 		BF9B99FE2EF00A1300F2E7EC /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = Localizable.strings; sourceTree = "<group>"; };
@@ -279,16 +279,16 @@
 		E4B5A2C547FEE0D43851EDBF /* ImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 		EA9B43DCE8036D599CB6941E /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
 		EAE72EEFB2F938867B00A5D1 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		F00000000000000000000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		F00000000000000000000002 /* CulinaShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CulinaShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F00000000000000000000004 /* CulinaShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CulinaShare.entitlements; sourceTree = "<group>"; };
 		F366107B89FBDAB81E0E6667 /* LikedRecipesManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikedRecipesManagerTests.swift; sourceTree = "<group>"; };
 		F5C4F2055099FDED27B71EBC /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		FB2BE8A30CED23C70AE85F45 /* CulinaChefTimerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CulinaChefTimerWidget.swift; sourceTree = "<group>"; };
 		FCF1AFB82F4D6DC0FBEADEC2 /* TermsOfServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceView.swift; sourceTree = "<group>"; };
 		FD97221B4FA2497E34222673 /* RecipeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeDetailView.swift; sourceTree = "<group>"; };
 		FFD0B42FC2F1FB98BC6CC86F /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
-		F00000000000000000000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
-		F00000000000000000000002 /* CulinaShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CulinaShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		F00000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F00000000000000000000004 /* CulinaShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CulinaShare.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -348,11 +348,11 @@
 		40728F1A522F5676DA8C2A7A = {
 			isa = PBXGroup;
 			children = (
+				BF80EE192F9B7B4D00209D23 /* Localization */,
 				BF9B99FA2EF00A1300F2E7EC /* de.lproj */,
 				BF9B99FD2EF00A1300F2E7EC /* en.lproj */,
 				BF9B9A002EF00A1300F2E7EC /* es.lproj */,
 				BF9B9A032EF00A1300F2E7EC /* fr.lproj */,
-				BF9B99F22EF0093800F2E7EC /* Localization */,
 				BF5CFEAF2EDB988D000A4330 /* Certificates */,
 				ED62F7E2D93415139BD2695B /* Configs */,
 				9A787DBC0B50C38AFCD7641B /* Sources */,
@@ -445,14 +445,14 @@
 			path = Certificates;
 			sourceTree = "<group>";
 		};
-		BF9B99F22EF0093800F2E7EC /* Localization */ = {
+		BF80EE192F9B7B4D00209D23 /* Localization */ = {
 			isa = PBXGroup;
 			children = (
-				BF9B99ED2EF0093800F2E7EC /* de.json */,
-				BF9B99EE2EF0093800F2E7EC /* en.json */,
-				BF9B99EF2EF0093800F2E7EC /* es.json */,
-				BF9B99F02EF0093800F2E7EC /* fr.json */,
-				BF9B99F12EF0093800F2E7EC /* it.json */,
+				BF80EE142F9B7B4D00209D23 /* de.json */,
+				BF80EE152F9B7B4D00209D23 /* en.json */,
+				BF80EE162F9B7B4D00209D23 /* es.json */,
+				BF80EE172F9B7B4D00209D23 /* fr.json */,
+				BF80EE182F9B7B4D00209D23 /* it.json */,
 			);
 			path = Localization;
 			sourceTree = "<group>";
@@ -649,6 +649,23 @@
 			productReference = 92133B524A6E41594887E31B /* CulinaChefTimerWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		F00000000000000000000009 /* CulinaShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F0000000000000000000000E /* Build configuration list for PBXNativeTarget "CulinaShare" */;
+			buildPhases = (
+				F00000000000000000000008 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CulinaShare;
+			packageProductDependencies = (
+			);
+			productName = CulinaShare;
+			productReference = F00000000000000000000002 /* CulinaShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		FFADC5FD5D5C094834C6F95E /* CulinaChef */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5B6AABAE9D3D4444A9138644 /* Build configuration list for PBXNativeTarget "CulinaChef" */;
@@ -673,23 +690,6 @@
 			productName = CulinaChef;
 			productReference = 21B76FF23B7C59DF68BE67EA /* CulinaChef.app */;
 			productType = "com.apple.product-type.application";
-		};
-		F00000000000000000000009 /* CulinaShare */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = F0000000000000000000000E /* Build configuration list for PBXNativeTarget "CulinaShare" */;
-			buildPhases = (
-				F00000000000000000000008 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = CulinaShare;
-			packageProductDependencies = (
-			);
-			productName = CulinaShare;
-			productReference = F00000000000000000000002 /* CulinaShare.appex */;
-			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -761,14 +761,14 @@
 				BF5CFEB12EDB988D000A4330 /* backend.cer in Resources */,
 				BF9B9A042EF00A1300F2E7EC /* Localizable.strings in Resources */,
 				BF9B9A052EF00A1300F2E7EC /* Localizable.strings in Resources */,
+				BF80EE1A2F9B7B4D00209D23 /* de.json in Resources */,
+				BF80EE1B2F9B7B4D00209D23 /* fr.json in Resources */,
+				BF80EE1C2F9B7B4D00209D23 /* es.json in Resources */,
+				BF80EE1D2F9B7B4D00209D23 /* it.json in Resources */,
+				BF80EE1E2F9B7B4D00209D23 /* en.json in Resources */,
 				BF9B9A062EF00A1300F2E7EC /* Localizable.strings in Resources */,
 				BF9B9A072EF00A1300F2E7EC /* Localizable.strings in Resources */,
 				EC9915DFDE1D29CCAAD0B702 /* ringtone-031-437514.mp3 in Resources */,
-				BF9B99F32EF0093800F2E7EC /* it.json in Resources */,
-				BF9B99F42EF0093800F2E7EC /* es.json in Resources */,
-				BF9B99F52EF0093800F2E7EC /* de.json in Resources */,
-				BF9B99F62EF0093800F2E7EC /* en.json in Resources */,
-				BF9B99F72EF0093800F2E7EC /* fr.json in Resources */,
 				6CCA57EED5FBBDC6B328E0B6 /* timer_ringtone.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1074,19 +1074,6 @@
 			};
 			name = Release;
 		};
-		FF683C9A7756139E39518D57 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				DEVELOPMENT_TEAM = 4Q33QP9G7Z;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				SDKROOT = iphoneos;
-				SWIFT_EMIT_MODULE_SEPARATELY = NO;
-				SWIFT_ENABLE_EXPLICIT_MODULES = YES;
-				SWIFT_VERSION = 5.9;
-			};
-			name = Release;
-		};
 		F0000000000000000000000C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1123,6 +1110,19 @@
 				PRODUCT_NAME = CulinaShare;
 				SKIP_INSTALL = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		FF683C9A7756139E39518D57 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				DEVELOPMENT_TEAM = 4Q33QP9G7Z;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_MODULE_SEPARATELY = NO;
+				SWIFT_ENABLE_EXPLICIT_MODULES = YES;
 				SWIFT_VERSION = 5.9;
 			};
 			name = Release;

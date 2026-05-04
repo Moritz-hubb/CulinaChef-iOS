@@ -86,21 +86,32 @@ enum Config {
         currentEnvironment != .development
     }
 
-    // MARK: - Security / SSL Pinning
+    // MARK: - Security / SSL Pinning (SPKI – Public Key Hash Pinning)
     
-    /// Whether SSL pinning should be enforced.
-    /// Note: Supabase certificates rotate; strict leaf cert pinning can break without refreshed `.cer` files.
+    /// Whether SSL public key pinning should be enforced.
+    /// Uses SPKI (Subject Public Key Info) hashes instead of full certificate data,
+    /// which survives certificate rotations when the server reuses the same key pair.
+    /// If a pin mismatch occurs but system trust passes, the connection is still
+    /// allowed (graceful degradation) to prevent the app from breaking on cert rotation.
     static var enableSSLPinning: Bool {
         currentEnvironment == .production
     }
     
-    /// Whether Supabase should be pinned.
-    /// In production this should normally be `true`, but you can temporarily disable it to restore connectivity
-    /// if the Supabase leaf certificate changed and new pins weren't downloaded yet.
+    /// Whether Supabase traffic should be pinned.
     static var enableSupabasePinning: Bool {
-        // TEMP SAFETY: keep backend pinning, but allow Supabase to proceed with system trust if pins are stale
         false
     }
+    
+    /// Base64-encoded SHA-256 hashes of the backend server's SPKI.
+    /// Generate with: `./ios/scripts/download_ssl_certificates.sh`
+    /// Include both the current and a backup hash for smoother key rotations.
+    static let backendPublicKeyHashes: Set<String> = [
+        "VYxe9LAwK2QozwAdcQXon+QWur/Wn6o01PdWoMq1jiw=",  // Current (as of 2026-04-08)
+    ]
+    
+    /// Base64-encoded SHA-256 hashes of the Supabase server's SPKI.
+    /// Only used when `enableSupabasePinning` is true.
+    static let supabasePublicKeyHashes: Set<String> = []
     
     /// Check if we're in a development/testing environment where backend validation might not work
     /// (Development builds, TestFlight, or staging)
@@ -144,6 +155,10 @@ enum Config {
     
     // MARK: - API Timeouts
     
+    /// Zeit zwischen Datenpaketen für typische API-Calls.
     static let apiTimeout: TimeInterval = 30.0
-    static let imageUploadTimeout: TimeInterval = 60.0
+    /// Gesamtzeit pro URLSession-Task (muss ≥ längste Einzelanfrage sein, z. B. Social-Import).
+    static let imageUploadTimeout: TimeInterval = 180.0
+    /// `POST /ai/import-from-social-url` und Metadaten-Vorschau (KI + langsames Netz).
+    static let socialImportAPITimeout: TimeInterval = 120.0
 }

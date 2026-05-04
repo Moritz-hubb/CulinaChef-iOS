@@ -211,7 +211,6 @@ ToolbarItem(placement: .navigationBarTrailing) {
                 fat_g: plan.nutrition?.fat_g
             ),
             created_at: nil,
-            is_favorite: false,
             user_email: nil,
             is_public: nil,
             image_url: nil,
@@ -301,7 +300,7 @@ Text(ing.name).font(.body).foregroundStyle(.white)
             VStack(alignment: .leading, spacing: 16) {
                 Text(step.title).font(.title3.bold()).foregroundStyle(.white)
                 if let d = step.duration_minutes { LabeledRow(L.label_cookingTime.localized.replacingOccurrences(of: ":", with: ""), String(d) + " min") }
-                Text(scaleInstruction(step.description, baseServings: plan.servings, currentServings: servings)).foregroundStyle(.white)
+                Text(scaleInstruction(step.description, baseServings: plan.servings, currentServings: servings).replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")).foregroundStyle(.white)
 
                 if let cookMins = parseCookMinutes(from: step.description) {
                     SharedTimerControl(minutes: cookMins, label: step.title, center: timerCenter)
@@ -642,35 +641,79 @@ extension RecipeResultView {
     }
 
     // Scale numeric ingredient quantities inside free-text step instructions based on servings
+    // Supports both labeled quantities (⟦ingredient_qty:⟧) and automatic detection
     fileprivate func scaleInstruction(_ text: String, baseServings: Int?, currentServings: Int) -> String {
         guard let base = baseServings, base > 0, base != currentServings else { return text }
         let scale = Double(currentServings) / Double(base)
-        // Exclude time/temperature units; scale only known food quantity units
-        let allowedUnits = ["g","gramm","kg","ml","l","dl","cl","EL","TL","Prise","Stück","Stueck","Scheiben","Dosen","Tassen","cup","cups","tbsp","tsp"]
-        let timeUnits = ["min","minute","minuten","sek","sekunden","std","stunde","stunden","°c","grad","c"]
-        // Regex: number (int|decimal|fraction) + optional space + unit
-        // number group allows: 1/2, 3/4, 0.5, 0,5, 2
-        let pattern = #"(?i)(\b\d+\/\d+|\b\d+[\.,]\d+|\b\d+)\s*(\p{L}+\b)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return text }
-        let ns = text as NSString
-        let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: ns.length))
-        if matches.isEmpty { return text }
+
         var result = text
-        // Replace from end to start to keep ranges valid
+
+        // Normalize old marker format (marker between number and unit) to new format (marker after unit)
+        // Old: "200⟦ingredient_qty:⟧ g" → New: "200 g⟦ingredient_qty:⟧"
+        let normalizePattern = #"(?i)(\d+(?:\/\d+|[\.,]\d+)?)\s*⟦ingredient_qty:⟧\s*(\p{L}+)"#
+        if let normalizeRegex = try? NSRegularExpression(pattern: normalizePattern, options: []) {
+            let ns = result as NSString
+            let normalizeMatches = normalizeRegex.matches(in: result, options: [], range: NSRange(location: 0, length: ns.length))
+            for m in normalizeMatches.reversed() {
+                guard m.numberOfRanges >= 3 else { continue }
+                guard let numStr = Range(m.range(at: 1), in: result).map({ String(result[$0]) }),
+                      let unitStr = Range(m.range(at: 2), in: result).map({ String(result[$0]) }) else { continue }
+                let normalized = numStr + " " + unitStr + "⟦ingredient_qty:⟧"
+                guard let swiftRange = Range(m.range, in: result) else { continue }
+                result.replaceSubrange(swiftRange, with: normalized)
+            }
+        }
+
+        // First, handle labeled quantities (⟦ingredient_qty:⟧) — explicitly marked by AI
+        let labeledPattern = #"(?i)(\b\d+\/\d+|\b\d+[\.,]\d+|\b\d+)\s*(\p{L}+)\s*⟦ingredient_qty:⟧"#
+        if let labeledRegex = try? NSRegularExpression(pattern: labeledPattern, options: []) {
+            let ns = result as NSString
+            let labeledMatches = labeledRegex.matches(in: result, options: [], range: NSRange(location: 0, length: ns.length))
+            for m in labeledMatches.reversed() {
+                guard m.numberOfRanges >= 3 else { continue }
+                let numRange = m.range(at: 1)
+                let unitRange = m.range(at: 2)
+                guard let numStr = Range(numRange, in: result).map({ String(result[$0]) }),
+                      let unitStr = Range(unitRange, in: result).map({ String(result[$0]) }) else { continue }
+                guard let value = parseQuantityNumber(numStr) else { continue }
+                let scaled = value * scale
+                let replacement = formatScaledQuantity(scaled, original: numStr) + " " + unitStr + "⟦ingredient_qty:⟧"
+                let fullRange = m.range
+                guard let swiftRange = Range(fullRange, in: result) else { continue }
+                result.replaceSubrange(swiftRange, with: replacement)
+            }
+        }
+
+        // Then, handle unlabeled quantities (fallback for recipes without labels)
+        let allowedUnits = ["g","gramm","gram","kg","kilogramm","ml","milliliter","l","liter","dl","deciliter","cl","centiliter",
+                           "EL","Esslöffel","tbsp","tablespoon","tablespoons",
+                           "TL","Teelöffel","tsp","teaspoon","teaspoons",
+                           "Prise","pinch","pinches",
+                           "Stück","Stueck","piece","pieces",
+                           "Scheiben","slices","Scheibe","slice",
+                           "Dosen","dose","doses","can","cans",
+                           "Tassen","Tasse","cup","cups",
+                           "Zwiebeln","onions","Zwiebel","onion",
+                           "Zehen","cloves","Zehe","clove"]
+        let timeUnits = ["min","minute","minuten","minutes","sek","sekunde","sekunden","seconds","sec",
+                        "std","stunde","stunden","hour","hours","h",
+                        "°c","°f","grad","celsius","fahrenheit","c","f"]
+        let pattern = #"(?i)(\b\d+\/\d+|\b\d+[\.,]\d+|\b\d+)\s*(\p{L}+)(?!\s*⟦ingredient_qty:⟧)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return result }
+        let ns = result as NSString
+        let matches = regex.matches(in: result, options: [], range: NSRange(location: 0, length: ns.length))
         for m in matches.reversed() {
             guard m.numberOfRanges >= 3 else { continue }
             let numRange = m.range(at: 1)
             let unitRange = m.range(at: 2)
-            // Extract strings for decision making
             guard let numStr = Range(numRange, in: result).map({ String(result[$0]) }),
                   let unitStr = Range(unitRange, in: result).map({ String(result[$0]) }) else { continue }
             let unitLower = unitStr.lowercased()
-            if timeUnits.contains(unitLower) { continue }
+            if timeUnits.contains(where: { $0.lowercased() == unitLower }) { continue }
             if !allowedUnits.contains(where: { $0.lowercased() == unitLower }) { continue }
             guard let value = parseQuantityNumber(numStr) else { continue }
             let scaled = value * scale
             let replacement = formatScaledQuantity(scaled, original: numStr) + " " + unitStr
-            // Replace the entire matched span (number + optional space + unit)
             let fullRange = m.range
             guard let swiftRange = Range(fullRange, in: result) else { continue }
             result.replaceSubrange(swiftRange, with: replacement)

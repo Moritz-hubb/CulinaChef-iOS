@@ -1,90 +1,91 @@
-# SSL Certificate Pinning
+# SSL Public Key Pinning (SPKI)
 
 ## Übersicht
 
-Die App verwendet SSL Certificate Pinning für erhöhte Sicherheit. Die Zertifikate werden zur Build-Zeit ins App-Bundle eingebunden.
+Die App verwendet **SPKI (Subject Public Key Info) Pinning** statt vollständigem Zertifikat-Pinning. Dabei wird der SHA-256-Hash des öffentlichen Schlüssels (Public Key) verglichen, nicht das gesamte Zertifikat.
 
-## Lokale Entwicklung
+**Vorteile gegenüber Leaf-Certificate-Pinning:**
+- Überlebt Zertifikats-Rotationen, solange der Server den gleichen Key verwendet
+- Kein Bundling von `.cer`-Dateien im App-Bundle notwendig
+- Pin-Hashes werden als Konstanten in `Config.swift` gespeichert
 
-Für lokale Builds müssen die Zertifikate manuell heruntergeladen werden:
+**Graceful Degradation:**
+Wenn der Pin-Vergleich fehlschlägt, aber die System-Trust-Validierung besteht (d.h. das Zertifikat ist gültig, nur der Key hat sich geändert), wird die Verbindung trotzdem zugelassen und ein Warning geloggt. Dadurch bricht die App bei Zertifikats-Rotationen von Railway/Supabase **nie** ab.
+
+## Architektur
+
+```
+Verbindungsaufbau
+    │
+    ├─ System Trust Validation (iOS/macOS CA Store)
+    │   ├─ ❌ Fehlgeschlagen → Verbindung BLOCKIERT (MITM oder abgelaufen)
+    │   └─ ✅ Bestanden
+    │       │
+    │       ├─ SPKI Hash Match → ✅ Verbindung (mit Pinning)
+    │       └─ SPKI Hash Mismatch → ✅ Verbindung (mit Warning-Log)
+    │                                  → Pin-Hashes aktualisieren!
+```
+
+## SPKI-Hashes aktualisieren
+
+### Automatisch (empfohlen)
 
 ```bash
 cd ios
 ./scripts/download_ssl_certificates.sh
 ```
 
-Das Script:
-- Liest die Supabase-URL aus `Configs/Secrets.xcconfig`
-- Liest die Backend-URL aus `Sources/Services/Config.swift` (Production)
-- Lädt die Zertifikate herunter und speichert sie in:
-  - `Certificates/supabase.cer`
-  - `Certificates/backend.cer`
-  - `supabase.cer` (Root, für Backward Compatibility)
-  - `backend.cer` (Root, für Backward Compatibility)
+Das Script gibt die aktuellen SPKI-Hashes aus, die in `Config.swift` eingetragen werden müssen.
+
+### Manuell
+
+```bash
+# SPKI SHA-256 Hash extrahieren
+echo | openssl s_client -servername HOST -connect HOST:443 2>/dev/null \
+  | openssl x509 -pubkey -noout \
+  | openssl pkey -pubin -outform DER \
+  | openssl dgst -sha256 -binary \
+  | base64
+```
+
+### In Config.swift eintragen
+
+```swift
+static let backendPublicKeyHashes: Set<String> = [
+    "AKTUELLER_HASH_BASE64",  // Aktueller Key
+]
+```
 
 ## CI/CD (GitHub Actions)
 
-Die Zertifikate werden automatisch während des Build-Prozesses heruntergeladen:
-
-1. **Automatischer Download**: Die CI/CD Pipeline lädt die Zertifikate vor dem Build herunter
-2. **GitHub Secrets**: Die Supabase-URL kann als `SUPABASE_URL` Secret gesetzt werden (optional)
-3. **Fallback**: Falls kein Secret gesetzt ist, wird die Standard-URL verwendet
-
-## Production Builds
-
-Für Production-Builds (App Store, TestFlight):
-
-1. **Automatisch**: Wenn über CI/CD gebaut wird, werden Zertifikate automatisch heruntergeladen
-2. **Manuell**: Wenn lokal gebaut wird, müssen Zertifikate vorher heruntergeladen werden
+Die CI Pipeline kann die SPKI-Hashes automatisch prüfen, aber sie müssen **nicht** bei jedem Build heruntergeladen werden, da die Hashes als Konstanten in `Config.swift` stehen. Die `.cer`-Dateien werden nur noch vom Script zur Hash-Berechnung verwendet.
 
 ## Wichtige Hinweise
 
-- ⚠️ **Zertifikate sind NICHT in Git**: Sie sind in `.gitignore` und werden nicht committed
-- ✅ **Zertifikate sind öffentlich**: Sie können von jedem Server heruntergeladen werden (kein Sicherheitsrisiko)
-- 🔄 **Zertifikate erneuern**: Wenn Server-Zertifikate erneuert werden, müssen die Zertifikate neu heruntergeladen werden
-- 📱 **App-Bundle**: Die Zertifikate werden zur Build-Zeit ins App-Bundle eingebunden
+- **Railway** verwendet Let's Encrypt Zertifikate (90-Tage-Rotation)
+- Bei Rotation kann sich der Public Key ändern → Graceful Degradation fängt das ab
+- Logs prüfen: Bei Pin-Mismatch wird ein Error-Log geschrieben → Hashes aktualisieren
+- **Supabase-Pinning** ist aktuell deaktiviert (`enableSupabasePinning = false`)
+
+## Dateien
+
+| Datei | Beschreibung |
+|-------|-------------|
+| `Sources/Services/SecureURLSession.swift` | SPKI-Pinning-Implementierung |
+| `Sources/Services/Config.swift` | Pin-Hashes & Feature-Flags |
+| `scripts/download_ssl_certificates.sh` | Hash-Extraktion-Script |
 
 ## Troubleshooting
 
-### SSL Pinning schlägt fehl
+### App kann keine Verbindung herstellen
 
-1. Prüfe, ob Zertifikate im Bundle sind:
-   ```bash
-   # Nach dem Build
-   unzip -l CulinaChef.app | grep "\.cer"
-   ```
+1. Prüfe ob SSL-Pinning aktiv ist: `Config.enableSSLPinning` (nur in Production)
+2. In Debug-Builds wird Pinning übersprungen
+3. Prüfe Logs auf "SSL Pinning: Public key mismatch" → Hashes aktualisieren
 
-2. Prüfe, ob Zertifikate aktuell sind:
-   ```bash
-   openssl x509 -in Certificates/supabase.cer -inform DER -noout -dates
-   openssl x509 -in Certificates/backend.cer -inform DER -noout -dates
-   ```
+### SPKI-Hash hat sich geändert
 
-3. Lade Zertifikate neu herunter:
-   ```bash
-   ./scripts/download_ssl_certificates.sh
-   ```
-
-### Build schlägt fehl wegen fehlender Zertifikate
-
-Die Zertifikate sind als `optional: true` markiert, daher sollte der Build auch ohne sie funktionieren. SSL Pinning wird dann jedoch nicht aktiviert.
-
-## Zertifikate erneuern
-
-Wenn Server-Zertifikate erneuert werden:
-
-1. Lade neue Zertifikate herunter:
-   ```bash
-   ./scripts/download_ssl_certificates.sh
-   ```
-
-2. Baue die App neu
-
-3. Teste SSL Pinning
-
-## Implementierung
-
-Die SSL Pinning-Implementierung befindet sich in:
-- `Sources/Services/SecureURLSession.swift`
-- Zertifikate werden aus dem Bundle geladen: `Bundle.main.url(forResource:name:withExtension:)`
-
+1. Script ausführen: `./scripts/download_ssl_certificates.sh`
+2. Neuen Hash in `Config.backendPublicKeyHashes` eintragen
+3. App neu builden und releasen
+4. **Die App funktioniert dank Graceful Degradation auch mit veralteten Hashes weiter**

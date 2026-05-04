@@ -783,25 +783,14 @@ struct PersonalRecipesView: View {
         mainContent
             .navigationBarHidden(true)
             .task { 
-                // OPTIMIZATION: Lade zuerst gecachte Rezepte für sofortige Anzeige
                 await loadCachedRecipesIfAvailable()
-                // Dann im Hintergrund aktualisieren (nur wenn Cache älter als 5 Minuten)
-                if app.recipesCacheTimestamp == nil || 
-                   Date().timeIntervalSince(app.recipesCacheTimestamp ?? Date.distantPast) > 300 {
+                if app.recipesCacheTimestamp == nil {
+                    // First load ever: show loading indicator and fetch from network
+                    await loadRecipes(keepVisible: false)
+                } else if Date().timeIntervalSince(app.recipesCacheTimestamp ?? Date.distantPast) > 300 {
+                    // Cache stale: refresh in background without flashing loading indicator
                     await loadRecipes(keepVisible: true)
                 }
-            }
-            .onAppear {
-                let appearTime = Date()
-                print("📱 [PERFORMANCE] PersonalRecipesView APPEARED at \(appearTime)")
-                print("📱 [PERFORMANCE] Current state: loading=\(loading), recipes=\(recipes.count), menus=\(menus.count)")
-            }
-            .task {
-                let taskStartTime = Date()
-                print("📱 [PERFORMANCE] PersonalRecipesView .task STARTED at \(taskStartTime)")
-                await loadRecipes(keepVisible: false)
-                let taskDuration = Date().timeIntervalSince(taskStartTime)
-                print("✅ [PERFORMANCE] PersonalRecipesView .task COMPLETED in \(String(format: "%.3f", taskDuration))s")
             }
             .refreshable { 
                 let refreshStartTime = Date()
@@ -1071,16 +1060,19 @@ struct PersonalRecipesView: View {
     
     /// Lädt gecachte Rezepte sofort, falls verfügbar
     func loadCachedRecipesIfAvailable() async {
-        // Lade gecachte Rezepte und Menüs sofort für instant display
         await MainActor.run {
             if !app.cachedRecipes.isEmpty {
-                // Zeige sofort an, auch wenn nur 1 Rezept im Cache ist
                 self.recipes = app.cachedRecipes
                 self.menus = app.cachedMenus
                 self.loading = false
                 Logger.info("[PersonalRecipesView] Loaded \(app.cachedRecipes.count) cached recipes for instant display", category: .data)
+            } else if app.recipesCacheTimestamp != nil {
+                // We've loaded before and the result was empty — show empty state immediately
+                self.recipes = []
+                self.menus = app.cachedMenus
+                self.loading = false
+                Logger.info("[PersonalRecipesView] Cache empty (previously loaded) - showing empty state", category: .data)
             } else {
-                // Cache ist leer - starte sofortiges Laden vom Netzwerk
                 Logger.info("[PersonalRecipesView] No cached recipes available, will load from network", category: .data)
             }
         }

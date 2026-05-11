@@ -5,14 +5,14 @@ struct SocialRecipeImportView: View {
     @Environment(\.dismiss) private var dismiss
 
     var initialURL: String? = nil
-    var autoStartFromShare: Bool = false
+    var initialExtraText: String? = nil
     var onFinished: (Recipe) -> Void
 
     @State private var urlText: String = ""
+    @State private var extraText: String = ""
     @State private var loading = false
     @State private var error: String?
     @State private var showConsentDialog = false
-    @State private var didTriggerAutoStart = false
     @State private var selectedTweaks: Set<String> = []
     @State private var tweakText: String = ""
     @State private var showTweaks = false
@@ -74,6 +74,21 @@ struct SocialRecipeImportView: View {
                             .padding(12)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 
+                            SocialImportLabel(L.import_social_extra_label.localized)
+                            Text(L.import_social_extra_hint.localized)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.75))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            TextField(L.import_social_extra_placeholder.localized, text: $extraText, axis: .vertical)
+                                .lineLimit(3...8)
+                                .textFieldStyle(.plain)
+                                .foregroundStyle(.white)
+                                .tint(.white)
+                                .padding(12)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .focused($isFocused)
+
                             // Tweak section
                             tweakSection
 
@@ -133,15 +148,13 @@ struct SocialRecipeImportView: View {
                         .foregroundStyle(.white)
                 }
             }
-            .interactiveDismissDisabled(loading && autoStartFromShare)
+            .interactiveDismissDisabled(loading)
             .alert(L.consent_title.localized, isPresented: $showConsentDialog) {
                 Button(L.consent_decline.localized, role: .cancel) {}
                 Button(L.consent_accept.localized) {
                     OpenAIConsentManager.hasConsent = true
                     app.openAIConsentGranted = true
-                    if autoStartFromShare {
-                        Task { await runImport() }
-                    }
+                    Task { await runImport() }
                 }
             } message: {
                 Text(L.consent_subtitle.localized)
@@ -150,11 +163,9 @@ struct SocialRecipeImportView: View {
                 if urlText.isEmpty, let initialURL, !initialURL.isEmpty {
                     urlText = initialURL
                 }
-                guard autoStartFromShare, !didTriggerAutoStart else { return }
-                let trimmed = urlText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { return }
-                didTriggerAutoStart = true
-                Task { await runImport() }
+                if extraText.isEmpty, let initialExtraText, !initialExtraText.isEmpty {
+                    extraText = initialExtraText
+                }
             }
         }
     }
@@ -296,12 +307,14 @@ struct SocialRecipeImportView: View {
         do {
             let tweaks = selectedTweaks.isEmpty ? nil : Array(selectedTweaks)
             let trimmedTweak = tweakText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmedExtra = String(extraText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(12000))
             let recipe = try await app.backend.importRecipeFromSocialURL(
                 url: trimmedURL,
                 recipeLanguage: lang,
                 dietaryContext: dietary.isEmpty ? nil : dietary,
                 recipeTweaks: tweaks,
                 tweakText: trimmedTweak.isEmpty ? nil : trimmedTweak,
+                extraText: trimmedExtra.isEmpty ? nil : trimmedExtra,
                 accessToken: token
             )
             Logger.info("[SocialImport] runImport success recipeId=\(recipe.id)", category: .data)

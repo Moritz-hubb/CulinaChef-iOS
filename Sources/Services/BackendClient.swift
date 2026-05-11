@@ -312,10 +312,12 @@ final class BackendClient {
         dietaryContext: String?,
         recipeTweaks: [String]?,
         tweakText: String?,
+        extraText: String?,
         accessToken: String
     ) async throws -> Recipe {
         struct Body: Encodable {
             let url: String
+            let extra_text: String?
             let language: String?
             let dietary_context: String?
             let recipe_tweaks: [String]?
@@ -328,8 +330,11 @@ final class BackendClient {
             }
         }()
         let trimmedTweakText = tweakText?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedExtra = extraText?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cappedExtra = trimmedExtra.map { String($0.prefix(12000)) }
         let body = Body(
             url: url,
+            extra_text: (cappedExtra?.isEmpty == true) ? nil : cappedExtra,
             language: lang,
             dietary_context: dietaryContext,
             recipe_tweaks: recipeTweaks?.isEmpty == true ? nil : recipeTweaks,

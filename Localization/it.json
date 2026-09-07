@@ -240,7 +240,7 @@
   "onboarding.keine_spezielle_ernährungsweise_kei": "Nessuna dieta particolare? Nessun problema!",
   "onboarding.skip": "Salta",
   "onboarding.was_möchtest_du_meiden": "Cosa non ti piace per niente?",
-  "onboarding.zutaten_die_du_nicht": "Ingredienti che non ti piacciono o vuoi evitare",
+  "onboarding.zutaten_die_du_nicht": "Ingredienti che non ti piacciono",
   "onboarding.welcome": "Benvenuto in CulinaAI!",
   "onboarding.welcomeMessage": "Conosciamo le tue preferenze personali per creare le ricette perfette per te.",
   "onboarding.feature.ai": "Generazione di ricette con IA",
@@ -257,9 +257,7 @@
   "onboarding.greeting.message": "Scopriamo insieme le tue preferenze personali per creare le ricette perfette per te.",
   "onboarding.greeting.fallback": "lì",
   "onboarding.wähle_deine_ernährungspräferenzen_a": "Scegli le tue preferenze alimentari",
-  "onboarding.wähle_deine_ernährungspräferenzen_a": "Scegli le tue preferenze alimentari",
   "onboarding.zurück": "Indietro",
-  "onboarding.zutaten_die_du_nicht": "Ingredienti che non ti piacciono",
   "onboarding.stepOfTotal": "Passaggio {step} di {total}",
   "onboarding.howSpicyDoYouLikeIt": "Quanto piccante ti piace?",
   "onboarding.additionalPreferencesOptional": "Preferenze aggiuntive (opzionale)",
@@ -764,5 +762,6 @@
   "recipe.revise.loading": "Revisione…",
   "recipe.revise.needFullRecipe": "Attendi il caricamento completo della ricetta.",
   "recipe.revise.needGoalOrText": "Seleziona almeno un obiettivo o inserisci testo.",
-  "recipe.revise.badge": "Revisione"
+  "recipe.revise.badge": "Revisione",
+  "recipe.zutaten_für_diesen_schritt": "Ingredienti per questo passo"
 }

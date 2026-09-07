@@ -1,316 +1,179 @@
 import Foundation
-// DEVELOPMENT MODE: RevenueCat import disabled
-// import RevenueCat
+import RevenueCat
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
 #endif
 
-/// Manager for RevenueCat subscription operations
-/// Handles all RevenueCat SDK interactions, purchases, and entitlement checking
-/// 
-/// DEVELOPMENT MODE: This class is stubbed out to allow compilation without RevenueCat module.
-/// Before launch, uncomment RevenueCat import and restore all functionality.
+/// RevenueCat subscription operations: configure, identify, offerings, purchases.
 @MainActor
 final class RevenueCatManager: NSObject, ObservableObject {
-    
-    // MARK: - Singleton
-    
     static let shared = RevenueCatManager()
     
-    // MARK: - Published Properties
-    
-    // DEVELOPMENT MODE: Using placeholder types
-    @Published var customerInfo: Any? // CustomerInfo?
-    @Published var offerings: Any? // Offerings?
+    @Published var customerInfo: CustomerInfo?
+    @Published var offerings: Offerings?
     @Published var isLoading = false
     @Published var error: Error?
     
-    // MARK: - Constants
-    
-    /// Entitlement identifier for unlimited access
+    /// Must match the entitlement identifier in the RevenueCat dashboard.
     static let unlimitedEntitlementID = "CulinaAi Unlimited"
     
-    // MARK: - Private Properties
-    
-    private var isConfigured = false
-    
-    // MARK: - Initialization
+    private(set) var isConfigured = false
     
     private override init() {
         super.init()
-        // Private initializer for singleton
     }
     
-    // MARK: - Configuration
-    
-    /// Configure RevenueCat SDK with API key and user ID
-    /// Should be called once at app startup
-    /// 
-    /// DEVELOPMENT MODE: Stubbed out - does nothing
     func configure(userId: String? = nil) {
-        // DEVELOPMENT MODE: No-op
-        Logger.debug("[RevenueCat] Configure called (disabled in development)", category: .data)
+        guard !isConfigured else {
+            Logger.debug("[RevenueCat] Already configured", category: .data)
+            return
+        }
+        
+        let apiKey = Config.revenueCatAPIKey
+        guard !apiKey.isEmpty else {
+            Logger.error("[RevenueCat] Missing API key — skip configure", category: .data)
+            return
+        }
+        
+        let appUserID = userId ?? KeychainManager.get(key: "user_id")
+        Logger.info("[RevenueCat] Configuring SDK", category: .data)
+        
+        Purchases.logLevel = Config.currentEnvironment == .development ? .debug : .info
+        
+        var builder = Configuration.Builder(withAPIKey: apiKey)
+        if let appUserID, !appUserID.isEmpty {
+            builder = builder.with(appUserID: appUserID)
+        }
+        Purchases.configure(with: builder.build())
+        Purchases.shared.delegate = self
         isConfigured = true
         
-        // PRODUCTION (uncomment before launch):
-        // guard !isConfigured else {
-        //     Logger.debug("[RevenueCat] Already configured", category: .data)
-        //     return
-        // }
-        // 
-        // let appUserID = userId ?? getUserId()
-        // 
-        // Logger.info("[RevenueCat] Configuring with API key and user ID: \(appUserID.prefix(8))...", category: .data)
-        // 
-        // Purchases.logLevel = Config.currentEnvironment == .development ? .debug : .info
-        // 
-        // Purchases.configure(
-        //     with: Configuration.Builder(withAPIKey: Config.revenueCatAPIKey)
-        //         .with(appUserID: appUserID)
-        //         .with(usesStoreKit2IfAvailable: true)
-        //         .build()
-        // )
-        // 
-        // // Set delegate for customer info updates
-        // Purchases.shared.delegate = self
-        // 
-        // isConfigured = true
-        // 
-        // // Load initial customer info
-        // Task {
-        //     await loadCustomerInfo()
-        //     await loadOfferings()
-        // }
-    }
-    
-    /// Get or create user ID
-    private func getUserId() -> String {
-        if let userId = KeychainManager.get(key: "user_id") {
-            return userId
+        Task {
+            await loadCustomerInfo()
+            await loadOfferings()
         }
-        // Generate temporary ID - will be updated when user logs in
-        let tempId = UUID().uuidString
-        Logger.debug("[RevenueCat] Generated temporary user ID", category: .data)
-        return tempId
     }
     
-    /// Update user ID when user logs in
-    /// DEVELOPMENT MODE: Stubbed out
     func identify(userId: String) async throws {
-        // DEVELOPMENT MODE: No-op
-        Logger.debug("[RevenueCat] Identify called (disabled in development)", category: .data)
-        
-        // PRODUCTION (uncomment before launch):
-        // Logger.info("[RevenueCat] Identifying user: \(userId.prefix(8))...", category: .data)
-        // try await Purchases.shared.logIn(userId)
-        // await loadCustomerInfo()
+        guard isConfigured, Purchases.isConfigured else { return }
+        Logger.info("[RevenueCat] Identifying user", category: .data)
+        let result = try await Purchases.shared.logIn(userId)
+        customerInfo = result.customerInfo
     }
     
-    /// Log out current user
-    /// DEVELOPMENT MODE: Stubbed out
     func logOut() async throws {
-        // DEVELOPMENT MODE: No-op
-        Logger.debug("[RevenueCat] Logout called (disabled in development)", category: .data)
-        
-        // PRODUCTION (uncomment before launch):
-        // Logger.info("[RevenueCat] Logging out user", category: .data)
-        // let customerInfo = try await Purchases.shared.logOut()
-        // await MainActor.run {
-        //     self.customerInfo = customerInfo
-        // }
+        guard isConfigured, Purchases.isConfigured else { return }
+        Logger.info("[RevenueCat] Logging out user", category: .data)
+        customerInfo = try await Purchases.shared.logOut()
     }
     
-    // MARK: - Customer Info
-    
-    /// Load current customer info
-    /// DEVELOPMENT MODE: Stubbed out
     func loadCustomerInfo() async {
-        // DEVELOPMENT MODE: No-op
-        Logger.debug("[RevenueCat] LoadCustomerInfo called (disabled in development)", category: .data)
-        
-        // PRODUCTION (uncomment before launch):
-        // isLoading = true
-        // error = nil
-        // 
-        // do {
-        //     let info = try await Purchases.shared.customerInfo()
-        //     await MainActor.run {
-        //         self.customerInfo = info
-        //         self.isLoading = false
-        //         Logger.info("[RevenueCat] Customer info loaded - isSubscribed: \(info.entitlements[Self.unlimitedEntitlementID]?.isActive == true)", category: .data)
-        //     }
-        // } catch {
-        //     await MainActor.run {
-        //         self.error = error
-        //         self.isLoading = false
-        //         Logger.error("[RevenueCat] Failed to load customer info", error: error, category: .data)
-        //     }
-        // }
+        guard isConfigured, Purchases.isConfigured else { return }
+        isLoading = true
+        error = nil
+        do {
+            let info = try await Purchases.shared.customerInfo()
+            customerInfo = info
+            isLoading = false
+            Logger.info(
+                "[RevenueCat] Customer info loaded — subscribed: \(info.entitlements[Self.unlimitedEntitlementID]?.isActive == true)",
+                category: .data
+            )
+        } catch {
+            self.error = error
+            isLoading = false
+            Logger.error("[RevenueCat] Failed to load customer info", error: error, category: .data)
+        }
     }
     
-    /// Check if user has active subscription
-    /// DEVELOPMENT MODE: Always returns false (subscription check disabled)
     var isSubscribed: Bool {
-        // DEVELOPMENT MODE: Always false
-        return false
-        
-        // PRODUCTION (uncomment before launch):
-        // guard let customerInfo = customerInfo else { return false }
-        // return customerInfo.entitlements[Self.unlimitedEntitlementID]?.isActive == true
+        customerInfo?.entitlements[Self.unlimitedEntitlementID]?.isActive == true
     }
     
-    /// Get subscription expiration date
-    /// DEVELOPMENT MODE: Returns nil
     var expirationDate: Date? {
-        return nil
-        // PRODUCTION: customerInfo?.entitlements[Self.unlimitedEntitlementID]?.expirationDate
+        customerInfo?.entitlements[Self.unlimitedEntitlementID]?.expirationDate
     }
     
-    /// Get subscription period end date
-    var periodEnd: Date? {
-        expirationDate
-    }
+    var periodEnd: Date? { expirationDate }
     
-    /// Check if subscription will auto-renew
-    /// DEVELOPMENT MODE: Returns false
     var willRenew: Bool {
-        return false
-        // PRODUCTION: customerInfo?.entitlements[Self.unlimitedEntitlementID]?.willRenew == true
+        customerInfo?.entitlements[Self.unlimitedEntitlementID]?.willRenew == true
     }
     
-    /// Get active subscription product identifier
-    /// DEVELOPMENT MODE: Returns nil
     var activeProductIdentifier: String? {
-        return nil
-        // PRODUCTION: customerInfo?.entitlements[Self.unlimitedEntitlementID]?.productIdentifier
+        customerInfo?.entitlements[Self.unlimitedEntitlementID]?.productIdentifier
     }
     
-    // MARK: - Offerings
-    
-    /// Load available offerings (products)
-    /// DEVELOPMENT MODE: Stubbed out
     func loadOfferings() async {
-        // DEVELOPMENT MODE: No-op
-        Logger.debug("[RevenueCat] LoadOfferings called (disabled in development)", category: .data)
-        
-        // PRODUCTION (uncomment before launch):
-        // do {
-        //     let offerings = try await Purchases.shared.offerings()
-        //     await MainActor.run {
-        //         self.offerings = offerings
-        //         Logger.info("[RevenueCat] Offerings loaded - available packages: \(offerings.current?.availablePackages.count ?? 0)", category: .data)
-        //     }
-        // } catch {
-        //     await MainActor.run {
-        //         self.error = error
-        //         Logger.error("[RevenueCat] Failed to load offerings", error: error, category: .data)
-        //     }
-        // }
+        guard isConfigured, Purchases.isConfigured else { return }
+        do {
+            offerings = try await Purchases.shared.offerings()
+            Logger.info(
+                "[RevenueCat] Offerings loaded — packages: \(offerings?.current?.availablePackages.count ?? 0)",
+                category: .data
+            )
+        } catch {
+            self.error = error
+            Logger.error("[RevenueCat] Failed to load offerings", error: error, category: .data)
+        }
     }
     
-    /// Get available packages from current offering
-    /// DEVELOPMENT MODE: Returns empty array
-    var availablePackages: [Any] { // [Package]
-        return []
-        // PRODUCTION: offerings?.current?.availablePackages ?? []
+    var availablePackages: [Package] {
+        offerings?.current?.availablePackages ?? []
     }
     
-    /// Get monthly package
-    /// DEVELOPMENT MODE: Returns nil
-    var monthlyPackage: Any? { // Package?
-        return nil
-        // PRODUCTION: availablePackages.first { $0.storeProduct.subscriptionPeriod?.unit == .month }
+    var monthlyPackage: Package? {
+        availablePackages.first { $0.packageType == .monthly }
+            ?? availablePackages.first { $0.storeProduct.subscriptionPeriod?.unit == .month }
     }
     
-    /// Get yearly package
-    /// DEVELOPMENT MODE: Returns nil
-    var yearlyPackage: Any? { // Package?
-        return nil
-        // PRODUCTION: availablePackages.first { $0.storeProduct.subscriptionPeriod?.unit == .year }
+    var yearlyPackage: Package? {
+        availablePackages.first { $0.packageType == .annual }
+            ?? availablePackages.first { $0.storeProduct.subscriptionPeriod?.unit == .year }
     }
     
-    // MARK: - Purchases
-    
-    /// Purchase a subscription package
-    /// DEVELOPMENT MODE: Stubbed out - throws error
-    func purchase(package: Any) async throws -> (Any?, Any) { // (StoreTransaction?, CustomerInfo)
-        // DEVELOPMENT MODE: Not available
-        throw RevenueCatError.configurationError
-        
-        // PRODUCTION (uncomment before launch):
-        // Logger.info("[RevenueCat] Starting purchase for package: \(package.identifier)", category: .data)
-        // 
-        // do {
-        //     let (transaction, customerInfo, userCancelled) = try await Purchases.shared.purchase(package: package)
-        //     
-        //     if userCancelled {
-        //         throw RevenueCatError.userCancelled
-        //     }
-        //     
-        //     await MainActor.run {
-        //         self.customerInfo = customerInfo
-        //     }
-        //     
-        //     Logger.info("[RevenueCat] Purchase successful", category: .data)
-        //     return (transaction, customerInfo)
-        // } catch {
-        //     Logger.error("[RevenueCat] Purchase failed", error: error, category: .data)
-        //     throw error
-        // }
+    func purchase(package: Package) async throws -> (StoreTransaction?, CustomerInfo) {
+        Logger.info("[RevenueCat] Starting purchase for package: \(package.identifier)", category: .data)
+        let result = try await Purchases.shared.purchase(package: package)
+        if result.userCancelled {
+            throw RevenueCatError.userCancelled
+        }
+        customerInfo = result.customerInfo
+        Logger.info("[RevenueCat] Purchase successful", category: .data)
+        return (result.transaction, result.customerInfo)
     }
     
-    /// Restore purchases
-    /// DEVELOPMENT MODE: Stubbed out
     func restorePurchases() async throws {
-        // DEVELOPMENT MODE: No-op
-        Logger.debug("[RevenueCat] RestorePurchases called (disabled in development)", category: .data)
-        
-        // PRODUCTION (uncomment before launch):
-        // Logger.info("[RevenueCat] Restoring purchases", category: .data)
-        // 
-        // let customerInfo = try await Purchases.shared.restorePurchases()
-        // 
-        // await MainActor.run {
-        //     self.customerInfo = customerInfo
-        // }
-        // 
-        // Logger.info("[RevenueCat] Purchases restored - isSubscribed: \(customerInfo.entitlements[Self.unlimitedEntitlementID]?.isActive == true)", category: .data)
+        Logger.info("[RevenueCat] Restoring purchases", category: .data)
+        customerInfo = try await Purchases.shared.restorePurchases()
+        Logger.info("[RevenueCat] Restore finished — subscribed: \(isSubscribed)", category: .data)
     }
     
-    // MARK: - Customer Center
-    
-    /// Check if Customer Center is available
     var canShowCustomerCenter: Bool {
-        // RevenueCat Customer Center is available if we have customer info
-        return customerInfo != nil
+        customerInfo != nil
     }
     
-    /// Show Customer Center (manage subscription)
     func showCustomerCenter() {
-        // RevenueCat provides a URL for managing subscriptions
-        // This opens the App Store subscription management page
         if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
             UIApplication.shared.open(url)
         }
     }
 }
 
-// MARK: - PurchasesDelegate
+extension RevenueCatManager: PurchasesDelegate {
+    nonisolated func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
+        Task { @MainActor in
+            self.customerInfo = customerInfo
+            Logger.info(
+                "[RevenueCat] Customer info updated — subscribed: \(customerInfo.entitlements[Self.unlimitedEntitlementID]?.isActive == true)",
+                category: .data
+            )
+        }
+    }
+}
 
-// DEVELOPMENT MODE: PurchasesDelegate disabled
-// extension RevenueCatManager: PurchasesDelegate {
-//     nonisolated func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
-//         Task { @MainActor in
-//             self.customerInfo = customerInfo
-//             Logger.info("[RevenueCat] Customer info updated - isSubscribed: \(customerInfo.entitlements[Self.unlimitedEntitlementID]?.isActive == true)", category: .data)
-//         }
-//     }
-// }
-
-// MARK: - Errors
-
-enum RevenueCatError: LocalizedError {
+enum RevenueCatError: LocalizedError, Equatable {
     case userCancelled
     case noOfferingsAvailable
     case packageNotFound
@@ -329,4 +192,3 @@ enum RevenueCatError: LocalizedError {
         }
     }
 }
-

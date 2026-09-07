@@ -257,9 +257,7 @@
   "onboarding.greeting.message": "Let's discover your personal preferences together so we can create the perfect recipes for you.",
   "onboarding.greeting.fallback": "there",
   "onboarding.wähle_deine_ernährungspräferenzen_a": "Choose your dietary preferences",
-  "onboarding.wähle_deine_ernährungspräferenzen_a": "Choose your dietary preferences",
   "onboarding.zurück": "Back",
-  "onboarding.zutaten_die_du_nicht": "Ingredients you don't like or want to avoid",
   "onboarding.stepOfTotal": "Step {step} of {total}",
   "onboarding.howSpicyDoYouLikeIt": "How spicy do you like it?",
   "onboarding.additionalPreferencesOptional": "Additional preferences (optional)",
@@ -727,5 +725,6 @@
   "import.social_insufficient_info": "The link doesn't contain enough information to create a recipe. Try a different link.",
   "import.social_tweak_title": "Adapt recipe",
   "import.social_tweak_subtitle": "Optional: The AI will adapt the recipe to your preferences.",
-  "import.social_tweak_prompt_placeholder": "e.g. use coconut milk instead of cream …"
+  "import.social_tweak_prompt_placeholder": "e.g. use coconut milk instead of cream …",
+  "recipe.zutaten_für_diesen_schritt": "Ingredients for this step"
 }

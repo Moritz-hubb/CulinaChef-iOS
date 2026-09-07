@@ -257,9 +257,7 @@
   "onboarding.greeting.message": "Let's discover your personal preferences together so we can create the perfect recipes for you.",
   "onboarding.greeting.fallback": "there",
   "onboarding.wähle_deine_ernährungspräferenzen_a": "Choose your dietary preferences",
-  "onboarding.wähle_deine_ernährungspräferenzen_a": "Choose your dietary preferences",
   "onboarding.zurück": "Back",
-  "onboarding.zutaten_die_du_nicht": "Ingredients you don't like or want to avoid",
   "onboarding.stepOfTotal": "Step {step} of {total}",
   "onboarding.howSpicyDoYouLikeIt": "How spicy do you like it?",
   "onboarding.additionalPreferencesOptional": "Additional preferences (optional)",
@@ -764,5 +762,6 @@
   "recipe.revise.loading": "Revising…",
   "recipe.revise.needFullRecipe": "Please wait until the recipe has fully loaded.",
   "recipe.revise.needGoalOrText": "Select at least one goal or enter text.",
-  "recipe.revise.badge": "Revision"
+  "recipe.revise.badge": "Revision",
+  "recipe.zutaten_für_diesen_schritt": "Ingredients for this step"
 }

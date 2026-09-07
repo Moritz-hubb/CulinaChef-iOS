@@ -1004,6 +1004,7 @@ enum L {
     static let recipe_das_perfekte_rezept_ist = "recipe.das_perfekte_rezept_ist"
     static let recipe_keine_schritte_gefunden = "recipe.keine_schritte_gefunden"
     static let recipe_zutaten = "recipe.zutaten"
+    static let recipe_zutaten_für_diesen_schritt = "recipe.zutaten_für_diesen_schritt"
     static let recipe_zutaten_zur_einkaufsliste_hinzufüge = "recipe.zutaten_zur_einkaufsliste_hinzufüge"
     static let recipe_nährwerte = "recipe.nährwerte"
     static let recipe_nährwerte_pro_portion = "recipe.nährwerte_pro_portion"

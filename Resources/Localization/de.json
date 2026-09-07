@@ -258,7 +258,6 @@
   "onboarding.greeting.fallback": "dort",
   "onboarding.wähle_deine_ernährungspräferenzen_a": "Wähle deine Ernährungspräferenzen aus",
   "onboarding.zurück": "Zurück",
-  "onboarding.zutaten_die_du_nicht": "Zutaten die du nicht magst oder vermeiden möchtest",
   "onboarding.stepOfTotal": "Schritt {step} von {total}",
   "onboarding.howSpicyDoYouLikeIt": "Wie scharf magst du es?",
   "onboarding.additionalPreferencesOptional": "Weitere Vorlieben (optional)",
@@ -726,5 +725,6 @@
   "import.social_insufficient_info": "Der Link enthält nicht genug Informationen, um ein Rezept zu erstellen. Versuche einen anderen Link.",
   "import.social_tweak_title": "Rezept anpassen",
   "import.social_tweak_subtitle": "Optional: Die KI passt das Rezept an deine Wünsche an.",
-  "import.social_tweak_prompt_placeholder": "z. B. Kokosmilch statt Sahne verwenden …"
+  "import.social_tweak_prompt_placeholder": "z. B. Kokosmilch statt Sahne verwenden …",
+  "recipe.zutaten_für_diesen_schritt": "Zutaten für diesen Schritt"
 }

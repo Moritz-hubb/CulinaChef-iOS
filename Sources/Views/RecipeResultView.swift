@@ -297,10 +297,17 @@ Text(ing.name).font(.body).foregroundStyle(.white)
     private func stepPage(index: Int, step: RecipeStep) -> some View {
         let isLastStep = index == plan.steps.count
         return ScrollView {
+            let stepIngredients = StepIngredientExtractor.ingredients(
+                in: step.description,
+                planIngredients: plan.ingredients,
+                currentServings: servings,
+                baseServings: plan.servings
+            )
             VStack(alignment: .leading, spacing: 16) {
                 Text(step.title).font(.title3.bold()).foregroundStyle(.white)
                 if let d = step.duration_minutes { LabeledRow(L.label_cookingTime.localized.replacingOccurrences(of: ":", with: ""), String(d) + " min") }
                 Text(scaleInstruction(step.description, baseServings: plan.servings, currentServings: servings).replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")).foregroundStyle(.white)
+                StepIngredientsBlock(items: stepIngredients)
 
                 if let cookMins = parseCookMinutes(from: step.description) {
                     SharedTimerControl(minutes: cookMins, label: step.title, center: timerCenter)

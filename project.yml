@@ -18,14 +18,25 @@ packages:
   RevenueCat:
     url: https://github.com/RevenueCat/purchases-ios-spm.git
     from: 5.49.2
+  SuperwallKit:
+    url: https://github.com/superwall/Superwall-iOS
+    from: 4.0.0
+# Xcode 26 otherwise links private SwiftUICore and drops SPM object files.
 settings:
   base:
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     SWIFT_VERSION: 5.9
     DEVELOPMENT_TEAM: "4Q33QP9G7Z"
     ALWAYS_SEARCH_USER_PATHS: NO
-    SWIFT_ENABLE_EXPLICIT_MODULES: YES
-    SWIFT_EMIT_MODULE_SEPARATELY: NO
+    SWIFT_ENABLE_EXPLICIT_MODULES: NO
+    ENABLE_DEBUG_DYLIB: NO
+    LLVM_LTO: NO
+  configs:
+    Debug:
+      GCC_OPTIMIZATION_LEVEL: 0
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      DEAD_CODE_STRIPPING: NO
+      ONLY_ACTIVE_ARCH: YES
 targets:
   CulinaChef:
     type: application
@@ -43,6 +54,8 @@ targets:
         product: Sentry
       - package: RevenueCat
         product: RevenueCat
+      - package: SuperwallKit
+        product: SuperwallKit
       - target: CulinaChefTimerWidget
         embed: true
         codeSignOnCopy: true
@@ -71,6 +84,7 @@ targets:
         OpenAIAPIKey: $(OPENAI_API_KEY)
         SentryDSN: $(SENTRY_DSN)
         RevenueCatAPIKey: $(REVENUECAT_API_KEY)
+        SuperwallAPIKey: $(SUPERWALL_API_KEY)
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - culinachef
@@ -84,6 +98,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.moritzserrin.culinachef
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_DEBUG_DYLIB: NO
       configs:
         Release:
           DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
@@ -121,6 +136,12 @@ targets:
       path: Configs/CulinaChefWidget.entitlements
     info:
       path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Koch-Timer
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+          NSExtensionAttributes:
+            WidgetKind: CulinaChefTimerWidget
     settings:
       base:
         PRODUCT_NAME: CulinaChefTimerWidget
@@ -156,6 +177,15 @@ targets:
       path: Configs/CulinaShare.entitlements
     info:
       path: CulinaShare/Info.plist
+      properties:
+        CFBundleDisplayName: CulinaChef
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
     settings:
       base:
         PRODUCT_NAME: CulinaShare

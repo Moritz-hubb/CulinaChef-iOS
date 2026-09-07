@@ -240,7 +240,7 @@
   "onboarding.keine_spezielle_ernährungsweise_kei": "¿Sin dieta especial? ¡No hay problema!",
   "onboarding.skip": "Saltar",
   "onboarding.was_möchtest_du_meiden": "¿Qué no te gusta para nada?",
-  "onboarding.zutaten_die_du_nicht": "Ingredientes que no te gustan o quieres evitar",
+  "onboarding.zutaten_die_du_nicht": "Ingredientes que no te gustan",
   "onboarding.welcome": "¡Bienvenido a CulinaAI!",
   "onboarding.welcomeMessage": "Conozcamos tus preferencias personales para crear las recetas perfectas para ti.",
   "onboarding.feature.ai": "Generación de recetas con IA",
@@ -257,9 +257,7 @@
   "onboarding.greeting.message": "Descubramos juntos tus preferencias personales para crear las recetas perfectas para ti.",
   "onboarding.greeting.fallback": "allí",
   "onboarding.wähle_deine_ernährungspräferenzen_a": "Elige tus preferencias alimentarias",
-  "onboarding.wähle_deine_ernährungspräferenzen_a": "Elige tus preferencias alimentarias",
   "onboarding.zurück": "Atrás",
-  "onboarding.zutaten_die_du_nicht": "Ingredientes que no te gustan",
   "onboarding.stepOfTotal": "Paso {step} de {total}",
   "onboarding.howSpicyDoYouLikeIt": "¿Qué tan picante te gusta?",
   "onboarding.additionalPreferencesOptional": "Preferencias adicionales (opcional)",
@@ -727,5 +725,6 @@
   "import.social_insufficient_info": "El enlace no contiene suficiente información para crear una receta. Prueba con otro enlace.",
   "import.social_tweak_title": "Adaptar receta",
   "import.social_tweak_subtitle": "Opcional: La IA adaptará la receta a tus preferencias.",
-  "import.social_tweak_prompt_placeholder": "p. ej. usar leche de coco en vez de nata …"
+  "import.social_tweak_prompt_placeholder": "p. ej. usar leche de coco en vez de nata …",
+  "recipe.zutaten_für_diesen_schritt": "Ingredientes para este paso"
 }

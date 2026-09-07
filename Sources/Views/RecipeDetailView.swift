@@ -721,11 +721,19 @@ struct RecipeDetailView: View {
             // Remove invisible labels before displaying
             let bodyText = scaledText.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
             let labelText = split.label
+            let stepIngredients = StepIngredientExtractor.ingredients(
+                in: split.body,
+                recipeIngredients: displayRecipe.ingredients ?? [],
+                servings: servings,
+                baseServings: 4
+            )
             VStack(alignment: .leading, spacing: 16) {
                 Text(bodyText)
                     .font(.title3)
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
+
+                StepIngredientsBlock(items: stepIngredients)
                 
                 // Timer detection
                 if let cookMins = parseCookMinutes(from: bodyText) {

@@ -178,6 +178,8 @@ final class AppState: ObservableObject {
     /// - Führt einmalige Migration von Abo-Daten aus `UserDefaults` in den Keychain durch.
     /// - Prüft bestehende Sessions und lädt ggf. Nutzerpräferenzen aus Supabase.
     init() {
+        Monetization.shared.start()
+        
         let backendURL = Config.backendBaseURL
         // Always log in DEBUG to ensure we see it
         Logger.info("[AppState] Initializing BackendClient with URL: \(backendURL.absoluteString)", category: .config)
@@ -198,13 +200,6 @@ final class AppState: ObservableObject {
         subscriptionManager = SubscriptionManager(backend: backend, subscriptionsClient: subscriptionsClient, storeKit: storeKit)
         menuManager = MenuManager()
         
-        // DEVELOPMENT MODE: RevenueCat initialization disabled
-        // Initialize RevenueCat (uncomment before launch):
-        // if let userId = KeychainManager.get(key: "user_id") {
-        //     RevenueCatManager.shared.configure(userId: userId)
-        // } else {
-        //     RevenueCatManager.shared.configure()
-        // }
         recipeManager = RecipeManager()
         
         // Prime StoreKit - delay to ensure app is fully initialized
@@ -271,13 +266,11 @@ final class AppState: ObservableObject {
         // Check for existing session
         checkSession()
         
-        // DEVELOPMENT MODE: RevenueCat identify disabled
-        // Update RevenueCat user ID when user logs in (uncomment before launch):
-        // Task {
-        //     if let userId = KeychainManager.get(key: "user_id") {
-        //         try? await RevenueCatManager.shared.identify(userId: userId)
-        //     }
-        // }
+        Task {
+            if let userId = KeychainManager.get(key: "user_id") {
+                try? await Monetization.shared.identify(userId: userId)
+            }
+        }
         // DEV MODE: Subscription status always active, no checks needed
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -374,13 +367,9 @@ final class AppState: ObservableObject {
             self.accessToken = token
             self.userEmail = email
             
-            // DEVELOPMENT MODE: RevenueCat identify disabled
-            // Identify user in RevenueCat when session is restored (uncomment before launch):
-            // if let userId = KeychainManager.get(key: "user_id") {
-            //     Task {
-            //         try? await RevenueCatManager.shared.identify(userId: userId)
-            //     }
-            // }
+            if let userId = KeychainManager.get(key: "user_id") {
+                Task { try? await Monetization.shared.identify(userId: userId) }
+            }
             self.isAuthenticated = true
             
             // Try to refresh token in background to ensure session is valid
@@ -948,6 +937,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             self.isAuthenticated = true
             self.isInitialDataLoaded = false // Reset to show loading screen
         }
+        try? await Monetization.shared.identify(userId: result.userId)
         
         // Load subscription status directly from StoreKit (Apple) first
         await refreshSubscriptionStatusFromStoreKit()
@@ -975,6 +965,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             self.isAuthenticated = true
             self.isInitialDataLoaded = false // Reset to show loading screen
         }
+        try? await Monetization.shared.identify(userId: result.userId)
         
         // Load subscription status directly from StoreKit (Apple) first
         await refreshSubscriptionStatusFromStoreKit()
@@ -1045,6 +1036,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             self.passwordResetToken = nil
             self.passwordResetRefreshToken = nil
         }
+        try? await Monetization.shared.identify(userId: result.userId)
         
         // Load subscription status directly from StoreKit (Apple) first
         await refreshSubscriptionStatusFromStoreKit()
@@ -1076,6 +1068,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             // CRITICAL: Reload shopping list for new user to prevent cache bleeding
             self.shoppingListManager.loadShoppingList()
         }
+        try? await Monetization.shared.identify(userId: result.userId)
         
         // Load subscription status directly from StoreKit (Apple) first
         await refreshSubscriptionStatusFromStoreKit()
@@ -1093,6 +1086,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     /// - Hinweis: Shopping- und Subscription-Daten werden lokal zurückgesetzt;
     ///   Server-seitige Session-Invalidierung erfolgt über Supabase.
     func signOut() async {
+        await Monetization.shared.logOut()
         await authManager.signOut(accessToken: accessToken)
         await MainActor.run {
             self.accessToken = nil
@@ -1156,17 +1150,11 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
 
     // MARK: - Account deletion & subscription management
     func openManageSubscriptions() async {
-        // DEVELOPMENT MODE: Use StoreKit only
-        await subscriptionManager.openManageSubscriptions()
-        
-        // PRODUCTION (uncomment before launch):
-        // // Use RevenueCat Customer Center if available
-        // if RevenueCatManager.shared.canShowCustomerCenter {
-        //     RevenueCatManager.shared.showCustomerCenter()
-        // } else {
-        //     // Fallback to StoreKit
-        //     await subscriptionManager.openManageSubscriptions()
-        // }
+        if RevenueCatManager.shared.canShowCustomerCenter {
+            RevenueCatManager.shared.showCustomerCenter()
+        } else {
+            await subscriptionManager.openManageSubscriptions()
+        }
     }
 
     func deleteAccountAndData() async {

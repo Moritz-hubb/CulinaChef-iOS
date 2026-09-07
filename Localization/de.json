@@ -258,7 +258,6 @@
   "onboarding.greeting.fallback": "dort",
   "onboarding.wähle_deine_ernährungspräferenzen_a": "Wähle deine Ernährungspräferenzen aus",
   "onboarding.zurück": "Zurück",
-  "onboarding.zutaten_die_du_nicht": "Zutaten die du nicht magst oder vermeiden möchtest",
   "onboarding.stepOfTotal": "Schritt {step} von {total}",
   "onboarding.howSpicyDoYouLikeIt": "Wie scharf magst du es?",
   "onboarding.additionalPreferencesOptional": "Weitere Vorlieben (optional)",
@@ -763,5 +762,6 @@
   "recipe.revise.loading": "Überarbeite …",
   "recipe.revise.needFullRecipe": "Bitte warte, bis das Rezept vollständig geladen ist.",
   "recipe.revise.needGoalOrText": "Bitte mindestens ein Ziel wählen oder Text eingeben.",
-  "recipe.revise.badge": "Überarbeitung"
+  "recipe.revise.badge": "Überarbeitung",
+  "recipe.zutaten_für_diesen_schritt": "Zutaten für diesen Schritt"
 }

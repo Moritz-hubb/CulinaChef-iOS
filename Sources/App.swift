@@ -87,6 +87,7 @@ struct CulinaChefApp: App {
     
     private func handleDeepLink(_ url: URL) {
         Logger.debug("Received deep link: \(url)", category: .ui)
+        Monetization.shared.handleDeepLink(url)
         
         // Handle culinachef:// scheme
         if url.scheme == "culinachef" {

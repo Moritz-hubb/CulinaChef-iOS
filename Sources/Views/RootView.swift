@@ -187,12 +187,7 @@ struct RootView: View {
             .fullScreenCover(isPresented: $showOnboarding) {
                 OnboardingView()
             }
-            // DEVELOPMENT MODE: Paywall disabled
-            // .fullScreenCover(isPresented: $showSubscriptionPaywall, onDismiss: paywallDismissed) {
-            //     RevenueCatPaywallView()
-            //         .environmentObject(app)
-            //         .interactiveDismissDisabled(true)
-            // }
+            // DEVELOPMENT MODE: Paywall UI is Superwall (campaign_trigger)
             .onAppear {
                 checkSubscriptionStatus()
             }
@@ -242,11 +237,8 @@ struct RootView: View {
     }
     
     private func checkSubscriptionStatus() {
-        // DEVELOPMENT MODE: Paywall disabled
-        // Always trigger a refresh in the background
         app.loadSubscriptionStatus()
-        
-        // Don't show paywall in development
+        Monetization.shared.register(placement: SuperwallPlacements.campaignTrigger)
         showSubscriptionPaywall = false
     }
 }

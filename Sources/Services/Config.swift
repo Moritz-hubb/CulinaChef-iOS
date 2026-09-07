@@ -132,26 +132,41 @@ enum Config {
     
     // MARK: - RevenueCat Configuration
     
-    /// RevenueCat API Key - loaded from Info.plist or environment
+    /// RevenueCat public SDK key from Info.plist (`Secrets.xcconfig`).
     static let revenueCatAPIKey: String = {
-        // First try Info.plist (from Secrets.xcconfig)
         if let key = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
            !key.isEmpty,
            !key.hasPrefix("$") {
             return key
         }
         
-        // Fallback to test key for development only
         #if DEBUG
         Logger.warning("RevenueCatAPIKey not configured in Info.plist. Using test key for development.", category: .config)
         return "test_nYAqGXmJwAhLGWnwCXWzRyQjWsk"
         #else
         Logger.error("RevenueCatAPIKey not configured in Info.plist. RevenueCat will not work in production!", category: .config)
-        // In production, we should fail if key is missing
-        // But for now, return empty string to prevent crashes
         return ""
         #endif
     }()
+    
+    /// Superwall public API key from Info.plist (`Secrets.xcconfig`).
+    static let superwallAPIKey: String = {
+        if let key = Bundle.main.object(forInfoDictionaryKey: "SuperwallAPIKey") as? String,
+           !key.isEmpty,
+           !key.hasPrefix("$") {
+            return key
+        }
+        Logger.warning("SuperwallAPIKey not configured in Info.plist. Superwall paywalls will not show.", category: .config)
+        return ""
+    }()
+    
+    static var isSuperwallConfigured: Bool {
+        !superwallAPIKey.isEmpty
+    }
+    
+    static var isRevenueCatConfigured: Bool {
+        !revenueCatAPIKey.isEmpty
+    }
     
     // MARK: - API Timeouts
     

@@ -15,37 +15,42 @@ enum Feature {
 }
 
 extension AppState {
-    /// Check if the current user has access to a specific feature
-    /// - Parameter feature: The feature to check access for
-    /// - Returns: True if user has access, false otherwise
-    /// 
-    /// DEVELOPMENT MODE: All features are enabled. Before launch, restore subscription check.
-    /// DEV MODE: Always returns true - all features available without subscription
+    /// Check if the current user has access to a specific feature.
+    /// AI access is based on RevenueCat entitlement `CulinaAi Unlimited` (`isSubscribed`).
+    /// The backend still re-checks RevenueCat/DB; this only avoids sending the request.
     func hasAccess(to feature: Feature) -> Bool {
-        // DEV MODE: All features available, no subscription checks
+        switch feature {
+        case .aiChat, .aiRecipeGenerator, .aiRecipeAnalysis:
+            return isSubscribed
+        case .manualRecipes, .shoppingList, .communityLibrary, .recipeManagement:
+            return true
+        }
+    }
+    
+    /// Refreshes RevenueCat customer info, then allows the AI call or presents the Superwall paywall.
+    @discardableResult
+    func ensureAIAccess(for feature: Feature) async -> Bool {
+        await refreshSubscriptionStatusFromStoreKit()
+        if hasAccess(to: feature) {
+            return true
+        }
+        presentAIPaywall()
+        return false
+    }
+    
+    func presentAIPaywall() {
+        Monetization.shared.register(placement: SuperwallPlacements.campaignTrigger)
+    }
+    
+    /// If the backend returned 403 SUBSCRIPTION_REQUIRED, show the paywall and return true.
+    @discardableResult
+    func handleAISubscriptionDenied(_ error: Error) -> Bool {
+        guard BackendHTTPError.isSubscriptionRequired(error) else { return false }
+        presentAIPaywall()
         return true
-        
-        // Original code commented out for DEV MODE:
-        /*
-        // DEVELOPMENT: All features enabled
-        return true
-        
-        // PRODUCTION (uncomment before launch):
-        // switch feature {
-        // // AI features require active subscription
-        // case .aiChat, .aiRecipeGenerator, .aiRecipeAnalysis:
-        //     return isSubscribed
-        //     
-        // // Free features are always available
-        // case .manualRecipes, .shoppingList, .communityLibrary, .recipeManagement:
-        //     return true
-        // }
-        */
     }
     
     /// Get a user-friendly description of why access is restricted
-    /// - Parameter feature: The feature that is restricted
-    /// - Returns: Localized description string
     func accessRestrictionReason(for feature: Feature) -> String {
         switch feature {
         case .aiChat:

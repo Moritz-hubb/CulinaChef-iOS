@@ -350,6 +350,8 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             return
         }
         
+        guard await app.ensureAIAccess(for: .aiChat) else { return }
+        
         // Check DSGVO consent before using OpenAI
         guard hasConsent else {
             await MainActor.run { showConsentDialog = true }
@@ -379,6 +381,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
                 Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
+                if app.handleAISubscriptionDenied(error) { return }
                 await MainActor.run { 
                     messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error), isError: true))
                 }
@@ -391,6 +394,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             let reply = try await openai.chatReply(messages: prefixed, maxHistory: prefixed.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { 
                 let errorMsg = error.localizedDescription.contains("cannotFindHost") || error.localizedDescription.contains("cannotConnectToHost") 
                     ? L.errorNetworkConnection.localized 
@@ -412,6 +416,8 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             pickedImageData = nil
             return
         }
+        
+        guard await app.ensureAIAccess(for: .aiChat) else { return }
         
         // Check DSGVO consent before using OpenAI
         guard hasConsent else {
@@ -443,6 +449,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
                 Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
+                if app.handleAISubscriptionDenied(error) { return }
                 await MainActor.run { 
                     messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error), isError: true))
                 }
@@ -471,6 +478,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             let reply = try await openai.chatReply(messages: contextMsgs, maxHistory: contextMsgs.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { messages.append(.init(role: .assistant, text: L.errorImageAnalysisError.localized, isError: true)) }
         }
     }
@@ -510,6 +518,8 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             return
         }
         
+        guard await app.ensureAIAccess(for: .aiChat) else { return }
+        
         // Check DSGVO consent before using OpenAI
         guard hasConsent else {
             await MainActor.run { showConsentDialog = true }
@@ -537,6 +547,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
                 Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
+                if app.handleAISubscriptionDenied(error) { return }
                 await MainActor.run { 
                     messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error), isError: true))
                 }
@@ -549,6 +560,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             let reply = try await openai.chatReply(messages: prefixed, maxHistory: prefixed.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { 
                 let errorMsg = error.localizedDescription.contains("cannotFindHost") || error.localizedDescription.contains("cannotConnectToHost") 
                     ? L.errorNetworkConnection.localized 
@@ -567,6 +579,8 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             messages.append(.init(role: .assistant, text: L.errorJailbreakDetected.localized))
             return
         }
+        
+        guard await app.ensureAIAccess(for: .aiChat) else { return }
         
         // Check DSGVO consent before using OpenAI
         guard hasConsent else {
@@ -592,6 +606,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
                 Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
             } catch {
+                if app.handleAISubscriptionDenied(error) { return }
                 await MainActor.run { 
                     messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error), isError: true))
                 }
@@ -627,6 +642,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             let reply = try await openai.chatReply(messages: contextMsgs, maxHistory: contextMsgs.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { messages.append(.init(role: .assistant, text: L.errorImageAnalysisError.localized, isError: true)) }
         }
     }
@@ -1275,6 +1291,8 @@ private struct RecipeSuggestionsView: View {
             return
         }
         
+        guard await app.ensureAIAccess(for: .aiRecipeGenerator) else { return }
+        
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run {
@@ -1320,6 +1338,7 @@ private struct RecipeSuggestionsView: View {
             // Start auto-generation of all recipes in the background
             Task { await app.autoGenerateRecipesForMenu(menu: menu, suggestions: placeholders) }
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { 
                 createError = ErrorMessageHelper.userFriendlyMessage(from: error)
             }
@@ -1421,6 +1440,8 @@ private struct RecipeSuggestionsView: View {
             return
         }
         
+        guard await app.ensureAIAccess(for: .aiRecipeGenerator) else { return }
+        
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run {
@@ -1452,6 +1473,7 @@ private struct RecipeSuggestionsView: View {
         } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
             Logger.info("[ChatView] Backend unreachable, continuing without usage tracking", category: .network)
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { 
                 createError = ErrorMessageHelper.userFriendlyMessage(from: error)
             }
@@ -1532,6 +1554,7 @@ private struct RecipeSuggestionsView: View {
                 self.showAutoResult = true
             }
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { 
                 createError = ErrorMessageHelper.userFriendlyMessage(from: error)
             }

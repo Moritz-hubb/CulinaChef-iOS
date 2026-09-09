@@ -37,6 +37,11 @@ enum ErrorMessageHelper {
            errorDescription.contains("authentication") {
             return L.errorNotLoggedIn.localized
         }
+
+        if errorDescription.contains("subscription_required") ||
+           errorDescription.contains("aktives abo ist erforderlich") {
+            return L.error_aiChatRestricted.localized
+        }
         
         // StoreKit/Purchase errors
         if errorDescription.contains("purchase") || 

@@ -25,7 +25,8 @@ enum AppleSubscriptionProductIDs {
 
 /// Savings / weekly-equivalent math for Superwall Parameter variables.
 enum PaywallPriceMath {
-    static let weeksPerMonth = Decimal(string: "4.345")!
+    /// Weeks per average month. `Decimal(string:)` is non-optional for this literal.
+    static let weeksPerMonth = Decimal(string: "4.345")! // swiftlint:disable:this force_unwrapping
     
     /// `savingsPercentage = (1 - monthlyPrice / (weeklyPrice * 4.345)) * 100`, rounded to an integer.
     static func roundedSavingsPercentage(weeklyPrice: Decimal, monthlyPrice: Decimal) -> Int? {
@@ -155,6 +156,10 @@ final class Monetization {
     }
     
     /// Shows the Superwall campaign assigned to this placement (no-op if the user is already entitled).
+    ///
+    /// Placement params must go through `register` so Superwall Parameter variables
+    /// (`{{ monthlySavingsPercentage }}`) receive a value. `getPaywall` does not reliably
+    /// bind Parameter state in SuperwallKit 4.x.
     func register(placement: String, feature: (() -> Void)? = nil) {
         guard Config.isSuperwallConfigured else {
             feature?()
@@ -163,83 +168,53 @@ final class Monetization {
         Task {
             let context = await preparePaywallContext()
             Superwall.shared.setUserAttributes(context.userAttributes)
+            if !context.productIdsBySuperwallName.isEmpty {
+                Superwall.shared.overrideProductsByName = context.productIdsBySuperwallName
+            }
             
-            do {
-                let paywall = try await Superwall.shared.getPaywall(
-                    forPlacement: placement,
-                    params: context.params,
-                    paywallOverrides: context.overrides,
-                    delegate: self
-                )
             Logger.info(
-                "[Superwall] Presenting paywall name=\(paywall.info.name) id=\(paywall.info.identifier) placement=\(placement)",
+                "[PaywallDebug] register placement=\(placement) params=\(Self.debugDescribe(context.params)) userAttributes[savings]=\(String(describing: Superwall.shared.userAttributes[Self.monthlySavingsPercentageKey])) overrides=\(context.productIdsBySuperwallName)",
                 category: .data
             )
-                present(paywall)
-            } catch let reason as PaywallSkippedReason {
-                Logger.info("[Superwall] Paywall skipped: \(reason)", category: .data)
-                feature?()
-            } catch {
-                Logger.error("[Superwall] getPaywall failed — falling back to register", error: error, category: .data)
-                if let feature {
-                    Superwall.shared.register(placement: placement, params: context.params, feature: feature)
-                } else {
-                    Superwall.shared.register(placement: placement, params: context.params)
-                }
+            
+            let handler = PaywallPresentationHandler()
+            handler.onPresent { info in
+                Logger.info(
+                    "[PaywallDebug] presented name=\(info.name) id=\(info.identifier) products=\(info.productIds) savingsParamStill=\(String(describing: Superwall.shared.userAttributes[Self.monthlySavingsPercentageKey]))",
+                    category: .data
+                )
+            }
+            handler.onSkip { reason in
+                Logger.info("[PaywallDebug] skipped: \(reason)", category: .data)
+            }
+            handler.onError { error in
+                Logger.error("[PaywallDebug] presentation error", error: error, category: .data)
+            }
+            
+            if let feature {
+                Superwall.shared.register(placement: placement, params: context.params, handler: handler, feature: feature)
+            } else {
+                Superwall.shared.register(placement: placement, params: context.params, handler: handler)
             }
         }
     }
-    
-    // MARK: - Presentation
-    
-    private func present(_ paywall: PaywallViewController) {
-        #if canImport(UIKit)
-        paywall.modalPresentationStyle = .fullScreen
-        guard let host = topViewController() else {
-            Logger.error("[Superwall] No view controller available to present paywall", category: .data)
-            return
-        }
-        if host === paywall || host.presentedViewController === paywall { return }
-        host.present(paywall, animated: true)
-        #endif
-    }
-    
-    #if canImport(UIKit)
-    private func topViewController() -> UIViewController? {
-        let windows = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-        let window = windows.first(where: \.isKeyWindow) ?? windows.first
-        var controller = window?.rootViewController
-        while let presented = controller?.presentedViewController {
-            controller = presented
-        }
-        return controller
-    }
-    #endif
     
     // MARK: - Paywall parameters
     
     private struct PaywallContext {
         var params: [String: Any]
         var userAttributes: [String: Any?]
-        var overrides: PaywallOverrides?
+        var productIdsBySuperwallName: [String: String]
     }
     
     private func preparePaywallContext() async -> PaywallContext {
         await waitUntilSuperwallConfigured()
         await applyStorefrontLocale()
-        
-        if RevenueCatManager.shared.offerings == nil {
-            await RevenueCatManager.shared.loadOfferings()
-        }
+        await waitUntilOfferingsLoaded()
         
         let storeProducts = await loadLocalizedStoreProducts()
         var params: [String: Any] = [:]
-        var attributes: [String: Any?] = [
-            Self.monthlySavingsPercentageKey: nil,
-            Self.monthlyWeeklyPriceKey: nil
-        ]
+        var attributes: [String: Any?] = [:]
         
         if let monthly = storeProducts.monthly {
             let weeklyEquivalent = PaywallPriceMath.formattedMonthlyWeeklyPrice(
@@ -258,35 +233,51 @@ final class Monetization {
             params["weeklyPlanTrialPrice"] = weekly.localizedPrice
         }
         
-        if let weekly = storeProducts.weekly, let monthly = storeProducts.monthly,
-           let percentage = PaywallPriceMath.roundedSavingsPercentage(
-            weeklyPrice: weekly.price,
-            monthlyPrice: monthly.price
-           ) {
-            // Superwall Parameter "number" expects a JSON number (NSNumber), not a Swift Int box.
-            let number = NSNumber(value: percentage)
-            params[Self.monthlySavingsPercentageKey] = number
-            attributes[Self.monthlySavingsPercentageKey] = number
-            Logger.info(
-                "[Superwall] monthlySavingsPercentage=\(percentage) weekly=\(weekly.localizedPrice) monthly=\(monthly.localizedPrice) currency=\(monthly.currencyCode ?? "?")",
-                category: .data
-            )
+        if let weekly = storeProducts.weekly, let monthly = storeProducts.monthly {
+            if let percentage = PaywallPriceMath.roundedSavingsPercentage(
+                weeklyPrice: weekly.price,
+                monthlyPrice: monthly.price
+            ) {
+                // Superwall Parameter variables bind from placement params.
+                // Pass a JSON number (editor type: number) and the same digits as text
+                // so `{{ monthlySavingsPercentage }}` and `{{ params.monthlySavingsPercentage }}` both fill.
+                let number = NSNumber(value: percentage)
+                let text = String(percentage)
+                params[Self.monthlySavingsPercentageKey] = number
+                attributes[Self.monthlySavingsPercentageKey] = number
+                attributes["\(Self.monthlySavingsPercentageKey)Text"] = text
+                Logger.info(
+                    "[PaywallDebug] savings=\(percentage)% weeklyPrice=\(weekly.price) (\(weekly.localizedPrice)) monthlyPrice=\(monthly.price) (\(monthly.localizedPrice)) currency=\(monthly.currencyCode ?? "?")",
+                    category: .data
+                )
+            } else {
+                Logger.warning(
+                    "[PaywallDebug] savings math returned nil weeklyPrice=\(weekly.price) monthlyPrice=\(monthly.price)",
+                    category: .data
+                )
+            }
         } else {
             Logger.warning(
-                "[Superwall] monthlySavingsPercentage skipped — weekly=\(storeProducts.weekly != nil) monthly=\(storeProducts.monthly != nil)",
+                "[PaywallDebug] savings skipped — weekly=\(storeProducts.weekly?.localizedPrice ?? "nil") monthly=\(storeProducts.monthly?.localizedPrice ?? "nil")",
                 category: .data
             )
         }
         
-        var overrides: PaywallOverrides?
-        if !storeProducts.bySuperwallName.isEmpty {
-            overrides = PaywallOverrides(
-                productsByName: storeProducts.bySuperwallName,
-                presentationStyleOverride: .fullscreen
-            )
-        }
-        
-        return PaywallContext(params: params, userAttributes: attributes, overrides: overrides)
+        return PaywallContext(
+            params: params,
+            userAttributes: attributes,
+            productIdsBySuperwallName: storeProducts.appleIdsBySuperwallName
+        )
+    }
+    
+    private static func debugDescribe(_ params: [String: Any]) -> String {
+        params
+            .keys
+            .sorted()
+            .map { key in
+                "\(key)=\(String(describing: params[key] ?? "nil"))"
+            }
+            .joined(separator: ", ")
     }
     
     private func waitUntilSuperwallConfigured() async {
@@ -294,6 +285,27 @@ final class Monetization {
         while Superwall.shared.configurationStatus == .pending, Date() < deadline {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
+        Logger.info(
+            "[PaywallDebug] Superwall configurationStatus=\(String(describing: Superwall.shared.configurationStatus))",
+            category: .data
+        )
+    }
+    
+    private func waitUntilOfferingsLoaded() async {
+        if RevenueCatManager.shared.availablePackages.isEmpty, RevenueCatManager.shared.error == nil {
+            await RevenueCatManager.shared.loadOfferings()
+        }
+        let offering = RevenueCatManager.shared.paywallOffering
+        if RevenueCatManager.shared.availablePackages.isEmpty {
+            Logger.warning(
+                "[PaywallDebug] RevenueCat offerings have no products. Savings will use StoreKit IDs only. Fix: RevenueCat → Offering \(RevenueCatManager.trialPlansOfferingID) → add weekly + monthly packages. Simulator also needs Scheme → Run → Options → StoreKit Configuration = Configs/StoreKit.storekit and an App Store account (or the .storekit file).",
+                category: .data
+            )
+        }
+        Logger.info(
+            "[PaywallDebug] RC offering=\(offering?.identifier ?? "nil") packages=\(RevenueCatManager.shared.availablePackages.count)",
+            category: .data
+        )
     }
     
     private func applyStorefrontLocale() async {
@@ -308,110 +320,170 @@ final class Monetization {
         var localizedPrice: String
         var currencyCode: String?
         var locale: Locale
-        var superwallProduct: SuperwallKit.StoreProduct
+        var appleProductId: String
     }
     
     private struct LoadedStoreProducts {
         var weekly: LocalizedProduct?
         var monthly: LocalizedProduct?
-        var bySuperwallName: [String: SuperwallKit.StoreProduct]
+        var appleIdsBySuperwallName: [String: String]
     }
     
-    /// StoreKit 2 first (App Store storefront), then RevenueCat. Superwall custom/dashboard USD is not used.
+    /// Prefer RevenueCat packages from `TrialPlansCulinaAi`, then StoreKit 2 for the same Apple IDs.
     private func loadLocalizedStoreProducts() async -> LoadedStoreProducts {
         let packages = allRevenueCatPackages()
+        for package in packages {
+            let period = package.storeProduct.subscriptionPeriod.map { period in
+                "\(period.value)-\(String(describing: period.unit))"
+            } ?? "none"
+            Logger.info(
+                "[PaywallDebug] RC package id=\(package.identifier) type=\(String(describing: package.packageType)) product=\(package.storeProduct.productIdentifier) period=\(period) price=\(package.storeProduct.localizedPriceString) currency=\(package.storeProduct.currencyCode ?? "?")",
+                category: .data
+            )
+        }
+        
         var identifiers = Set(packages.map(\.storeProduct.productIdentifier))
         identifiers.insert(AppleSubscriptionProductIDs.monthly)
         identifiers.insert(SuperwallProductNames.weeklyPlanTrial)
         identifiers.insert(SuperwallProductNames.monthlyPlanTrial)
         
+        let rcProductsById: [String: RevenueCat.StoreProduct]
+        if packages.isEmpty {
+            let fetched = await RevenueCatManager.shared.storeProducts(for: Array(identifiers))
+            rcProductsById = Dictionary(uniqueKeysWithValues: fetched.map { ($0.productIdentifier, $0) })
+            for product in fetched {
+                Logger.info(
+                    "[PaywallDebug] RC product-by-id \(product.productIdentifier) price=\(product.localizedPriceString) period=\(String(describing: product.subscriptionPeriod?.unit))",
+                    category: .data
+                )
+            }
+        } else {
+            rcProductsById = [:]
+        }
+        
+        if await Storefront.current == nil {
+            Logger.warning(
+                "[PaywallDebug] Storefront.current is nil (ASDError 509 / no App Store account). Simulator: enable StoreKit Configuration on the CulinaChef scheme. Device: sign in with a sandbox Apple ID.",
+                category: .data
+            )
+        }
+        
         var sk2ById: [String: StoreKit.Product] = [:]
-        if let products = try? await StoreKit.Product.products(for: identifiers) {
+        do {
+            let products = try await StoreKit.Product.products(for: identifiers)
             for product in products {
                 sk2ById[product.id] = product
             }
+            Logger.info(
+                "[PaywallDebug] SK2 requested=\(identifiers.sorted()) loaded=\(sk2ById.keys.sorted())",
+                category: .data
+            )
+            if sk2ById.isEmpty {
+                Logger.warning(
+                    "[PaywallDebug] StoreKit returned 0 products. Superwall cannot purchase until App Store Connect IDs match and StoreKit Configuration is selected in the Run scheme (simulator) or a sandbox account is signed in (device).",
+                    category: .data
+                )
+            }
+        } catch {
+            Logger.error("[PaywallDebug] SK2 Product.products failed", error: error, category: .data)
         }
         
-        func localized(from product: StoreKit.Product) -> LocalizedProduct {
+        func fromSK2(_ product: StoreKit.Product) -> LocalizedProduct {
             LocalizedProduct(
                 price: product.price,
                 localizedPrice: product.displayPrice,
                 currencyCode: product.priceFormatStyle.currencyCode,
                 locale: product.priceFormatStyle.locale,
-                superwallProduct: SuperwallKit.StoreProduct(sk2Product: product)
+                appleProductId: product.id
             )
         }
         
-        func sk2Weekly() -> StoreKit.Product? {
-            if let named = sk2ById[SuperwallProductNames.weeklyPlanTrial] { return named }
-            return sk2ById.values.first { $0.subscription?.subscriptionPeriod.unit == .week }
+        func fromRC(_ package: Package) -> LocalizedProduct? {
+            let store = package.storeProduct
+            guard store.price > 0 else { return nil }
+            return LocalizedProduct(
+                price: store.price,
+                localizedPrice: store.localizedPriceString,
+                currencyCode: store.currencyCode,
+                locale: store.priceFormatter?.locale ?? Locale.current,
+                appleProductId: store.productIdentifier
+            )
         }
         
-        func sk2Monthly() -> StoreKit.Product? {
-            if let named = sk2ById[SuperwallProductNames.monthlyPlanTrial] { return named }
-            if let apple = sk2ById[AppleSubscriptionProductIDs.monthly] { return apple }
-            return sk2ById.values.first { $0.subscription?.subscriptionPeriod.unit == .month }
+        func looksWeekly(_ package: Package) -> Bool {
+            if package.packageType == .weekly { return true }
+            if package.storeProduct.subscriptionPeriod?.unit == .week { return true }
+            let token = "\(package.identifier) \(package.storeProduct.productIdentifier)".lowercased()
+            return token.contains("week")
         }
         
-        var weekly = sk2Weekly().map(localized(from:))
-        var monthly = sk2Monthly().map(localized(from:))
+        func looksMonthly(_ package: Package) -> Bool {
+            if package.packageType == .monthly { return true }
+            if package.storeProduct.subscriptionPeriod?.unit == .month { return true }
+            let token = "\(package.identifier) \(package.storeProduct.productIdentifier)".lowercased()
+            return token.contains("month") && !token.contains("week")
+        }
         
-        if weekly == nil || monthly == nil {
-            for package in packages {
-                let store = package.storeProduct
-                guard let unit = store.subscriptionPeriod?.unit else { continue }
-                let wrapped: SuperwallKit.StoreProduct
-                if let sk2 = store.sk2Product {
-                    wrapped = SuperwallKit.StoreProduct(sk2Product: sk2)
-                } else {
-                    continue
-                }
-                let localized = LocalizedProduct(
-                    price: store.price,
-                    localizedPrice: store.localizedPriceString,
-                    currencyCode: store.currencyCode,
-                    locale: store.priceFormatter?.locale ?? Locale.current,
-                    superwallProduct: wrapped
-                )
-                if unit == .week, weekly == nil { weekly = localized }
-                if unit == .month, monthly == nil { monthly = localized }
+        var weekly = packages.first(where: looksWeekly).flatMap(fromRC)
+        var monthly = packages.first(where: looksMonthly).flatMap(fromRC)
+        
+        func fromRCProduct(_ store: RevenueCat.StoreProduct) -> LocalizedProduct? {
+            guard store.price > 0 else { return nil }
+            return LocalizedProduct(
+                price: store.price,
+                localizedPrice: store.localizedPriceString,
+                currencyCode: store.currencyCode,
+                locale: store.priceFormatter?.locale ?? Locale.current,
+                appleProductId: store.productIdentifier
+            )
+        }
+        
+        for store in rcProductsById.values {
+            if store.subscriptionPeriod?.unit == .week || store.productIdentifier.lowercased().contains("week") {
+                if weekly == nil { weekly = fromRCProduct(store) }
+            }
+            if store.subscriptionPeriod?.unit == .month || store.productIdentifier.lowercased().contains("month") {
+                if monthly == nil { monthly = fromRCProduct(store) }
+            }
+            if store.productIdentifier == AppleSubscriptionProductIDs.monthly, monthly == nil {
+                monthly = fromRCProduct(store)
             }
         }
         
-        var byName: [String: SuperwallKit.StoreProduct] = [:]
+        if let sk2Week = sk2ById.values.first(where: { $0.subscription?.subscriptionPeriod.unit == .week }) {
+            weekly = fromSK2(sk2Week)
+        }
+        if let namedWeek = sk2ById[SuperwallProductNames.weeklyPlanTrial] {
+            weekly = fromSK2(namedWeek)
+        }
+        
+        if let sk2Month = sk2ById.values.first(where: { $0.subscription?.subscriptionPeriod.unit == .month }) {
+            monthly = fromSK2(sk2Month)
+        }
+        if let appleMonth = sk2ById[AppleSubscriptionProductIDs.monthly] {
+            monthly = fromSK2(appleMonth)
+        }
+        if let namedMonth = sk2ById[SuperwallProductNames.monthlyPlanTrial] {
+            monthly = fromSK2(namedMonth)
+        }
+        
+        var ids: [String: String] = [:]
         if let weekly {
-            byName[SuperwallProductNames.weeklyPlanTrial] = weekly.superwallProduct
+            ids[SuperwallProductNames.weeklyPlanTrial] = weekly.appleProductId
         }
         if let monthly {
-            byName[SuperwallProductNames.monthlyPlanTrial] = monthly.superwallProduct
+            ids[SuperwallProductNames.monthlyPlanTrial] = monthly.appleProductId
         }
         
         Logger.info(
-            "[Superwall] Store products loaded: \(sk2ById.keys.sorted().joined(separator: ", ")) weekly=\(weekly?.localizedPrice ?? "nil") monthly=\(monthly?.localizedPrice ?? "nil")",
+            "[PaywallDebug] resolved weekly=\(weekly?.localizedPrice ?? "nil") (\(weekly?.appleProductId ?? "no-id")) monthly=\(monthly?.localizedPrice ?? "nil") (\(monthly?.appleProductId ?? "no-id"))",
             category: .data
         )
         
-        return LoadedStoreProducts(weekly: weekly, monthly: monthly, bySuperwallName: byName)
+        return LoadedStoreProducts(weekly: weekly, monthly: monthly, appleIdsBySuperwallName: ids)
     }
     
     private func allRevenueCatPackages() -> [Package] {
         RevenueCatManager.shared.availablePackages
     }
-}
-
-extension Monetization: PaywallViewControllerDelegate {
-    func paywall(
-        _ paywall: PaywallViewController,
-        didFinishWith result: PaywallResult,
-        shouldDismiss: Bool
-    ) {
-        if shouldDismiss {
-            paywall.dismiss(animated: true)
-        }
-    }
-    
-    func paywall(
-        _ paywall: PaywallViewController,
-        loadingStateDidChange loadingState: PaywallLoadingState
-    ) {}
 }

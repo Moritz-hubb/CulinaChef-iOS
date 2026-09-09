@@ -289,10 +289,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
             return
         }
         
-        // DEV MODE: Feature access check removed - all features available
-        // guard app.hasAccess(to: .aiRecipeGenerator) else {
-        //     return
-        // }
+        guard await app.ensureAIAccess(for: .aiRecipeGenerator) else { return }
         
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
@@ -314,12 +311,13 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
             _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: txnID)
         } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
             Logger.info("Backend unreachable, continuing without usage tracking", category: .network)
-        } catch {
-            await MainActor.run { 
-                self.error = ErrorMessageHelper.userFriendlyMessage(from: error)
+            } catch {
+                if app.handleAISubscriptionDenied(error) { return }
+                await MainActor.run { 
+                    self.error = ErrorMessageHelper.userFriendlyMessage(from: error)
+                }
+                return
             }
-            return
-        }
         guard let openai = app.openAI else { 
             error = L.errorApiClientNotConfigured.localized
             return 
@@ -392,6 +390,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                     self.impossibleRecipeMessage = desc.replacingOccurrences(of: "IMPOSSIBLE_RECIPE:", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
                     self.showImpossibleRecipeAlert = true
                 } else {
+                    if self.app.handleAISubscriptionDenied(error) { return }
                     self.error = ErrorMessageHelper.userFriendlyMessage(from: error)
                 }
             }

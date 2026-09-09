@@ -134,7 +134,11 @@ final class RevenueCatManager: NSObject, ObservableObject {
             }
         } catch {
             self.error = error
-            Logger.error("[RevenueCat] Failed to load offerings", error: error, category: .data)
+            Logger.error(
+                "[RevenueCat] Offerings empty or misconfigured. Attach weekly+monthly App Store products to offering \(Self.trialPlansOfferingID). \(error.localizedDescription)",
+                error: error,
+                category: .data
+            )
         }
     }
     
@@ -157,9 +161,20 @@ final class RevenueCatManager: NSObject, ObservableObject {
             ?? availablePackages.first { $0.storeProduct.subscriptionPeriod?.unit == .month }
     }
     
-    var yearlyPackage: Package? {
-        availablePackages.first { $0.packageType == .annual }
-            ?? availablePackages.first { $0.storeProduct.subscriptionPeriod?.unit == .year }
+    /// Loads Store products by Apple ID even when the offering has no packages.
+    func storeProducts(for identifiers: [String]) async -> [RevenueCat.StoreProduct] {
+        guard isConfigured, Purchases.isConfigured, !identifiers.isEmpty else { return [] }
+        do {
+            let products = try await Purchases.shared.products(identifiers)
+            Logger.info(
+                "[RevenueCat] products(for:) loaded \(products.count)/\(identifiers.count): \(products.map(\.productIdentifier).sorted())",
+                category: .data
+            )
+            return products
+        } catch {
+            Logger.error("[RevenueCat] products(for:) failed", error: error, category: .data)
+            return []
+        }
     }
     
     func purchase(package: Package) async throws -> (StoreTransaction?, CustomerInfo) {

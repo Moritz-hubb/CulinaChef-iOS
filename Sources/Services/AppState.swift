@@ -1723,6 +1723,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             Logger.info("[AutoGen] OpenAI consent not granted; skipping auto-generation", category: .data)
             return
         }
+        guard await ensureAIAccess(for: .aiRecipeGenerator) else { return }
         
         var ai = (self.recipeAI ?? self.openAI)
         if ai == nil { refreshRecipeAI(); ai = (self.recipeAI ?? self.openAI) }
@@ -1774,6 +1775,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
                     setMenuSuggestionProgress(menuId: menu.id, name: s.name, progress: nil)
                 }
             } catch {
+                if handleAISubscriptionDenied(error) { return }
                 Logger.error("[AutoGen] Failed for \(s.name)", error: error, category: .data)
                 setMenuSuggestionStatus(menuId: menu.id, name: s.name, status: "failed")
                 setMenuSuggestionProgress(menuId: menu.id, name: s.name, progress: nil)

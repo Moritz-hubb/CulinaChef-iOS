@@ -113,6 +113,7 @@ targets:
       testTargets:
         - CulinaChefTests
       gatherCoverageData: true
+      storeKitConfiguration: Configs/StoreKit.storekit
 
   CulinaChefTests:
     type: bundle.unit-test

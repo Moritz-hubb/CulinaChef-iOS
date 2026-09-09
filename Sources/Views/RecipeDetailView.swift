@@ -1428,6 +1428,11 @@ struct RecipeDetailView: View {
            errorDescription.contains("limit exceeded") {
             return L.errorRateLimitExceeded.localized
         }
+
+        if errorDescription.contains("subscription_required") ||
+           errorDescription.contains("aktives abo") {
+            return L.error_aiChatRestricted.localized
+        }
         
         // Generic fallback
         return L.errorGenericUserFriendly.localized
@@ -1759,6 +1764,7 @@ private struct RecipeAISheetForSavedRecipe: View {
             reviseError = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
             return
         }
+        guard await app.ensureAIAccess(for: .aiRecipeGenerator) else { return }
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run { showConsentDialog = true }
             return
@@ -1801,6 +1807,7 @@ private struct RecipeAISheetForSavedRecipe: View {
         } catch {
             await MainActor.run {
                 revising = false
+                if app.handleAISubscriptionDenied(error) { return }
                 reviseError = userFriendlyErrorMessage(from: error)
             }
         }
@@ -1824,6 +1831,8 @@ private struct RecipeAISheetForSavedRecipe: View {
             return
         }
         
+        guard await app.ensureAIAccess(for: .aiChat) else { return }
+        
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run { showConsentDialog = true }
@@ -1846,6 +1855,7 @@ private struct RecipeAISheetForSavedRecipe: View {
             } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost {
                 Logger.info("Backend unreachable for recipe AI, continuing without usage tracking", category: .network)
             } catch {
+                if app.handleAISubscriptionDenied(error) { return }
                 await MainActor.run { 
                     self.error = userFriendlyErrorMessage(from: error)
                 }
@@ -1870,6 +1880,7 @@ private struct RecipeAISheetForSavedRecipe: View {
             let reply = try await openai.chatReply(messages: prefixed, maxHistory: prefixed.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { 
                 let errorMsg = userFriendlyErrorMessage(from: error)
                 messages.append(.init(role: .assistant, text: errorMsg))
@@ -1899,6 +1910,11 @@ private struct RecipeAISheetForSavedRecipe: View {
         if errorDescription.contains("rate limit") || 
            errorDescription.contains("limit exceeded") {
             return L.errorRateLimitExceeded.localized
+        }
+
+        if errorDescription.contains("subscription_required") ||
+           errorDescription.contains("aktives abo") {
+            return L.error_aiChatRestricted.localized
         }
         
         // Generic fallback
@@ -2409,6 +2425,11 @@ private struct RatingSubmissionView: View {
         if errorDescription.contains("rate limit") || 
            errorDescription.contains("limit exceeded") {
             return L.errorRateLimitExceeded.localized
+        }
+
+        if errorDescription.contains("subscription_required") ||
+           errorDescription.contains("aktives abo") {
+            return L.error_aiChatRestricted.localized
         }
         
         // Generic fallback

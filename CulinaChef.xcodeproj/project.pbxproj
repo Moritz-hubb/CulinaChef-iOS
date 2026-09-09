@@ -40,6 +40,7 @@
 		44529BFC2C79DD07CC204031 /* TimerCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F507943A1CBD339AE23C041 /* TimerCenter.swift */; };
 		46B75DBE7BC06DE28CAB3DA0 /* AppStoreReviewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90E6F0449C15CC5D631DE76 /* AppStoreReviewManager.swift */; };
 		4C3CED17610A1D45C7A844F7 /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF262E16254E15667802A85D /* BackendClient.swift */; };
+		C9D0E1F2A3B4C5D6E7F8091B /* BackendHTTPError.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F1A2B3C4D5E6F7081920AA /* BackendHTTPError.swift */; };
 		4DE9CCADAC6764AD935D92F7 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B5A2C547FEE0D43851EDBF /* ImageCache.swift */; };
 		565260071999B6FFC2DA62D6 /* Monetization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A46C888DB58070A57390BA /* Monetization.swift */; };
 		57BBA4C3EC5DE8BAE972E286 /* TermsOfServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF1AFB82F4D6DC0FBEADEC2 /* TermsOfServiceView.swift */; };
@@ -259,6 +260,7 @@
 		BF838F8F30504DDE00F7263E /* es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = es.json; sourceTree = "<group>"; };
 		BF838F9030504DDE00F7263E /* fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fr.json; sourceTree = "<group>"; };
 		BF838F9130504DDE00F7263E /* it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = it.json; sourceTree = "<group>"; };
+		BF838F983051CC2E00F7263E /* StoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = StoreKit.storekit; path = Configs/StoreKit.storekit; sourceTree = "<group>"; };
 		C0AF1DC9CC8ED07B4C5A8915 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		C6374362E3A330D0BA9829E2 /* SecureURLSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureURLSession.swift; sourceTree = "<group>"; };
 		D4F8960B0FF5281ECE12C22E /* String+Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Validation.swift"; sourceTree = "<group>"; };
@@ -267,6 +269,7 @@
 		D77AED64D568CB376372637F /* ManualRecipeBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualRecipeBuilderView.swift; sourceTree = "<group>"; };
 		DD51D9C2949825F126779695 /* ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingList.swift; sourceTree = "<group>"; };
 		DF262E16254E15667802A85D /* BackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClient.swift; sourceTree = "<group>"; };
+		E8F1A2B3C4D5E6F7081920AA /* BackendHTTPError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendHTTPError.swift; sourceTree = "<group>"; };
 		E4B5A2C547FEE0D43851EDBF /* ImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 		EA9B43DCE8036D599CB6941E /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
 		EAE72EEFB2F938867B00A5D1 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -337,6 +340,7 @@
 		40728F1A522F5676DA8C2A7A = {
 			isa = PBXGroup;
 			children = (
+				BF838F983051CC2E00F7263E /* StoreKit.storekit */,
 				BF838F9230504DDE00F7263E /* Localization */,
 				ED62F7E2D93415139BD2695B /* Configs */,
 				E402C4153409FB1B6C2374A8 /* CulinaShare */,
@@ -456,6 +460,7 @@
 				9CF6FA0F10E39BFDD46C6CF5 /* AnalyticsManager.swift */,
 				99C4F8F3DE07184AAFB7382E /* AppState.swift */,
 				DF262E16254E15667802A85D /* BackendClient.swift */,
+				E8F1A2B3C4D5E6F7081920AA /* BackendHTTPError.swift */,
 				4F725A9BFAB698230A7C8BF7 /* BackendOpenAIClient.swift */,
 				7D693ECE8B7A5A10EB84E9E8 /* Config.swift */,
 				EA9B43DCE8036D599CB6941E /* LocalizationManager.swift */,
@@ -718,6 +723,7 @@
 				DCC426E9353E48E235BF0096 /* AuthView.swift in Sources */,
 				6AB5EFEE5BCA1E5DB4C5BBA0 /* AuthenticationManager.swift in Sources */,
 				4C3CED17610A1D45C7A844F7 /* BackendClient.swift in Sources */,
+				C9D0E1F2A3B4C5D6E7F8091B /* BackendHTTPError.swift in Sources */,
 				8411A4000EDCED30DC9B7C8D /* BackendOpenAIClient.swift in Sources */,
 				75BB4C9CB7F221549C30CD38 /* ChatMessage.swift in Sources */,
 				1B966F3BFA8F9A1496EC839B /* ChatView.swift in Sources */,

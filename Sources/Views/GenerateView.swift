@@ -90,6 +90,8 @@ TextField("z.B. Tomaten", text: $newIngredientText)
             return
         }
         
+        guard await app.ensureAIAccess(for: .aiRecipeGenerator) else { return }
+        
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run { showConsentDialog = true }
@@ -105,6 +107,7 @@ TextField("z.B. Tomaten", text: $newIngredientText)
             let recipe = try await app.backend.generateRecipe(ingredients: ingredients, accessToken: token)
             await MainActor.run { self.generated = recipe }
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { 
                 self.error = ErrorMessageHelper.userFriendlyMessage(from: error)
             }

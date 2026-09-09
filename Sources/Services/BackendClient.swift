@@ -77,14 +77,7 @@ final class BackendClient {
                 category: .network
             )
             #endif
-            struct ServerError: Decodable { let detail: String? }
-            if let err = try? JSONDecoder().decode(ServerError.self, from: data), let msg = err.detail, !msg.isEmpty {
-                throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
-            }
-            if let msg = String(data: data, encoding: .utf8), !msg.isEmpty {
-                throw NSError(domain: "Backend", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
-            }
-            throw URLError(.badServerResponse)
+            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
         }
         return (data, http)
         } catch {

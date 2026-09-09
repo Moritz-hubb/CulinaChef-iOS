@@ -536,6 +536,8 @@ private struct RecipeAISheet: View {
             return
         }
         
+        guard await app.ensureAIAccess(for: .aiChat) else { return }
+        
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run { showConsentDialog = true }
@@ -552,6 +554,7 @@ private struct RecipeAISheet: View {
                 throw NSError(domain: "rate_limit", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
             }
             do { _ = try await app.backend.incrementAIUsage(accessToken: token) } catch {
+                if app.handleAISubscriptionDenied(error) { return }
                 await MainActor.run { self.error = error.localizedDescription }
                 return
             }
@@ -573,6 +576,7 @@ private struct RecipeAISheet: View {
             let reply = try await openai.chatReply(messages: prefixed, maxHistory: prefixed.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run { messages.append(.init(role: .assistant, text: "Fehler: \(error.localizedDescription)")) }
         }
     }

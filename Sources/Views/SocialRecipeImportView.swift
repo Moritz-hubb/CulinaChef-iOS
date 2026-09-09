@@ -274,6 +274,7 @@ struct SocialRecipeImportView: View {
             await MainActor.run { showConsentDialog = true }
             return
         }
+        guard await app.ensureAIAccess(for: .aiRecipeGenerator) else { return }
         guard let token = app.accessToken else {
             Logger.warning("[SocialImport] runImport: not logged in", category: .ui)
             await MainActor.run { error = L.errorNotLoggedIn.localized }
@@ -296,6 +297,7 @@ struct SocialRecipeImportView: View {
             _ = try await app.backend.incrementAIUsage(accessToken: token, originalTransactionId: txnID)
         } catch {
             Logger.error("[SocialImport] incrementAIUsage failed", error: error, category: .network)
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run {
                 self.error = error.localizedDescription
             }
@@ -325,6 +327,7 @@ struct SocialRecipeImportView: View {
             }
         } catch {
             Logger.error("[SocialImport] importRecipeFromSocialURL failed", error: error, category: .network)
+            if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run {
                 self.error = importErrorMessage(for: error)
             }

@@ -133,19 +133,35 @@ enum Config {
     // MARK: - RevenueCat Configuration
     
     /// RevenueCat public SDK key from Info.plist (`Secrets.xcconfig`).
+    /// Release/TestFlight must use an Apple key (`appl_`). A Test Store key (`test_`)
+    /// makes RevenueCat call `fatalError` on configure and crashes the app on launch.
     static let revenueCatAPIKey: String = {
+        let raw: String
         if let key = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
            !key.isEmpty,
            !key.hasPrefix("$") {
-            return key
+            raw = key
+        } else {
+            #if DEBUG
+            Logger.warning("RevenueCatAPIKey not configured in Info.plist. Using test key for development.", category: .config)
+            raw = "test_nYAqGXmJwAhLGWnwCXWzRyQjWsk"
+            #else
+            Logger.error("RevenueCatAPIKey not configured in Info.plist. RevenueCat will not work in production!", category: .config)
+            return ""
+            #endif
         }
         
         #if DEBUG
-        Logger.warning("RevenueCatAPIKey not configured in Info.plist. Using test key for development.", category: .config)
-        return "test_nYAqGXmJwAhLGWnwCXWzRyQjWsk"
+        return raw
         #else
-        Logger.error("RevenueCatAPIKey not configured in Info.plist. RevenueCat will not work in production!", category: .config)
-        return ""
+        if raw.hasPrefix("test_") {
+            Logger.error(
+                "RevenueCat Test Store API key (test_…) is not allowed in Release/TestFlight. Use the Apple public SDK key (appl_…) from RevenueCat → Apps → Apple.",
+                category: .config
+            )
+            return ""
+        }
+        return raw
         #endif
     }()
     

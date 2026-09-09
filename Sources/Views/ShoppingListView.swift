@@ -53,7 +53,7 @@ struct ShoppingListView: View {
                                     .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
                             }
                             .accessibilityLabel(L.shopping_hinzufügen.localized)
-                            .accessibilityHint("Fügt einen neuen Eintrag zur Einkaufsliste hinzu")
+                            .accessibilityHint(L.a11y_addShoppingItem.localized)
                             
                             Button(action: { shoppingListManager.clearCompleted() }) {
                                 HStack {
@@ -74,7 +74,7 @@ struct ShoppingListView: View {
                                 )
                             }
                             .accessibilityLabel(L.shopping_erledigte_löschen.localized)
-                            .accessibilityHint("Löscht alle erledigten Einträge")
+                            .accessibilityHint(L.a11y_clearCompleted.localized)
                             
                             Button(action: { showClearConfirmation = true }) {
                                 HStack {
@@ -95,7 +95,7 @@ struct ShoppingListView: View {
                                 )
                             }
                             .accessibilityLabel(L.shopping_alle_löschen.localized)
-                            .accessibilityHint("Löscht alle Einträge aus der Einkaufsliste")
+                            .accessibilityHint(L.a11y_clearAllShopping.localized)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
@@ -132,7 +132,7 @@ struct ShoppingListView: View {
                             .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
                         }
                         .accessibilityLabel(L.shopping_hinzufügen.localized)
-                        .accessibilityHint("Fügt einen neuen Eintrag zur Einkaufsliste hinzu")
+                        .accessibilityHint(L.a11y_addShoppingItem.localized)
                         .padding(.horizontal, 16)
                         .padding(.bottom, 16)
                     }
@@ -201,7 +201,7 @@ struct ShoppingListView: View {
                 .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
             }
             .accessibilityLabel(L.shopping_eintrag_hinzufügen.localized)
-            .accessibilityHint("Fügt einen neuen Eintrag zur Einkaufsliste hinzu")
+            .accessibilityHint(L.a11y_addShoppingItem.localized)
             .padding(.top, 8)
         }
     }
@@ -250,8 +250,8 @@ struct CategorySection: View {
                         .fill(.ultraThinMaterial.opacity(0.4))
                 )
             }
-            .accessibilityLabel("\(category.localizedName), \(items.count) Einträge")
-            .accessibilityHint(isExpanded ? "Kategorie ausblenden" : "Kategorie einblenden")
+            .accessibilityLabel(L.a11y_shoppingCategoryCount.localized(replacing: ["category": category.localizedName, "count": String(items.count)]))
+            .accessibilityHint(isExpanded ? L.a11y_collapseCategory.localized : L.a11y_expandCategory.localized)
             .accessibilityAddTraits(isExpanded ? [] : .isButton)
             .buttonStyle(.plain)
             
@@ -343,8 +343,8 @@ struct ShoppingListItemRow: View {
                                 .fill(.ultraThinMaterial.opacity(0.3))
                         )
                 }
-                .accessibilityLabel("\(item.name) löschen")
-                .accessibilityHint("Entfernt diesen Eintrag aus der Einkaufsliste")
+                .accessibilityLabel(L.a11y_deleteNamedItem.localized(replacing: ["item": item.name]))
+                .accessibilityHint(L.a11y_removeShoppingItem.localized)
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
@@ -358,8 +358,8 @@ struct ShoppingListItemRow: View {
                     .stroke(Color.white.opacity(0.15), lineWidth: 1)
             )
             .opacity(item.isCompleted ? 0.6 : 1.0)
-            .accessibilityLabel(item.isCompleted ? "\(item.name), erledigt" : item.name)
-            .accessibilityHint(item.isCompleted ? "Als nicht erledigt markieren" : "Als erledigt markieren")
+            .accessibilityLabel(item.isCompleted ? L.a11y_itemCompleted.localized(replacing: ["item": item.name]) : item.name)
+            .accessibilityHint(item.isCompleted ? L.a11y_markIncomplete.localized : L.a11y_markComplete.localized)
             .accessibilityAddTraits(item.isCompleted ? .isSelected : [])
         }
         .buttonStyle(.plain)

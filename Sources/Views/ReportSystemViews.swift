@@ -248,7 +248,7 @@ struct ReportReasonSheet: View {
                                         )
                                     }
                                     .accessibilityLabel(reason.localizedTitle)
-                                    .accessibilityHint(selectedReason == reason ? "Aktuell ausgewählt" : "Wählt diesen Grund aus")
+                                    .accessibilityHint(selectedReason == reason ? L.a11y_currentlySelected.localized : L.a11y_selectThisReason.localized)
                                     .accessibilityAddTraits(selectedReason == reason ? .isSelected : [])
                                     .buttonStyle(.plain)
                                     .padding(.horizontal, 20)
@@ -284,8 +284,8 @@ struct ReportReasonSheet: View {
                                         .scrollContentBackground(.hidden)
                                         .foregroundColor(.white)
                                         .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                        .accessibilityLabel("Zusätzliche Details")
-                                        .accessibilityHint("Optionale zusätzliche Informationen zur Meldung")
+                                        .accessibilityLabel(L.a11y_additionalDetails.localized)
+                                        .accessibilityHint(L.a11y_additionalDetailsHint.localized)
                                 }
                                 .padding(.horizontal, 20)
                                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -333,7 +333,7 @@ struct ReportReasonSheet: View {
                                     .shadow(color: Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.4), radius: 16, y: 8)
                                 }
                                 .accessibilityLabel(isSubmitting ? L.loading.localized : L.report_reportButton.localized)
-                                .accessibilityHint("Sendet die Meldung ab")
+                                .accessibilityHint(L.a11y_submitReport.localized)
                                 .disabled(isSubmitting)
                                 .padding(.horizontal, 20)
                                 .padding(.top, 8)
@@ -357,7 +357,7 @@ struct ReportReasonSheet: View {
             }
         }
         .alert("Fehler", isPresented: $showError) {
-            Button("OK", role: .cancel) {}
+            Button(L.ok.localized, role: .cancel) {}
         } message: {
             Text(errorMessage)
         }
@@ -428,7 +428,7 @@ struct ReportReasonSheet: View {
         } catch {
             Logger.error("Report submission failed", error: error, category: .network)
             await MainActor.run {
-                errorMessage = "Meldung fehlgeschlagen: \(error.localizedDescription)"
+                errorMessage = L.error_reportFailed.localized(replacing: ["error": error.localizedDescription])
                 showError = true
             }
         }

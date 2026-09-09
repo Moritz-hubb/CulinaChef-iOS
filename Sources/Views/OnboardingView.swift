@@ -2,6 +2,7 @@ import SwiftUI
 import Foundation
 import AVFoundation
 import AudioToolbox
+import UserNotifications
 
 struct OnboardingView: View {
     // Keep @ObservedObject but prevent view recreation by not using .id() modifiers
@@ -168,7 +169,7 @@ struct OnboardingView: View {
                         .padding(.top, 20)
                     
                     // Penguin illustration below progress bar - only show for steps >= 0, but NOT for step 2 (greeting)
-                    if currentStep != 2 {
+                    if currentStep != 2 && currentStep != 7 {
                         if let uiImage = UIImage(named: "penguin-onboarding") {
                             Image(uiImage: uiImage)
                                 .resizable()
@@ -197,6 +198,7 @@ struct OnboardingView: View {
                     step4DietaryTypes.tag(4)
                     step5Preferences.tag(5)
                     step6Dislikes.tag(6)
+                    step7Notifications.tag(7)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.5), value: currentStep)
@@ -285,7 +287,7 @@ struct OnboardingView: View {
             if savedInDefaults != -999 {
                 // UserDefaults has a value (including 0), use it as source of truth
                 savedStep = savedInDefaults
-            } else if currentStepValue >= -1 && currentStepValue <= 4 {
+            } else if currentStepValue >= -1 && currentStepValue <= 7 {
                 // UserDefaults doesn't have a value, but currentStep is valid, use it
                 savedStep = currentStepValue
                 // Also save it
@@ -422,7 +424,7 @@ struct OnboardingView: View {
     // MARK: - Progress Bar
     private var progressBar: some View {
         HStack(spacing: 8) {
-            ForEach(0..<7) { index in
+            ForEach(0..<8) { index in
                 Capsule()
                     .fill(index <= currentStep ? 
                           LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
@@ -693,7 +695,7 @@ struct OnboardingView: View {
                         TextField(L.placeholder_newAllergy.localized, text: $newAllergyText)
                             .id(localizationManager.currentLanguage)
                             .textFieldStyle(.plain)
-                            .accessibilityLabel("Allergie eingeben")
+                            .accessibilityLabel(L.a11y_enterAllergy.localized)
                             .accessibilityHint(L.placeholder_newAllergy.localized)
                             .padding(12)
                             .background(.white)
@@ -718,8 +720,8 @@ struct OnboardingView: View {
                                     LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
                                 )
                         }
-                        .accessibilityLabel("Allergie hinzufügen")
-                        .accessibilityHint("Fügt die eingegebene Allergie zur Liste hinzu")
+                        .accessibilityLabel(L.a11y_addAllergy.localized)
+                        .accessibilityHint(L.a11y_addAllergyHint.localized)
                     }
                     
                     if !allergies.isEmpty {
@@ -860,7 +862,7 @@ struct OnboardingView: View {
                     VStack(spacing: 12) {
                     Slider(value: $spicyLevel, in: 0...3, step: 1)
                         .tint(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing))
-                        .accessibilityLabel("Schärfelevel")
+                        .accessibilityLabel(L.label_spicyLevel.localized)
                         .accessibilityValue(spicyLabels[Int(spicyLevel)])
                         
                         // Labels below slider
@@ -992,6 +994,33 @@ struct OnboardingView: View {
         )
     }
     
+    // MARK: - Step 7: Notification permission
+    private var step7Notifications: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            if let uiImage = UIImage(named: "penguin-notifications") {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 220, height: 220)
+                    .accessibilityHidden(true)
+            } else {
+                Image(systemName: "bell.badge.fill")
+                    .font(.system(size: 72))
+                    .foregroundColor(.white)
+                    .accessibilityHidden(true)
+            }
+            Text(L.intro_notificationsTitle.localized)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .id(localizationManager.currentLanguage)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
     // MARK: - Navigation Buttons
     private var navigationButtons: some View {
         VStack(spacing: 12) {
@@ -1029,8 +1058,8 @@ struct OnboardingView: View {
                 }
                 .scaleEffect(buttonScale)
                 .accessibilityLabel(L.getStarted.localized)
-                .accessibilityHint("Startet das Onboarding")
-            } else if currentStep < 6 {
+                .accessibilityHint(L.a11y_startOnboarding.localized)
+            } else if currentStep < 7 {
                 Button {
                     // For language selection step, ensure language is selected
                     if (currentStep == 0 && selectedLanguage.isEmpty) || (currentStep == 1 && username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
@@ -1111,33 +1140,28 @@ struct OnboardingView: View {
                 }
                 .scaleEffect(buttonScale)
                 .accessibilityLabel(L.next.localized)
-                .accessibilityHint("Geht zum nächsten Schritt")
+                .accessibilityHint(L.a11y_goToNextStep.localized)
                 .disabled((currentStep == 0 && selectedLanguage.isEmpty) || (currentStep == 1 && username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
             } else {
                 Button {
-                    // Final level completion celebration
                     OnboardingFeedback.playFinalCompleteSound()
                     OnboardingFeedback.playHaptic(style: .medium, notificationType: .success)
-                    
-                    // Button animation
                     withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
                         buttonScale = 0.95
                     }
-                    
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2)) {
                             buttonScale = 1.0
                         }
                     }
-                    
-                    Task { await completeOnboarding() }
+                    Task { await requestNotificationsThenComplete(askPermission: true) }
                 } label: {
                     HStack {
                         if isSaving {
                             ProgressView()
                                 .tint(.white)
                         } else {
-                            Text(L.done.localized)
+                            Text(L.intro_notificationsAllow.localized)
                                 .font(.system(size: 17, weight: .semibold))
                                 .id(localizationManager.currentLanguage)
                         }
@@ -1152,8 +1176,17 @@ struct OnboardingView: View {
                     .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4), radius: 10, y: 4)
                 }
                 .scaleEffect(buttonScale)
-                .accessibilityLabel(isSaving ? L.loading.localized : L.done.localized)
-                .accessibilityHint("Schließt das Onboarding ab und speichert die Einstellungen")
+                .accessibilityLabel(L.intro_notificationsAllow.localized)
+                .disabled(isSaving)
+                
+                Button {
+                    Task { await requestNotificationsThenComplete(askPermission: false) }
+                } label: {
+                    Text(L.intro_notificationsLater.localized)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.white.opacity(0.9))
+                        .id(localizationManager.currentLanguage)
+                }
                 .disabled(isSaving)
             }
             
@@ -1174,7 +1207,7 @@ struct OnboardingView: View {
                         .id(localizationManager.currentLanguage)
                 }
                 .accessibilityLabel(L.onboarding_zurück.localized)
-                .accessibilityHint("Geht zum vorherigen Schritt")
+                .accessibilityHint(L.a11y_goToPreviousStep.localized)
             }
         }
         .padding(.horizontal, 20)
@@ -1195,8 +1228,8 @@ struct OnboardingView: View {
                     .font(.system(size: 14))
                     .foregroundColor(.black.opacity(0.4))
             }
-            .accessibilityLabel("\(item) entfernen")
-            .accessibilityHint("Entfernt diese Allergie aus der Liste")
+            .accessibilityLabel(L.a11y_removeItem.localized(replacing: ["item": item]))
+            .accessibilityHint(L.a11y_removeAllergyHint.localized)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -1218,8 +1251,8 @@ struct OnboardingView: View {
                             .font(.system(size: 14))
                             .foregroundColor(.black.opacity(0.4))
                     }
-                    .accessibilityLabel("\(item) entfernen")
-                    .accessibilityHint("Entfernt diese Abneigung aus der Liste")
+                    .accessibilityLabel(L.a11y_removeItem.localized(replacing: ["item": item]))
+                    .accessibilityHint(L.a11y_removeDislikeHint.localized)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -1263,6 +1296,29 @@ struct OnboardingView: View {
     }
     
     // MARK: - Actions
+    private func requestNotificationsThenComplete(askPermission: Bool) async {
+        if askPermission {
+            await promptForNotificationPermission()
+        }
+        await completeOnboarding()
+    }
+    
+    @MainActor
+    private func promptForNotificationPermission() async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .notDetermined else { return }
+        
+        _ = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                if let error {
+                    Logger.error("Notification permission request failed: \(error.localizedDescription)", category: .ui)
+                }
+                continuation.resume(returning: granted)
+            }
+        }
+    }
+    
     private func completeOnboarding() async {
         isSaving = true
         
@@ -1598,7 +1654,7 @@ private struct LanguageOption: View {
             .shadow(color: isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .black.opacity(0.05), radius: isSelected ? 8 : 4, y: 2)
         }
         .accessibilityLabel(languageName)
-        .accessibilityHint(isSelected ? "Aktuell ausgewählt" : "Wählt \(languageName) als Sprache")
+        .accessibilityHint(isSelected ? L.a11y_currentlySelected.localized : L.a11y_selectLanguage.localized(replacing: ["language": languageName]))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .buttonStyle(.plain)
     }

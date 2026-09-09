@@ -47,6 +47,7 @@ targets:
     resources:
       - path: Resources
         type: folder
+      - path: InfoPlist
       - path: Configs/StoreKit.storekit
         optional: false
     dependencies:
@@ -69,6 +70,10 @@ targets:
       Release: Configs/Secrets.xcconfig
     entitlements:
       path: Configs/CulinaChef.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.moritzserrin.culinachef.share
+          - group.com.moritzserrin.culinachef
     info:
       path: Sources/Info.plist
       properties:
@@ -76,9 +81,10 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIRequiresFullScreen: true
         UILaunchStoryboardName: LaunchScreen
-        NSCameraUsageDescription: "Zum Fotografieren deiner Zutaten für Rezeptvorschläge."
+        NSCameraUsageDescription: "Zum Aufnehmen von Fotos für Rezepte, Titelbilder und Zutaten."
         NSPhotoLibraryAddUsageDescription: "Zum Speichern/Verarbeiten von Fotos deiner Zutaten."
         NSPhotoLibraryUsageDescription: "Zum Auswählen von Bildern aus deiner Galerie für Rezeptvorschläge."
+        NSUserNotificationsUsageDescription: "Damit wir dich an Koch-Timer und Rezept-Updates erinnern können."
         SupabaseURL: $(SUPABASE_URL)
         SupabaseAnonKey: $(SUPABASE_ANON_KEY)
         OpenAIAPIKey: $(OPENAI_API_KEY)
@@ -132,6 +138,8 @@ targets:
           - "**/Info.plist"  # Info.plist wird über info: path referenziert
           - "**/*.sh"  # Exclude shell scripts from widget bundle
           - "**/*.md"  # Exclude markdown documentation files
+    resources:
+      - path: Widgets/InfoPlist
     entitlements:
       path: Configs/CulinaChefWidget.entitlements
     info:
@@ -175,6 +183,9 @@ targets:
           - "**/Info.plist"
     entitlements:
       path: Configs/CulinaShare.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.moritzserrin.culinachef.share
     info:
       path: CulinaShare/Info.plist
       properties:

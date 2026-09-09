@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 
 struct RecipeCompletionView: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -10,7 +9,6 @@ struct RecipeCompletionView: View {
     let recipe: Recipe
     let onCloseRecipe: (() -> Void)?
 
-    @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoData: Data?
     @State private var cookingTime: String = ""
     @State private var tags: [String] = []
@@ -78,14 +76,6 @@ struct RecipeCompletionView: View {
                 successOverlay
             }
         }
-        .onChange(of: selectedPhoto) { _, newValue in
-            Task {
-                if let item = newValue,
-                   let data = try? await item.loadTransferable(type: Data.self) {
-                    await MainActor.run { self.photoData = data }
-                }
-            }
-        }
         .onAppear {
             if cookingTime.isEmpty, let ct = recipe.cooking_time { cookingTime = ct }
             if tags.isEmpty, let preset = recipe.tags, !preset.isEmpty { tags = preset }
@@ -106,7 +96,7 @@ struct RecipeCompletionView: View {
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
         )) {
-            Button("OK") { errorMessage = nil }
+            Button(L.ok.localized) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "")
         }
@@ -219,7 +209,6 @@ struct RecipeCompletionView: View {
                     Button {
                         withAnimation(.spring(response: 0.3)) {
                             photoData = nil
-                            selectedPhoto = nil
                         }
                     } label: {
                         Image(systemName: "xmark")
@@ -233,14 +222,11 @@ struct RecipeCompletionView: View {
                     .padding(12)
                 }
             } else {
-                PhotosPicker(
-                    selection: Binding(
-                        get: { selectedPhoto.map { [$0] } ?? [] },
-                        set: { selectedPhoto = $0.first }
-                    ),
-                    maxSelectionCount: 1,
-                    matching: .images
-                ) {
+                RecipePhotoSourceButton { data in
+                    withAnimation(.spring(response: 0.3)) {
+                        photoData = data
+                    }
+                } label: {
                     VStack(spacing: 12) {
                         Image(systemName: "camera.fill")
                             .font(.system(size: 28, weight: .semibold))
@@ -278,7 +264,6 @@ struct RecipeCompletionView: View {
                             .foregroundStyle(Color.white.opacity(0.28))
                     )
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(18)
@@ -555,7 +540,7 @@ struct RecipeCompletionView: View {
                 Logger.error("Recipe save failed with status \(httpResponse.statusCode)", category: .network)
                 if httpResponse.statusCode == 401 {
                     await MainActor.run {
-                        self.errorMessage = "Sitzung abgelaufen. Bitte melde dich neu an."
+                        self.errorMessage = L.error_sessionExpired.localized
                     }
                 }
                 throw URLError(.badServerResponse)

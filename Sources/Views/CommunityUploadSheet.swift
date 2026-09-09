@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 
 struct CommunityUploadSheet: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -9,7 +8,6 @@ struct CommunityUploadSheet: View {
     
     let recipe: Recipe
     
-    @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var uploadedImages: [UIImage] = []
     @State private var imageUrls: [String] = [] // URLs from recipe or uploaded
     
@@ -103,8 +101,8 @@ struct CommunityUploadSheet: View {
                                                                 .foregroundStyle(.white)
                                                                 .background(Circle().fill(.black.opacity(0.5)))
                                                         }
-                                                        .accessibilityLabel("Bild entfernen")
-                                                        .accessibilityHint("Entfernt dieses Bild")
+                                                        .accessibilityLabel(L.a11y_removeImage.localized)
+                                                        .accessibilityHint(L.a11y_removeThisImage.localized)
                                                         .padding(4)
                                                     }
                                             } placeholder: {
@@ -128,15 +126,19 @@ struct CommunityUploadSheet: View {
                                                         .foregroundStyle(.white)
                                                         .background(Circle().fill(.black.opacity(0.5)))
                                                 }
-                                                .accessibilityLabel("Bild entfernen")
-                                                .accessibilityHint("Entfernt dieses Bild")
+                                                .accessibilityLabel(L.a11y_removeImage.localized)
+                                                .accessibilityHint(L.a11y_removeThisImage.localized)
                                                 .padding(4)
                                             }
                                     }
                                     
                                     // Add photo button
                                     if (imageUrls.count + uploadedImages.count) < 1 {
-                                        PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 1, matching: .images) {
+                                        RecipePhotoSourceButton { data in
+                                            if let uiImage = UIImage(data: data) {
+                                                uploadedImages.append(uiImage)
+                                            }
+                                        } label: {
                                             VStack {
                                                 Image(systemName: "plus")
                                                     .font(.title2)
@@ -150,10 +152,7 @@ struct CommunityUploadSheet: View {
                                                     .fill(.ultraThinMaterial.opacity(0.4))
                                             )
                                             .accessibilityLabel(L.shareRecipePhoto.localized)
-                                            .accessibilityHint("Fügt ein Foto zum Upload hinzu")
-                                        }
-                                        .onChange(of: selectedPhotos) { _, newItems in
-                                            Task { await loadPhotos(newItems) }
+                                            .accessibilityHint(L.a11y_addPhotoToUpload.localized)
                                         }
                                     }
                                 }
@@ -225,7 +224,7 @@ struct CommunityUploadSheet: View {
                             )
                         }
                         .accessibilityLabel(isUploading ? L.loading.localized : L.community_veröffentlichen.localized)
-                        .accessibilityHint("Veröffentlicht das Rezept in der Community")
+                        .accessibilityHint(L.a11y_publishCommunity.localized)
                         .disabled(!canPublish || isUploading)
                         
                         Text(L.community_mit_der_veröffentlichung_wird.localized)
@@ -237,7 +236,7 @@ struct CommunityUploadSheet: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Community Upload")
+            .navigationTitle(L.nav_communityUpload.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -247,14 +246,14 @@ struct CommunityUploadSheet: View {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .semibold))
                             .accessibilityLabel(L.cancel.localized)
-                            .accessibilityHint("Schließt den Community Upload")
+                            .accessibilityHint(L.a11y_closeCommunityUpload.localized)
                     }
                     .foregroundStyle(.white)
                 }
             }
         }
         .alert(L.alert_error.localized, isPresented: $showError) {
-            Button("OK", role: .cancel) {}
+            Button(L.ok.localized, role: .cancel) {}
         } message: {
             Text(errorMessage)
         }
@@ -262,20 +261,6 @@ struct CommunityUploadSheet: View {
     
     private var canPublish: Bool {
         !isUploading
-    }
-    
-    private func loadPhotos(_ items: [PhotosPickerItem]) async {
-        for item in items {
-            if let data = try? await item.loadTransferable(type: Data.self),
-               let uiImage = UIImage(data: data) {
-                await MainActor.run {
-                    uploadedImages.append(uiImage)
-                }
-            }
-        }
-        await MainActor.run {
-            selectedPhotos.removeAll()
-        }
     }
     
     private func publishToCommunity() {
@@ -372,25 +357,25 @@ struct CommunityUploadSheet: View {
                 // Moderation failed
                 await MainActor.run {
                     moderationStatus = "Denied"
-                    moderationReason = serverErrorMessage ?? "Moderation fehlgeschlagen"
+                    moderationReason = serverErrorMessage ?? L.error_moderationFailed.localized
                 }
             } else if httpResponse.statusCode == 429 {
                 // Rate limit exceeded
                 await MainActor.run {
-                    errorMessage = serverErrorMessage ?? "Upload-Limit erreicht. Bitte versuche es später erneut."
+                    errorMessage = serverErrorMessage ?? L.error_uploadLimitReached.localized
                     showError = true
                 }
             } else if httpResponse.statusCode >= 500 {
                 // Server error
                 Logger.error("Community upload server error \(httpResponse.statusCode): \(serverErrorMessage ?? "Unknown")", category: .network)
                 await MainActor.run {
-                    errorMessage = serverErrorMessage ?? "Server-Fehler. Bitte versuche es später erneut."
+                    errorMessage = serverErrorMessage ?? L.error_serverRetry.localized
                     showError = true
                 }
             } else if (200...299).contains(httpResponse.statusCode) {
                 // Success
                 await MainActor.run {
-                    moderationStatus = "Freigegeben"
+                    moderationStatus = L.community_approved.localized
                     uploadSuccess = true
                 }
                 
@@ -404,7 +389,7 @@ struct CommunityUploadSheet: View {
                 // Other client errors (400-499)
                 Logger.error("Community upload client error \(httpResponse.statusCode): \(serverErrorMessage ?? "Unknown")", category: .network)
                 await MainActor.run {
-                    errorMessage = serverErrorMessage ?? "Upload fehlgeschlagen. Bitte versuche es erneut."
+                    errorMessage = serverErrorMessage ?? L.error_uploadRetry.localized
                     showError = true
                 }
             }

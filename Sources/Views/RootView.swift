@@ -4,7 +4,6 @@ import SwiftUI
 private struct RootViewModifiers: ViewModifier {
     @ObservedObject var app: AppState
     @Binding var showOnboarding: Bool
-    @Binding var showSubscriptionPaywall: Bool
     @Binding var languageRefreshTrigger: UUID
     @Binding var hasTrackedLaunch: Bool
     var scenePhase: ScenePhase
@@ -32,9 +31,6 @@ private struct RootViewModifiers: ViewModifier {
             })
             .onChange(of: app.isAuthenticated) { _, newValue in
                 handleAuthChange(newValue)
-            }
-            .onChange(of: app.isSubscribed) { _, isActive in
-                handleSubscriptionChange(isActive)
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { notification in
                 handleLanguageChange(notification)
@@ -104,16 +100,8 @@ private struct RootViewModifiers: ViewModifier {
         
         if newValue {
             checkOnboardingStatus()
-            checkSubscriptionStatus()
         } else {
             showOnboarding = false
-            showSubscriptionPaywall = false
-        }
-    }
-    
-    private func handleSubscriptionChange(_ isActive: Bool) {
-        if isActive {
-            showSubscriptionPaywall = false
         }
     }
     
@@ -136,16 +124,15 @@ struct RootView: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var showOnboarding = false
-    @State private var showSubscriptionPaywall = false
     @State private var languageRefreshTrigger = UUID()
     @State private var hasTrackedLaunch = false
+    @State private var hasSeenAppIntro = AppIntroView.hasCompleted
 
     var body: some View {
         contentView
             .modifier(RootViewModifiers(
                 app: app,
                 showOnboarding: $showOnboarding,
-                showSubscriptionPaywall: $showSubscriptionPaywall,
                 languageRefreshTrigger: $languageRefreshTrigger,
                 hasTrackedLaunch: $hasTrackedLaunch,
                 scenePhase: scenePhase,
@@ -175,6 +162,12 @@ struct RootView: View {
                 }
             } else {
                 LoadingView()
+            }
+        } else if !hasSeenAppIntro {
+            AppIntroView {
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    hasSeenAppIntro = true
+                }
             }
         } else {
             AuthView()
@@ -239,7 +232,6 @@ struct RootView: View {
     private func checkSubscriptionStatus() {
         app.loadSubscriptionStatus()
         Monetization.shared.register(placement: SuperwallPlacements.campaignTrigger)
-        showSubscriptionPaywall = false
     }
 }
 
@@ -477,7 +469,7 @@ struct TabBarButton: View {
             .padding(.vertical, 8)
         }
         .accessibilityLabel(title)
-        .accessibilityHint(isSelected ? "Aktuell ausgewählt" : "Wechselt zu \(title)")
+        .accessibilityHint(isSelected ? L.a11y_currentlySelected.localized : L.a11y_switchToTab.localized(replacing: ["title": title]))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .buttonStyle(PlainButtonStyle())
     }

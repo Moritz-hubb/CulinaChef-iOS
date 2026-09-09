@@ -69,6 +69,70 @@
           "winbackOffers" : [
 
           ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "2.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "B1A0WEEK",
+          "introductoryOffer" : {
+            "internalID" : "B1A0WTRI",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "",
+              "displayName" : "",
+              "locale" : "de"
+            }
+          ],
+          "productID" : "weeklyPlanTrial",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "Weekly Plan Trial",
+          "subscriptionGroupID" : "8E3784C0",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "B1A0MNTH",
+          "introductoryOffer" : {
+            "internalID" : "B1A0MTRI",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "",
+              "displayName" : "",
+              "locale" : "de"
+            }
+          ],
+          "productID" : "monthlyPlanTrial",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Monthly Plan Trial",
+          "subscriptionGroupID" : "8E3784C0",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
         }
       ]
     }

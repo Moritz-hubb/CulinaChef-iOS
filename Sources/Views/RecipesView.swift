@@ -37,14 +37,14 @@ private struct SearchBar: View {
                 .textFieldStyle(.plain)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-                .accessibilityLabel("Suche")
-                .accessibilityHint("Geben Sie einen Suchbegriff ein")
+                .accessibilityLabel(L.search.localized)
+                .accessibilityHint(L.a11y_searchHint.localized)
             if !query.isEmpty {
                 Button(action: { query = "" }) {
                     Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
                 }
-                .accessibilityLabel("Suche löschen")
-                .accessibilityHint("Löscht den Suchtext")
+                .accessibilityLabel(L.a11y_clearSearch.localized)
+                .accessibilityHint(L.a11y_clearSearchHint.localized)
                 .buttonStyle(.plain)
             }
         }

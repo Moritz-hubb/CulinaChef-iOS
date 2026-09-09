@@ -37,12 +37,12 @@ struct SettingsView: View {
                     settingsRow(icon: "bell", text: L.notifications.localized)
                 }
                 .accessibilityLabel(L.notifications.localized)
-                .accessibilityHint("Öffnet Benachrichtigungseinstellungen")
+                .accessibilityHint(L.a11y_openNotifications.localized)
                 Button(action: { app.showLanguageSettings = true }) {
                     settingsRow(icon: "globe", text: L.language.localized)
                 }
                 .accessibilityLabel(L.language.localized)
-                .accessibilityHint("Öffnet Spracheinstellungen")
+                .accessibilityHint(L.a11y_openLanguage.localized)
             }
         }
     }
@@ -61,7 +61,7 @@ struct SettingsView: View {
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
             .accessibilityLabel(L.dietaryPreferences.localized)
-            .accessibilityHint("Öffnet Ernährungspräferenzen")
+            .accessibilityHint(L.a11y_openDietary.localized)
         }
     }
     
@@ -114,22 +114,22 @@ struct SettingsView: View {
                     settingsRow(icon: "doc.text", text: L.legalTerms.localized)
                 }
                 .accessibilityLabel(L.legalTerms.localized)
-                .accessibilityHint("Öffnet die Nutzungsbedingungen")
+                .accessibilityHint(L.a11y_openTerms.localized)
                 Button(action: { showPrivacy = true }) {
                     settingsRow(icon: "hand.raised", text: L.legalPrivacy.localized)
                 }
                 .accessibilityLabel(L.legalPrivacy.localized)
-                .accessibilityHint("Öffnet die Datenschutzerklärung")
+                .accessibilityHint(L.a11y_openPrivacy.localized)
                 Button(action: { showImprint = true }) {
                     settingsRow(icon: "info.circle", text: L.legalImprint.localized)
                 }
                 .accessibilityLabel(L.legalImprint.localized)
-                .accessibilityHint("Öffnet das Impressum")
+                .accessibilityHint(L.a11y_openImprint.localized)
                 Button(action: { showFairUse = true }) {
                     settingsRow(icon: "shield.checkered", text: "Fair Use Policy")
                 }
-                .accessibilityLabel("Fair Use Policy")
-                .accessibilityHint("Öffnet die Fair Use Policy")
+                .accessibilityLabel(L.a11y_fairUsePolicy.localized)
+                .accessibilityHint(L.a11y_openFairUse.localized)
             }
         }
     }
@@ -165,12 +165,12 @@ struct SettingsView: View {
                     settingsRow(icon: "person.crop.circle", text: L.nav_profileSettings.localized)
                 }
                 .accessibilityLabel(L.nav_profileSettings.localized)
-                .accessibilityHint("Öffnet Profileinstellungen")
+                .accessibilityHint(L.a11y_openProfile.localized)
                 Button(action: { showSubscription = true }) {
                     settingsRow(icon: "creditcard", text: L.nav_subscription.localized)
                 }
                 .accessibilityLabel(L.nav_subscription.localized)
-                .accessibilityHint("Öffnet Abo-Verwaltung")
+                .accessibilityHint(L.a11y_openSubscription.localized)
                 Button(action: { Task { await app.signOut() } }) {
                     Text(L.signOut.localized)
                         .font(.headline)
@@ -181,7 +181,7 @@ struct SettingsView: View {
                         .shadow(color: .pink.opacity(0.35), radius: 10, x: 0, y: 6)
                 }
                 .accessibilityLabel(L.signOut.localized)
-                .accessibilityHint("Meldet Sie ab")
+                .accessibilityHint(L.a11y_signOut.localized)
                 Button(role: .destructive, action: { showDeleteConfirm = true }) {
                     HStack {
                         Image(systemName: "trash")
@@ -194,7 +194,7 @@ struct SettingsView: View {
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
                 }
                 .accessibilityLabel(L.deleteAccount.localized)
-                .accessibilityHint("Löscht das Konto und alle Daten")
+                .accessibilityHint(L.a11y_deleteAccount.localized)
             }
         }
     }
@@ -496,7 +496,7 @@ private struct DietarySettingsSheet: View {
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
                             .tint(.white)
-                                .accessibilityLabel("Allergie eingeben")
+                                .accessibilityLabel(L.a11y_enterAllergy.localized)
                                 .accessibilityHint(L.placeholder_newAllergy.localized)
                             .padding(10)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -522,7 +522,7 @@ private struct DietarySettingsSheet: View {
                                     )
                             }
                             .accessibilityLabel(L.common_add.localized)
-                            .accessibilityHint("Fügt die eingegebene Allergie hinzu")
+                            .accessibilityHint(L.a11y_addAllergyHint.localized)
                         }
                         if !allergies.isEmpty {
                             FlowLayout(items: allergies) { item in
@@ -538,7 +538,7 @@ private struct DietarySettingsSheet: View {
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
                             .tint(.white)
-                                .accessibilityLabel("Abneigung eingeben")
+                                .accessibilityLabel(L.a11y_enterDislike.localized)
                                 .accessibilityHint(L.placeholder_newDislike.localized)
                             .padding(10)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -564,7 +564,7 @@ private struct DietarySettingsSheet: View {
                                     )
                             }
                             .accessibilityLabel(L.common_add.localized)
-                            .accessibilityHint("Fügt die eingegebene Abneigung hinzu")
+                            .accessibilityHint(L.a11y_addDislikeHint.localized)
                         }
                         if !dislikes.isEmpty {
                             FlowLayout(items: dislikes) { item in
@@ -1192,330 +1192,102 @@ private struct RecipesExportPayload: Codable {
 private struct SubscriptionSettingsSheet: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
-    @State private var isPurchasing = false
-    @State private var isRestoring = false
-    @State private var showFairUsePolicy = false
-    @State private var showTerms = false
-    @State private var showPrivacy = false
-    @State private var hasAcceptedFairUse = false
-    @State private var showError = false
-    @State private var errorMessage: String?
-
-    private var dateFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .none
-        return f
+    
+    private var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 0.96, green: 0.78, blue: 0.68),
+                Color(red: 0.95, green: 0.74, blue: 0.64),
+                Color(red: 0.93, green: 0.66, blue: 0.55)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
+    private var currentTierTitle: String {
+        guard app.isSubscribed else { return L.subscriptionFreeTier.localized }
+        let productId = RevenueCatManager.shared.activeProductIdentifier?.lowercased() ?? ""
+        if productId.contains("week") {
+            return L.subscriptionPremiumWeekly.localized
+        }
+        if productId.contains("month") {
+            return L.subscriptionPremiumMonthly.localized
+        }
+        return L.subscriptionUnlimitedActive.localized
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                backgroundGradient
                     .ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Status Badge
-                        HStack {
-                            Spacer()
-                            HStack(spacing: 8) {
-                                Image(systemName: app.isSubscribed ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .foregroundStyle(app.isSubscribed ? .green : .orange)
-                                Text(app.isSubscribed ? L.subscriptionUnlimitedActive.localized : L.subscriptionFreeTier.localized)
-                                    .font(.headline)
-                            }
+                VStack(spacing: 24) {
+                    VStack(spacing: 8) {
+                        Text(L.nav_subscription.localized)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.75))
+                        Text(currentTierTitle)
+                            .font(.title.bold())
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            Spacer()
-                        }
-                        
-                        // Plan header
-                        VStack(spacing: 12) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 50))
-                                .foregroundStyle(.white)
-                                .shadow(color: .white.opacity(0.3), radius: 10)
-                            
-                            Text(L.subscriptionUnlimited.localized)
-                                .font(.title.bold())
-                                .foregroundStyle(.white)
-                            
-                            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                Text("5,99€")
-                                    .font(.system(size: 40, weight: .bold))
-                                    .foregroundStyle(.white)
-                                Text(L.subscriptionPerMonth.localized)
-                                    .font(.title3)
-                                    .foregroundStyle(.white.opacity(0.8))
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(24)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.white.opacity(0.15), lineWidth: 1))
-
-                        // Perks
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(L.settings_deine_vorteile.localized).font(.headline).foregroundStyle(.white)
-                            PerkRow(icon: "sparkles", text: L.subscriptionAIChatUnlimited.localized)
-                            PerkRow(icon: "wand.and.stars", text: L.subscriptionAIRecipeGenerator.localized)
-                            PerkRow(icon: "chart.bar", text: L.subscriptionAINutritionAnalysis.localized)
-                            PerkRow(icon: "infinity", text: L.subscriptionNoLimits.localized)
-                            PerkRow(icon: "books.vertical", text: L.settings_perk_community.localized)
-                            
-                            Divider().background(.white.opacity(0.2)).padding(.vertical, 4)
-                            
-                            // Fair Use Policy Link
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(L.subscriptionFairUseInfo.localized)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.7))
-                                
-                                Button {
-                                    showFairUsePolicy = true
-                                } label: {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "info.circle")
-                                            .font(.caption)
-                                        Text(L.legalFairUseLink.localized)
-                                            .font(.caption)
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption2)
-                                    }
-                                    .foregroundStyle(.white.opacity(0.8))
-                                }
-                            }
-                        }
-                        .padding(16)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
-
-                        // Status card
-                        VStack(alignment: .leading, spacing: 8) {
-                            let auto = app.getSubscriptionAutoRenew()
-                            let periodEnd = app.getSubscriptionPeriodEnd()
-                            let active = app.isSubscribed
-                            if active {
-                                HStack {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.green)
-                                    Text(L.subscriptionUnlimitedActive.localized)
-                                        .font(.headline)
-                                        .foregroundStyle(.white)
-                                }
-                                if auto {
-                                    if let end = periodEnd { 
-                                        Text("\(L.subscriptionNextBilling.localized) \(dateFormatter.string(from: end))")
-                                            .font(.subheadline)
-                                            .foregroundStyle(.white)
-                                    }
-                                    Text(L.subscriptionAutoRenewOn.localized)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.white.opacity(0.9))
-                                } else {
-                                    if let end = periodEnd { 
-                                        Text("\(L.subscriptionExpiresOn.localized) \(dateFormatter.string(from: end))")
-                                            .font(.subheadline)
-                                            .foregroundStyle(.orange)
-                                    }
-                                    Text(L.subscriptionAutoRenewOff.localized)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.white.opacity(0.9))
-                                    Text(L.subscriptionKeepFeaturesUntilExpiry.localized)
-                                        .font(.footnote)
-                                        .foregroundStyle(.white.opacity(0.8))
-                                }
-                            } else {
-                                HStack {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.orange)
-                                    Text(L.subscriptionFreeTier.localized)
-                                        .font(.headline)
-                                        .foregroundStyle(.white)
-                                }
-                                Text(L.subscriptionAllFeaturesExceptAI.localized)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white.opacity(0.9))
-                                Text(L.subscriptionUpgradeForAI.localized)
-                                    .font(.footnote)
-                                    .foregroundStyle(.white.opacity(0.8))
-                            }
-                        }
-                        .padding(16)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
-
-                        // Actions
-                        VStack(spacing: 16) {
-                            if app.isSubscribed {
-                                // Apple Subscription Management
-                                Button {
-                                    Task { await app.openManageSubscriptions() }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "gearshape.fill")
-                                        Text(L.subscriptionManageInAppleSettings.localized)
-                                    }
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [Color(red: 0.2, green: 0.6, blue: 0.9), Color(red: 0.1, green: 0.4, blue: 0.7)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    )
-                                    .shadow(color: .blue.opacity(0.4), radius: 15, x: 0, y: 8)
-                                }
-                                
-                                Text(L.subscriptionManageCancelInfo.localized)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.8))
-                                    .multilineTextAlignment(.center)
-                            } else {
-                                // Fair Use Policy Checkbox
-                                VStack(spacing: 12) {
-                                    HStack(alignment: .top, spacing: 12) {
-                                        Button(action: { hasAcceptedFairUse.toggle() }) {
-                                            Image(systemName: hasAcceptedFairUse ? "checkmark.square.fill" : "square")
-                                                .font(.title3)
-                                                .foregroundStyle(hasAcceptedFairUse ? Color(red: 0.2, green: 0.6, blue: 0.9) : .white.opacity(0.7))
-                                        }
-                                        
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            HStack(spacing: 4) {
-                                                Text(L.legalFairUseCheckbox.localized)
-                                                    .font(.subheadline)
-                                                    .foregroundStyle(.white)
-                                                
-                                                Button(action: { showFairUsePolicy = true }) {
-                                                    Text(L.legalFairUseCheckboxLink.localized)
-                                                        .font(.subheadline)
-                                                        .underline()
-                                                        .foregroundStyle(Color(red: 0.2, green: 0.6, blue: 0.9))
-                                                }
-                                            }
-                                        }
-                                        
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .fill(Color.white.opacity(0.1))
-                                    )
-                                    
-                                    // Purchase Button
-                                    Button {
-                                    // Validate Fair Use Policy acceptance
-                                    guard hasAcceptedFairUse else {
-                                        errorMessage = L.legalFairUseCheckboxRequired.localized
-                                        showError = true
-                                        return
-                                    }
-                                    
-                                    isPurchasing = true
-                                    errorMessage = nil
-                                    Task {
-                                        await app.purchaseStoreKit()
-                                        isPurchasing = false
-                                    }
-                                } label: {
-                                    HStack {
-                                        if isPurchasing {
-                                            ProgressView()
-                                                .tint(.white)
-                                        } else {
-                                            Image(systemName: "sparkles")
-                                            Text(L.subscriptionUnlockUnlimited.localized)
-                                        }
-                                    }
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [Color(red: 0.2, green: 0.6, blue: 0.9), Color(red: 0.1, green: 0.4, blue: 0.7)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    )
-                                    .shadow(color: .blue.opacity(0.4), radius: 15, x: 0, y: 8)
-                                }
-                                .disabled(isPurchasing)
-                                
-                                // Restore Button
-                                Button {
-                                    isRestoring = true
-                                    Task {
-                                        await app.restorePurchases()
-                                        isRestoring = false
-                                    }
-                                } label: {
-                                    HStack {
-                                        if isRestoring {
-                                            ProgressView()
-                                                .tint(.white.opacity(0.7))
-                                                .scaleEffect(0.8)
-                                        } else {
-                                            Text(L.subscriptionRestorePurchases.localized)
-                                        }
-                                    }
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white.opacity(0.8))
-                                }
-                                .disabled(isRestoring)
-                                
-                                Text(L.subscriptionCancelAnytime.localized)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.8))
-                                    .multilineTextAlignment(.center)
-                                }
-                            }
-                        }
-                        .padding(.top, 8)
-                        
-                        // Legal Footer
-                        VStack(spacing: 8) {
-                            Divider().background(.white.opacity(0.2))
-                            
-                            Text(L.legalPurchaseConsentText.localized)
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.6))
-                                .multilineTextAlignment(.center)
-                            
-                            HStack(spacing: 16) {
-                                Button(L.legalTermsNavTitle.localized) {
-                                    showTerms = true
-                                }
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.7))
-                                
-                                Text("•")
-                                    .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.4))
-                                
-                                Button(L.legalPrivacyNavTitle.localized) {
-                                    showPrivacy = true
-                                }
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.7))
-                            }
-                        }
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
+                            .multilineTextAlignment(.center)
                     }
-                    .padding(20)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 28)
+                    .padding(.horizontal, 20)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                    )
+                    
+                    if app.isSubscribed {
+                        Button {
+                            Task { await app.openManageSubscriptions() }
+                        } label: {
+                            Text(L.subscriptionCancelSubscription.localized)
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color(red: 0.85, green: 0.35, blue: 0.28), Color(red: 0.75, green: 0.25, blue: 0.22)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                )
+                                .shadow(color: Color.red.opacity(0.25), radius: 12, x: 0, y: 6)
+                        }
+                        .accessibilityLabel(L.subscriptionCancelSubscription.localized)
+                    } else {
+                        Button {
+                            Monetization.shared.register(placement: SuperwallPlacements.campaignTrigger)
+                        } label: {
+                            Text(L.subscriptionSubscribeToPremium.localized)
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                )
+                                .shadow(color: Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.4), radius: 15, x: 0, y: 8)
+                        }
+                        .accessibilityLabel(L.subscriptionSubscribeToPremium.localized)
+                        .accessibilityHint(L.a11y_subscribeUnlimitedHint.localized)
+                    }
+                    
+                    Spacer()
                 }
+                .padding(20)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1526,25 +1298,10 @@ private struct SubscriptionSettingsSheet: View {
                 }
             }
         }
-        .onAppear { 
+        .onAppear {
             Task {
                 await app.refreshSubscriptionStatusFromStoreKit()
-                await app.storeKit.loadProducts()
             }
-        }
-        .sheet(isPresented: $showFairUsePolicy) {
-            FairUseView()
-        }
-        .sheet(isPresented: $showTerms) {
-            TermsOfServiceView()
-        }
-        .sheet(isPresented: $showPrivacy) {
-            PrivacyPolicyView()
-        }
-        .alert(L.alert_error.localized, isPresented: $showError) {
-            Button(L.button_ok.localized, role: .cancel) { }
-        } message: {
-            Text(errorMessage ?? L.errorGeneric.localized)
         }
     }
 }
@@ -1872,8 +1629,8 @@ private struct AllergyChipView: View {
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
             }
-            .accessibilityLabel("\(item) entfernen")
-            .accessibilityHint("Entfernt diese Allergie aus der Liste")
+            .accessibilityLabel(L.a11y_removeItem.localized(replacing: ["item": item]))
+            .accessibilityHint(L.a11y_removeAllergyHint.localized)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -1900,8 +1657,8 @@ private struct DislikeChipView: View {
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
             }
-            .accessibilityLabel("\(item) entfernen")
-            .accessibilityHint("Entfernt diese Abneigung aus der Liste")
+            .accessibilityLabel(L.a11y_removeItem.localized(replacing: ["item": item]))
+            .accessibilityHint(L.a11y_removeDislikeHint.localized)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

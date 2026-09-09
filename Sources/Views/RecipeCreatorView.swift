@@ -55,19 +55,8 @@ struct RecipeCreatorView: View {
     @State private var showConsentDialog = false
 
     var body: some View {
-        // DEVELOPMENT MODE: Paywall disabled - always show recipe creator content
         recipeCreatorContent
-            .id(localizationManager.currentLanguage) // Force re-render on language change
-        
-        // PRODUCTION (uncomment before launch):
-        // Group {
-        //     if app.hasAccess(to: .aiRecipeGenerator) {
-        //         recipeCreatorContent
-        //     } else {
-        //         paywallContent
-        //     }
-        // }
-        // .id(localizationManager.currentLanguage)
+            .id(localizationManager.currentLanguage)
     }
     
     private var recipeCreatorContent: some View {
@@ -155,7 +144,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                             .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
                         }
                         .accessibilityLabel(L.recipe_ernährung.localized)
-                        .accessibilityHint("Öffnet Einstellungen für Ernährungspräferenzen")
+                        .accessibilityHint(L.a11y_openDietarySettings.localized)
                     }
                     WrapChips(options: categoryOptions, selection: $selectedCategories)
                     
@@ -199,7 +188,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                             .shadow(color: .blue.opacity(0.4), radius: 10, x: 0, y: 6)
                     }
                     .accessibilityLabel(generating ? L.loading.localized : L.button_generate.localized)
-                    .accessibilityHint("Generiert ein Rezept basierend auf den Eingaben")
+                    .accessibilityHint(L.a11y_generateRecipeFromInputs.localized)
                     .disabled(generating || goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .foregroundStyle(.white)
@@ -239,63 +228,6 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
             Button(L.button_ok.localized) { error = nil }
         } message: {
             Text(error ?? "")
-        }
-    }
-    
-    private var paywallContent: some View {
-        ZStack {
-            LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.95, green: 0.74, blue: 0.64), Color(red: 0.93, green: 0.66, blue: 0.55)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 24) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .shadow(color: .white.opacity(0.3), radius: 20)
-                    .accessibilityHidden(true)
-                
-                VStack(spacing: 12) {
-                    Text("KI-Rezeptgenerator")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundStyle(.white)
-                    
-                    Text("Diese Funktion ist nur für Unlimited-Mitglieder verfügbar")
-                        .font(.title3)
-                        .foregroundStyle(.white.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                
-                Button(action: { Task { await app.purchaseStoreKit() } }) {
-                    Text("Unlimited freischalten")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: 300)
-                        .frame(height: 56)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(red: 0.2, green: 0.6, blue: 0.9), Color(red: 0.1, green: 0.4, blue: 0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        )
-                        .shadow(color: .blue.opacity(0.4), radius: 20, x: 0, y: 10)
-                }
-                .accessibilityLabel("Unlimited freischalten")
-                .accessibilityHint("Öffnet die Abo-Auswahl")
-                .padding(.top, 16)
-            }
-            .padding()
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button(L.button_done.localized) {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                }
-                .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
-            }
         }
     }
 

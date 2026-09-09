@@ -49,11 +49,11 @@ extension AppState {
     func accessRestrictionReason(for feature: Feature) -> String {
         switch feature {
         case .aiChat:
-            return NSLocalizedString("ai_chat_restricted", comment: "AI Chat requires Unlimited subscription")
+            return L.error_aiChatRestricted.localized
         case .aiRecipeGenerator:
-            return NSLocalizedString("ai_recipe_restricted", comment: "AI Recipe Generation requires Unlimited subscription")
+            return L.error_aiRecipeRestricted.localized
         case .aiRecipeAnalysis:
-            return NSLocalizedString("ai_analysis_restricted", comment: "AI Recipe Analysis requires Unlimited subscription")
+            return L.error_aiAnalysisRestricted.localized
         default:
             return ""
         }

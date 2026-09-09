@@ -1,0 +1,5 @@
+/* Permission dialogs */
+"NSCameraUsageDescription" = "To photograph your ingredients for recipe suggestions.";
+"NSPhotoLibraryAddUsageDescription" = "To save and process photos of your ingredients.";
+"NSPhotoLibraryUsageDescription" = "To choose images from your gallery for recipe suggestions.";
+"NSUserNotificationsUsageDescription" = "So we can remind you about cooking timers and recipe updates.";

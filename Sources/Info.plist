@@ -30,11 +30,13 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Zum Fotografieren deiner Zutaten für Rezeptvorschläge.</string>
+		<string>Zum Aufnehmen von Fotos für Rezepte, Titelbilder und Zutaten.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Zum Speichern/Verarbeiten von Fotos deiner Zutaten.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Zum Auswählen von Bildern aus deiner Galerie für Rezeptvorschläge.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Damit wir dich an Koch-Timer und Rezept-Updates erinnern können.</string>
 	<key>OpenAIAPIKey</key>
 	<string>$(OPENAI_API_KEY)</string>
 	<key>RevenueCatAPIKey</key>

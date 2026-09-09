@@ -1,7 +1,6 @@
 import SwiftUI
 import AVFoundation
 import Combine
-import PhotosUI
 import UIKit
 
 struct RecipeDetailView: View {
@@ -24,7 +23,6 @@ struct RecipeDetailView: View {
     }
     
     // Photo upload states
-    @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoData: Data?
     @State private var isUploadingPhoto = false
     @State private var uploadError: String?
@@ -36,9 +34,6 @@ struct RecipeDetailView: View {
     @State private var shoppingServings: Int = 4
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
-    
-    // Paywall state
-    @State private var showPaywallSheet = false
 
     private let gradientColors = [
         Color(red: 0.96, green: 0.78, blue: 0.68),
@@ -76,7 +71,7 @@ struct RecipeDetailView: View {
             if isLoadingFullRecipe {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                Text("Rezept wird geladen...")
+                Text(L.recipe_loading.localized)
                     .foregroundStyle(.white.opacity(0.8))
                     .font(.system(size: 14))
             } else {
@@ -128,8 +123,8 @@ struct RecipeDetailView: View {
                         .background(.ultraThinMaterial, in: Circle())
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
-                .accessibilityLabel("Schließen")
-                .accessibilityHint("Schließt die Rezeptansicht")
+                .accessibilityLabel(L.close.localized)
+                .accessibilityHint(L.a11y_closeRecipe.localized)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 10) {
@@ -145,8 +140,8 @@ struct RecipeDetailView: View {
                             .background(.ultraThinMaterial, in: Circle())
                             .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
-                    .accessibilityLabel("Rezept teilen")
-                    .accessibilityHint("Teilt das Rezept über das Teilen-Menü")
+                    .accessibilityLabel(L.a11y_shareRecipe.localized)
+                    .accessibilityHint(L.a11y_shareRecipeHint.localized)
                     
                     // KI: ein Button — Sheet mit Chat / Überarbeiten (Segment)
                     Button(action: { showAISheet = true }) {
@@ -157,8 +152,8 @@ struct RecipeDetailView: View {
                             .background(.ultraThinMaterial, in: Circle())
                             .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
-                    .accessibilityLabel("KI-Assistent")
-                    .accessibilityHint("Chat und Rezept überarbeiten (Tabs)")
+                    .accessibilityLabel(L.a11y_aiAssistant.localized)
+                    .accessibilityHint(L.a11y_aiAssistantHint.localized)
                 }
             }
         }
@@ -191,8 +186,8 @@ struct RecipeDetailView: View {
                                 .fill(.ultraThinMaterial.opacity(0.3))
                         )
                     }
-                    .accessibilityLabel(timersExpanded ? "Timer ausblenden" : "\(timerCenter.timers.count) aktive Timer")
-                    .accessibilityHint(timersExpanded ? "Blendet Timer aus" : "Zeigt Timer an")
+                    .accessibilityLabel(timersExpanded ? L.a11y_hideTimers.localized : L.a11y_activeTimers.localized(replacing: ["count": String(timerCenter.timers.count)]))
+                    .accessibilityHint(timersExpanded ? L.a11y_hideTimersHint.localized : L.a11y_showTimersHint.localized)
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 12)
@@ -260,22 +255,6 @@ struct RecipeDetailView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: shareItems)
-        }
-        // DEV MODE: Paywall sheet removed - all features available
-        // .sheet(isPresented: $showPaywallSheet) {
-        //     RevenueCatPaywallView()
-        //         .environmentObject(app)
-        // }
-        .onChange(of: selectedPhoto) { _, newValue in
-            Task {
-                if let item = newValue,
-                   let data = try? await item.loadTransferable(type: Data.self) {
-                    await MainActor.run { 
-                        self.photoData = data
-                        Task { await uploadNewPhoto() }
-                    }
-                }
-            }
         }
         .alert(L.errorUploadFailed.localized, isPresented: Binding(
             get: { uploadError != nil },
@@ -578,10 +557,10 @@ struct RecipeDetailView: View {
             let canAddPhoto = !(displayRecipe.is_public == true && displayRecipe.image_url == nil || displayRecipe.image_url?.isEmpty == true)
             
             if !isUploadingPhoto && photoData == nil && canAddPhoto {
-                PhotosPicker(selection: Binding(
-                    get: { selectedPhoto.map { [$0] } ?? [] },
-                    set: { selectedPhoto = $0.first }
-                ), maxSelectionCount: 1, matching: .images) {
+                RecipePhotoSourceButton { data in
+                    photoData = data
+                    Task { await uploadNewPhoto() }
+                } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 40))
                         .foregroundStyle(.white)
@@ -613,10 +592,10 @@ struct RecipeDetailView: View {
                 let canAddPhoto = !(displayRecipe.is_public == true && displayRecipe.image_url == nil || displayRecipe.image_url?.isEmpty == true)
                 
                 if !isUploadingPhoto && photoData == nil && uploadedImageUrl == nil && canAddPhoto {
-                    PhotosPicker(selection: Binding(
-                        get: { selectedPhoto.map { [$0] } ?? [] },
-                        set: { selectedPhoto = $0.first }
-                    ), maxSelectionCount: 1, matching: .images) {
+                    RecipePhotoSourceButton { data in
+                        photoData = data
+                        Task { await uploadNewPhoto() }
+                    } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "plus")
                                 .font(.caption.bold())
@@ -654,7 +633,6 @@ struct RecipeDetailView: View {
                     Button {
                         withAnimation {
                             photoData = nil
-                            selectedPhoto = nil
                         }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -875,7 +853,6 @@ struct RecipeDetailView: View {
             await MainActor.run {
                 uploadedImageUrl = uploadedUrl
                 photoData = nil
-                selectedPhoto = nil
             }
             
         } catch {
@@ -1508,7 +1485,7 @@ struct RecipeDetailView: View {
             Logger.error("[RecipeDetailView] Failed to load full recipe: \(errorMessage)", category: .network)
             await MainActor.run {
                 isLoadingFullRecipe = false
-                self.error = "Rezept konnte nicht vollständig geladen werden"
+                self.error = L.error_recipeLoadIncomplete.localized
             }
         }
     }
@@ -1526,7 +1503,6 @@ private struct RecipeAISheetForSavedRecipe: View {
     @State private var sending = false
     @State private var error: String?
     @State private var showConsentDialog = false
-    @State private var showPaywallSheet = false
 
     private enum AISheetTab: String, CaseIterable {
         case chat
@@ -1552,17 +1528,7 @@ private struct RecipeAISheetForSavedRecipe: View {
     @State private var reviseError: String?
 
     var body: some View {
-        // DEVELOPMENT MODE: Paywall disabled - always show chat content
         chatContent
-        
-        // PRODUCTION (uncomment before launch):
-        // Group {
-        //     if app.hasAccess(to: .aiRecipeAnalysis) {
-        //         chatContent
-        //     } else {
-        //         paywallContent
-        //     }
-        // }
         .sheet(isPresented: $showConsentDialog) {
             OpenAIConsentDialog(
                 onAccept: {
@@ -1571,11 +1537,6 @@ private struct RecipeAISheetForSavedRecipe: View {
                 onDecline: {}
             )
         }
-        // DEV MODE: Paywall sheet removed - all features available
-        // .sheet(isPresented: $showPaywallSheet) {
-        //     RevenueCatPaywallView()
-        //         .environmentObject(app)
-        // }
     }
     
     private var chatContent: some View {
@@ -1923,66 +1884,6 @@ private struct RecipeAISheetForSavedRecipe: View {
         return String(data: data, encoding: .utf8) ?? "{}"
     }
     
-    private var paywallContent: some View {
-        ZStack {
-            LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.95, green: 0.74, blue: 0.64), Color(red: 0.93, green: 0.66, blue: 0.55)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Spacer()
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 30, height: 30)
-                            .background(.ultraThinMaterial, in: Circle())
-                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 18)
-                
-                Spacer()
-                
-                VStack(spacing: 24) {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 70))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .shadow(color: .white.opacity(0.3), radius: 20)
-                    
-                    VStack(spacing: 12) {
-                        Text(L.inRecipeAI.localized)
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundStyle(.white)
-                        
-                        Text("Diese Funktion ist nur für Unlimited-Mitglieder verfügbar")
-                            .font(.body)
-                            .foregroundStyle(.white.opacity(0.9))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
-                    }
-                    
-                    // DEV MODE: Paywall button removed - all features available
-                    // Button(action: { showPaywallSheet = true }) {
-                    //     Text("Unlimited freischalten")
-                    //     ...
-                    // }
-                }
-                
-                Spacer()
-            }
-            .padding()
-        }
-        // DEV MODE: Paywall sheet removed - all features available
-        // .sheet(isPresented: $showPaywallSheet) {
-        //     RevenueCatPaywallView()
-        //         .environmentObject(app)
-        // }
-    }
-    
     private func userFriendlyErrorMessage(from error: Error) -> String {
         let errorDescription = error.localizedDescription.lowercased()
         
@@ -2151,7 +2052,7 @@ private struct TimerControlActive: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "timer")
-                Text("Timer läuft")
+                Text(L.timer_running.localized)
                 Spacer()
                 Text(formatted(timer.remaining))
                     .monospacedDigit()
@@ -2169,7 +2070,7 @@ private struct TimerControlActive: View {
                 .foregroundStyle(.white)
                 
                 Button(action: { timer.reset() }) {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
+                    Label(L.timer_reset.localized, systemImage: "arrow.counterclockwise")
                 }
                 .buttonStyle(.bordered)
                 .tint(.white)
@@ -2204,7 +2105,7 @@ private struct TimerControlInactive: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "timer")
-                Text("Timer")
+                Text(L.timer.localized)
                 Spacer()
                 Text(formatted(minutes * 60))
                     .monospacedDigit()
@@ -2215,14 +2116,14 @@ private struct TimerControlInactive: View {
                 Button(action: {
                     center.start(minutes: minutes, label: label)
                 }) {
-                    Label("Start", systemImage: "play.fill")
+                    Label(L.startTimer.localized, systemImage: "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
                 .foregroundStyle(.white)
                 
                 Button(action: {}) {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
+                    Label(L.timer_reset.localized, systemImage: "arrow.counterclockwise")
                 }
                 .buttonStyle(.bordered)
                 .tint(.white)

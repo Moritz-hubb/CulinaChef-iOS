@@ -69,7 +69,7 @@ struct ForgotPasswordView: View {
                                     .foregroundColor(.gray.opacity(0.6))
                             }
                             .accessibilityLabel(L.cancel.localized)
-                            .accessibilityHint("Schließt den Passwort-Reset-Bildschirm")
+                            .accessibilityHint(L.a11y_closePasswordReset.localized)
                         }
                         .padding(.top, 16)
                         .padding(.trailing, 16)

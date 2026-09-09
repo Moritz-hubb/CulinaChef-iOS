@@ -618,7 +618,7 @@ struct FairUseView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Fair Use Policy")
+            .navigationTitle(L.a11y_fairUsePolicy.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

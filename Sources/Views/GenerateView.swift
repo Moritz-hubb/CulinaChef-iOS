@@ -9,7 +9,6 @@ struct GenerateView: View {
     @State private var generating = false
     @State private var generated: Recipe?
     @State private var error: String?
-    @State private var showPaywall = false
     @State private var showConsentDialog = false
 
     var body: some View {
@@ -21,17 +20,17 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
                             .foregroundStyle(.white)
-                            .accessibilityLabel("Zutat eingeben")
-                            .accessibilityHint("Geben Sie eine Zutat ein, z.B. Tomaten")
-                        Button("Hinzufügen") {
+                            .accessibilityLabel(L.a11y_enterIngredient.localized)
+                            .accessibilityHint(L.a11y_enterIngredientHint.localized)
+                        Button(L.common_add.localized) {
                             let trimmed = newIngredientText.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !trimmed.isEmpty {
                                 ingredients.append(trimmed)
                                 newIngredientText = ""
                             }
                         }
-                        .accessibilityLabel("Zutat hinzufügen")
-                        .accessibilityHint("Fügt die eingegebene Zutat zur Liste hinzu")
+                        .accessibilityLabel(L.a11y_addIngredient.localized)
+                        .accessibilityHint(L.a11y_addIngredientHint.localized)
                     }
                     if !ingredients.isEmpty {
                         ForEach(ingredients.indices, id: \.self) { index in
@@ -42,8 +41,8 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                                     Image(systemName: "trash")
                                         .foregroundColor(.red)
                                 }
-                                .accessibilityLabel("Zutat entfernen")
-                                .accessibilityHint("Entfernt \(ingredients[index]) aus der Liste")
+                                .accessibilityLabel(L.a11y_removeIngredient.localized)
+                                .accessibilityHint(L.a11y_removeNamedFromList.localized(replacing: ["item": ingredients[index]]))
                             }
                         }
                     }
@@ -52,7 +51,7 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                     if generating { ProgressView() } else { Text(L.generate_cookFromThis.localized) }
                 }
                 .accessibilityLabel(generating ? L.loading.localized : L.generate_cookFromThis.localized)
-                .accessibilityHint("Generiert ein Rezept aus den eingegebenen Zutaten")
+                .accessibilityHint(L.a11y_generateRecipeFromIngredients.localized)
                 .disabled(generating || ingredients.isEmpty)
 
                 if let r = generated {
@@ -67,12 +66,7 @@ TextField("z.B. Tomaten", text: $newIngredientText)
                 }
                 if let error { Text(error).foregroundColor(.red) }
             }
-            .navigationTitle("KI Kochen")
-            // DEV MODE: Paywall sheet removed - all features available
-            // .sheet(isPresented: $showPaywall) {
-            //     RevenueCatPaywallView()
-            //         .environmentObject(app)
-            // }
+            .navigationTitle(L.nav_aiCooking.localized)
             .sheet(isPresented: $showConsentDialog) {
                 OpenAIConsentDialog(
                     onAccept: {
@@ -95,14 +89,6 @@ TextField("z.B. Tomaten", text: $newIngredientText)
             }
             return
         }
-        
-        // DEVELOPMENT MODE: Feature access check disabled
-        // guard app.hasAccess(to: .aiRecipeGenerator) else {
-        //     await MainActor.run {
-        //         showPaywall = true
-        //     }
-        //     return
-        // }
         
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {

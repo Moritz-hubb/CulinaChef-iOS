@@ -71,7 +71,7 @@ struct AuthView: View {
                             .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
                     }
                     .accessibilityLabel(L.signUp.localized)
-                    .accessibilityHint("Öffnet den Registrierungsbildschirm")
+                    .accessibilityHint(L.a11y_openSignUp.localized)
                     .padding(.horizontal, 32)
                     
                     // Sign In link
@@ -91,7 +91,7 @@ struct AuthView: View {
                         .font(.system(size: 15))
                     }
                     .accessibilityLabel("\(L.auth_alreadyHaveAccount.localized) \(L.auth_signInButton.localized)")
-                    .accessibilityHint("Öffnet den Anmeldebildschirm")
+                    .accessibilityHint(L.a11y_openSignIn.localized)
                     .padding(.top, 20)
                     
                     // Legal links
@@ -103,7 +103,7 @@ struct AuthView: View {
                                 .underline()
                         }
                         .accessibilityLabel(L.auth_termsOfService.localized)
-                        .accessibilityHint("Öffnet die Nutzungsbedingungen")
+                        .accessibilityHint(L.a11y_openTerms.localized)
                         
                         Text("•")
                             .font(.caption)
@@ -117,7 +117,7 @@ struct AuthView: View {
                                 .underline()
                         }
                         .accessibilityLabel(L.auth_privacyPolicy.localized)
-                        .accessibilityHint("Öffnet die Datenschutzerklärung")
+                        .accessibilityHint(L.a11y_openPrivacy.localized)
                         
                         Text("•")
                             .font(.caption)
@@ -131,7 +131,7 @@ struct AuthView: View {
                                 .underline()
                         }
                         .accessibilityLabel(L.auth_imprint.localized)
-                        .accessibilityHint("Öffnet das Impressum")
+                        .accessibilityHint(L.a11y_openImprint.localized)
                     }
                     .padding(.top, 16)
                     .padding(.bottom, 50)

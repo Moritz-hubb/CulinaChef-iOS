@@ -126,7 +126,7 @@ final class AuthenticationManager {
             throw NSError(
                 domain: "SupabaseAuth",
                 code: 422,
-                userInfo: [NSLocalizedDescriptionKey: "Ein Account mit dieser Apple ID existiert bereits. Bitte melden Sie sich an."]
+                userInfo: [NSLocalizedDescriptionKey: L.error_appleAccountExists.localized]
             )
         }
         
@@ -260,7 +260,7 @@ final class AuthenticationManager {
     
     func saveProfile(fullName: String?, email: String?, accessToken: String?, userId: String?, userEmail: String?) async throws {
         guard let token = accessToken, let uid = userId else {
-            throw NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
+            throw NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
         }
         
         // Keep existing username (required) or fallback to email prefix
@@ -278,7 +278,7 @@ final class AuthenticationManager {
         userEmail: String?
     ) async throws {
         guard let token = accessToken, let uid = userId else {
-            throw NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
+            throw NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
         }
         
         let desiredBase = sanitizeUsername(fromDisplayName: fullName)
@@ -315,7 +315,7 @@ final class AuthenticationManager {
             }
         }
         
-        throw lastError ?? NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: "Username konnte nicht aktualisiert werden"])
+        throw lastError ?? NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: L.error_usernameUpdateFailed.localized])
     }
     
     private func upsertProfile(userId: String, username: String, accessToken: String, fullName: String? = nil, email: String? = nil) async throws {
@@ -340,7 +340,7 @@ final class AuthenticationManager {
         
         let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else {
-            throw NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: "Profil konnte nicht gespeichert werden: Ungültige Server-Antwort"])
+            throw NSError(domain: "Profiles", code: -1, userInfo: [NSLocalizedDescriptionKey: L.error_profileSaveFailed.localized])
         }
         
         // Accept 200 (OK), 201 (Created), and 204 (No Content) as success

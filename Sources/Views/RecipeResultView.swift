@@ -95,8 +95,8 @@ ToolbarItem(placement: .navigationBarTrailing) {
                             .background(.ultraThinMaterial, in: Circle())
                             .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
                     }
-                    .accessibilityLabel("Schließen")
-                    .accessibilityHint("Schließt die Rezeptansicht")
+                    .accessibilityLabel(L.close.localized)
+                    .accessibilityHint(L.a11y_closeRecipe.localized)
                 }
             }
 .sheet(isPresented: $showAISheet) {
@@ -134,8 +134,8 @@ ToolbarItem(placement: .navigationBarTrailing) {
                                     .fill(.ultraThinMaterial.opacity(0.3))
                             )
                         }
-                        .accessibilityLabel(timersExpanded ? "Timer ausblenden" : "\(timerCenter.timers.count) aktive Timer")
-                        .accessibilityHint(timersExpanded ? "Blendet Timer aus" : "Zeigt Timer an")
+                        .accessibilityLabel(timersExpanded ? L.a11y_hideTimers.localized : L.a11y_activeTimers.localized(replacing: ["count": String(timerCenter.timers.count)]))
+                        .accessibilityHint(timersExpanded ? L.a11y_hideTimersHint.localized : L.a11y_showTimersHint.localized)
                         .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 12)
@@ -482,7 +482,7 @@ private struct RecipeAISheet: View {
             HStack(spacing: 12) {
                 ZStack(alignment: .leading) {
                     if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("Nachricht…").foregroundStyle(.white.opacity(0.5))
+                        Text(L.chat_messageEllipsis.localized).foregroundStyle(.white.opacity(0.5))
                     }
                     TextField("", text: $inputText, axis: .vertical)
                         .textFieldStyle(.plain)
@@ -549,7 +549,7 @@ private struct RecipeAISheet: View {
         defer { sending = false }
         do {
             guard let token = app.accessToken else {
-                throw NSError(domain: "rate_limit", code: -1, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
+                throw NSError(domain: "rate_limit", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
             }
             do { _ = try await app.backend.incrementAIUsage(accessToken: token) } catch {
                 await MainActor.run { self.error = error.localizedDescription }
@@ -852,7 +852,7 @@ private struct SharedTimerControl: View {
                 .foregroundStyle(.white)
 
                 Button(action: { myTimer?.reset() }) {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
+                    Label(L.timer_reset.localized, systemImage: "arrow.counterclockwise")
                 }
                 .buttonStyle(.bordered)
                 .tint(.white)

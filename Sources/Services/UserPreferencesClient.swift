@@ -98,7 +98,7 @@ final class UserPreferencesClient {
                 Logger.error("[UserPreferencesClient] Fetch error (\(http.statusCode)): \(errorString)", category: .data)
             }
             throw NSError(domain: "UserPreferencesClient", code: http.statusCode,
-                         userInfo: [NSLocalizedDescriptionKey: "Preferences konnten nicht geladen werden"])
+                         userInfo: [NSLocalizedDescriptionKey: L.error_preferencesLoadFailed.localized])
         }
     }
     

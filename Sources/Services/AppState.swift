@@ -1,6 +1,6 @@
+import Combine
 import Foundation
 import Network
-import StoreKit
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -58,15 +58,10 @@ final class AppState: ObservableObject {
     /// E-Mail-Adresse des angemeldeten Nutzers.
     @Published var userEmail: String?
 
-    // Subscription state (DEV MODE: Always enabled, no subscription checks)
-    /// Ob die App aktuell davon ausgeht, dass der Nutzer ein aktives Abo hat.
-    /// DEV MODE: Immer true, da Abo-Prüfungen während der Entwicklungsphase deaktiviert sind.
-    @Published var isSubscribed: Bool = true
-    /// Becomes true once we have loaded the initial subscription status
-    /// (from StoreKit, backend, Supabase, or local cache).
-    /// Used to avoid briefly showing the paywall before we know the real state.
-    /// DEV MODE: Immer true, da Abo-Prüfungen während der Entwicklungsphase deaktiviert sind.
-    @Published var subscriptionStatusInitialized: Bool = true
+    /// Premium status from RevenueCat entitlement `CulinaAi Unlimited`.
+    @Published var isSubscribed: Bool = false
+    /// True after the first RevenueCat `CustomerInfo` load (or a failed load).
+    @Published var subscriptionStatusInitialized: Bool = false
 
     // Tab selection for programmatic navigation
     @Published var selectedTab: Int = 0
@@ -151,7 +146,6 @@ final class AppState: ObservableObject {
     private(set) var auth: SupabaseAuthClient!
     private(set) var preferencesClient: UserPreferencesClient!
     private(set) var subscriptionsClient: SubscriptionsClient!
-    private(set) var storeKit: StoreKitManager!
     
     // Shopping list manager (shared across views)
     private(set) var shoppingListManager: ShoppingListManager!
@@ -167,6 +161,7 @@ final class AppState: ObservableObject {
 
     // Legacy network monitor (kept for RecipeManager integration)
     private var pathMonitor: NWPathMonitor?
+    private var revenueCatCancellable: AnyCancellable?
 
     // Subscription polling (managed by SubscriptionManager)
 
@@ -179,6 +174,7 @@ final class AppState: ObservableObject {
     /// - Prüft bestehende Sessions und lädt ggf. Nutzerpräferenzen aus Supabase.
     init() {
         Monetization.shared.start()
+        observeRevenueCatSubscriptionStatus()
         
         let backendURL = Config.backendBaseURL
         // Always log in DEBUG to ensure we see it
@@ -191,58 +187,15 @@ final class AppState: ObservableObject {
         auth = SupabaseAuthClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey)
         preferencesClient = UserPreferencesClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey)
         subscriptionsClient = SubscriptionsClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey, backendBaseURL: Config.backendBaseURL)
-        storeKit = StoreKitManager()
         shoppingListManager = ShoppingListManager()
         likedRecipesManager = LikedRecipesManager()
         
         // Initialize feature managers
         authManager = AuthenticationManager(auth: auth, preferencesClient: preferencesClient)
-        subscriptionManager = SubscriptionManager(backend: backend, subscriptionsClient: subscriptionsClient, storeKit: storeKit)
+        subscriptionManager = SubscriptionManager(backend: backend, subscriptionsClient: subscriptionsClient)
         menuManager = MenuManager()
         
         recipeManager = RecipeManager()
-        
-        // Prime StoreKit - delay to ensure app is fully initialized
-        Task { @MainActor [weak self] in
-            guard let self else {
-                #if DEBUG
-                Logger.debug("[AppState] StoreKit Task: self is nil, returning", category: .data)
-                #endif
-                return
-            }
-            // Delay to ensure StoreKit and app are fully ready
-            #if DEBUG
-            Logger.debug("[AppState] StoreKit Task: Starting, will wait 0.5s...", category: .data)
-            #endif
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-            #if DEBUG
-            Logger.debug("[AppState] StoreKit Task: Delay complete, calling loadProducts()...", category: .data)
-            #endif
-            Logger.info("[AppState] Initializing StoreKit on app startup...", category: .data)
-            Logger.info("[AppState] Calling storeKit.loadProducts()...", category: .data)
-            await self.storeKit.loadProducts()
-            #if DEBUG
-            Logger.debug("[AppState] StoreKit Task: loadProducts() completed", category: .data)
-            #endif
-            Logger.info("[AppState] Calling refreshSubscriptionFromEntitlements()...", category: .data)
-            await self.refreshSubscriptionFromEntitlements()
-            Logger.info("[AppState] Starting Transaction.updates listener...", category: .data)
-            // Listen for transaction updates
-            for await result in Transaction.updates {
-                Logger.info("[AppState] Received Transaction.update", category: .data)
-                if case .verified(let transaction) = result, transaction.productID == StoreKitManager.monthlyProductId {
-                    Logger.info("[AppState] ✅ Verified transaction for our product received", category: .data)
-                    Logger.info("[AppState] Transaction ID: \(transaction.id)", category: .data)
-                    // Always refresh local and backend subscription status when a new
-                    // verified transaction for our product appears, then finish it
-                    await self.refreshSubscriptionFromEntitlements()
-                    await transaction.finish()
-                    Logger.info("[AppState] Transaction finished", category: .data)
-                } else {
-                    Logger.debug("[AppState] Transaction update not for our product or unverified", category: .data)
-                }
-            }
-        }
         
         // Network reachability monitor for flushing offline queue
         let monitor = NWPathMonitor()
@@ -1092,9 +1045,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             self.accessToken = nil
             self.userEmail = nil
             self.isAuthenticated = false
-            // DEV MODE: Keep subscription active even after sign out
-            // self.isSubscribed = false
-            self.isSubscribed = true
+            applyRevenueCatSubscriptionStatus()
             
             // CRITICAL: Clear shopping list to prevent cache bleeding
             self.shoppingListManager.clearShoppingList()
@@ -1117,7 +1068,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     ) async throws {
         guard let userId = KeychainManager.get(key: "user_id"),
               let token = accessToken else {
-            throw NSError(domain: "AppState", code: -1, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
+            throw NSError(domain: "AppState", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
         }
         
         try await preferencesClient.upsertPreferences(
@@ -1166,80 +1117,55 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     }
     
     func getSubscriptionPeriodEnd() -> Date? {
-        subscriptionManager.getSubscriptionPeriodEnd()
+        RevenueCatManager.shared.expirationDate ?? subscriptionManager.getSubscriptionPeriodEnd()
     }
     
     func getSubscriptionLastPayment() -> Date? {
-        subscriptionManager.getSubscriptionLastPayment()
+        RevenueCatManager.shared.customerInfo?.entitlements[RevenueCatManager.unlimitedEntitlementID]?.latestPurchaseDate
+            ?? subscriptionManager.getSubscriptionLastPayment()
     }
     
     func getSubscriptionAutoRenew() -> Bool {
-        subscriptionManager.getSubscriptionAutoRenew()
+        if RevenueCatManager.shared.customerInfo != nil {
+            return RevenueCatManager.shared.willRenew
+        }
+        return subscriptionManager.getSubscriptionAutoRenew()
     }
     
-    /// Lädt den Subscription-Status direkt von StoreKit (Apple), nicht aus der Datenbank.
-    /// Dies ist die bevorzugte Methode beim App-Start, um den aktuellsten Status zu erhalten.
-    /// DEV MODE: Immer true, da Abo-Prüfungen während der Entwicklungsphase deaktiviert sind.
+    /// Refreshes premium status from RevenueCat `CustomerInfo`.
     func refreshSubscriptionStatusFromStoreKit() async {
-        Logger.info("[AppState] DEV MODE: Subscription checks disabled - always returning active", category: .data)
-        await MainActor.run {
-            self.isSubscribed = true
-            self.subscriptionStatusInitialized = true
-            Logger.info("[AppState] Subscription status: active (DEV MODE)", category: .data)
-        }
+        await RevenueCatManager.shared.loadCustomerInfo()
+        applyRevenueCatSubscriptionStatus()
     }
     
     // moved to SubscriptionManager.extendIfAutoRenewNeeded()
     
-    /// DEV MODE: Subscription checks disabled - always returns active
     func loadSubscriptionStatus() {
-        // DEV MODE: Always set as subscribed, no actual checks
-        self.isSubscribed = true
-        self.subscriptionStatusInitialized = true
-        Logger.info("[AppState] DEV MODE: Subscription status set to active (no checks performed)", category: .data)
-        return
-        
-        // Original code commented out for DEV MODE:
-        /*
         Task { [weak self] in
-            guard let self else { return }
-            
-            // DEVELOPMENT MODE: Always set as subscribed
-            await MainActor.run {
-                self.isSubscribed = true
-                self.subscriptionStatusInitialized = true
-            }
-            
-            // PRODUCTION (uncomment before launch):
-            // // Use RevenueCat as primary source
-            // await RevenueCatManager.shared.loadCustomerInfo()
-            // let isSubscribed = RevenueCatManager.shared.isSubscribed
-            // 
-            // // Fallback to SubscriptionManager if RevenueCat not available
-            // if !isSubscribed {
-            // let status = await self.subscriptionManager.loadSubscriptionStatus(accessToken: self.accessToken)
-            // await MainActor.run {
-            //         self.isSubscribed = status.isSubscribed || isSubscribed
-            //     self.subscriptionStatusInitialized = true
-            //     }
-            // } else {
-            //     await MainActor.run {
-            //         self.isSubscribed = isSubscribed
-            //         self.subscriptionStatusInitialized = true
-            //     }
-            // }
+            await RevenueCatManager.shared.loadCustomerInfo()
+            self?.applyRevenueCatSubscriptionStatus()
         }
-        */
     }
     
-    /// DEV MODE: Subscription checks disabled - always returns active
+    private func observeRevenueCatSubscriptionStatus() {
+        revenueCatCancellable = RevenueCatManager.shared.$customerInfo
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.applyRevenueCatSubscriptionStatus()
+            }
+    }
+    
+    private func applyRevenueCatSubscriptionStatus() {
+        isSubscribed = RevenueCatManager.shared.isSubscribed
+        subscriptionStatusInitialized = true
+        Logger.info(
+            "[AppState] RevenueCat subscription status: \(isSubscribed)",
+            category: .data
+        )
+    }
+    
     private func loadSubscriptionStatusLocal() {
-        // DEV MODE: Always set as subscribed, no actual checks
-        Task { @MainActor in
-            self.isSubscribed = true
-            self.subscriptionStatusInitialized = true
-            Logger.info("[AppState] DEV MODE: Local subscription status set to active", category: .data)
-        }
+        applyRevenueCatSubscriptionStatus()
     }
     
     // Backward compatibility: keep existing API
@@ -1247,76 +1173,30 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         if active { subscribeSimulated() } else { cancelAutoRenew() }
     }
 
-    // MARK: - StoreKit purchase/restore
-    /// Startet den StoreKit-Kauf-Flow für das Monatsabo und synchronisiert Status mit Supabase.
-    ///
-    /// - Hinweis: Bei Abbruch oder pending-Status wird kein Fehler gesetzt.
-    func purchaseStoreKit() async {
-        Logger.info("[AppState] ========== START purchaseStoreKit() ==========", category: .data)
-        Logger.info("[AppState] Has access token: \(self.accessToken != nil)", category: .data)
-        Logger.info("[AppState] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")", category: .data)
-        
-        await MainActor.run { self.error = nil }
-        do {
-            Logger.info("[AppState] Calling subscriptionManager.purchaseStoreKit()...", category: .data)
-            let isActive = try await subscriptionManager.purchaseStoreKit(accessToken: self.accessToken, userId: KeychainManager.get(key: "user_id"))
-            Logger.info("[AppState] Purchase completed, isActive: \(isActive)", category: .data)
-            
-            await MainActor.run {
-                Logger.info("[AppState] Updating app state...", category: .data)
-                self.isSubscribed = isActive
-                Logger.info("[AppState] isSubscribed set to: \(isActive)", category: .data)
-                self.loadSubscriptionStatus()
-                Logger.info("[AppState] Starting aggressive subscription polling...", category: .data)
-                self.startAggressiveSubscriptionPolling(durationSeconds: 5 * 60, intervalSeconds: 30)
-                
-                // Track positive action for App Store review (subscription purchase)
-                if isActive {
-                    AppStoreReviewManager.recordPositiveAction()
-                    AppStoreReviewManager.requestReviewIfAppropriate()
-                }
-            }
-            Logger.info("[AppState] ========== END purchaseStoreKit() - SUCCESS ==========", category: .data)
-        } catch {
-            Logger.error("[AppState] ❌ Purchase failed", error: error, category: .data)
-            Logger.error("[AppState] Error: \(error.localizedDescription)", category: .data)
-            if let nsError = error as NSError? {
-                Logger.error("[AppState] Error domain: \(nsError.domain), code: \(nsError.code)", category: .data)
-            }
-            await MainActor.run { 
-                self.error = error.localizedDescription
-                Logger.info("[AppState] Error message set in app state: \(error.localizedDescription)", category: .data)
-            }
-            Logger.info("[AppState] ========== END purchaseStoreKit() - ERROR ==========", category: .data)
-        }
-    }
-
-    /// Stellt Käufe über StoreKit wieder her und aktualisiert Subscription-Entitlements.
-    /// DEV MODE: Subscription checks disabled - always returns active
+    // MARK: - Restore
+    
     func restorePurchases() async {
-        // DEV MODE: Always set as subscribed, no actual restore
-        await MainActor.run {
-            self.isSubscribed = true
-            self.subscriptionStatusInitialized = true
-            Logger.info("[AppState] DEV MODE: Restore purchases - always returning active", category: .data)
+        do {
+            try await RevenueCatManager.shared.restorePurchases()
+        } catch {
+            Logger.error("[AppState] Restore purchases failed", error: error, category: .data)
         }
+        applyRevenueCatSubscriptionStatus()
     }
 
-    /// DEV MODE: Subscription checks disabled - always returns active
     func refreshSubscriptionFromEntitlements() async {
-        // DEV MODE: Always set as subscribed, no actual checks
-        await MainActor.run {
-            self.isSubscribed = true
-            self.subscriptionStatusInitialized = true
-            Logger.info("[AppState] DEV MODE: Subscription status set to active (no entitlement checks)", category: .data)
-        }
+        await RevenueCatManager.shared.loadCustomerInfo()
+        applyRevenueCatSubscriptionStatus()
     }
     
     /// Returns the original transaction ID of the current subscription (if any).
     /// This is used for transaction-based rate limiting to prevent multi-account abuse.
     /// - Returns: originalTransactionId as String, or nil if no active subscription
     func getOriginalTransactionId() async -> String? {
-        await subscriptionManager.getOriginalTransactionId()
+        if RevenueCatManager.shared.customerInfo == nil {
+            await RevenueCatManager.shared.loadCustomerInfo()
+        }
+        return RevenueCatManager.shared.originalTransactionId
     }
 
     // MARK: - Subscription polling helpers

@@ -83,7 +83,7 @@ struct SignInView: View {
                                             .foregroundColor(.gray.opacity(0.6))
                                     }
                                     .accessibilityLabel(L.cancel.localized)
-                                    .accessibilityHint("Schließt den Anmeldebildschirm")
+                                    .accessibilityHint(L.a11y_closeSignIn.localized)
                                 }
                                 .padding(.top, 16)
                                 .padding(.trailing, 16)
@@ -146,7 +146,7 @@ struct SignInView: View {
                                                 .foregroundColor(.gray)
                                                 .font(.system(size: 16))
                                         }
-                                        .accessibilityLabel(showPassword ? "Passwort verbergen" : "Passwort anzeigen")
+                                        .accessibilityLabel(showPassword ? L.a11y_hidePassword.localized : L.a11y_showPassword.localized)
                                     }
                                     .padding(12)
                                     .background(Color(UIColor.systemGray6))
@@ -201,7 +201,7 @@ struct SignInView: View {
                             .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3), radius: 6, x: 0, y: 3)
                         }
                         .accessibilityLabel(app.loading ? L.loading.localized : L.loginButton.localized)
-                        .accessibilityHint("Meldet sich mit E-Mail und Passwort an")
+                        .accessibilityHint(L.a11y_signInWithEmailHint.localized)
                         .disabled(app.loading || email.isEmpty || password.isEmpty)
                         .opacity((app.loading || email.isEmpty || password.isEmpty) ? 0.6 : 1)
                         .id("signInButton")
@@ -229,7 +229,7 @@ struct SignInView: View {
                                 .foregroundColor(.gray)
                         }
                         .accessibilityLabel(L.forgotPassword.localized)
-                        .accessibilityHint("Öffnet den Passwort-Reset-Bildschirm")
+                        .accessibilityHint(L.a11y_openPasswordReset.localized)
                         .padding(.top, 8)
                         
                         // Apple Sign In (original button - uses system language)
@@ -268,17 +268,17 @@ struct SignInView: View {
                                     // Check for simulator/device-specific errors
                                     if errorDomain == "AKAuthenticationError" || errorDomain.contains("AuthenticationServices") {
                                         #if targetEnvironment(simulator)
-                                        self.errorMessage = "Sign in with Apple funktioniert nicht im Simulator. Bitte teste auf einem echten Gerät."
+                                        self.errorMessage = L.error_appleSignInSimulator.localized
                                         #else
                                         // Real device errors
                                         if errorCode == -7022 || errorCode == -7071 {
-                                            self.errorMessage = "Apple Sign In Fehler. Bitte versuche es erneut oder melde dich mit E-Mail an."
+                                            self.errorMessage = L.error_appleSignInUseEmail.localized
                                         } else {
-                                            self.errorMessage = error.localizedDescription.isEmpty ? "Apple Sign In fehlgeschlagen. Bitte versuche es erneut." : error.localizedDescription
+                                            self.errorMessage = error.localizedDescription.isEmpty ? L.errorAppleSignInFailed.localized : error.localizedDescription
                                         }
                                         #endif
                                     } else {
-                                        self.errorMessage = error.localizedDescription.isEmpty ? "Anmeldung fehlgeschlagen" : error.localizedDescription
+                                        self.errorMessage = error.localizedDescription.isEmpty ? L.error_signInFailed.localized : error.localizedDescription
                                     }
                                 }
                             })

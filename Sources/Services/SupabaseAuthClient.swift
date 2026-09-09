@@ -84,7 +84,7 @@ final class SupabaseAuthClient {
             // When email already registered or policy error
             let error = try? JSONDecoder().decode(AuthError.self, from: data)
             throw NSError(domain: "SupabaseAuth", code: http.statusCode, 
-                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? "Registrierung fehlgeschlagen (\(http.statusCode))"])
+                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_registrationFailed.localized(replacing: ["code": String(http.statusCode)])])
         }
     }
     
@@ -120,7 +120,7 @@ final class SupabaseAuthClient {
         } else {
             let error = try? JSONDecoder().decode(AuthError.self, from: data)
             throw NSError(domain: "SupabaseAuth", code: http.statusCode,
-                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? "Anmeldung fehlgeschlagen"])
+                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_signInFailed.localized])
         }
     }
     
@@ -158,7 +158,7 @@ final class SupabaseAuthClient {
             throw NSError(
                 domain: "SupabaseAuth",
                 code: http.statusCode,
-                userInfo: [NSLocalizedDescriptionKey: error?.message ?? "Apple Sign-In fehlgeschlagen"]
+                userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.errorAppleSignInFailed.localized]
             )
         }
     }
@@ -193,7 +193,7 @@ final class SupabaseAuthClient {
         } else {
             let error = try? JSONDecoder().decode(AuthError.self, from: data)
             throw NSError(domain: "SupabaseAuth", code: http.statusCode,
-                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? "Token-Refresh fehlgeschlagen"])
+                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_tokenRefreshFailed.localized])
         }
     }
     
@@ -250,7 +250,7 @@ final class SupabaseAuthClient {
         } else {
             let error = try? JSONDecoder().decode(AuthError.self, from: data)
             throw NSError(domain: "SupabaseAuth", code: http.statusCode,
-                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? "Passwort-Reset-E-Mail konnte nicht gesendet werden"])
+                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordResetEmailFailed.localized])
         }
     }
     
@@ -290,7 +290,7 @@ final class SupabaseAuthClient {
         } else {
             let error = try? JSONDecoder().decode(AuthError.self, from: data)
             throw NSError(domain: "SupabaseAuth", code: http.statusCode,
-                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? "Passwort-Update fehlgeschlagen"])
+                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordUpdateFailed.localized])
         }
     }
     
@@ -364,7 +364,7 @@ final class SupabaseAuthClient {
         } else {
             let error = try? JSONDecoder().decode(AuthError.self, from: data)
             throw NSError(domain: "SupabaseAuth", code: http.statusCode,
-                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? "Passwortänderung fehlgeschlagen"])
+                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordChangeFailed.localized])
         }
     }
 }

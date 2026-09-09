@@ -19,19 +19,8 @@ struct ChatView: View {
     @State private var hasConsent: Bool = OpenAIConsentManager.hasConsent
 
     var body: some View {
-        // DEVELOPMENT MODE: Paywall disabled - always show chat content
         chatContent
-            .id(localizationManager.currentLanguage) // Force re-render on language change
-        
-        // PRODUCTION (uncomment before launch):
-        // Group {
-        //     if app.hasAccess(to: .aiChat) {
-        //         chatContent
-        //     } else {
-        //         paywallContent
-        //     }
-        // }
-        // .id(localizationManager.currentLanguage)
+            .id(localizationManager.currentLanguage)
     }
     
     private var chatContent: some View {
@@ -205,50 +194,6 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         .accessibilityHint(L.chat_revoke_consent_hint.localized)
     }
     
-    @State private var showPaywallSheet = false
-    
-    private var paywallContent: some View {
-        ZStack {
-            LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.95, green: 0.74, blue: 0.64), Color(red: 0.93, green: 0.66, blue: 0.55)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 24) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .shadow(color: .white.opacity(0.3), radius: 20)
-                    .accessibilityHidden(true)
-                
-                VStack(spacing: 12) {
-                    Text(L.subscriptionAIChatUnlimited.localized)
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
-                    
-                    Text(L.subscriptionAllFeaturesExceptAI.localized)
-                        .font(.title3)
-                        .foregroundStyle(.white.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 40)
-                }
-                
-                // DEV MODE: Paywall button removed - all features available
-                // Button(action: { showPaywallSheet = true }) {
-                //     Text(L.subscriptionUnlockUnlimited.localized)
-                //     ...
-                // }
-            }
-            .padding()
-        }
-        // DEV MODE: Paywall sheet removed - all features available
-        // .sheet(isPresented: $showPaywallSheet) {
-        //     RevenueCatPaywallView()
-        //         .environmentObject(app)
-        // }
-    }
-    
     private var inputBar: some View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
@@ -290,8 +235,8 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                         .foregroundStyle(.white.opacity(0.6))
                         .font(.system(size: 20))
                 }
-                .accessibilityLabel("Bild entfernen")
-                .accessibilityHint("Entfernt das angehängte Bild")
+                .accessibilityLabel(L.a11y_removeImage.localized)
+                .accessibilityHint(L.a11y_removeAttachedImage.localized)
             }
             .padding(8)
             .background(
@@ -737,7 +682,7 @@ private struct ChatBubble: View {
                         .shadow(color: Color.orange.opacity(0.3), radius: 6, x: 0, y: 3)
                     }
                     .accessibilityLabel(L.ui_wiederholen.localized)
-                    .accessibilityHint("Sendet die letzte Nachricht erneut")
+                    .accessibilityHint(L.a11y_retryLastMessage.localized)
                     .padding(.top, 4)
                 }
             }
@@ -875,7 +820,7 @@ private struct RecipeSuggestionsView: View {
                                         .shadow(color: Color.orange.opacity(0.3), radius: 6, x: 0, y: 3)
                                     }
                                     .accessibilityLabel(L.chat_erstelle_ein_rezept.localized)
-                                    .accessibilityHint("Erstellt ein Rezept für \(recipe.name)")
+                                    .accessibilityHint(L.a11y_createRecipeFor.localized(replacing: ["name": recipe.name]))
                                 }
                                 .padding(.vertical, 6)
                                 
@@ -895,7 +840,7 @@ private struct RecipeSuggestionsView: View {
                                 HStack(spacing: 6) {
                                     if creatingMenu { ProgressView().tint(.white) }
                                     Image(systemName: "folder.badge.plus")
-                                    Text(createdMenuId == nil ? "Menü erstellen" : "Menü erstellt ✓")
+                                    Text(createdMenuId == nil ? L.a11y_createMenu.localized : L.a11y_menuCreated.localized)
                                 }
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
@@ -911,8 +856,8 @@ private struct RecipeSuggestionsView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white.opacity(0.2), lineWidth: 1))
                                 .shadow(color: Color.orange.opacity(0.25), radius: 8, x: 0, y: 4)
                             }
-                            .accessibilityLabel(createdMenuId == nil ? "Menü erstellen" : "Menü erstellt")
-                            .accessibilityHint(creatingMenu ? "Erstellt Menü" : "Erstellt ein Menü aus den vorgeschlagenen Rezepten")
+                            .accessibilityLabel(createdMenuId == nil ? L.a11y_createMenu.localized : L.a11y_menuCreated.localized)
+                            .accessibilityHint(creatingMenu ? L.a11y_creatingMenu.localized : L.a11y_createMenuFromRecipes.localized)
                             .buttonStyle(.plain)
                             .disabled(creatingMenu || recipes.isEmpty)
                             
@@ -1333,11 +1278,7 @@ private struct RecipeSuggestionsView: View {
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run {
-                createError = NSLocalizedString(
-                    "consent.required",
-                    value: "KI-Funktionen benötigen Ihre Einwilligung",
-                    comment: "Consent required error"
-                )
+                createError = L.consent_required.localized
             }
             return
         }
@@ -1483,11 +1424,7 @@ private struct RecipeSuggestionsView: View {
         // Check DSGVO consent before using OpenAI
         guard OpenAIConsentManager.hasConsent else {
             await MainActor.run {
-                createError = NSLocalizedString(
-                    "consent.required",
-                    value: "KI-Funktionen benötigen Ihre Einwilligung",
-                    comment: "Consent required error"
-                )
+                createError = L.consent_required.localized
             }
             return
         }
@@ -1818,46 +1755,6 @@ private struct EmptyStateView: View {
         .padding(.horizontal, 32)
         .onAppear {
             isFloating = true
-        }
-    }
-}
-
-// MARK: - Image Picker
-struct ImagePicker: UIViewControllerRepresentable {
-    @Binding var isPresented: Bool
-    var sourceType: UIImagePickerController.SourceType = .camera
-    var onPicked: (Data) -> Void
-
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = sourceType
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
-        if isPresented {
-            // no-op; presentation is handled by SwiftUI
-        } else {
-            uiViewController.dismiss(animated: true)
-        }
-    }
-
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        let parent: ImagePicker
-        init(_ parent: ImagePicker) { self.parent = parent }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.isPresented = false
-        }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            parent.isPresented = false
-            if let img = info[.originalImage] as? UIImage, let data = img.jpegData(compressionQuality: 0.85) {
-                parent.onPicked(data)
-            }
         }
     }
 }

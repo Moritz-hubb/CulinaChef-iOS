@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 
 struct ManualRecipeBuilderView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -15,7 +14,6 @@ struct ManualRecipeBuilderView: View {
     @State private var difficulty: String = ""
     
     // Images
-    @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoData: Data?
     @State private var isUploadingPhoto = false
     
@@ -168,7 +166,7 @@ struct ManualRecipeBuilderView: View {
                                         .foregroundStyle(.white)
                                         .tint(.white)
                                         .accessibilityLabel(L.label_servings.localized)
-                                        .accessibilityHint("Anzahl der Portionen")
+                                        .accessibilityHint(L.a11y_servingsCount.localized)
                                         .padding(12)
                                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                         .focused($isFocused)
@@ -184,7 +182,7 @@ struct ManualRecipeBuilderView: View {
                                         .foregroundStyle(.white)
                                         .tint(.white)
                                         .accessibilityLabel(L.label_timeMinutes.localized)
-                                        .accessibilityHint("Kochzeit in Minuten")
+                                        .accessibilityHint(L.a11y_cookingTimeMinutes.localized)
                                         .padding(12)
                                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                         .focused($isFocused)
@@ -214,7 +212,9 @@ struct ManualRecipeBuilderView: View {
                                         alignment: .topTrailing
                                     )
                             } else {
-                                PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 1, matching: .images) {
+                                RecipePhotoSourceButton { data in
+                                    photoData = data
+                                } label: {
                                     HStack(spacing: 8) {
                                         Image(systemName: "photo.on.rectangle.angled")
                                         Text(L.recipe_foto_hinzufügen.localized)
@@ -370,15 +370,6 @@ struct ManualRecipeBuilderView: View {
             }
         }
         .navigationViewStyle(.stack)
-        .onChange(of: selectedPhotos) { _, newValue in
-            Task {
-                if let item = newValue.first {
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        await MainActor.run { self.photoData = data }
-                    }
-                }
-            }
-        }
         .alert(L.alert_error.localized, isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
             Button(L.button_ok.localized) { saveError = nil }
         } message: {

@@ -108,7 +108,7 @@ struct ResetPasswordView: View {
                                             .foregroundColor(.gray)
                                             .font(.system(size: 16))
                                     }
-                                    .accessibilityLabel(showPassword ? "Passwort verbergen" : "Passwort anzeigen")
+                                    .accessibilityLabel(showPassword ? L.a11y_hidePassword.localized : L.a11y_showPassword.localized)
                                 }
                                 .padding(12)
                                 .background(Color(UIColor.systemGray6))
@@ -148,7 +148,7 @@ struct ResetPasswordView: View {
                                             .foregroundColor(.gray)
                                             .font(.system(size: 16))
                                     }
-                                    .accessibilityLabel(showConfirmPassword ? "Passwort verbergen" : "Passwort anzeigen")
+                                    .accessibilityLabel(showConfirmPassword ? L.a11y_hidePassword.localized : L.a11y_showPassword.localized)
                                 }
                                 .padding(12)
                                 .background(Color(UIColor.systemGray6))
@@ -202,7 +202,7 @@ struct ResetPasswordView: View {
                                 .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3), radius: 6, x: 0, y: 3)
                             }
                             .accessibilityLabel(isLoading ? L.loading.localized : L.resetPasswordUpdateButton.localized)
-                            .accessibilityHint("Setzt das Passwort auf den neuen Wert")
+                            .accessibilityHint(L.a11y_setNewPassword.localized)
                             .disabled(isLoading || newPassword.isEmpty || confirmPassword.isEmpty)
                             .opacity((isLoading || newPassword.isEmpty || confirmPassword.isEmpty) ? 0.6 : 1)
                         }

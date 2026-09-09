@@ -17,6 +17,8 @@ final class RevenueCatManager: NSObject, ObservableObject {
     
     /// Must match the entitlement identifier in the RevenueCat dashboard.
     static let unlimitedEntitlementID = "CulinaAi Unlimited"
+    /// Must match the offering identifier in the RevenueCat dashboard (not Superwall product names).
+    static let trialPlansOfferingID = "TrialPlansCulinaAi"
     
     private(set) var isConfigured = false
     
@@ -105,22 +107,49 @@ final class RevenueCatManager: NSObject, ObservableObject {
         customerInfo?.entitlements[Self.unlimitedEntitlementID]?.productIdentifier
     }
     
+    /// Store transaction id for the active unlimited subscription (rate limiting).
+    var originalTransactionId: String? {
+        guard let info = customerInfo else { return nil }
+        if let productId = info.entitlements[Self.unlimitedEntitlementID]?.productIdentifier,
+           let storeId = info.subscriptionsByProductIdentifier[productId]?.storeTransactionId {
+            return storeId
+        }
+        return info.subscriptionsByProductIdentifier.values.first { $0.isActive }?.storeTransactionId
+    }
+    
     func loadOfferings() async {
         guard isConfigured, Purchases.isConfigured else { return }
         do {
             offerings = try await Purchases.shared.offerings()
+            let trial = offerings?.offering(identifier: Self.trialPlansOfferingID)
             Logger.info(
-                "[RevenueCat] Offerings loaded — packages: \(offerings?.current?.availablePackages.count ?? 0)",
+                "[RevenueCat] Offerings loaded — \(Self.trialPlansOfferingID) packages: \(trial?.availablePackages.count ?? 0), current: \(offerings?.current?.identifier ?? "nil")",
                 category: .data
             )
+            if trial == nil {
+                Logger.warning(
+                    "[RevenueCat] Offering \(Self.trialPlansOfferingID) not found. Available: \(offerings?.all.keys.sorted().joined(separator: ", ") ?? "none")",
+                    category: .data
+                )
+            }
         } catch {
             self.error = error
             Logger.error("[RevenueCat] Failed to load offerings", error: error, category: .data)
         }
     }
     
+    /// Packages from `TrialPlansCulinaAi`, then the dashboard current offering if that ID is missing.
+    var paywallOffering: Offering? {
+        offerings?.offering(identifier: Self.trialPlansOfferingID) ?? offerings?.current
+    }
+    
     var availablePackages: [Package] {
-        offerings?.current?.availablePackages ?? []
+        paywallOffering?.availablePackages ?? []
+    }
+    
+    var weeklyPackage: Package? {
+        availablePackages.first { $0.packageType == .weekly }
+            ?? availablePackages.first { $0.storeProduct.subscriptionPeriod?.unit == .week }
     }
     
     var monthlyPackage: Package? {

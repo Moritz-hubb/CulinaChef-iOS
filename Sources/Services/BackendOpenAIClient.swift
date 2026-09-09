@@ -37,7 +37,7 @@ final class BackendOpenAIClient {
         model: String = "gpt-4o-mini"
     ) async throws -> String {
         guard let token = accessTokenProvider() else {
-            throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
+            throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
         }
         
         // Trim messages to maxHistory
@@ -153,7 +153,7 @@ final class BackendOpenAIClient {
         model: String = "gpt-4o-mini"
     ) async throws -> String {
         guard let token = accessTokenProvider() else {
-            throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
+            throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
         }
         
         struct Request: Encodable {
@@ -246,7 +246,7 @@ final class BackendOpenAIClient {
         dietaryContext: String? = nil
     ) async throws -> RecipePlan {
         guard let token = accessTokenProvider() else {
-            throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: "Nicht angemeldet"])
+            throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
         }
         
         // Build request dictionary

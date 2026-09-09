@@ -106,15 +106,15 @@ extension String {
     static func validationError(for field: ValidationField) -> String {
         switch field {
         case .email:
-            return NSLocalizedString("validation.email.invalid", value: "Bitte geben Sie eine gültige E-Mail-Adresse ein", comment: "Invalid email error")
+            return L.validation_emailInvalid.localized
         case .password:
-            return NSLocalizedString("validation.password.too_short", value: "Passwort muss mindestens 6 Zeichen lang sein", comment: "Password too short error")
+            return L.validation_passwordTooShort.localized
         case .passwordStrong:
-            return NSLocalizedString("validation.password.weak", value: "Passwort muss mind. 8 Zeichen, 1 Großbuchstaben, 1 Kleinbuchstaben und 1 Zahl enthalten", comment: "Weak password error")
+            return L.validation_passwordWeak.localized
         case .username:
-            return NSLocalizedString("validation.username.invalid", value: "Benutzername muss 3-32 Zeichen lang sein und darf nur Buchstaben, Zahlen und _ enthalten", comment: "Invalid username error")
+            return L.validation_usernameInvalid.localized
         case .required:
-            return NSLocalizedString("validation.field.required", value: "Dieses Feld ist erforderlich", comment: "Required field error")
+            return L.validation_fieldRequired.localized
         }
     }
     

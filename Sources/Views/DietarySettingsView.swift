@@ -102,7 +102,7 @@ struct DietarySettingsView: View {
                             .background(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
                             .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
                             .accessibilityLabel(L.done.localized)
-                            .accessibilityHint("Schließt die Ernährungspräferenzen")
+                            .accessibilityHint(L.a11y_closeDietary.localized)
         }
                     }
 
@@ -143,7 +143,7 @@ struct DietarySettingsView: View {
                                 .textFieldStyle(.plain)
                                 .foregroundStyle(.white)
                                 .tint(.white)
-                                .accessibilityLabel("Allergie eingeben")
+                                .accessibilityLabel(L.a11y_enterAllergy.localized)
                                 .accessibilityHint(L.dietary_allergiesPlaceholder.localized)
                                 .padding(10)
                                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -156,7 +156,7 @@ struct DietarySettingsView: View {
                                 }
                             }
                             .accessibilityLabel(L.common_add.localized)
-                            .accessibilityHint("Fügt die eingegebene Allergie hinzu")
+                            .accessibilityHint(L.a11y_addAllergyHint.localized)
                             .foregroundStyle(.white)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
@@ -183,8 +183,8 @@ struct DietarySettingsView: View {
                                         Image(systemName: "xmark.circle.fill")
                                             .font(.caption)
                                     }
-                                    .accessibilityLabel("\(item) entfernen")
-                                    .accessibilityHint("Entfernt diese Allergie aus der Liste")
+                                    .accessibilityLabel(L.a11y_removeItem.localized(replacing: ["item": item]))
+                                    .accessibilityHint(L.a11y_removeAllergyHint.localized)
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -202,7 +202,7 @@ struct DietarySettingsView: View {
                                 .textFieldStyle(.plain)
                                 .foregroundStyle(.white)
                                 .tint(.white)
-                                .accessibilityLabel("Abneigung eingeben")
+                                .accessibilityLabel(L.a11y_enterDislike.localized)
                                 .accessibilityHint(L.dietary_dislikesPlaceholder.localized)
                                 .padding(10)
                                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -215,7 +215,7 @@ struct DietarySettingsView: View {
                                 }
                             }
                             .accessibilityLabel(L.common_add.localized)
-                            .accessibilityHint("Fügt die eingegebene Abneigung hinzu")
+                            .accessibilityHint(L.a11y_addDislikeHint.localized)
                             .foregroundStyle(.white)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
@@ -242,8 +242,8 @@ struct DietarySettingsView: View {
                                         Image(systemName: "xmark.circle.fill")
                                             .font(.caption)
                                     }
-                                    .accessibilityLabel("\(item) entfernen")
-                                    .accessibilityHint("Entfernt diese Abneigung aus der Liste")
+                                    .accessibilityLabel(L.a11y_removeItem.localized(replacing: ["item": item]))
+                                    .accessibilityHint(L.a11y_removeDislikeHint.localized)
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -269,7 +269,7 @@ struct DietarySettingsView: View {
                             Slider(value: $spicyLevel, in: 0...3, step: 1)
                                 .tint(.purple)
                                 .accessibilityLabel(L.settings_schärfelevel.localized)
-                                .accessibilityValue(["Mild", "Normal", "Scharf", "Sehr Scharf"][Int(spicyLevel)])
+                                .accessibilityValue([L.mild.localized, L.normal.localized, L.spicy.localized, L.verySpicy.localized][Int(spicyLevel)])
                                 .onChange(of: spicyLevel) { _, _ in saveBack() }
                             
                             ForEach(Array(tastePreferences.keys.sorted()), id: \.self) { key in
@@ -299,7 +299,7 @@ struct DietarySettingsView: View {
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
                             .tint(.white)
-                            .accessibilityLabel("Notizen")
+                            .accessibilityLabel(L.notes.localized)
                             .accessibilityHint(L.dietary_notesPlaceholder.localized)
                             .padding(10)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

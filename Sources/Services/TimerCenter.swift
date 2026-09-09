@@ -19,11 +19,10 @@ final class TimerCenter: ObservableObject {
     init() {
         // Restore timers from persistent storage on init
         restoreTimers()
-        // Request notification permission
-        requestNotificationPermission()
     }
     
     func start(minutes: Int, label: String) {
+        requestNotificationPermissionIfNeeded()
         let timer = RunningTimer(minutes: minutes, label: label, timerCenter: self)
         timers.append(timer)
         saveTimers()
@@ -110,11 +109,10 @@ final class TimerCenter: ObservableObject {
         }
     }
     
-    private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            if granted {
-                // Notification permission granted
-            }
+    private func requestNotificationPermissionIfNeeded() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .notDetermined else { return }
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
         }
     }
 }
@@ -235,8 +233,8 @@ final class RunningTimer: ObservableObject, Identifiable {
         guard running, remaining > 0 else { return }
         
         let content = UNMutableNotificationContent()
-        content.title = "Timer abgelaufen"
-        content.body = "\(label) ist fertig!"
+        content.title = L.timer_expiredTitle.localized
+        content.body = L.timer_expiredBody.localized(replacing: ["label": label])
         content.sound = .default
         content.categoryIdentifier = "TIMER_COMPLETE"
         

@@ -19,6 +19,7 @@ struct SignUpView: View {
     @State private var showPrivacy = false
     @FocusState private var focusedField: Field?
     @State private var showAccountExistsError = false
+    @State private var step = 0
     var onNavigateToSignIn: (() -> Void)?
     
     enum Field: Hashable {
@@ -86,411 +87,34 @@ struct SignUpView: View {
                     .padding(.bottom, focusedField == nil ? 16 : 8)
                     .animation(.easeInOut(duration: 0.2), value: focusedField)
                     
-                    // White card with form - takes remaining space
                     VStack(spacing: 0) {
-                        ScrollViewReader { proxy in
-                            ScrollView(.vertical, showsIndicators: false) {
+                        ScrollView(.vertical, showsIndicators: false) {
                             VStack(spacing: 16) {
-                                Spacer().frame(height: 1) // Top spacing
-                                // Title with close button
-                                HStack {
-                                    Text(L.ui_registrieren.localized)
-                                        .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.black)
-                                    Spacer()
-                                    Button {
-                                        dismiss()
-                                    } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.system(size: 28))
-                                            .foregroundColor(.gray.opacity(0.6))
-                                    }
-                                }
-                                .padding(.top, 16)
-                                .padding(.horizontal, 20)
+                                signupHeaderBar
                                 
-                                // Email Field
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(L.email.localized)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(.gray)
-                                    
-                                    TextField("", text: $email, prompt: Text(L.emailPlaceholder.localized).foregroundColor(.gray.opacity(0.5)))
-                                        .textContentType(.emailAddress)
-                                        .keyboardType(.emailAddress)
-                                        .autocapitalization(.none)
-                                        .focused($focusedField, equals: .email)
-                                        .submitLabel(.next)
-                                        .onSubmit { focusedField = .password }
-                                        .accessibilityLabel(L.email.localized)
-                                        .accessibilityHint(L.emailPlaceholder.localized)
-                                        .padding(10)
-                                        .background(Color(UIColor.systemGray6))
-                                        .cornerRadius(8)
-                                        .foregroundColor(.black)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(focusedField == .email ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
-                                        )
-                                }
-                                .id("emailField")
-                                
-                                // Password Field
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(L.password.localized)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(.gray)
-                                    
-                                    HStack {
-                                        if showPassword {
-                                            TextField("", text: $password, prompt: Text(L.minCharacters.localized).foregroundColor(.gray.opacity(0.5)))
-                                                .textContentType(.newPassword)
-                                                .focused($focusedField, equals: .password)
-                                                .submitLabel(.next)
-                                                .onSubmit { focusedField = .confirmPassword }
-                                                .accessibilityLabel(L.password.localized)
-                                        } else {
-                                            SecureField("", text: $password, prompt: Text(L.minCharacters.localized).foregroundColor(.gray.opacity(0.5)))
-                                                .textContentType(.newPassword)
-                                                .focused($focusedField, equals: .password)
-                                                .submitLabel(.next)
-                                                .onSubmit { focusedField = .confirmPassword }
-                                                .accessibilityLabel(L.password.localized)
-                                        }
-                                        
-                                        Button { showPassword.toggle() } label: {
-                                            Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                                .foregroundColor(.gray)
-                                                .font(.system(size: 14))
-                                        }
-                                        .accessibilityLabel(showPassword ? "Passwort verbergen" : "Passwort anzeigen")
-                                    }
-                                    .padding(10)
-                                    .background(Color(UIColor.systemGray6))
-                                    .cornerRadius(8)
+                                Text(L.ui_registrieren.localized)
+                                    .font(.system(size: 20, weight: .bold))
                                     .foregroundColor(.black)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(focusedField == .password ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
-                                    )
-                                    
-                                    // Password strength indicator
-                                    if !password.isEmpty {
-                                        HStack(spacing: 3) {
-                                            ForEach(0..<3) { index in
-                                                Rectangle()
-                                                    .fill(index < strengthBars ? passwordStrengthColor : Color.gray.opacity(0.2))
-                                                    .frame(height: 3)
-                                                    .cornerRadius(1.5)
-                                            }
-                                        }
-                                    }
-                                }
-                                .id("passwordField")
-                                
-                                // Confirm Password Field
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(L.ui_passwort_bestätigen.localized)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(.gray)
-                                    
-                                    HStack {
-                                        if showConfirmPassword {
-                                            TextField("", text: $confirmPassword, prompt: Text(L.ui_wiederholen.localized).foregroundColor(.gray.opacity(0.5)))
-                                                .textContentType(.newPassword)
-                                                .focused($focusedField, equals: .confirmPassword)
-                                                .submitLabel(.go)
-                                                .onSubmit { Task { await signUp() } }
-                                                .accessibilityLabel(L.ui_passwort_bestätigen.localized)
-                                        } else {
-                                            SecureField("", text: $confirmPassword, prompt: Text(L.ui_wiederholen.localized).foregroundColor(.gray.opacity(0.5)))
-                                                .textContentType(.newPassword)
-                                                .focused($focusedField, equals: .confirmPassword)
-                                                .submitLabel(.go)
-                                                .onSubmit { Task { await signUp() } }
-                                                .accessibilityLabel(L.ui_passwort_bestätigen.localized)
-                                        }
-                                        
-                                        Button { showConfirmPassword.toggle() } label: {
-                                            Image(systemName: showConfirmPassword ? "eye.slash.fill" : "eye.fill")
-                                                .foregroundColor(.gray)
-                                                .font(.system(size: 14))
-                                        }
-                                        .accessibilityLabel(showConfirmPassword ? "Passwort verbergen" : "Passwort anzeigen")
-                                        
-                                        if passwordsMatch {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundColor(.green)
-                                                .font(.system(size: 16))
-                                                .accessibilityLabel("Passwörter stimmen überein")
-                                        }
-                                    }
-                                    .padding(10)
-                                    .background(Color(UIColor.systemGray6))
-                                    .cornerRadius(8)
-                                    .foregroundColor(.black)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(focusedField == .confirmPassword ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
-                                    )
-                                }
-                                .id("confirmPasswordField")
-                        
-                        // Terms & Privacy Acceptance
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(alignment: .top, spacing: 10) {
-                                Button(action: { acceptedTerms.toggle() }) {
-                                    Image(systemName: acceptedTerms ? "checkmark.square.fill" : "square")
-                                        .font(.system(size: 20))
-                                        .foregroundStyle(acceptedTerms ? Color(red: 0.95, green: 0.5, blue: 0.3) : .gray)
-                                }
-                                .accessibilityLabel(acceptedTerms ? "Nutzungsbedingungen akzeptiert" : "Nutzungsbedingungen akzeptieren")
-                                
-                                HStack(spacing: 0) {
-                                    Text(L.ui_ich_akzeptiere_die.localized)
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.gray)
-                                    Button(action: { showTerms = true }) {
-                                        Text(L.termsOfServiceShort.localized)
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                            .underline()
-                                    }
-                                    .accessibilityLabel(L.termsOfServiceShort.localized)
-                                    .accessibilityHint("Öffnet die Nutzungsbedingungen")
-                                    Text(L.ui_und_die.localized)
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.gray)
-                                    Button(action: { showPrivacy = true }) {
-                                        Text(L.ui_datenschutzerklärung_2997.localized)
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                            .underline()
-                                    }
-                                    .accessibilityLabel(L.ui_datenschutzerklärung_2997.localized)
-                                    .accessibilityHint("Öffnet die Datenschutzerklärung")
-                                }
-                            }
-                            
-                            // Age Confirmation
-                            HStack(alignment: .top, spacing: 10) {
-                                Button(action: { confirmedAge.toggle() }) {
-                                    Image(systemName: confirmedAge ? "checkmark.square.fill" : "square")
-                                        .font(.system(size: 20))
-                                        .foregroundStyle(confirmedAge ? Color(red: 0.95, green: 0.5, blue: 0.3) : .gray)
-                                }
-                                .accessibilityLabel(confirmedAge ? "Altersbestätigung akzeptiert" : "Altersbestätigung akzeptieren")
-                                
-                                Text(L.ui_ich_bestätige_dass_ich.localized)
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.gray)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 4)
-                        .id("termsSection")
-                        
-                        // Error Message
-                        if showAccountExistsError {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "exclamationmark.circle.fill")
-                                        .font(.system(size: 11))
-                                    Text(L.errorAccountExists.localized)
-                                        .font(.system(size: 11))
-                                }
-                                .foregroundColor(.red)
+                                    .padding(.horizontal, 20)
                                 
-                                Button(action: {
-                                    dismiss()
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                        onNavigateToSignIn?()
-                                    }
-                                }) {
-                                    HStack(spacing: 4) {
-                                        Text(L.errorAccountExistsLoginLink.localized)
-                                            .font(.system(size: 11, weight: .semibold))
-                                        Image(systemName: "arrow.right")
-                                            .font(.system(size: 10))
-                                    }
-                                    .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                }
-                                .accessibilityLabel(L.errorAccountExistsLoginLink.localized)
-                                .accessibilityHint("Wechselt zum Anmeldebildschirm")
-                            }
-                            .padding(8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(6)
-                        } else if let error = errorMessage {
-                            HStack(spacing: 5) {
-                                Image(systemName: "exclamationmark.circle.fill")
-                                    .font(.system(size: 11))
-                                Text(error)
-                                    .font(.system(size: 11))
-                            }
-                            .foregroundColor(.red)
-                            .padding(6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(6)
-                        }
-                        
-                        // Sign Up Button
-                        Button {
-                            Task { await signUp() }
-                        } label: {
-                            HStack {
-                                if app.loading {
-                                    ProgressView()
-                                        .tint(.white)
+                                if step == 0 {
+                                    emailSlide
                                 } else {
-                                    Text(L.signUpButton.localized)
-                                        .font(.system(size: 15, weight: .semibold))
+                                    passwordSlide
                                 }
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                            .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3), radius: 4, x: 0, y: 2)
-                        }
-                        .accessibilityLabel(app.loading ? L.loading.localized : L.signUpButton.localized)
-                        .accessibilityHint("Registriert ein neues Konto")
-                        .disabled(app.loading || !isFormValid)
-                        .opacity((app.loading || !isFormValid) ? 0.6 : 1)
-                        .id("signUpButton")
-                        
-                        // Divider with "Or"
-                        HStack(spacing: 10) {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(height: 1)
-                            Text("or")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.gray)
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(height: 1)
-                        }
-                        .padding(.vertical, 2)
-                        
-                        // Apple Sign In (original button - uses system language)
-                        // NOTE: Apple Sign In remembers if the Apple ID was used before.
-                        // After first use, Apple will always show Sign In dialog, even with .signUp.
-                        // Our app logic handles this by checking if profile exists after authentication.
-                        SignInWithAppleButton(.signUp, onRequest: { request in
-                                // Validate that user has accepted terms and privacy
-                                guard self.acceptedTerms && self.confirmedAge else {
-                                    DispatchQueue.main.async {
-                                        self.errorMessage = L.acceptTermsAndPrivacy.localized
-                                        self.showAccountExistsError = false
-                                    }
-                                    return
-                                }
-                                
-                                // Clear any previous error messages
-                                DispatchQueue.main.async {
-                                    self.errorMessage = nil
-                                    self.showAccountExistsError = false
-                                }
-                                
-                                // Prepare nonce for replay protection
-                                let nonce = randomNonceString()
-                                self.appleNonce = nonce
-                                request.requestedScopes = [.fullName, .email]
-                                request.nonce = sha256(nonce)
-                            }, onCompletion: { result in
-                                switch result {
-                                case .success(let authResult):
-                                    if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
-                                       let tokenData = credential.identityToken,
-                                       let idToken = String(data: tokenData, encoding: .utf8) {
-                                        // Extract full name if available (only provided on first sign in)
-                                        let fullName: String?
-                                        if let givenName = credential.fullName?.givenName,
-                                           let familyName = credential.fullName?.familyName {
-                                            fullName = "\(givenName) \(familyName)"
-                                        } else if let givenName = credential.fullName?.givenName {
-                                            fullName = givenName
-                                        } else {
-                                            fullName = nil
-                                        }
-                                        Task { await handleAppleSignIn(idToken: idToken, fullName: fullName) }
-                                    } else {
-                                        self.errorMessage = "Apple Anmelde-Token ungültig"
-                                    }
-                                case .failure(let error):
-                                    // Handle Apple Sign In errors with better messages
-                                    let nsError = error as NSError
-                                    let errorCode = nsError.code
-                                    let errorDomain = nsError.domain
-                                    
-                                    // Check for simulator/device-specific errors
-                                    if errorDomain == "AKAuthenticationError" || errorDomain.contains("AuthenticationServices") {
-                                        #if targetEnvironment(simulator)
-                                        self.errorMessage = "Sign in with Apple funktioniert nicht im Simulator. Bitte teste auf einem echten Gerät."
-                                        #else
-                                        // Real device errors
-                                        if errorCode == -7022 || errorCode == -7071 {
-                                            self.errorMessage = "Apple Sign In Fehler. Bitte versuche es erneut oder melde dich mit E-Mail an."
-                                        } else {
-                                            self.errorMessage = error.localizedDescription.isEmpty ? "Apple Sign In fehlgeschlagen. Bitte versuche es erneut." : error.localizedDescription
-                                        }
-                                        #endif
-                                    } else {
-                                        self.errorMessage = error.localizedDescription.isEmpty ? "Anmeldung fehlgeschlagen" : error.localizedDescription
-                                    }
-                                }
-                            })
-                        .signInWithAppleButtonStyle(.black)
-                        .frame(height: 44)
-                        .frame(maxWidth: 375) // Prevent constraint conflicts
-                        .cornerRadius(8)
-                            }
-                            .padding(.horizontal, 20)
                             .padding(.top, 8)
-                            .padding(.bottom, 400) // Extra bottom padding for keyboard - ensures all content is accessible
+                            .padding(.bottom, 400)
+                            .animation(.easeInOut(duration: 0.25), value: step)
                         }
                         .scrollDismissesKeyboard(.interactively)
-                        .onChange(of: focusedField) { _, newValue in
-                            if let field = newValue {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    withAnimation {
-                                        switch field {
-                                        case .email:
-                                            proxy.scrollTo("emailField", anchor: .center)
-                                        case .password:
-                                            proxy.scrollTo("passwordField", anchor: .center)
-                                        case .confirmPassword:
-                                            // When confirming password, scroll to terms section so user can see checkboxes
-                                            proxy.scrollTo("termsSection", anchor: .top)
-                                        }
-                                    }
-                                }
-                            } else {
-                                // When keyboard is dismissed, scroll to bottom to show all buttons
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation {
-                                        proxy.scrollTo("signUpButton", anchor: .bottom)
-                                    }
-                                }
-                            }
-                        }
-                        }
-                        .background(Color.white)
-                        .cornerRadius(30, corners: [.topLeft, .topRight])
-                        .ignoresSafeArea(edges: .bottom)
                     }
+                    .background(Color.white)
+                    .cornerRadius(30, corners: [.topLeft, .topRight])
+                    .ignoresSafeArea(edges: .bottom)
                     .frame(maxHeight: .infinity)
+
                 }
             }
         }
@@ -500,6 +124,399 @@ struct SignUpView: View {
         }
         .sheet(isPresented: $showPrivacy) {
             PrivacyPolicyView()
+        }
+        .onAppear {
+            focusedField = .email
+        }
+    }
+    
+    private var signupHeaderBar: some View {
+        HStack {
+            if step == 1 {
+                Button {
+                    errorMessage = nil
+                    showAccountExistsError = false
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        step = 0
+                    }
+                    focusedField = .email
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.black)
+                        .frame(width: 32, height: 32)
+                }
+                .accessibilityLabel(L.onboarding_zurück.localized)
+            }
+            Spacer()
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(.gray.opacity(0.6))
+            }
+            .accessibilityLabel(L.cancel.localized)
+        }
+        .padding(.top, 16)
+        .padding(.horizontal, 20)
+    }
+    
+    private var emailSlide: some View {
+        VStack(spacing: 16) {
+            emailField
+            termsSection
+            errorBanner
+            primaryButton(title: L.next.localized, disabled: email.trimmed.isEmpty, loading: false) {
+                goToPasswordSlide()
+            }
+            orDivider
+            appleSignInButton
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    private var passwordSlide: some View {
+        VStack(spacing: 16) {
+            Text(email.trimmed)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.gray)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            passwordField
+            confirmPasswordField
+            termsSection
+            errorBanner
+            primaryButton(
+                title: L.signUpButton.localized,
+                disabled: app.loading || !isFormValid,
+                loading: app.loading
+            ) {
+                Task { await signUp() }
+            }
+            orDivider
+            appleSignInButton
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    private var emailField: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(L.email.localized)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.gray)
+            TextField("", text: $email, prompt: Text(L.emailPlaceholder.localized).foregroundColor(.gray.opacity(0.5)))
+                .textContentType(.emailAddress)
+                .keyboardType(.emailAddress)
+                .autocapitalization(.none)
+                .focused($focusedField, equals: .email)
+                .submitLabel(.next)
+                .onSubmit { goToPasswordSlide() }
+                .padding(10)
+                .background(Color(UIColor.systemGray6))
+                .cornerRadius(8)
+                .foregroundColor(.black)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(focusedField == .email ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
+                )
+        }
+    }
+    
+    private var passwordField: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(L.password.localized)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.gray)
+            HStack {
+                if showPassword {
+                    TextField("", text: $password, prompt: Text(L.minCharacters.localized).foregroundColor(.gray.opacity(0.5)))
+                        .textContentType(.newPassword)
+                        .focused($focusedField, equals: .password)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .confirmPassword }
+                } else {
+                    SecureField("", text: $password, prompt: Text(L.minCharacters.localized).foregroundColor(.gray.opacity(0.5)))
+                        .textContentType(.newPassword)
+                        .focused($focusedField, equals: .password)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .confirmPassword }
+                }
+                Button { showPassword.toggle() } label: {
+                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 14))
+                }
+                .accessibilityLabel(showPassword ? L.a11y_hidePassword.localized : L.a11y_showPassword.localized)
+            }
+            .padding(10)
+            .background(Color(UIColor.systemGray6))
+            .cornerRadius(8)
+            .foregroundColor(.black)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(focusedField == .password ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
+            )
+            if !password.isEmpty {
+                HStack(spacing: 3) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Rectangle()
+                            .fill(index < strengthBars ? passwordStrengthColor : Color.gray.opacity(0.2))
+                            .frame(height: 3)
+                            .cornerRadius(1.5)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var confirmPasswordField: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(L.ui_passwort_bestätigen.localized)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.gray)
+            HStack {
+                if showConfirmPassword {
+                    TextField("", text: $confirmPassword, prompt: Text(L.ui_wiederholen.localized).foregroundColor(.gray.opacity(0.5)))
+                        .textContentType(.newPassword)
+                        .focused($focusedField, equals: .confirmPassword)
+                        .submitLabel(.go)
+                        .onSubmit { Task { await signUp() } }
+                } else {
+                    SecureField("", text: $confirmPassword, prompt: Text(L.ui_wiederholen.localized).foregroundColor(.gray.opacity(0.5)))
+                        .textContentType(.newPassword)
+                        .focused($focusedField, equals: .confirmPassword)
+                        .submitLabel(.go)
+                        .onSubmit { Task { await signUp() } }
+                }
+                Button { showConfirmPassword.toggle() } label: {
+                    Image(systemName: showConfirmPassword ? "eye.slash.fill" : "eye.fill")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 14))
+                }
+                .accessibilityLabel(showConfirmPassword ? L.a11y_hidePassword.localized : L.a11y_showPassword.localized)
+                if passwordsMatch {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.system(size: 16))
+                }
+            }
+            .padding(10)
+            .background(Color(UIColor.systemGray6))
+            .cornerRadius(8)
+            .foregroundColor(.black)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(focusedField == .confirmPassword ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear, lineWidth: 2)
+            )
+        }
+    }
+    
+    private var termsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                Button(action: { acceptedTerms.toggle() }) {
+                    Image(systemName: acceptedTerms ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 20))
+                        .foregroundStyle(acceptedTerms ? Color(red: 0.95, green: 0.5, blue: 0.3) : .gray)
+                }
+                HStack(spacing: 0) {
+                    Text(L.ui_ich_akzeptiere_die.localized)
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray)
+                    Button(action: { showTerms = true }) {
+                        Text(L.termsOfServiceShort.localized)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                            .underline()
+                    }
+                    Text(L.ui_und_die.localized)
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray)
+                    Button(action: { showPrivacy = true }) {
+                        Text(L.ui_datenschutzerklärung_2997.localized)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                            .underline()
+                    }
+                }
+            }
+            HStack(alignment: .top, spacing: 10) {
+                Button(action: { confirmedAge.toggle() }) {
+                    Image(systemName: confirmedAge ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 20))
+                        .foregroundStyle(confirmedAge ? Color(red: 0.95, green: 0.5, blue: 0.3) : .gray)
+                }
+                Text(L.ui_ich_bestätige_dass_ich.localized)
+                    .font(.system(size: 11))
+                    .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+    }
+    
+    @ViewBuilder
+    private var errorBanner: some View {
+        if showAccountExistsError {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 5) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 11))
+                    Text(L.errorAccountExists.localized)
+                        .font(.system(size: 11))
+                }
+                .foregroundColor(.red)
+                Button(action: {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        onNavigateToSignIn?()
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Text(L.errorAccountExistsLoginLink.localized)
+                            .font(.system(size: 11, weight: .semibold))
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                }
+            }
+            .padding(8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.red.opacity(0.1))
+            .cornerRadius(6)
+        } else if let error = errorMessage {
+            HStack(spacing: 5) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 11))
+                Text(error)
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(.red)
+            .padding(6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.red.opacity(0.1))
+            .cornerRadius(6)
+        }
+    }
+    
+    private var orDivider: some View {
+        HStack(spacing: 10) {
+            Rectangle().fill(Color.gray.opacity(0.3)).frame(height: 1)
+            Text(L.or.localized).font(.system(size: 11, weight: .medium)).foregroundColor(.gray)
+            Rectangle().fill(Color.gray.opacity(0.3)).frame(height: 1)
+        }
+        .padding(.vertical, 2)
+    }
+    
+    private func primaryButton(title: String, disabled: Bool, loading: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                if loading {
+                    ProgressView().tint(.white)
+                } else {
+                    Text(title).font(.system(size: 15, weight: .semibold))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .foregroundColor(.white)
+            .cornerRadius(8)
+            .shadow(color: Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3), radius: 4, x: 0, y: 2)
+        }
+        .disabled(disabled)
+        .opacity(disabled ? 0.6 : 1)
+    }
+    
+    private var appleSignInButton: some View {
+        SignInWithAppleButton(.signUp, onRequest: { request in
+            guard self.acceptedTerms && self.confirmedAge else {
+                DispatchQueue.main.async {
+                    self.errorMessage = L.acceptTermsAndPrivacy.localized
+                    self.showAccountExistsError = false
+                }
+                return
+            }
+            DispatchQueue.main.async {
+                self.errorMessage = nil
+                self.showAccountExistsError = false
+            }
+            let nonce = randomNonceString()
+            self.appleNonce = nonce
+            request.requestedScopes = [.fullName, .email]
+            request.nonce = sha256(nonce)
+        }, onCompletion: { result in
+            switch result {
+            case .success(let authResult):
+                if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
+                   let tokenData = credential.identityToken,
+                   let idToken = String(data: tokenData, encoding: .utf8) {
+                    let fullName: String?
+                    if let givenName = credential.fullName?.givenName,
+                       let familyName = credential.fullName?.familyName {
+                        fullName = "\(givenName) \(familyName)"
+                    } else if let givenName = credential.fullName?.givenName {
+                        fullName = givenName
+                    } else {
+                        fullName = nil
+                    }
+                    Task { await handleAppleSignIn(idToken: idToken, fullName: fullName) }
+                } else {
+                    self.errorMessage = L.errorAppleTokenInvalid.localized
+                }
+            case .failure(let error):
+                let nsError = error as NSError
+                let errorCode = nsError.code
+                let errorDomain = nsError.domain
+                if errorDomain == "AKAuthenticationError" || errorDomain.contains("AuthenticationServices") {
+                    #if targetEnvironment(simulator)
+                    self.errorMessage = L.error_appleSignInSimulator.localized
+                    #else
+                    if errorCode == -7022 || errorCode == -7071 {
+                        self.errorMessage = L.error_appleSignInUseEmail.localized
+                    } else {
+                        self.errorMessage = error.localizedDescription.isEmpty ? L.errorAppleSignInFailed.localized : error.localizedDescription
+                    }
+                    #endif
+                } else {
+                    self.errorMessage = error.localizedDescription.isEmpty ? L.error_signInFailed.localized : error.localizedDescription
+                }
+            }
+        })
+        .signInWithAppleButtonStyle(.black)
+        .frame(height: 44)
+        .frame(maxWidth: 375)
+        .cornerRadius(8)
+    }
+    
+    private func goToPasswordSlide() {
+        let trimmed = email.trimmed
+        guard !trimmed.isEmpty else {
+            errorMessage = String.validationError(for: .required)
+            showAccountExistsError = false
+            return
+        }
+        guard trimmed.isValidEmail else {
+            errorMessage = String.validationError(for: .email)
+            showAccountExistsError = false
+            return
+        }
+        errorMessage = nil
+        showAccountExistsError = false
+        withAnimation(.easeInOut(duration: 0.25)) {
+            step = 1
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            focusedField = .password
         }
     }
     
@@ -542,12 +559,12 @@ struct SignUpView: View {
         }
         
         guard passwordsMatch else {
-            errorMessage = NSLocalizedString("validation.password.mismatch", value: "Passwörter stimmen nicht überein", comment: "Password mismatch error")
+            errorMessage = L.settings_passwordsDoNotMatch.localized
             return
         }
         
         guard acceptedTerms && confirmedAge else {
-            errorMessage = NSLocalizedString("validation.terms.required", value: "Bitte akzeptieren Sie die Nutzungsbedingungen", comment: "Terms required error")
+            errorMessage = L.acceptTermsAndPrivacy.localized
             return
         }
         

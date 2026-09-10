@@ -24,6 +24,7 @@
 		260C6211C9EBA6C621E6EA5C /* MockSupabaseResponses.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4BBA2509D4205F615D2389 /* MockSupabaseResponses.swift */; };
 		2617275002BC335143B7BB81 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B72479522C0E2E4C3447AC96 /* RevenueCat */; };
 		28CEBB001420E1DBB835A730 /* StepIngredientsBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76011A0A93B77F4C6A7E04BC /* StepIngredientsBlock.swift */; };
+		A8F31C0B4D2E91A7C5B60814 /* IngredientCategorizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9E42D1C5E3F02B8D6C71925 /* IngredientCategorizerTests.swift */; };
 		2D7D9BA5B7418663E41A578C /* ShoppingListManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EDB6B3A12DFC71D7A4F9185 /* ShoppingListManagerTests.swift */; };
 		3094EEED5AA9C2F94E4C8B3D /* TastePreferencesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447A6B8A84478C798910A5E1 /* TastePreferencesManager.swift */; };
 		315BFED8453D8F82AC7A274B /* RecipePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03D43DECD96C09C92E0F256F /* RecipePlan.swift */; };
@@ -42,7 +43,6 @@
 		57BBA4C3EC5DE8BAE972E286 /* TermsOfServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF1AFB82F4D6DC0FBEADEC2 /* TermsOfServiceView.swift */; };
 		59E6066EEE66DB8FBA7CB2EB /* RecipesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F3487977213951EF85063B8 /* RecipesView.swift */; };
 		5FCBB858C3B0036C902DD553 /* BackendClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42169ED425055D7B0C7DCC4A /* BackendClientTests.swift */; };
-		5FD812EE46ECE2BE17354F27 /* LikedRecipesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C38F108F9C7302B0520E12 /* LikedRecipesManager.swift */; };
 		6221EB728B71FEA91A8A9FA3 /* ImprintView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 682480BA01AEC9380FF0F4A6 /* ImprintView.swift */; };
 		6409409A3393876CBCA16C56 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 194DF8D93E02C37F7C9DE712 /* ShareViewController.swift */; };
 		661F401AC760F8C6F8FD04B7 /* Info.plist.backup in Resources */ = {isa = PBXBuildFile; fileRef = 68C71A6610BDAED82B8792CC /* Info.plist.backup */; };
@@ -86,7 +86,6 @@
 		A87DEB86EF1AB56F87377362 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD97221B4FA2497E34222673 /* RecipeDetailView.swift */; };
 		A9D92401FFC32D9E4049A6D2 /* MenuManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B1DFC7CBBC6F57AD4C82BD7 /* MenuManager.swift */; };
 		ABF9438D01967639E9300DA0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EAE72EEFB2F938867B00A5D1 /* LaunchScreen.storyboard */; };
-		B12F8CDE1CC6059319E84989 /* LikedRecipesManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F366107B89FBDAB81E0E6667 /* LikedRecipesManagerTests.swift */; };
 		B325A2932815BE02546AE3F6 /* UserPreferencesClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7DC09C3D7565C453EC5277 /* UserPreferencesClient.swift */; };
 		B74612E22263F9B53F9A7E78 /* SupabaseAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9C8E97CEA997977B04DFDC /* SupabaseAuthClient.swift */; };
 		B7F7142CE863BED29C2914A7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C4F8F3DE07184AAFB7382E /* AppState.swift */; };
@@ -169,7 +168,6 @@
 		194DF8D93E02C37F7C9DE712 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		1AE18E2F63067CE6BA3CB289 /* RecipeCreatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeCreatorView.swift; sourceTree = "<group>"; };
 		21B76FF23B7C59DF68BE67EA /* CulinaAi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CulinaAi.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		21C38F108F9C7302B0520E12 /* LikedRecipesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikedRecipesManager.swift; sourceTree = "<group>"; };
 		22A46C888DB58070A57390BA /* Monetization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Monetization.swift; sourceTree = "<group>"; };
 		24E831A7B1026BCAE595DEB3 /* UIAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAppearance.swift; sourceTree = "<group>"; };
 		26317223248F15F1944A9F46 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -210,6 +208,7 @@
 		6B1DFC7CBBC6F57AD4C82BD7 /* MenuManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuManager.swift; sourceTree = "<group>"; };
 		6E061996A232631E0D280E3E /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		6E6730BDEFA14B8922E5EA6C /* AppIntroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntroView.swift; sourceTree = "<group>"; };
+		B9E42D1C5E3F02B8D6C71925 /* IngredientCategorizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientCategorizerTests.swift; sourceTree = "<group>"; };
 		6EDB6B3A12DFC71D7A4F9185 /* ShoppingListManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListManagerTests.swift; sourceTree = "<group>"; };
 		72481376FDFA2972F2263952 /* JailbreakDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JailbreakDetector.swift; sourceTree = "<group>"; };
 		728DA3A6CF6CD4E107415450 /* ShoppingListExtended.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListExtended.swift; sourceTree = "<group>"; };
@@ -267,7 +266,6 @@
 		EAE72EEFB2F938867B00A5D1 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		EFC499A8A048E4852B3F3891 /* StepIngredientExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepIngredientExtractor.swift; sourceTree = "<group>"; };
 		F3363C4462A409F33CD67CAD /* SocialRecipeImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRecipeImportView.swift; sourceTree = "<group>"; };
-		F366107B89FBDAB81E0E6667 /* LikedRecipesManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikedRecipesManagerTests.swift; sourceTree = "<group>"; };
 		F5C4F2055099FDED27B71EBC /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		FB2BE8A30CED23C70AE85F45 /* CulinaChefTimerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CulinaChefTimerWidget.swift; sourceTree = "<group>"; };
 		FCF1AFB82F4D6DC0FBEADEC2 /* TermsOfServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceView.swift; sourceTree = "<group>"; };
@@ -298,12 +296,12 @@
 				87ADFE33C58FEF2A524B9C04 /* AppStateTests.swift */,
 				42169ED425055D7B0C7DCC4A /* BackendClientTests.swift */,
 				174E397B5850F0459C63D384 /* KeychainManagerTests.swift */,
-				F366107B89FBDAB81E0E6667 /* LikedRecipesManagerTests.swift */,
 				7675AB2EAF24B0AEC5A02AED /* LocalizationManagerTests.swift */,
 				7E3211EFE8C499247FFEE1F8 /* OpenAIClientTests.swift */,
 				364BC5FAF792DA770F9DF3A7 /* PaywallPriceMathTests.swift */,
 				35087D174F4743853D95CE96 /* RatingsClientTests.swift */,
 				6EDB6B3A12DFC71D7A4F9185 /* ShoppingListManagerTests.swift */,
+				B9E42D1C5E3F02B8D6C71925 /* IngredientCategorizerTests.swift */,
 				2EF4F84771B3193FD68A9F08 /* StringValidationTests.swift */,
 				52E07267E0858383C5231893 /* SubscriptionsClientTests.swift */,
 				2985EDED3592461554F441CD /* SubscriptionTests.swift */,
@@ -434,7 +432,6 @@
 			children = (
 				B90E6F0449C15CC5D631DE76 /* AppStoreReviewManager.swift */,
 				A9B0E04E90D5EB0F73662CDC /* AuthenticationManager.swift */,
-				21C38F108F9C7302B0520E12 /* LikedRecipesManager.swift */,
 				6B1DFC7CBBC6F57AD4C82BD7 /* MenuManager.swift */,
 				22A46C888DB58070A57390BA /* Monetization.swift */,
 				5E5F4CA8CE1D4B7197A2FF80 /* RCPurchaseController.swift */,
@@ -741,7 +738,6 @@
 				925EE3EA0A70F9101AC0CFF1 /* ImageOptimizer.swift in Sources */,
 				6221EB728B71FEA91A8A9FA3 /* ImprintView.swift in Sources */,
 				C8EC7A8151636A78736D99C3 /* JailbreakDetector.swift in Sources */,
-				5FD812EE46ECE2BE17354F27 /* LikedRecipesManager.swift in Sources */,
 				19CFC472E6C0FA757B1E6E0F /* LoadingView.swift in Sources */,
 				6B3CDD8F380E7E04543F3E08 /* LocalizationManager.swift in Sources */,
 				91B313AA3A2983E9BD7F9C24 /* LocalizedAppleSignInButton.swift in Sources */,
@@ -820,7 +816,6 @@
 				88D188939F39E6A9ACB67617 /* AuthFlowIntegrationTests.swift in Sources */,
 				5FCBB858C3B0036C902DD553 /* BackendClientTests.swift in Sources */,
 				FFF8F29956D8F6369821BC24 /* KeychainManagerTests.swift in Sources */,
-				B12F8CDE1CC6059319E84989 /* LikedRecipesManagerTests.swift in Sources */,
 				E9A27A948CF2AE019F73144D /* LocalizationManagerTests.swift in Sources */,
 				1BE1A83CC516A86B8C327BF3 /* MenuManagementIntegrationTests.swift in Sources */,
 				260C6211C9EBA6C621E6EA5C /* MockSupabaseResponses.swift in Sources */,
@@ -829,6 +824,7 @@
 				6DB5DD77650E857638CE46C1 /* PaywallPriceMathTests.swift in Sources */,
 				1B480D6E2CFCC4B622EA5A3C /* RatingsClientTests.swift in Sources */,
 				2D7D9BA5B7418663E41A578C /* ShoppingListManagerTests.swift in Sources */,
+				A8F31C0B4D2E91A7C5B60814 /* IngredientCategorizerTests.swift in Sources */,
 				BCCE65B26AF0840BE3CACBEE /* StringValidationTests.swift in Sources */,
 				138687AB9FE7D960B030AE5E /* SubscriptionFlowIntegrationTests.swift in Sources */,
 				85D6C5963BE88397721555E0 /* SubscriptionTests.swift in Sources */,

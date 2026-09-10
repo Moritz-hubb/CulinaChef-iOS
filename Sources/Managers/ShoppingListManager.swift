@@ -168,11 +168,13 @@ class ShoppingListManager: ObservableObject {
     
     // Clear shopping list when user logs out
     func clearShoppingList() {
-        guard let userId = KeychainManager.get(key: "user_id") else { return }
-        let key = storageKey(for: userId)
-        userDefaults.removeObject(forKey: key)
+        if let userId = KeychainManager.get(key: "user_id") {
+            userDefaults.removeObject(forKey: storageKey(for: userId))
+            Logger.sensitive("[ShoppingListManager] Cleared shopping list for user \(userId)", category: .data)
+        }
+        appGroupDefaults?.removeObject(forKey: "shopping_list")
         shoppingList = ShoppingList()
-        Logger.sensitive("[ShoppingListManager] Cleared shopping list for user \(userId)", category: .data)
+        WidgetCenter.shared.reloadAllTimelines()
     }
     
     // MARK: - Item Management
@@ -203,6 +205,17 @@ class ShoppingListManager: ObservableObject {
             shoppingList = updatedList
             saveShoppingList()
         }
+    }
+    
+    func updateItemCategory(item: ShoppingListItem, to category: ItemCategory) {
+        guard item.category != category else { return }
+        guard let index = shoppingList.items.firstIndex(where: { $0.id == item.id }) else { return }
+        var updatedList = shoppingList
+        updatedList.items[index].category = category
+        shoppingList = updatedList
+        IngredientCategorizer.rememberOverride(name: item.name, category: category)
+        saveShoppingList()
+        NotificationCenter.default.post(name: NSNotification.Name("ShoppingListDidChange"), object: nil)
     }
     
     func deleteItem(item: ShoppingListItem) {

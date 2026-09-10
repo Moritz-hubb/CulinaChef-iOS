@@ -25,15 +25,8 @@ final class RCPurchaseController: PurchaseController {
         
         Task {
             for await customerInfo in Purchases.shared.customerInfoStream {
-                let entitlements = Set(customerInfo.entitlements.activeInCurrentEnvironment.keys.map {
-                    Entitlement(id: $0)
-                })
                 await MainActor.run {
-                    if entitlements.isEmpty {
-                        Superwall.shared.subscriptionStatus = .inactive
-                    } else {
-                        Superwall.shared.subscriptionStatus = .active(entitlements)
-                    }
+                    Monetization.shared.applySuperwallSubscriptionStatus(from: customerInfo)
                 }
             }
         }

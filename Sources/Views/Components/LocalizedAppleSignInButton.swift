@@ -1,22 +1,121 @@
 import SwiftUI
 import AuthenticationServices
 import CryptoKit
+import Security
+import UIKit
 
-/// A localized Apple Sign In button that triggers the authorization flow
+/// Nonce, SHA-256 and user-facing error mapping for Sign in with Apple.
+enum AppleSignInNonce {
+    static func random(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+        while remainingLength > 0 {
+            var randoms = [UInt8](repeating: 0, count: 16)
+            let status = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
+            if status != errSecSuccess {
+                Logger.error("Unable to generate nonce. SecRandomCopyBytes failed with status: \(status)", category: .auth)
+                return String(format: "%08x%08x", UInt32(Date().timeIntervalSince1970), arc4random())
+            }
+            for random in randoms {
+                if remainingLength == 0 { break }
+                result.append(charset[Int(random % UInt8(charset.count))])
+                remainingLength -= 1
+            }
+        }
+        return result
+    }
+
+    static func sha256(_ input: String) -> String {
+        let hashed = SHA256.hash(data: Data(input.utf8))
+        return hashed.compactMap { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Returns `nil` when the user cancelled so the UI stays quiet.
+    static func userMessage(for error: Error) -> String? {
+        if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+            return nil
+        }
+        let nsError = error as NSError
+        if nsError.code == 1001 {
+            return nil
+        }
+        if nsError.domain == "AKAuthenticationError" || nsError.domain.contains("AuthenticationServices") {
+            #if targetEnvironment(simulator)
+            return L.error_appleSignInSimulator.localized
+            #else
+            if nsError.code == -7022 || nsError.code == -7071 {
+                return L.error_appleSignInUseEmail.localized
+            }
+            return error.localizedDescription.isEmpty ? L.errorAppleSignInFailed.localized : error.localizedDescription
+            #endif
+        }
+        return error.localizedDescription.isEmpty ? L.error_signInFailed.localized : error.localizedDescription
+    }
+
+    static func fullName(from credential: ASAuthorizationAppleIDCredential) -> String? {
+        if let givenName = credential.fullName?.givenName,
+           let familyName = credential.fullName?.familyName {
+            return "\(givenName) \(familyName)"
+        }
+        return credential.fullName?.givenName
+    }
+}
+
+/// Owns the authorization controller so delegates are not deallocated mid-flow.
+final class AppleSignInController: NSObject, ObservableObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    var onRequest: (ASAuthorizationAppleIDRequest) -> Void = { _ in }
+    var onCompletion: (Result<ASAuthorization, Error>) -> Void = { _ in }
+    private var authorizationController: ASAuthorizationController?
+
+    func performRequest() {
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        onRequest(request)
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+        authorizationController = controller
+        controller.performRequests()
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        DispatchQueue.main.async {
+            self.onCompletion(.success(authorization))
+        }
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        DispatchQueue.main.async {
+            self.onCompletion(.failure(error))
+        }
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let windows = scenes.flatMap(\.windows)
+        if let key = windows.first(where: { $0.isKeyWindow && !$0.isHidden }) {
+            return key
+        }
+        if let visible = windows.first(where: { !$0.isHidden && $0.alpha > 0 }) {
+            return visible
+        }
+        return windows.first ?? ASPresentationAnchor()
+    }
+}
+
+/// Custom Apple Sign In button. The system `SignInWithAppleButton` often swallows taps inside a `ScrollView` / `fullScreenCover`.
 struct LocalizedAppleSignInButton: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
-    
+    @StateObject private var session = AppleSignInController()
+
     let buttonType: ASAuthorizationAppleIDButton.ButtonType
     let buttonStyle: ASAuthorizationAppleIDButton.Style
     let localizedText: String
     let onRequest: (ASAuthorizationAppleIDRequest) -> Void
     let onCompletion: (Result<ASAuthorization, Error>) -> Void
     let shouldPerformRequest: (() -> Bool)?
-    
-    @State private var authorizationController: ASAuthorizationController?
-    @State private var authorizationDelegate: AuthorizationDelegate?
-    @State private var presentationProvider: PresentationContextProvider?
-    
+
     init(
         buttonType: ASAuthorizationAppleIDButton.ButtonType = .signIn,
         buttonStyle: ASAuthorizationAppleIDButton.Style = .black,
@@ -32,7 +131,7 @@ struct LocalizedAppleSignInButton: View {
         self.onCompletion = onCompletion
         self.shouldPerformRequest = shouldPerformRequest
     }
-    
+
     var body: some View {
         Button {
             performAppleSignIn()
@@ -53,106 +152,47 @@ struct LocalizedAppleSignInButton: View {
                     .stroke(buttonStyle == .black ? Color.clear : Color.gray.opacity(0.3), lineWidth: 1)
             )
         }
-        .frame(maxWidth: 375) // Prevent constraint conflicts
+        .buttonStyle(.plain)
+        .frame(maxWidth: 375)
+        .accessibilityLabel(localizedText)
+        .id("\(localizationManager.currentLanguage)-\(buttonType.rawValue)")
     }
-    
+
     private func performAppleSignIn() {
-        // Ensure we're on main thread
-        guard Thread.isMainThread else {
-            DispatchQueue.main.async {
-                self.performAppleSignIn()
-            }
-            return
-        }
-        
-        // Check if request should be performed (validation)
         if let shouldPerform = shouldPerformRequest, !shouldPerform() {
-            // Validation failed, don't perform request
             return
         }
-        
-        let provider = ASAuthorizationAppleIDProvider()
-        let request = provider.createRequest()
-        
-        // Configure request before calling onRequest
-        onRequest(request)
-        
-        // Ensure request is properly configured
-        // Note: Nonce should be set in onRequest closure
-        
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        let completionHandler = onCompletion
-        let delegate = AuthorizationDelegate(onCompletion: { result in
-            // Call the completion handler
-            // Note: References are automatically managed by @State and will be cleared when view is recreated
-            completionHandler(result)
-        })
-        let presentationProvider = PresentationContextProvider()
-        
-        controller.delegate = delegate
-        controller.presentationContextProvider = presentationProvider
-        
-        // Keep references to prevent deallocation
-        self.authorizationController = controller
-        self.authorizationDelegate = delegate
-        self.presentationProvider = presentationProvider
-        
-        // Perform requests (we're already on main thread)
-        controller.performRequests()
+        session.onRequest = onRequest
+        session.onCompletion = onCompletion
+        session.performRequest()
     }
 }
 
-// MARK: - Authorization Delegate
-private class AuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate {
-    let onCompletion: (Result<ASAuthorization, Error>) -> Void
-    
-    init(onCompletion: @escaping (Result<ASAuthorization, Error>) -> Void) {
-        self.onCompletion = onCompletion
-    }
-    
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-        // Ensure callback is on main thread
-        DispatchQueue.main.async {
-            self.onCompletion(.success(authorization))
-        }
-    }
-    
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        // Ensure callback is on main thread
-        DispatchQueue.main.async {
-            self.onCompletion(.failure(error))
-        }
-    }
-}
+@MainActor
+enum AppleAccountDeletionAuth {
+    private static var session: AppleSignInController?
 
-// MARK: - Presentation Context Provider
-private class PresentationContextProvider: NSObject, ASAuthorizationControllerPresentationContextProviding {
-    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        // Use modern API for iOS 13+
-        guard let windowScene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }) else {
-            // Fallback: try to get any active window scene
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                return windowScene.windows.first ?? UIWindow()
+    static func requestAuthorizationCode() async -> String? {
+        await withCheckedContinuation { continuation in
+            let controller = AppleSignInController()
+            session = controller
+            let nonce = AppleSignInNonce.random()
+            controller.onRequest = { request in
+                request.requestedScopes = []
+                request.nonce = AppleSignInNonce.sha256(nonce)
             }
-            // Last resort: return a new window
-            return UIWindow()
+            controller.onCompletion = { result in
+                session = nil
+                switch result {
+                case .success(let authorization):
+                    let credential = authorization.credential as? ASAuthorizationAppleIDCredential
+                    let code = credential.flatMap(\.authorizationCode).flatMap { String(data: $0, encoding: .utf8) }
+                    continuation.resume(returning: code)
+                case .failure:
+                    continuation.resume(returning: nil)
+                }
+            }
+            controller.performRequest()
         }
-        
-        // Get the key window from the active scene
-        if let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
-            return keyWindow
-        }
-        
-        // Fallback to first window in scene
-        if let firstWindow = windowScene.windows.first {
-            return firstWindow
-        }
-        
-        // Last resort
-        return UIWindow()
     }
 }
-
-

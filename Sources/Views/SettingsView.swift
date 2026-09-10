@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var showError = false
     @State private var errorMessage: String?
     @State private var hasConsent: Bool = OpenAIConsentManager.hasConsent
+    @State private var isDeletingAccount = false
     
     private var backgroundGradient: LinearGradient {
         LinearGradient(
@@ -187,12 +188,16 @@ struct SettingsView: View {
                         Image(systemName: "trash")
                         Text(L.deleteAccount.localized).font(.subheadline)
                         Spacer()
+                        if isDeletingAccount {
+                            ProgressView().tint(.white)
+                        }
                     }
                     .foregroundStyle(.white)
                     .padding(12)
                     .background(Color.red.opacity(0.15), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
                 }
+                .disabled(isDeletingAccount)
                 .accessibilityLabel(L.deleteAccount.localized)
                 .accessibilityHint(L.a11y_deleteAccount.localized)
             }
@@ -278,8 +283,16 @@ struct SettingsView: View {
             }
             Button(L.deleteNow.localized, role: .destructive) {
                 Task {
-                    await app.deleteAccountAndData()
-                    showDeleteSuccess = true
+                    isDeletingAccount = true
+                    defer { isDeletingAccount = false }
+                    do {
+                        try await app.deleteAccountAndData()
+                        showDeleteSuccess = true
+                    } catch {
+                        Logger.error("[AccountDeletion] Backend deletion failed", error: error, category: .data)
+                        errorMessage = L.accountDeletionFailed.localized
+                        showError = true
+                    }
                 }
             }
             Button(L.cancel.localized, role: .cancel) { }
@@ -745,7 +758,6 @@ private struct ProfileSettingsSheet: View {
     @State private var error: String?
     @State private var saved = false
     @State private var recipesCount = 0
-    @State private var favoritesCount = 0
     @State private var ratingsCount = 0
     @State private var allergies: String = ""
     @State private var dietTypes: String = ""
@@ -892,7 +904,6 @@ private struct ProfileSettingsSheet: View {
                             
                             HStack(spacing: 20) {
                                 StatCard(icon: "book.fill", label: L.settings_recipesCount.localized, value: "\(recipesCount)")
-                                StatCard(icon: "heart.fill", label: L.settings_favoritesCount.localized, value: "\(favoritesCount)")
                                 StatCard(icon: "star.fill", label: L.settings_ratingsCount.localized, value: "\(ratingsCount)")
                             }
                         }
@@ -1014,7 +1025,6 @@ private struct ProfileSettingsSheet: View {
             // Load counts (backend endpoints pending)
             // Placeholder values until backend provides endpoints
             recipesCount = 0
-            favoritesCount = 0
             ratingsCount = 0
             
         } catch {
@@ -1233,12 +1243,9 @@ private struct SubscriptionSettingsSheet: View {
         return L.subscriptionUnlimitedActive.localized
     }
     
-    /// Restore is for cancelled or lapsed Apple IDs — not for an auto-renewing subscription.
+    /// Restore is only for lapsed Apple IDs. An active period (including cancelled-but-not-expired) hides it.
     private var shouldShowRestorePurchases: Bool {
-        if app.isSubscribed {
-            return !app.getSubscriptionAutoRenew()
-        }
-        return RevenueCatManager.shared.hasLapsedSubscription
+        !app.isSubscribed && RevenueCatManager.shared.hasLapsedSubscription
     }
 
     var body: some View {

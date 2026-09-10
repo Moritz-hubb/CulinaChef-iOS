@@ -31,6 +31,8 @@ final class AuthenticationManager {
         try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
         try KeychainManager.save(key: "user_id", value: response.user.id)
         try KeychainManager.save(key: "user_email", value: response.user.email)
+        try KeychainManager.save(key: "auth_provider", value: "email")
+        KeychainManager.delete(key: "apple_user_id")
         
         // Load onboarding status from backend
         await loadOnboardingStatusFromBackend(userId: response.user.id, accessToken: response.access_token)
@@ -57,6 +59,8 @@ final class AuthenticationManager {
         try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
         try KeychainManager.save(key: "user_id", value: response.user.id)
         try KeychainManager.save(key: "user_email", value: response.user.email)
+        try KeychainManager.save(key: "auth_provider", value: "email")
+        KeychainManager.delete(key: "apple_user_id")
         
         // Create/Upsert profile with unique username
         // If profile saving fails, log it but don't fail the entire signup
@@ -95,13 +99,20 @@ final class AuthenticationManager {
     
     // MARK: - Apple Sign-In
     
-    func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp: Bool = false) async throws -> SignInResult {
+    func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp: Bool = false, appleUserId: String? = nil, authorizationCode: String? = nil) async throws -> SignInResult {
         let response = try await auth.signInWithApple(idToken: idToken, nonce: nonce)
         
         try KeychainManager.save(key: "access_token", value: response.access_token)
         try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
         try KeychainManager.save(key: "user_id", value: response.user.id)
         try KeychainManager.save(key: "user_email", value: response.user.email)
+        try KeychainManager.save(key: "auth_provider", value: "apple")
+        if let appleUserId, !appleUserId.isEmpty {
+            try KeychainManager.save(key: "apple_user_id", value: appleUserId)
+        }
+        if let authorizationCode, !authorizationCode.isEmpty {
+            await registerAppleAuthorizationCode(authorizationCode, accessToken: response.access_token)
+        }
         
         // Check if profile exists to determine if this is a new or existing user
         // Note: We check the profile, not the auth user, because Supabase creates the auth user
@@ -435,6 +446,25 @@ final class AuthenticationManager {
                 Logger.error("Failed to load onboarding status from backend, local status is false", error: error, category: .auth)
             }
             // Don't overwrite local status on error - preserve user's progress
+        }
+    }
+
+    private func registerAppleAuthorizationCode(_ authorizationCode: String, accessToken: String) async {
+        var url = Config.backendBaseURL
+        url.append(path: "/account/apple/register")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try? JSONEncoder().encode(["authorization_code": authorizationCode])
+        do {
+            let (_, resp) = try await SecureURLSession.shared.data(for: req)
+            guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                Logger.info("[Apple] Could not register authorization code for later revoke", category: .auth)
+                return
+            }
+        } catch {
+            Logger.error("[Apple] Authorization code register failed", error: error, category: .auth)
         }
     }
 }

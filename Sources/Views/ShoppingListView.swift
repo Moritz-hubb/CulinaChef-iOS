@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ShoppingListView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -7,6 +8,7 @@ struct ShoppingListView: View {
     @State private var showAddItemSheet = false
     @State private var showClearConfirmation = false
     @State private var refreshID = UUID()
+    @State private var itemForCategoryPicker: ShoppingListItem?
     
     private var shoppingListManager: ShoppingListManager {
         app.shoppingListManager
@@ -105,7 +107,8 @@ struct ShoppingListView: View {
                         ForEach(categories, id: \.self) { category in
                             CategorySection(
                                 category: category,
-                                manager: shoppingListManager
+                                manager: shoppingListManager,
+                                itemForCategoryPicker: $itemForCategoryPicker
                             )
                         }
                         .id(refreshID)
@@ -142,6 +145,11 @@ struct ShoppingListView: View {
         .sheet(isPresented: $showAddItemSheet) {
             AddItemSheet(manager: shoppingListManager)
                 .presentationDetents([.height(400), .medium])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $itemForCategoryPicker) { item in
+            ChangeCategorySheet(item: item, manager: shoppingListManager)
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .confirmationDialog(L.alert_clearAllEntries.localized, isPresented: $showClearConfirmation, titleVisibility: .visible) {
@@ -212,6 +220,7 @@ struct ShoppingListView: View {
 struct CategorySection: View {
     let category: ItemCategory
     @ObservedObject var manager: ShoppingListManager
+    @Binding var itemForCategoryPicker: ShoppingListItem?
     @State private var isExpanded = true
     
     private var items: [ShoppingListItem] {
@@ -220,7 +229,6 @@ struct CategorySection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Category header
             Button(action: { withAnimation(.spring(response: 0.3)) { isExpanded.toggle() } }) {
                 HStack {
                     Text(category.localizedName)
@@ -255,11 +263,14 @@ struct CategorySection: View {
             .accessibilityAddTraits(isExpanded ? [] : .isButton)
             .buttonStyle(.plain)
             
-            // Items list
             if isExpanded {
                 VStack(spacing: 8) {
                     ForEach(items) { item in
-                        ShoppingListItemRow(item: item, manager: manager)
+                        ShoppingListItemRow(
+                            item: item,
+                            manager: manager,
+                            itemForCategoryPicker: $itemForCategoryPicker
+                        )
                     }
                 }
             }
@@ -273,10 +284,86 @@ struct CategorySection: View {
 struct ShoppingListItemRow: View {
     let item: ShoppingListItem
     @ObservedObject var manager: ShoppingListManager
+    @Binding var itemForCategoryPicker: ShoppingListItem?
     @State private var showCheckAnimation = false
+    @State private var didLongPress = false
     
     var body: some View {
-        Button(action: {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .stroke(Color.white.opacity(0.6), lineWidth: 2)
+                    .frame(width: 24, height: 24)
+                
+                if item.isCompleted {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 24, height: 24)
+                    
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .scaleEffect(showCheckAnimation ? 1.3 : 1.0)
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .font(.body)
+                    .foregroundStyle(.white)
+                    .strikethrough(item.isCompleted, color: .white)
+                
+                if let quantity = item.quantity, !quantity.isEmpty {
+                    Text(quantity)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .strikethrough(item.isCompleted, color: .white.opacity(0.7))
+                }
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    manager.deleteItem(item: item)
+                }
+            }) {
+                Image(systemName: "trash")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .frame(width: 32, height: 32)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.3))
+                    )
+            }
+            .accessibilityLabel(L.a11y_deleteNamedItem.localized(replacing: ["item": item.name]))
+            .accessibilityHint(L.a11y_removeShoppingItem.localized)
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThinMaterial.opacity(item.isCompleted ? 0.2 : 0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+        )
+        .opacity(item.isCompleted ? 0.6 : 1.0)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !didLongPress else {
+                didLongPress = false
+                return
+            }
             withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                 showCheckAnimation = true
                 manager.toggleItemCompletion(item: item)
@@ -285,84 +372,134 @@ struct ShoppingListItemRow: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 showCheckAnimation = false
             }
-        }) {
-            HStack(spacing: 12) {
-                // Checkbox
-                ZStack {
-                    Circle()
-                        .stroke(Color.white.opacity(0.6), lineWidth: 2)
-                        .frame(width: 24, height: 24)
-                    
-                    if item.isCompleted {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 24, height: 24)
+        }
+        .onLongPressGesture(minimumDuration: 0.45) {
+            didLongPress = true
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            itemForCategoryPicker = item
+        }
+        .accessibilityLabel(item.isCompleted ? L.a11y_itemCompleted.localized(replacing: ["item": item.name]) : item.name)
+        .accessibilityHint(L.a11y_longPressToMove.localized)
+        .accessibilityAddTraits(item.isCompleted ? .isSelected : [])
+        .accessibilityAction(named: L.shopping_chooseCategory.localized) {
+            itemForCategoryPicker = item
+        }
+    }
+}
+
+// MARK: - Change Category Sheet
+
+struct ChangeCategorySheet: View {
+    let item: ShoppingListItem
+    @ObservedObject var manager: ShoppingListManager
+    @Environment(\.dismiss) private var dismiss
+    
+    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.96, green: 0.78, blue: 0.68),
+                        Color(red: 0.95, green: 0.74, blue: 0.64),
+                        Color(red: 0.93, green: 0.66, blue: 0.55)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(item.name)
+                                .font(.title3.bold())
+                                .foregroundStyle(.white)
+                            if let quantity = item.quantity, !quantity.isEmpty {
+                                Text(quantity)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white.opacity(0.75))
+                            }
+                            Text(L.shopping_chooseCategory.localized)
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.8))
+                                .padding(.top, 4)
+                        }
+                        .padding(.horizontal, 4)
                         
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
-                            .scaleEffect(showCheckAnimation ? 1.3 : 1.0)
+                        LazyVGrid(columns: columns, spacing: 10) {
+                            ForEach(ItemCategory.allCases, id: \.self) { category in
+                                categoryButton(category)
+                            }
+                        }
                     }
+                    .padding(20)
                 }
-                
-                // Item info
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name)
-                        .font(.body)
-                        .foregroundStyle(.white)
-                        .strikethrough(item.isCompleted, color: .white)
-                    
-                    if let quantity = item.quantity, !quantity.isEmpty {
-                        Text(quantity)
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.7))
-                            .strikethrough(item.isCompleted, color: .white.opacity(0.7))
-                    }
-                }
-                
-                Spacer()
-                
-                // Delete button
-                Button(action: {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        manager.deleteItem(item: item)
-                    }
-                }) {
-                    Image(systemName: "trash")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.6))
-                        .frame(width: 32, height: 32)
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial.opacity(0.3))
-                        )
-                }
-                .accessibilityLabel(L.a11y_deleteNamedItem.localized(replacing: ["item": item.name]))
-                .accessibilityHint(L.a11y_removeShoppingItem.localized)
-                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.ultraThinMaterial.opacity(item.isCompleted ? 0.2 : 0.5))
-            )
+            .navigationTitle(L.label_category.localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(.ultraThinMaterial, in: Circle())
+                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                    }
+                    .accessibilityLabel(L.button_cancel.localized)
+                }
+            }
+        }
+    }
+    
+    private func categoryButton(_ category: ItemCategory) -> some View {
+        let isSelected = item.category == category
+        let fill = LinearGradient(
+            colors: isSelected
+                ? [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)]
+                : [Color.white.opacity(0.22), Color.white.opacity(0.10)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            manager.updateItemCategory(item: item, to: category)
+            dismiss()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: category.systemImage)
+                    .font(.body.weight(.semibold))
+                    .frame(width: 22)
+                Text(category.localizedName)
+                    .font(.subheadline.bold())
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.caption.bold())
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+            .background(fill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(isSelected ? 0.45 : 0.22), lineWidth: 1)
             )
-            .opacity(item.isCompleted ? 0.6 : 1.0)
-            .accessibilityLabel(item.isCompleted ? L.a11y_itemCompleted.localized(replacing: ["item": item.name]) : item.name)
-            .accessibilityHint(item.isCompleted ? L.a11y_markIncomplete.localized : L.a11y_markComplete.localized)
-            .accessibilityAddTraits(item.isCompleted ? .isSelected : [])
+            .shadow(color: isSelected ? Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.35) : .clear, radius: 8, x: 0, y: 4)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(category.localizedName)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

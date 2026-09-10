@@ -32,8 +32,6 @@ struct RecipeDetailView: View {
     // Shopping list states
     @State private var showServingSelector = false
     @State private var shoppingServings: Int = 4
-    @State private var showShareSheet = false
-    @State private var shareItems: [Any] = []
 
     private let gradientColors = [
         Color(red: 0.96, green: 0.78, blue: 0.68),
@@ -121,10 +119,6 @@ struct RecipeDetailView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 10) {
-                    // Like Button
-                    LikeButtonToolbarClean(recipeId: displayRecipe.id, likedManager: app.likedRecipesManager)
-                    
-                    // Share Button
                     Button(action: { shareRecipe() }) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 18, weight: .semibold))
@@ -245,9 +239,6 @@ struct RecipeDetailView: View {
                 servings: $shoppingServings,
                 onConfirm: { addIngredientsToShoppingList(servings: shoppingServings) }
             )
-        }
-        .sheet(isPresented: $showShareSheet) {
-            ShareSheet(items: shareItems)
         }
         .alert(L.errorUploadFailed.localized, isPresented: Binding(
             get: { uploadError != nil },
@@ -1257,14 +1248,7 @@ struct RecipeDetailView: View {
     
     // MARK: - Share Functions
     private func shareRecipe() {
-        var items: [Any] = []
-        
-        // Generate Markdown
-        let markdown = generateMarkdownExport()
-        items.append(markdown)
-        
-        shareItems = items
-        showShareSheet = true
+        ShareSheet.presentRecipe(title: displayRecipe.title, text: generateMarkdownExport())
     }
     
     private func generateMarkdownExport() -> String {
@@ -2377,49 +2361,3 @@ private struct RatingSubmissionView: View {
     }
 }
 
-// MARK: - Like Button for Toolbar
-private struct LikeButtonToolbar: View {
-    let recipeId: String
-    @ObservedObject var likedManager: LikedRecipesManager
-    
-    private var isLiked: Bool {
-        likedManager.isLiked(recipeId: recipeId)
-    }
-    
-    var body: some View {
-        Button(action: { 
-            withAnimation(.spring(response: 0.3)) {
-                likedManager.toggleLike(recipeId: recipeId)
-            }
-        }) {
-            Image(systemName: isLiked ? "heart.fill" : "heart")
-                .foregroundColor(.pink)
-                .font(.title3)
-        }
-    }
-}
-
-// MARK: - Clean Like Button for RecipeDetail Header
-private struct LikeButtonToolbarClean: View {
-    let recipeId: String
-    @ObservedObject var likedManager: LikedRecipesManager
-    
-    private var isLiked: Bool {
-        likedManager.isLiked(recipeId: recipeId)
-    }
-    
-    var body: some View {
-        Button(action: { 
-            withAnimation(.spring(response: 0.3)) {
-                likedManager.toggleLike(recipeId: recipeId)
-            }
-        }) {
-            Image(systemName: isLiked ? "heart.fill" : "heart")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(isLiked ? .pink : .white)
-                .frame(width: 36, height: 36)
-                .background(.ultraThinMaterial, in: Circle())
-                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
-        }
-    }
-}

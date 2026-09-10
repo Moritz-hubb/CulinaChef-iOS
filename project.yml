@@ -68,6 +68,8 @@ targets:
     entitlements:
       path: Configs/CulinaChef.entitlements
       properties:
+        com.apple.developer.applesignin:
+          - Default
         com.apple.security.application-groups:
           - group.com.moritzserrin.culinachef.share
           - group.com.moritzserrin.culinachef

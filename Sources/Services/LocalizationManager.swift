@@ -19,6 +19,7 @@ class LocalizationManager: ObservableObject {
                     UserDefaults.standard.set(true, forKey: "app_language_explicitly_set")
                 }
             }
+            persistLanguageToAppGroup(currentLanguage)
             loadTranslations()
             // Trigger UI update via NotificationCenter
             NotificationCenter.default.post(name: .languageChanged, object: nil)
@@ -309,6 +310,7 @@ class LocalizationManager: ObservableObject {
         self.currentLanguage = language
         UserDefaults.standard.set(language, forKey: "app_language")
         UserDefaults.standard.set(true, forKey: "app_language_explicitly_set")
+        persistLanguageToAppGroup(language)
         _isInitializing = false
         
         // loadTranslations() is already called by currentLanguage.didSet, so we don't need to call it again
@@ -429,6 +431,11 @@ class LocalizationManager: ObservableObject {
         #endif
     }
     
+    private func persistLanguageToAppGroup(_ language: String) {
+        UserDefaults(suiteName: "group.com.moritzserrin.culinachef.share")?
+            .set(language, forKey: "app_language")
+    }
+
     func string(forKey key: String) -> String {
         if let translation = translations[key] {
             return translation
@@ -475,6 +482,7 @@ class LocalizationManager: ObservableObject {
         // Clear explicit preference flag and saved language
         UserDefaults.standard.set(false, forKey: "app_language_explicitly_set")
         UserDefaults.standard.removeObject(forKey: "app_language")
+        persistLanguageToAppGroup(validLang)
         
         #if DEBUG
         Logger.debug("[LocalizationManager] Resetting language from \(currentLanguage) to \(validLang)", category: .data)
@@ -560,6 +568,12 @@ enum L {
     static let shareRecipeImage = "share.image"
     static let shareRecipePhoto = "share.photo"
     static let shareRecipeCancel = "share.cancel"
+    static let shareNotificationTitle = "share.notificationTitle"
+    static let shareNotificationBody = "share.notificationBody"
+    static let shareLinkSaved = "share.linkSaved"
+    static let shareOpenToImport = "share.openToImport"
+    static let shareNoContent = "share.noContent"
+    static let shareNoLink = "share.noLink"
     
     // MARK: - Authentication
     static let signIn = "auth.signIn"
@@ -620,6 +634,7 @@ enum L {
     static let deleteAccountMessage = "settings.deleteAccountMessage"
     static let accountDeleted = "settings.accountDeleted"
     static let accountDeletedMessage = "settings.accountDeletedMessage"
+    static let accountDeletionFailed = "settings.accountDeletionFailed"
     static let manageSubscription = "settings.manageSubscription"
     static let deleteNow = "settings.deleteNow"
     static let settings_about = "settings.about"
@@ -1081,6 +1096,7 @@ enum L {
     static let recipe_erstelle_jetzt_dein_erstes = "recipe.erstelle_jetzt_dein_erstes"
     static let recipe_mit_ki_erstellen = "recipe.mit_ki_erstellen"
     static let import_social_title = "import.social_title"
+    static let label_beta = "label.beta"
     static let import_social_subtitle = "import.social_subtitle"
     static let import_social_url_label = "import.social_url_label"
     static let import_social_url_placeholder = "import.social_url_placeholder"
@@ -1153,6 +1169,8 @@ enum L {
     static let shopping_füge_zutaten_aus_rezepten = "shopping.füge_zutaten_aus_rezepten"
     static let shopping_eintrag_hinzufügen = "shopping.eintrag_hinzufügen"
     static let shopping_hinzufügen_5f41 = "shopping.hinzufügen_5f41"
+    static let shopping_moveHint = "shopping.moveHint"
+    static let shopping_chooseCategory = "shopping.chooseCategory"
     static let ui_willkommen_zurück = "ui.willkommen_zurück"
     static let ui_registrieren = "ui.registrieren"
     static let ui_passwort_bestätigen = "ui.passwort_bestätigen"
@@ -1479,6 +1497,7 @@ enum L {
     static let a11y_itemCompleted = "a11y.itemCompleted"
     static let a11y_markIncomplete = "a11y.markIncomplete"
     static let a11y_markComplete = "a11y.markComplete"
+    static let a11y_longPressToMove = "a11y.longPressToMove"
     static let a11y_shareRecipe = "a11y.shareRecipe"
     static let a11y_shareRecipeHint = "a11y.shareRecipeHint"
     static let a11y_aiAssistant = "a11y.aiAssistant"

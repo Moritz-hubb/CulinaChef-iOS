@@ -1,6 +1,5 @@
 import SwiftUI
 import AuthenticationServices
-import CryptoKit
 
 struct SignInView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -232,60 +231,21 @@ struct SignInView: View {
                         .accessibilityHint(L.a11y_openPasswordReset.localized)
                         .padding(.top, 8)
                         
-                        // Apple Sign In (original button - uses system language)
-                        SignInWithAppleButton(.signIn, onRequest: { request in
-                                // Prepare nonce for replay protection
-                                let nonce = randomNonceString()
+                        LocalizedAppleSignInButton(
+                            buttonType: .signIn,
+                            localizedText: L.loginWithApple.localized,
+                            onRequest: { request in
+                                let nonce = AppleSignInNonce.random()
                                 self.appleNonce = nonce
                                 request.requestedScopes = [.fullName, .email]
-                                request.nonce = sha256(nonce)
-                            }, onCompletion: { result in
-                                switch result {
-                                case .success(let authResult):
-                                    if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
-                                       let tokenData = credential.identityToken,
-                                       let idToken = String(data: tokenData, encoding: .utf8) {
-                                        // Extract full name if available (only provided on first sign in)
-                                        let fullName: String?
-                                        if let givenName = credential.fullName?.givenName,
-                                           let familyName = credential.fullName?.familyName {
-                                            fullName = "\(givenName) \(familyName)"
-                                        } else if let givenName = credential.fullName?.givenName {
-                                            fullName = givenName
-                                        } else {
-                                            fullName = nil
-                                        }
-                                        Task { await handleAppleSignIn(idToken: idToken, fullName: fullName) }
-                                    } else {
-                                        self.errorMessage = L.errorAppleTokenInvalid.localized
-                                    }
-                                case .failure(let error):
-                                    // Handle Apple Sign In errors with better messages
-                                    let nsError = error as NSError
-                                    let errorCode = nsError.code
-                                    let errorDomain = nsError.domain
-                                    
-                                    // Check for simulator/device-specific errors
-                                    if errorDomain == "AKAuthenticationError" || errorDomain.contains("AuthenticationServices") {
-                                        #if targetEnvironment(simulator)
-                                        self.errorMessage = L.error_appleSignInSimulator.localized
-                                        #else
-                                        // Real device errors
-                                        if errorCode == -7022 || errorCode == -7071 {
-                                            self.errorMessage = L.error_appleSignInUseEmail.localized
-                                        } else {
-                                            self.errorMessage = error.localizedDescription.isEmpty ? L.errorAppleSignInFailed.localized : error.localizedDescription
-                                        }
-                                        #endif
-                                    } else {
-                                        self.errorMessage = error.localizedDescription.isEmpty ? L.error_signInFailed.localized : error.localizedDescription
-                                    }
-                                }
-                            })
-                        .signInWithAppleButtonStyle(.black)
-                        .frame(height: 44)
-                        .frame(maxWidth: 375) // Prevent constraint conflicts
-                        .cornerRadius(8)
+                                request.nonce = AppleSignInNonce.sha256(nonce)
+                            },
+                            onCompletion: { result in
+                                handleAppleAuthorization(result)
+                            }
+                        )
+                        .disabled(app.loading)
+                        .id("appleSignInButton")
                         }
                             .padding(.horizontal, 24)
                             .padding(.top, 8)
@@ -360,41 +320,29 @@ struct SignInView: View {
         }
     }
     
-    private func handleAppleSignIn(idToken: String, fullName: String? = nil) async {
+    private func handleAppleAuthorization(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authResult):
+            if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
+               let tokenData = credential.identityToken,
+               let idToken = String(data: tokenData, encoding: .utf8) {
+                let fullName = AppleSignInNonce.fullName(from: credential)
+                let authorizationCode = credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
+                Task { await handleAppleSignIn(idToken: idToken, fullName: fullName, appleUserId: credential.user, authorizationCode: authorizationCode) }
+            } else {
+                errorMessage = L.errorAppleTokenInvalid.localized
+            }
+        case .failure(let error):
+            errorMessage = AppleSignInNonce.userMessage(for: error)
+        }
+    }
+
+    private func handleAppleSignIn(idToken: String, fullName: String? = nil, appleUserId: String? = nil, authorizationCode: String? = nil) async {
         do {
-            try await app.signInWithApple(idToken: idToken, nonce: appleNonce, fullName: fullName)
+            try await app.signInWithApple(idToken: idToken, nonce: appleNonce, fullName: fullName, appleUserId: appleUserId, authorizationCode: authorizationCode)
         } catch {
             await MainActor.run { self.errorMessage = error.localizedDescription }
         }
-    }
-    
-    // MARK: - Nonce utilities
-    private func randomNonceString(length: Int = 32) -> String {
-        precondition(length > 0)
-        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
-        var result = ""
-        var remainingLength = length
-        while remainingLength > 0 {
-            var randoms = [UInt8](repeating: 0, count: 16)
-            let status = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
-            if status != errSecSuccess {
-                Logger.error("Unable to generate nonce. SecRandomCopyBytes failed with status: \(status)", category: .auth)
-                // Fallback: Use timestamp-based nonce as last resort
-                return String(format: "%08x%08x", UInt32(Date().timeIntervalSince1970), arc4random())
-            }
-            for random in randoms {
-                if remainingLength == 0 { break }
-                result.append(charset[Int(random % UInt8(charset.count))])
-                remainingLength -= 1
-            }
-        }
-        return result
-    }
-    
-    private func sha256(_ input: String) -> String {
-        let inputData = Data(input.utf8)
-        let hashed = SHA256.hash(data: inputData)
-        return hashed.compactMap { String(format: "%02x", $0) }.joined()
     }
 }
 

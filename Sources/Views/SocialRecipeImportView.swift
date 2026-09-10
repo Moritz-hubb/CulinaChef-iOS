@@ -139,10 +139,18 @@ struct SocialRecipeImportView: View {
                     }
                 }
             }
-            .navigationTitle(L.import_social_title.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 8) {
+                        Text(L.import_social_title.localized)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        BetaTag()
+                    }
+                    .accessibilityElement(children: .combine)
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L.cancel.localized) { dismiss() }
                         .foregroundStyle(.white)
@@ -437,5 +445,25 @@ private struct ImportTweakChips: View {
             DispatchQueue.main.async { binding.wrappedValue = geometry.size.height }
             return .clear
         }
+    }
+}
+
+struct BetaTag: View {
+    var body: some View {
+        Text(L.label_beta.localized)
+            .font(.system(size: 9, weight: .heavy))
+            .tracking(0.7)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                in: Capsule()
+            )
+            .accessibilityHidden(true)
     }
 }

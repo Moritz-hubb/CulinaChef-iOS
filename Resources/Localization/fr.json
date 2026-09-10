@@ -136,7 +136,7 @@
   "detail.addedToShoppingList": "Ajouté à la liste de courses",
   "detail.reportRecipe": "Signaler la recette",
   "detail.shareRecipe": "Partager la recette",
-  "detail.startTimer": "Démarrer le minuteur",
+  "detail.startTimer": "Démarrer",
   "detail.stopTimer": "Arrêter le minuteur",
   "detail.timer": "Minuteur",
   "detail.timerStarted": "Minuteur démarré",
@@ -464,7 +464,7 @@
   "settings.deine_vorteile": "Vos avantages",
   "settings.deleteAccount": "Supprimer le Compte",
   "settings.deleteAccountConfirm": "Supprimer le compte?",
-  "settings.deleteAccountMessage": "Vos données seront supprimées de la base de données. Les abonnements doivent être annulés via Apple.",
+  "settings.deleteAccountMessage": "Votre compte, recettes, notes, photos, favoris et toutes les autres données seront définitivement supprimés. Les abonnements Apple doivent être résiliés séparément ; nous ouvrirons la gestion des abonnements.",
   "settings.deleteNow": "Supprimer maintenant",
   "settings.dietary": "Nutrition",
   "settings.dietaryPreferences": "Préférences Alimentaires",
@@ -605,6 +605,12 @@
   "share.image": "Image",
   "share.photo": "Photo",
   "share.cancel": "Annuler",
+  "share.notificationTitle": "Recette prête à importer",
+  "share.notificationBody": "Appuyez ici pour importer la recette dans CulinaAi.",
+  "share.linkSaved": "Lien enregistré !",
+  "share.openToImport": "Ouvrez CulinaAi — l’import démarre automatiquement.",
+  "share.noContent": "Aucun contenu",
+  "share.noLink": "Aucun lien trouvé",
   "time.hour": "h",
   "time.hours": "heures",
   "time.min": "min",
@@ -942,5 +948,6 @@
   "timer.proof": "Lever",
   "timer.rest": "Repos",
   "timer.simmer": "Mijoter",
-  "timer.steep": "Infuser"
+  "timer.steep": "Infuser",
+  "settings.accountDeletionFailed": "Le compte n'a pas pu être supprimé. Vérifiez votre connexion et réessayez. Aucune donnée n'a été supprimée."
 }

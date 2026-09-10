@@ -5,6 +5,80 @@ import UserNotifications
 
 private let shareLog = Logger(subsystem: "com.moritzserrin.culinachef.share", category: "CulinaShare")
 
+private enum ShareL10n {
+    enum Key {
+        case notificationTitle
+        case notificationBody
+        case savedTitle
+        case savedSubtitle
+        case noContent
+        case noLink
+    }
+
+    private static let supported = Set(["de", "en", "es", "fr", "it"])
+
+    static func string(_ key: Key) -> String {
+        strings[language]?[key] ?? strings["en"]![key]!
+    }
+
+    private static var language: String {
+        if let stored = UserDefaults(suiteName: "group.com.moritzserrin.culinachef.share")?
+            .string(forKey: "app_language")?
+            .lowercased(),
+           supported.contains(stored) {
+            return stored
+        }
+        for preferred in Locale.preferredLanguages {
+            let code = preferred.components(separatedBy: CharacterSet(charactersIn: "-_")).first?.lowercased() ?? ""
+            if supported.contains(code) { return code }
+        }
+        return "en"
+    }
+
+    private static let strings: [String: [Key: String]] = [
+        "de": [
+            .notificationTitle: "Rezept bereit zum Import",
+            .notificationBody: "Tippe hier, um das Rezept in CulinaAi zu importieren.",
+            .savedTitle: "Link gespeichert!",
+            .savedSubtitle: "Öffne CulinaAi — der Import startet automatisch.",
+            .noContent: "Keine Inhalte",
+            .noLink: "Kein Link gefunden"
+        ],
+        "en": [
+            .notificationTitle: "Recipe ready to import",
+            .notificationBody: "Tap here to import the recipe into CulinaAi.",
+            .savedTitle: "Link saved!",
+            .savedSubtitle: "Open CulinaAi — the import will start automatically.",
+            .noContent: "No content",
+            .noLink: "No link found"
+        ],
+        "es": [
+            .notificationTitle: "Receta lista para importar",
+            .notificationBody: "Toca aquí para importar la receta en CulinaAi.",
+            .savedTitle: "¡Enlace guardado!",
+            .savedSubtitle: "Abre CulinaAi: la importación empezará automáticamente.",
+            .noContent: "Sin contenido",
+            .noLink: "No se encontró ningún enlace"
+        ],
+        "fr": [
+            .notificationTitle: "Recette prête à importer",
+            .notificationBody: "Appuyez ici pour importer la recette dans CulinaAi.",
+            .savedTitle: "Lien enregistré !",
+            .savedSubtitle: "Ouvrez CulinaAi — l’import démarre automatiquement.",
+            .noContent: "Aucun contenu",
+            .noLink: "Aucun lien trouvé"
+        ],
+        "it": [
+            .notificationTitle: "Ricetta pronta per l’importazione",
+            .notificationBody: "Tocca qui per importare la ricetta in CulinaAi.",
+            .savedTitle: "Link salvato!",
+            .savedSubtitle: "Apri CulinaAi: l’importazione partirà automaticamente.",
+            .noContent: "Nessun contenuto",
+            .noLink: "Nessun link trovato"
+        ]
+    ]
+}
+
 /// Share Extension: In Apps wie TikTok unter **Teilen → Mehr → CulinaAi** erscheinen
 /// (nach erstem Start ggf. „Bearbeiten" und CulinaAi aktivieren).
 @objc(ShareViewController)
@@ -28,7 +102,7 @@ final class ShareViewController: UIViewController {
         shareLog.debug("[CulinaShare] extractAndOpen started")
         guard let item = extensionContext?.inputItems.first as? NSExtensionItem else {
             shareLog.error("[CulinaShare] no NSExtensionItem in inputItems")
-            finishWithError(message: "Keine Inhalte")
+            finishWithError(message: ShareL10n.string(.noContent))
             return
         }
 
@@ -76,7 +150,7 @@ final class ShareViewController: UIViewController {
             guard let self else { return }
             guard let link = foundURL else {
                 shareLog.error("[CulinaShare] no http URL in attachments (plain/url types)")
-                self.finishWithError(message: "Kein Link gefunden")
+                self.finishWithError(message: ShareL10n.string(.noLink))
                 return
             }
 
@@ -143,8 +217,8 @@ final class ShareViewController: UIViewController {
 
     private func scheduleReminderNotification(link: String) {
         let content = UNMutableNotificationContent()
-        content.title = "Rezept bereit zum Import"
-        content.body = "Tippe hier um das Rezept in CulinaAi zu importieren."
+        content.title = ShareL10n.string(.notificationTitle)
+        content.body = ShareL10n.string(.notificationBody)
         content.sound = .default
         content.userInfo = ["deep_link": "culinachef://import?url=\(link)"]
 
@@ -183,12 +257,12 @@ final class ShareViewController: UIViewController {
         icon.widthAnchor.constraint(equalToConstant: 52).isActive = true
 
         let title = UILabel()
-        title.text = "Link gespeichert!"
+        title.text = ShareL10n.string(.savedTitle)
         title.font = .systemFont(ofSize: 20, weight: .semibold)
         title.textAlignment = .center
 
         let subtitle = UILabel()
-        subtitle.text = "Öffne CulinaAi — der Import startet automatisch."
+        subtitle.text = ShareL10n.string(.savedSubtitle)
         subtitle.font = .systemFont(ofSize: 15)
         subtitle.textColor = .secondaryLabel
         subtitle.textAlignment = .center

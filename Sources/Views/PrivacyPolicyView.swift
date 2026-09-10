@@ -370,11 +370,11 @@ struct PrivacyPolicyView: View {
                                 DataCategory(
                                     title: "",
                                     description: localized(
-                                        "Alle gespeicherten Rezepte, Menüs und Favoriten",
-                                        "Toutes les recettes, menus et favoris sauvegardés",
-                                        "All saved recipes, menus, and favorites",
-                                        spanish: "Todas las recetas, menús y favoritos guardados",
-                                        italian: "Tutte le ricette, menu e preferiti salvati"
+                                        "Alle gespeicherten Rezepte und Menüs",
+                                        "Toutes les recettes et menus sauvegardés",
+                                        "All saved recipes and menus",
+                                        spanish: "Todas las recetas y menús guardados",
+                                        italian: "Tutte le ricette e i menu salvati"
                                     )
                                 )
                                 DataCategory(
@@ -390,11 +390,21 @@ struct PrivacyPolicyView: View {
                                 DataCategory(
                                     title: "",
                                     description: localized(
-                                        "Bewertungen und Notizen",
-                                        "Évaluations et notes",
-                                        "Ratings and notes",
-                                        spanish: "Valoraciones y notas",
-                                        italian: "Valutazioni e note"
+                                        "Bewertungen, Favoriten und Meldungen",
+                                        "Évaluations, favoris et signalements",
+                                        "Ratings, favorites, and reports",
+                                        spanish: "Valoraciones, favoritos e informes",
+                                        italian: "Valutazioni, preferiti e segnalazioni"
+                                    )
+                                )
+                                DataCategory(
+                                    title: "",
+                                    description: localized(
+                                        "Rezeptfotos und lokal gespeicherte Daten (z. B. Einkaufsliste)",
+                                        "Photos de recettes et données locales (p. ex. liste de courses)",
+                                        "Recipe photos and locally stored data (e.g. shopping list)",
+                                        spanish: "Fotos de recetas y datos locales (p. ej. lista de la compra)",
+                                        italian: "Foto delle ricette e dati locali (p. es. lista della spesa)"
                                     )
                                 )
                             }

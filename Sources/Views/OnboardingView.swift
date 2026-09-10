@@ -33,7 +33,8 @@ struct OnboardingView: View {
         return initialValue
     }()
     @State private var buttonScale: CGFloat = 1.0
-    @State private var isLanguageChanging = false // Flag to prevent TabView from changing currentStep during language change
+    @State private var isLanguageChanging = false // Flag to prevent step from resetting during language change
+    @State private var stepDirection: Int = 1 // 1 = forward (swipe from right), -1 = back
     @State private var username: String = "" // Username entered during onboarding
     
     // Helper function to update currentStep and persist it
@@ -50,6 +51,41 @@ struct OnboardingView: View {
         UserDefaults.standard.set(newStep, forKey: "onboarding_current_step")
         Logger.debug("[OnboardingView] updateCurrentStep: Saved to UserDefaults: \(newStep)", category: .ui)
     }
+
+    private func goToStep(_ newStep: Int) {
+        let clamped = min(max(newStep, -1), 7)
+        guard clamped != currentStep else { return }
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        stepDirection = clamped > currentStep ? 1 : -1
+        withAnimation(.easeInOut(duration: 0.28)) {
+            updateCurrentStep(clamped)
+        }
+    }
+
+    private var swipeTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: stepDirection >= 0 ? .trailing : .leading),
+            removal: .move(edge: stepDirection >= 0 ? .leading : .trailing)
+        )
+    }
+
+    @ViewBuilder
+    private var currentStepContent: some View {
+        switch currentStep {
+        case 0: step0LanguageSelection
+        case 1: step1Username
+        case 2: step2Greeting
+        case 3: step3Allergies
+        case 4: step4DietaryTypes
+        case 5: step5Preferences
+        case 6: step6Dislikes
+        case 7: step7Notifications
+        default: stepWelcome
+        }
+    }
+
+    private var showsProgressHeader: Bool { currentStep >= 0 }
+    private var showsHeaderPenguin: Bool { currentStep >= 0 && currentStep != 2 && currentStep != 7 }
     @State private var showSuccessAnimation = false
     @State private var selectedLanguage: String = ""
     @State private var allergies: [String] = []
@@ -163,73 +199,17 @@ struct OnboardingView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Progress indicator at top - only show for steps >= 0
-                if currentStep >= 0 {
-                    progressBar
-                        .padding(.top, 20)
-                    
-                    // Penguin illustration below progress bar - only show for steps >= 0, but NOT for step 2 (greeting)
-                    if currentStep != 2 && currentStep != 7 {
-                        if let uiImage = UIImage(named: "penguin-onboarding") {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 120, height: 120)
-                                .padding(.top, 60)
-                                .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
-                                .accessibilityHidden(true)
-                        } else {
-                            Image(systemName: "list.clipboard")
-                                .font(.system(size: 60))
-                                .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                .padding(.top, 60)
-                                .accessibilityHidden(true)
-                        }
-                    }
+                onboardingHeader
+                    .transaction { $0.animation = nil }
+
+                ZStack {
+                    currentStepContent
+                        .id(currentStep)
+                        .transition(swipeTransition)
                 }
-                
-                // Content
-                TabView(selection: $currentStep) {
-                    stepWelcome.tag(-1)
-                    step0LanguageSelection.tag(0)
-                    step1Username.tag(1)
-                    step2Greeting.tag(2)
-                    step3Allergies.tag(3)
-                    step4DietaryTypes.tag(4)
-                    step5Preferences.tag(5)
-                    step6Dislikes.tag(6)
-                    step7Notifications.tag(7)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.5), value: currentStep)
-                // CRITICAL: Don't add .id() modifier here - it causes the entire TabView to reset
-                // and currentStep to be reset to -1 when language changes
-                .onChange(of: currentStep) { oldValue, newValue in
-                    if isLanguageChanging {
-                        Logger.debug("[OnboardingView] ⚠️ BLOCKED: TabView tried to change currentStep from \(oldValue) to \(newValue) during language change!", category: .ui)
-                        // Restore the saved step from UserDefaults
-                        let savedStep: Int
-                        if let savedValue = UserDefaults.standard.object(forKey: "onboarding_current_step") as? Int {
-                            savedStep = savedValue
-                        } else {
-                            savedStep = -999
-                        }
-                        if savedStep != -999 && newValue != savedStep {
-                            Logger.debug("[OnboardingView] Restoring currentStep to saved value: \(savedStep)", category: .ui)
-                            DispatchQueue.main.async {
-                                currentStep = savedStep
-                            }
-                        }
-                    } else {
-                        Logger.debug("[OnboardingView] TabView selection changed: \(oldValue) -> \(newValue) (allowed) - Syncing to UserDefaults", category: .ui)
-                        // CRITICAL: Always sync to UserDefaults when user swipes or navigates
-                        UserDefaults.standard.set(newValue, forKey: "onboarding_current_step")
-                        UserDefaults.standard.synchronize()
-                        Logger.debug("[OnboardingView] Synced currentStep \(newValue) to UserDefaults", category: .ui)
-                    }
-                }
-                
-                // Navigation buttons
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+
                 navigationButtons
             }
         }
@@ -421,6 +401,34 @@ struct OnboardingView: View {
         }
     }
     
+    // MARK: - Header (not animated — page content swipes instead)
+    private var onboardingHeader: some View {
+        VStack(spacing: 0) {
+            if showsProgressHeader {
+                progressBar
+                    .padding(.top, 20)
+
+                if showsHeaderPenguin {
+                    if let uiImage = UIImage(named: "penguin-onboarding") {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .padding(.top, 60)
+                            .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
+                            .accessibilityHidden(true)
+                    } else {
+                        Image(systemName: "list.clipboard")
+                            .font(.system(size: 60))
+                            .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                            .padding(.top, 60)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Progress Bar
     private var progressBar: some View {
         HStack(spacing: 8) {
@@ -432,8 +440,6 @@ struct OnboardingView: View {
                     .frame(height: 4)
                     .shadow(color: index <= currentStep ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.3) : .clear, radius: 4)
                     .scaleEffect(index == currentStep && showSuccessAnimation ? 1.15 : 1.0)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15), value: currentStep)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.7), value: showSuccessAnimation)
             }
         }
         .padding(.horizontal, 20)
@@ -472,11 +478,8 @@ struct OnboardingView: View {
                             Logger.debug("[OnboardingView] Language selected: \(langCode), currentStep BEFORE: \(currentStep)", category: .ui)
                             let stepBeforeLanguageChange = currentStep
                             
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
-                                selectedLanguage = langCode
-                                // Set language immediately when selected
-                                localizationManager.setLanguage(langCode)
-                            }
+                            selectedLanguage = langCode
+                            localizationManager.setLanguage(langCode)
                             
                             // Check if currentStep changed after language change
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -580,27 +583,17 @@ struct OnboardingView: View {
                     Text(L.onboarding_username_title.localized)
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.white)
-                        .id(localizationManager.currentLanguage)
-                        .opacity(currentStep == 1 ? 1 : 0)
-                        .offset(y: currentStep == 1 ? 0 : -10)
-                        .animation(.easeOut(duration: 0.3), value: currentStep)
                     
                     Text(L.onboarding_username_subtitle.localized)
                         .font(.system(size: 15))
                         .foregroundColor(.white.opacity(0.9))
-                        .id(localizationManager.currentLanguage)
-                        .opacity(currentStep == 1 ? 1 : 0)
-                        .offset(y: currentStep == 1 ? 0 : -10)
-                        .animation(.easeOut(duration: 0.3).delay(0.05), value: currentStep)
                 }
                 .padding(.top, 20)
                 
-                // Username Input Field
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L.onboarding_username_label.localized)
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white.opacity(0.9))
-                        .id(localizationManager.currentLanguage)
                     
                     TextField(L.onboarding_username_placeholder.localized, text: $username)
                         .font(.system(size: 17))
@@ -609,22 +602,19 @@ struct OnboardingView: View {
                         .padding(.vertical, 14)
                         .background(Color.white)
                         .cornerRadius(12)
-                        .autocapitalization(.none)
+                        .textInputAutocapitalization(.words)
                         .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .id(localizationManager.currentLanguage)
+                        .submitLabel(.done)
                 }
                 .padding(.top, 24)
-                .opacity(currentStep == 1 ? 1 : 0)
-                .scaleEffect(currentStep == 1 ? 1 : 0.95)
-                .animation(.easeOut(duration: 0.3).delay(0.1), value: currentStep)
                 
                 Spacer()
             }
             .padding(.horizontal, 24)
+            .padding(.bottom, 24)
         }
-        .opacity(currentStep == 1 ? 1 : 0)
-        .id("username-\(currentStep)") // Force re-render for smooth transition
+        .scrollDismissesKeyboard(.interactively)
+        .scrollBounceBehavior(.basedOnSize)
     }
     
     // MARK: - Step 2: Greeting with Username
@@ -636,22 +626,13 @@ struct OnboardingView: View {
             WavingPenguinView()
                 .frame(height: 150)
                 .padding(.horizontal, 40)
-                .opacity(currentStep == 2 ? 1 : 0)
-                .scaleEffect(currentStep == 2 ? 1 : 0.8)
-                .offset(y: currentStep == 2 ? 0 : 30)
-                .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.2), value: currentStep)
             
-            // Greeting Message
             VStack(spacing: 12) {
                 Text(L.onboarding_greeting_title.localized.replacingOccurrences(of: "{username}", with: username.isEmpty ? L.onboarding_greeting_fallback.localized : username))
                     .font(.system(size: 30, weight: .bold))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
-                    .id(localizationManager.currentLanguage)
-                    .opacity(currentStep == 2 ? 1 : 0)
-                    .offset(y: currentStep == 2 ? 0 : 30)
-                    .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.3), value: currentStep)
                 
                 Text(L.onboarding_greeting_message.localized)
                     .font(.system(size: 16))
@@ -659,18 +640,12 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
                     .padding(.horizontal, 40)
-                    .id(localizationManager.currentLanguage)
-                    .opacity(currentStep == 2 ? 1 : 0)
-                    .offset(y: currentStep == 2 ? 0 : 30)
-                    .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.4), value: currentStep)
             }
             .padding(.top, 24)
             
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .opacity(currentStep == 2 ? 1 : 0)
-        .id("greeting-\(currentStep)") // Force re-render for smooth transition
     }
     
     // MARK: - Step 3: Allergies
@@ -1038,10 +1013,10 @@ struct OnboardingView: View {
                     
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         Logger.debug("[OnboardingView] Welcome button - Moving from step -1 to 0", category: .ui)
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2)) {
+                        withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
                             buttonScale = 1.0
-                            updateCurrentStep(0)
                         }
+                        goToStep(0)
                     }
                 } label: {
                     Text(L.getStarted.localized)
@@ -1092,19 +1067,10 @@ struct OnboardingView: View {
                             }
                         }
                         
-                        // Special animation for transition from username to greeting
-                        let animation: Animation
-                        if currentStep == 1 && nextStep == 2 {
-                            // Smooth fade transition for username -> greeting
-                            animation = .easeInOut(duration: 0.5)
-                        } else {
-                            animation = .spring(response: 0.6, dampingFraction: 0.85, blendDuration: 0.3)
-                        }
-                        
-                        withAnimation(animation) {
+                        withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
                             buttonScale = 1.0
-                            updateCurrentStep(nextStep)
                         }
+                        goToStep(nextStep)
                         
                         // Additional haptic feedback when step transition completes
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -1197,9 +1163,7 @@ struct OnboardingView: View {
                     
                     let prevStep = currentStep - 1
                     Logger.debug("[OnboardingView] Back button - Moving from step \(currentStep) to \(prevStep)", category: .ui)
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.2)) {
-                        updateCurrentStep(prevStep)
-                    }
+                    goToStep(prevStep)
                 } label: {
                     Text(L.onboarding_zurück.localized)
                         .font(.system(size: 15, weight: .medium))

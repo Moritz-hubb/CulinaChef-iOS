@@ -79,9 +79,10 @@ final class RevenueCatManager: NSObject, ObservableObject {
             customerInfo = info
             isLoading = false
             Logger.info(
-                "[RevenueCat] Customer info loaded — subscribed: \(info.entitlements[Self.unlimitedEntitlementID]?.isActive == true)",
+                "[RevenueCat] Customer info loaded — subscribed: \(Self.hasActiveSubscription(info))",
                 category: .data
             )
+            Monetization.shared.applySuperwallSubscriptionStatus(from: info)
         } catch {
             self.error = error
             isLoading = false
@@ -89,12 +90,16 @@ final class RevenueCatManager: NSObject, ObservableObject {
         }
     }
     
-    var isSubscribed: Bool {
-        guard let info = customerInfo else { return false }
-        if info.entitlements[Self.unlimitedEntitlementID]?.isActive == true { return true }
+    static func hasActiveSubscription(_ info: CustomerInfo) -> Bool {
+        if info.entitlements[unlimitedEntitlementID]?.isActive == true { return true }
         if !info.entitlements.active.isEmpty { return true }
         if info.subscriptionsByProductIdentifier.values.contains(where: \.isActive) { return true }
         return !info.activeSubscriptions.isEmpty
+    }
+    
+    var isSubscribed: Bool {
+        guard let info = customerInfo else { return false }
+        return Self.hasActiveSubscription(info)
     }
     
     /// True when Unlimited was purchased before but is not active now (cancelled / expired).
@@ -237,9 +242,10 @@ extension RevenueCatManager: PurchasesDelegate {
         Task { @MainActor in
             self.customerInfo = customerInfo
             Logger.info(
-                "[RevenueCat] Customer info updated — subscribed: \(customerInfo.entitlements[Self.unlimitedEntitlementID]?.isActive == true)",
+                "[RevenueCat] Customer info updated — subscribed: \(Self.hasActiveSubscription(customerInfo))",
                 category: .data
             )
+            Monetization.shared.applySuperwallSubscriptionStatus(from: customerInfo)
         }
     }
 }

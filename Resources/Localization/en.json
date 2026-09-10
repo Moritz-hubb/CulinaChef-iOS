@@ -136,7 +136,7 @@
   "detail.addedToShoppingList": "Added to shopping list",
   "detail.reportRecipe": "Report Recipe",
   "detail.shareRecipe": "Share Recipe",
-  "detail.startTimer": "Start Timer",
+  "detail.startTimer": "Start",
   "detail.stopTimer": "Stop Timer",
   "detail.timer": "Timer",
   "detail.timerStarted": "Timer started",
@@ -464,7 +464,7 @@
   "settings.deine_vorteile": "Your Benefits",
   "settings.deleteAccount": "Delete Account",
   "settings.deleteAccountConfirm": "Delete Account?",
-  "settings.deleteAccountMessage": "Your data will be removed from the database. Subscriptions must be canceled through Apple; we'll open subscription management for you.",
+  "settings.deleteAccountMessage": "Your account, recipes, ratings, photos, favorites, and all other stored data will be permanently deleted. Apple subscriptions must be canceled separately in your Apple ID; we will open subscription management for you.",
   "settings.deleteNow": "Delete Now",
   "settings.dietary": "Nutrition",
   "settings.dietaryPreferences": "Dietary Preferences",
@@ -605,6 +605,12 @@
   "share.image": "Image",
   "share.photo": "Photo",
   "share.cancel": "Cancel",
+  "share.notificationTitle": "Recipe ready to import",
+  "share.notificationBody": "Tap here to import the recipe into CulinaAi.",
+  "share.linkSaved": "Link saved!",
+  "share.openToImport": "Open CulinaAi — the import will start automatically.",
+  "share.noContent": "No content",
+  "share.noLink": "No link found",
   "time.hour": "hr",
   "time.hours": "hours",
   "time.min": "min",
@@ -942,5 +948,6 @@
   "timer.proof": "Proof",
   "timer.rest": "Rest",
   "timer.simmer": "Simmer",
-  "timer.steep": "Steep"
+  "timer.steep": "Steep",
+  "settings.accountDeletionFailed": "Your account could not be deleted. Please check your connection and try again. No data was removed."
 }

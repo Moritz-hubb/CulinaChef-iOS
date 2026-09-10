@@ -241,7 +241,8 @@ You can delete your account at any time by following these steps:
 - User account and authentication data
 - All saved recipes, menus, and favorites
 - Dietary preferences and personal settings
-- Ratings and notes
+- Ratings, favorites, and reports
+- Recipe photos and locally stored data (e.g. shopping list)
 
 **Important:**
 

@@ -241,7 +241,8 @@ Sie können Ihr Konto jederzeit in den Einstellungen vollständig löschen.
 - Benutzerkonto und Authentifizierungsdaten
 - Alle gespeicherten Rezepte, Menüs und Favoriten
 - Ernährungspräferenzen und persönliche Einstellungen
-- Bewertungen und Notizen
+- Bewertungen, Favoriten und Meldungen
+- Rezeptfotos und lokal gespeicherte Daten (z. B. Einkaufsliste)
 
 **Wichtiger Hinweis:**
 

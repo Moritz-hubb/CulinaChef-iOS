@@ -157,6 +157,31 @@ final class Monetization {
         if Config.isSuperwallConfigured {
             Superwall.shared.identify(userId: userId)
         }
+        applySuperwallSubscriptionStatus(from: RevenueCatManager.shared.customerInfo)
+    }
+    
+    /// Superwall only skips paywalls when `subscriptionStatus` is active. Use any-environment
+    /// RevenueCat entitlements (sandbox + production) plus active Store subscriptions.
+    func applySuperwallSubscriptionStatus(from info: RevenueCat.CustomerInfo?) {
+        guard Config.isSuperwallConfigured else { return }
+        let status = superwallStatus(from: info)
+        Superwall.shared.subscriptionStatus = status
+        if status.isActive {
+            Task { await Superwall.shared.dismiss() }
+        }
+        Logger.info(
+            "[Paywall] Superwall subscriptionStatus=\(String(describing: status)) rcSubscribed=\(info.map(RevenueCatManager.hasActiveSubscription) ?? false)",
+            category: .data
+        )
+    }
+    
+    private func superwallStatus(from info: RevenueCat.CustomerInfo?) -> SuperwallKit.SubscriptionStatus {
+        guard let info else { return .unknown }
+        var entitlements = Set(info.entitlements.active.keys.map { SuperwallKit.Entitlement(id: $0) })
+        if entitlements.isEmpty, RevenueCatManager.hasActiveSubscription(info) {
+            entitlements.insert(SuperwallKit.Entitlement(id: RevenueCatManager.unlimitedEntitlementID))
+        }
+        return entitlements.isEmpty ? .inactive : .active(entitlements)
     }
     
     func logOut() async {
@@ -177,10 +202,9 @@ final class Monetization {
         feature: (() -> Void)? = nil
     ) {
         Task {
-            if RevenueCatManager.shared.customerInfo == nil {
-                await RevenueCatManager.shared.loadCustomerInfo()
-            }
+            await resolveSubscriptionBeforePaywall()
             guard !hasBlockingActiveSubscription() else {
+                Logger.info("[Paywall] skip present — active subscription moment=\(moment)", category: .data)
                 feature?()
                 return
             }
@@ -200,10 +224,25 @@ final class Monetization {
         }
     }
     
+    private func resolveSubscriptionBeforePaywall() async {
+        if let userId = KeychainManager.get(key: "user_id"), !userId.isEmpty {
+            try? await identify(userId: userId)
+        }
+        await RevenueCatManager.shared.loadCustomerInfo()
+        applySuperwallSubscriptionStatus(from: RevenueCatManager.shared.customerInfo)
+        if hasBlockingActiveSubscription() { return }
+        
+        let deadline = Date().addingTimeInterval(2.5)
+        while Date() < deadline, !hasBlockingActiveSubscription() {
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            await RevenueCatManager.shared.loadCustomerInfo()
+            applySuperwallSubscriptionStatus(from: RevenueCatManager.shared.customerInfo)
+        }
+    }
+    
     private func hasBlockingActiveSubscription() -> Bool {
         if RevenueCatManager.shared.isSubscribed { return true }
-        if case .active = Superwall.shared.subscriptionStatus { return true }
-        return false
+        return Superwall.shared.subscriptionStatus.isActive
     }
     
     /// Shows the Superwall campaign assigned to this placement (no-op if the user is already entitled).
@@ -218,6 +257,7 @@ final class Monetization {
         }
         Task {
             let context = await preparePaywallContext()
+            applySuperwallSubscriptionStatus(from: RevenueCatManager.shared.customerInfo)
             if hasBlockingActiveSubscription() {
                 Logger.info("[Paywall] skip register \(placement) — active subscription", category: .data)
                 feature?()

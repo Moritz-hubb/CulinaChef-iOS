@@ -46,9 +46,15 @@ private struct RootViewModifiers: ViewModifier {
     }
     
     private var viewId: String {
-        app.showSettings || app.showLanguageSettings 
-            ? "stable" 
-            : "\(languageRefreshTrigger)_\(localizationManager.currentLanguage)"
+        if showOnboarding || isOnboardingIncomplete || app.showSettings || app.showLanguageSettings {
+            return "stable"
+        }
+        return "\(languageRefreshTrigger)_\(localizationManager.currentLanguage)"
+    }
+
+    private var isOnboardingIncomplete: Bool {
+        guard let userId = KeychainManager.get(key: "user_id") else { return false }
+        return !UserDefaults.standard.bool(forKey: "onboarding_completed_\(userId)")
     }
     
     private func handleAppear() {
@@ -152,6 +158,7 @@ struct RootView: View {
                 // Check onboarding status before showing main view
                 if shouldShowOnboarding() {
                     OnboardingView()
+                        .id("culina-onboarding")
                         .onAppear {
                             // Set flag so we know onboarding is showing
                             showOnboarding = true

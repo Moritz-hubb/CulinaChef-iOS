@@ -13,6 +13,21 @@ struct AuthResponse: Codable {
     struct User: Codable {
         let id: String
         let email: String
+
+        enum CodingKeys: String, CodingKey {
+            case id, email
+        }
+
+        init(id: String, email: String) {
+            self.id = id
+            self.email = email
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+            email = try container.decodeIfPresent(String.self, forKey: .email) ?? ""
+        }
     }
 }
 
@@ -324,10 +339,10 @@ final class SupabaseAuthClient {
             // Supabase returns user data directly
             struct UserResponse: Codable {
                 let id: String
-                let email: String
+                let email: String?
             }
             let user = try JSONDecoder().decode(UserResponse.self, from: data)
-            return AuthResponse.User(id: user.id, email: user.email)
+            return AuthResponse.User(id: user.id, email: user.email ?? "")
         } else {
             return nil
         }
@@ -476,6 +491,9 @@ enum KeychainManager {
         delete(key: "subscription_last_payment")
         delete(key: "subscription_period_end")
         delete(key: "subscription_autorenew")
+        delete(key: "taste_preferences_secure")
+        delete(key: "auth_provider")
+        delete(key: "apple_user_id")
     }
     
     // MARK: - Date Storage

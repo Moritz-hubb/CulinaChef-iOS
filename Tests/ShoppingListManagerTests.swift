@@ -348,6 +348,16 @@ final class ShoppingListManagerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(afterAdd, beforeAdd)
     }
     
+    func testUpdateItemCategory() {
+        manager.addItem(name: "Milchreis", quantity: "200g", category: .dairy)
+        let item = manager.shoppingList.items[0]
+        
+        manager.updateItemCategory(item: item, to: .grains)
+        
+        XCTAssertEqual(manager.shoppingList.items[0].category, .grains)
+        XCTAssertEqual(ItemCategory.categorize(ingredient: "Milchreis"), .grains)
+    }
+    
     func testSaveWithoutUser() {
         // Arrange - Remove user
         KeychainManager.deleteAll()

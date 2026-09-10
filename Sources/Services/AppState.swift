@@ -143,9 +143,6 @@ final class AppState: ObservableObject {
     // Shopping list manager (shared across views)
     private(set) var shoppingListManager: ShoppingListManager!
     
-    // Liked recipes manager (local storage, no DB)
-    private(set) var likedRecipesManager: LikedRecipesManager!
-    
     // MARK: - Feature Managers (Extracted from God Object)
     private(set) var authManager: AuthenticationManager!
     private(set) var subscriptionManager: SubscriptionManager!
@@ -180,7 +177,6 @@ final class AppState: ObservableObject {
         preferencesClient = UserPreferencesClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey)
         subscriptionsClient = SubscriptionsClient(baseURL: Config.supabaseURL, apiKey: Config.supabaseAnonKey, backendBaseURL: Config.backendBaseURL)
         shoppingListManager = ShoppingListManager()
-        likedRecipesManager = LikedRecipesManager()
         
         // Initialize feature managers
         authManager = AuthenticationManager(auth: auth, preferencesClient: preferencesClient)
@@ -986,11 +982,11 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     ///   - fullName: Optionaler vollständiger Name vom Apple Credential (nur beim ersten Sign In verfügbar).
     ///   - isSignUp: Wenn true, wird geprüft ob Account bereits existiert und Fehler geworfen.
     /// - Throws: Fehler aus `SupabaseAuthClient` oder Keychain-Speicherung.
-    func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp: Bool = false) async throws {
+    func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp: Bool = false, appleUserId: String? = nil, authorizationCode: String? = nil) async throws {
         loading = true
         defer { loading = false }
         
-        let result = try await authManager.signInWithApple(idToken: idToken, nonce: nonce, fullName: fullName, isSignUp: isSignUp)
+        let result = try await authManager.signInWithApple(idToken: idToken, nonce: nonce, fullName: fullName, isSignUp: isSignUp, appleUserId: appleUserId, authorizationCode: authorizationCode)
         
         await MainActor.run {
             self.accessToken = result.accessToken
@@ -1088,12 +1084,39 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         }
     }
 
-    func deleteAccountAndData() async {
-        do {
-            try await subscriptionManager.deleteAccountAndData(accessToken: self.accessToken, userId: KeychainManager.get(key: "user_id"), userEmail: self.userEmail)
-        } catch {
-            Logger.error("[AccountDeletion] Backend deletion failed", error: error, category: .data)
+    func deleteAccountAndData() async throws {
+        var appleCode: String?
+        let provider = KeychainManager.get(key: "auth_provider")
+        let email = userEmail ?? KeychainManager.get(key: "user_email")
+        let usedApple = provider == "apple" || (email?.contains("privaterelay.appleid.com") == true) || KeychainManager.get(key: "apple_user_id") != nil
+        if usedApple {
+            appleCode = await AppleAccountDeletionAuth.requestAuthorizationCode()
         }
+        try await subscriptionManager.deleteAccountAndData(
+            accessToken: self.accessToken,
+            userId: KeychainManager.get(key: "user_id"),
+            userEmail: self.userEmail,
+            appleAuthorizationCode: appleCode
+        )
+        clearLocalUserDataAfterAccountDeletion()
+    }
+
+    /// Entfernt lokale Caches, bevor Tokens per signOut gelöscht werden.
+    private func clearLocalUserDataAfterAccountDeletion() {
+        OpenAIConsentManager.resetConsent()
+        TastePreferencesManager.delete()
+        shoppingListManager.clearShoppingList()
+        IngredientCategorizer.clearOverrides()
+        if let userId = KeychainManager.get(key: "user_id") {
+            UserDefaults.standard.removeObject(forKey: "cached_recipes_\(userId)")
+            UserDefaults.standard.removeObject(forKey: "cached_menus_\(userId)")
+            UserDefaults.standard.removeObject(forKey: "recipes_cache_timestamp_\(userId)")
+        }
+        UserDefaults.standard.removeObject(forKey: DietaryPreferences.storageKey)
+        dietary = DietaryPreferences()
+        cachedRecipes = []
+        cachedMenus = []
+        recipesCacheTimestamp = nil
     }
     
     func getSubscriptionPeriodEnd() -> Date? {

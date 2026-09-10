@@ -276,41 +276,20 @@ final class SubscriptionManager {
         #endif
     }
     
-    func deleteAccountAndData(accessToken: String?, userId: String?, userEmail: String?) async throws {
-        guard let token = accessToken, let uid = userId else {
+    func deleteAccountAndData(accessToken: String?, userId: String?, userEmail: String?, appleAuthorizationCode: String? = nil) async throws {
+        guard let token = accessToken, userId != nil else {
             throw NSError(domain: "Account", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
         }
-        
-        // Log deletion for audit/GDPR compliance
-        do {
-            struct AuditLog: Encodable {
-                let user_id: String
-                let email: String?
-                let deleted_by: String
-                let reason: String
-            }
-            var url = Config.supabaseURL
-            url.append(path: "/rest/v1/account_deletions")
-            var req = URLRequest(url: url)
-            req.httpMethod = "POST"
-            req.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-            req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            req.addValue("return=minimal", forHTTPHeaderField: "Prefer")
-            let log = AuditLog(user_id: uid, email: userEmail, deleted_by: "user_request", reason: "user_initiated")
-            req.httpBody = try JSONEncoder().encode([log])
-            _ = try? await SecureURLSession.shared.data(for: req)
-        } catch {
-            Logger.error("[AccountDeletion] Audit log failed", error: error, category: .data)
-        }
-        
-        // Call backend to delete all data + auth user
+
         var url = Config.backendBaseURL
         url.append(path: "/account/delete")
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        if let appleAuthorizationCode, !appleAuthorizationCode.isEmpty {
+            req.httpBody = try JSONEncoder().encode(["apple_authorization_code": appleAuthorizationCode])
+        }
         let (_, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw URLError(.badServerResponse)

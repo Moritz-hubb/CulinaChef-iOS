@@ -136,7 +136,7 @@
   "detail.addedToShoppingList": "Zur Einkaufsliste hinzugefügt",
   "detail.reportRecipe": "Rezept melden",
   "detail.shareRecipe": "Rezept teilen",
-  "detail.startTimer": "Timer starten",
+  "detail.startTimer": "Starten",
   "detail.stopTimer": "Timer stoppen",
   "detail.timer": "Timer",
   "detail.timerStarted": "Timer gestartet",
@@ -464,7 +464,7 @@
   "settings.deine_vorteile": "Deine Vorteile",
   "settings.deleteAccount": "Konto löschen",
   "settings.deleteAccountConfirm": "Konto löschen?",
-  "settings.deleteAccountMessage": "Deine Daten werden aus der Datenbank entfernt. Abonnements müssen über Apple gekündigt werden; wir öffnen dafür die Aboverwaltung.",
+  "settings.deleteAccountMessage": "Dein Konto, Rezepte, Bewertungen, Fotos, Favoriten und alle anderen gespeicherten Daten werden unwiderruflich gelöscht. Apple-Abos musst du separat in der Apple-ID kündigen; wir öffnen dafür die Aboverwaltung.",
   "settings.deleteNow": "Jetzt löschen",
   "settings.dietary": "Ernährung",
   "settings.dietaryPreferences": "Ernährungspräferenzen",
@@ -605,6 +605,12 @@
   "share.image": "Bild",
   "share.photo": "Foto",
   "share.cancel": "Abbrechen",
+  "share.notificationTitle": "Rezept bereit zum Import",
+  "share.notificationBody": "Tippe hier, um das Rezept in CulinaAi zu importieren.",
+  "share.linkSaved": "Link gespeichert!",
+  "share.openToImport": "Öffne CulinaAi — der Import startet automatisch.",
+  "share.noContent": "Keine Inhalte",
+  "share.noLink": "Kein Link gefunden",
   "time.hour": "Std",
   "time.hours": "Stunden",
   "time.min": "Min",
@@ -942,5 +948,6 @@
   "timer.proof": "Gehen lassen",
   "timer.rest": "Ruhen",
   "timer.simmer": "Köcheln",
-  "timer.steep": "Ziehen lassen"
+  "timer.steep": "Ziehen lassen",
+  "settings.accountDeletionFailed": "Das Konto konnte nicht gelöscht werden. Bitte prüfe deine Verbindung und versuche es erneut. Es wurden keine Daten entfernt."
 }

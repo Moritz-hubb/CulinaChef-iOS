@@ -232,13 +232,6 @@ struct FairUseView: View {
                                     "Saving and managing recipes"
                                 ))
                                 FairUseBullet(text: localized(
-                                    "Nutzung der Community-Bibliothek",
-                                    "Utilisation de la bibliothèque communautaire",
-                                    "Uso de la biblioteca de la comunidad",
-                                    "Utilizzo della biblioteca della comunità",
-                                    "Using the community library"
-                                ))
-                                FairUseBullet(text: localized(
                                     "Einkaufsliste und Menüplanung",
                                     "Liste de courses et planification de menus",
                                     "Lista de compras y planificación de menús",

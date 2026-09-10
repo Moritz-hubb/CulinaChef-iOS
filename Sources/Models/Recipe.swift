@@ -8,7 +8,7 @@ struct Recipe: Identifiable, Codable, Equatable {
     let instructions: [String]? // Optional for preview recipes
     let nutrition: Nutrition? // Optional for preview recipes
     let created_at: String?
-    var user_email: String? // For community recipes
+    var user_email: String?
     var is_public: Bool? // Flag if recipe is shared publicly
     var image_url: String? // Photo URL
     var cooking_time: String? // e.g. "30 Min"

@@ -92,9 +92,6 @@ final class AppState: ObservableObject {
         didSet { dietary.save() }
     }
     
-    // Recipe selected for community upload (for upload sheet)
-    @Published var selectedRecipeForUpload: Recipe? = nil
-    
     // Password reset state
     @Published var showPasswordReset: Bool = false
     @Published var showSettings: Bool = false
@@ -105,7 +102,7 @@ final class AppState: ObservableObject {
     // Deep link recipe navigation
     @Published var deepLinkRecipe: Recipe? = nil
 
-    /// Share Extension (TikTok → Teilen → CulinaChef): vorausgefüllter Import
+    /// Share Extension (TikTok → Teilen → CulinaAi): vorausgefüllter Import
     @Published var pendingSocialImportURL: String?
     @Published var pendingSocialImportExtra: String?
     @Published var showSocialImportFromShare: Bool = false
@@ -118,10 +115,6 @@ final class AppState: ObservableObject {
     @Published var cachedRecipes: [Recipe] = []
     @Published var cachedMenus: [Menu] = []
     @Published var recipesCacheTimestamp: Date? = nil
-    
-    // Cached community recipes for instant display
-    @Published var cachedCommunityRecipes: [Recipe] = []
-    @Published var communityRecipesCacheTimestamp: Date? = nil
     
     // Rating cache: recipeId -> (average: Double?, count: Int)
     // Used to avoid individual API calls for each recipe card
@@ -179,7 +172,6 @@ final class AppState: ObservableObject {
         let backendURL = Config.backendBaseURL
         // Always log in DEBUG to ensure we see it
         Logger.info("[AppState] Initializing BackendClient with URL: \(backendURL.absoluteString)", category: .config)
-        print("🔍 [DEBUG] Backend URL: \(backendURL.absoluteString)") // Direct print for visibility
         backend = BackendClient(baseURL: backendURL)
         // OpenAI now proxied through backend for security
         openAI = BackendOpenAIClient(backend: backend, accessTokenProvider: { [weak self] in self?.accessToken })
@@ -297,7 +289,7 @@ final class AppState: ObservableObject {
             try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
             await self.loadInitialData()
             
-            // OPTIMIZATION: Preload recipes and community recipes in background after initial load
+            // OPTIMIZATION: Preload personal recipes in background after initial load
             // This ensures tabs show data instantly without API calls
             if let userId = KeychainManager.get(key: "user_id"),
                let token = self.accessToken {
@@ -463,29 +455,20 @@ final class AppState: ObservableObject {
         Logger.info("[DEBUG Dietary] Dietary.allergies: \(dietary.allergies)", category: .data)
         Logger.info("[DEBUG Dietary] Dietary.dislikes: \(dietary.dislikes)", category: .data)
         Logger.info("[DEBUG Dietary] Dietary.notes: \(dietary.notes ?? "nil")", category: .data)
-        print("🔍 [DEBUG Dietary] ========== DIETARY PREFERENCES DEBUG ==========")
-        print("🔍 [DEBUG Dietary] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")")
-        print("🔍 [DEBUG Dietary] Dietary.diets: \(dietary.diets)")
-        print("🔍 [DEBUG Dietary] Dietary.allergies: \(dietary.allergies)")
-        print("🔍 [DEBUG Dietary] Dietary.dislikes: \(dietary.dislikes)")
-        print("🔍 [DEBUG Dietary] Dietary.notes: \(dietary.notes ?? "nil")")
         
         // STRIKTE Anforderungen (Allergien & Ernährungsweisen)
         // WICHTIG: Ernährungsweisen müssen IMMER respektiert werden - Rezepte entsprechend anpassen
         if !dietary.diets.isEmpty {
             strictParts.append("Ernährungsweisen (IMMER respektieren, Rezepte entsprechend anpassen): " + dietary.diets.sorted().joined(separator: ", "))
             Logger.info("[DEBUG Dietary] Added diets to strictParts: \(dietary.diets)", category: .data)
-            print("🔍 [DEBUG Dietary] Added diets to strictParts: \(dietary.diets)")
         }
         if !dietary.allergies.isEmpty {
             strictParts.append("Allergien/Unverträglichkeiten (IMMER vermeiden): " + dietary.allergies.joined(separator: ", "))
             Logger.info("[DEBUG Dietary] Added allergies to strictParts: \(dietary.allergies)", category: .data)
-            print("🔍 [DEBUG Dietary] Added allergies to strictParts: \(dietary.allergies)")
         }
         if !dietary.dislikes.isEmpty {
             strictParts.append("Bitte meiden: " + dietary.dislikes.joined(separator: ", "))
             Logger.info("[DEBUG Dietary] Added dislikes to strictParts: \(dietary.dislikes)", category: .data)
-            print("🔍 [DEBUG Dietary] Added dislikes to strictParts: \(dietary.dislikes)")
         }
         
         // OPTIONALE Geschmackspräferenzen
@@ -538,14 +521,11 @@ final class AppState: ObservableObject {
         
         if result.isEmpty {
             Logger.info("[DEBUG Dietary] Result is EMPTY - no dietary preferences", category: .data)
-            print("🔍 [DEBUG Dietary] Result is EMPTY - no dietary preferences")
             return ""
         }
         let finalPrompt = result.joined(separator: "\n")
         Logger.info("[DEBUG Dietary] Final dietary prompt: \(finalPrompt)", category: .data)
-        print("🔍 [DEBUG Dietary] Final dietary prompt: \(finalPrompt)")
         Logger.info("[DEBUG Dietary] ========== END DIETARY PREFERENCES DEBUG ==========", category: .data)
-        print("🔍 [DEBUG Dietary] ========== END DIETARY PREFERENCES DEBUG ==========")
         return finalPrompt
     }
 
@@ -1175,11 +1155,13 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
 
     // MARK: - Restore
     
-    func restorePurchases() async {
+    func restorePurchases() async throws {
         do {
             try await RevenueCatManager.shared.restorePurchases()
         } catch {
             Logger.error("[AppState] Restore purchases failed", error: error, category: .data)
+            applyRevenueCatSubscriptionStatus()
+            throw error
         }
         applyRevenueCatSubscriptionStatus()
     }
@@ -1407,43 +1389,21 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     
     /// Lädt Rezepte und Menüs im Hintergrund und speichert sie im Cache für sofortige Anzeige
     private func preloadRecipesAndMenus(userId: String, token: String) async {
-        let startTime = Date()
-        print("📦 [PERFORMANCE] Preload Recipes & Menus STARTED at \(startTime)")
-        
         do {
-            // Lade Rezepte und Menüs parallel
-            let networkStartTime = Date()
-            print("📡 [PERFORMANCE] Starting parallel network requests (recipes + menus)...")
             async let recipesTask = loadRecipesForCache(userId: userId, token: token)
             async let menusTask = menuManager.fetchMenus(accessToken: token, userId: userId)
             
             let (recipes, menus) = try await (recipesTask, menusTask)
-            let networkDuration = Date().timeIntervalSince(networkStartTime)
-            print("📡 [PERFORMANCE] Network requests completed in \(String(format: "%.3f", networkDuration))s")
-            print("📡 [PERFORMANCE] Received: \(recipes.count) recipes, \(menus.count) menus")
             
-            let cacheStartTime = Date()
             await MainActor.run {
                 self.cachedRecipes = recipes
                 self.cachedMenus = menus
                 self.recipesCacheTimestamp = Date()
-                let cacheDuration = Date().timeIntervalSince(cacheStartTime)
-                print("💾 [PERFORMANCE] Cache updated in \(String(format: "%.3f", cacheDuration))s")
-                print("💾 [PERFORMANCE] Cached \(recipes.count) recipes and \(menus.count) menus")
                 Logger.info("[AppState] Preloaded \(recipes.count) recipes and \(menus.count) menus to cache", category: .data)
             }
             
-            // Speichere auch auf Disk für Persistenz
-            let diskStartTime = Date()
             saveCachedRecipesToDisk(recipes: recipes, menus: menus)
-            let diskDuration = Date().timeIntervalSince(diskStartTime)
-            print("💿 [PERFORMANCE] Disk save completed in \(String(format: "%.3f", diskDuration))s")
-            
-            let totalDuration = Date().timeIntervalSince(startTime)
-            print("✅ [PERFORMANCE] Preload Recipes & Menus COMPLETED in \(String(format: "%.3f", totalDuration))s")
         } catch {
-            let totalDuration = Date().timeIntervalSince(startTime)
-            print("❌ [PERFORMANCE] Preload Recipes & Menus FAILED after \(String(format: "%.3f", totalDuration))s: \(error.localizedDescription)")
             Logger.error("[AppState] Failed to preload recipes and menus", error: error, category: .data)
         }
     }
@@ -1477,202 +1437,14 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     
     // MARK: - Background Preloading
     
-    /// Preloads all recipes (personal + community) in background for instant tab display
+    /// Preloads personal recipes and menus in the background for instant tab display
     private func preloadAllRecipesInBackground(userId: String, token: String) async {
-        let totalStartTime = Date()
-        print("🚀 [PERFORMANCE] ========================================")
-        print("🚀 [PERFORMANCE] Background Preload STARTED at \(Date())")
-        print("🚀 [PERFORMANCE] ========================================")
-        Logger.info("[AppState] 🚀 Background preload STARTED", category: .data)
-        
-        // Load personal recipes and menus
-        let personalStartTime = Date()
-        print("📦 [PERFORMANCE] Loading personal recipes and menus...")
+        Logger.info("[AppState] Background preload started", category: .data)
         await preloadRecipesAndMenus(userId: userId, token: token)
-        let personalDuration = Date().timeIntervalSince(personalStartTime)
-        print("✅ [PERFORMANCE] Personal recipes loaded in \(String(format: "%.3f", personalDuration))s")
-        
-        // Load community recipes (multiple pages for better coverage)
-        let communityStartTime = Date()
-        print("🌍 [PERFORMANCE] Loading community recipes (3 pages)...")
-        await preloadCommunityRecipes(token: token, pages: 3, pageSize: 15)
-        let communityDuration = Date().timeIntervalSince(communityStartTime)
-        print("✅ [PERFORMANCE] Community recipes loaded in \(String(format: "%.3f", communityDuration))s")
-        
-        let totalDuration = Date().timeIntervalSince(totalStartTime)
-        print("🎉 [PERFORMANCE] ========================================")
-        print("🎉 [PERFORMANCE] Background Preload COMPLETED")
-        print("🎉 [PERFORMANCE] Total duration: \(String(format: "%.3f", totalDuration))s")
-        print("🎉 [PERFORMANCE] Personal: \(String(format: "%.3f", personalDuration))s")
-        print("🎉 [PERFORMANCE] Community: \(String(format: "%.3f", communityDuration))s")
-        print("🎉 [PERFORMANCE] ========================================")
-        Logger.info("[AppState] 🎉 Background preload COMPLETED in \(String(format: "%.3f", totalDuration))s", category: .data)
+        Logger.info("[AppState] Background preload completed", category: .data)
     }
     
-    /// Preloads community recipes in background (multiple pages)
-    private func preloadCommunityRecipes(token: String, pages: Int, pageSize: Int) async {
-        let startTime = Date()
-        print("🌍 [PERFORMANCE] Preload Community Recipes STARTED at \(startTime)")
-        print("🌍 [PERFORMANCE] Loading \(pages) pages (pageSize: \(pageSize)) = ~\(pages * pageSize) recipes")
-        
-        var allRecipes: [Recipe] = []
-        var successfulPages = 0
-        
-        // Load multiple pages in parallel for faster loading
-        // OPTIMIZATION: Use timeout per page to prevent blocking
-        let networkStartTime = Date()
-        print("📡 [PERFORMANCE] Starting parallel network requests for \(pages) pages...")
-        var tasks: [Task<[Recipe], Error>] = []
-        for page in 0..<pages {
-            tasks.append(Task {
-                // Add timeout wrapper to prevent 60+ second hangs
-                return try await withThrowingTaskGroup(of: [Recipe].self) { group in
-                    group.addTask {
-                        let pageStartTime = Date()
-                        let recipes = try await self.loadCommunityRecipesPage(page: page, pageSize: pageSize, token: token)
-                        let pageDuration = Date().timeIntervalSince(pageStartTime)
-                        print("📡 [PERFORMANCE] Page \(page) loaded in \(String(format: "%.3f", pageDuration))s (\(recipes.count) recipes)")
-                        return recipes
-                    }
-                    
-                    // Timeout after 6 seconds per page (shorter than request timeout for faster failure)
-                    group.addTask {
-                        try await Task.sleep(nanoseconds: 6_000_000_000) // 6 seconds
-                        throw URLError(.timedOut)
-                    }
-                    
-                    // Return first completed task (either success or timeout)
-                    let result = try await group.next()!
-                    group.cancelAll()
-                    return result
-                }
-            })
-        }
-        
-        // Wait for all pages to load (with timeout protection)
-        var pageIndex = 0
-        for task in tasks {
-            do {
-                let recipes = try await task.value
-                allRecipes.append(contentsOf: recipes)
-                successfulPages += 1
-                print("✅ [PERFORMANCE] Page \(pageIndex) completed: \(recipes.count) recipes")
-                pageIndex += 1
-            } catch {
-                print("❌ [PERFORMANCE] Page \(pageIndex) FAILED: \(error.localizedDescription)")
-                Logger.error("[AppState] Failed to load community recipes page: \(error.localizedDescription)", category: .data)
-                pageIndex += 1
-            }
-        }
-        
-        print("📊 [PERFORMANCE] Successfully loaded \(successfulPages)/\(pages) pages")
-        
-        let networkDuration = Date().timeIntervalSince(networkStartTime)
-        print("📡 [PERFORMANCE] All \(pages) pages loaded in \(String(format: "%.3f", networkDuration))s")
-        print("📡 [PERFORMANCE] Total recipes received: \(allRecipes.count)")
-        
-        // Remove duplicates (by ID) and sort by created_at desc
-        let processingStartTime = Date()
-        var uniqueRecipes: [Recipe] = []
-        var seenIds: Set<String> = []
-        for recipe in allRecipes {
-            if !seenIds.contains(recipe.id) {
-                uniqueRecipes.append(recipe)
-                seenIds.insert(recipe.id)
-            }
-        }
-        
-        // Sort by created_at desc (newest first)
-        uniqueRecipes.sort { recipe1, recipe2 in
-            let date1 = recipe1.created_at ?? ""
-            let date2 = recipe2.created_at ?? ""
-            return date1 > date2
-        }
-        
-        let processingDuration = Date().timeIntervalSince(processingStartTime)
-        print("🔄 [PERFORMANCE] Processing (dedupe + sort) completed in \(String(format: "%.3f", processingDuration))s")
-        print("🔄 [PERFORMANCE] Unique recipes: \(uniqueRecipes.count) (removed \(allRecipes.count - uniqueRecipes.count) duplicates)")
-        
-        // OPTIMIZATION: Cache only if we got recipes
-        // Don't cache empty results - allows retry on next tab switch
-        let cacheStartTime = Date()
-        await MainActor.run {
-            // Only cache if we got recipes - empty cache means no cache, allows retry
-            if !uniqueRecipes.isEmpty {
-                self.cachedCommunityRecipes = uniqueRecipes
-                self.communityRecipesCacheTimestamp = Date()
-                let cacheDuration = Date().timeIntervalSince(cacheStartTime)
-                print("💾 [PERFORMANCE] Community cache updated in \(String(format: "%.3f", cacheDuration))s")
-                print("💾 [PERFORMANCE] Cached \(uniqueRecipes.count) community recipes (from \(successfulPages)/\(pages) pages)")
-                Logger.info("[AppState] Preloaded \(uniqueRecipes.count) community recipes to cache (from \(successfulPages)/\(pages) pages)", category: .data)
-            } else {
-                print("⚠️ [PERFORMANCE] No recipes to cache (from \(successfulPages)/\(pages) pages) - will retry on next tab switch")
-                // Don't set cache if empty - allows retry
-            }
-        }
-        
-        let totalDuration = Date().timeIntervalSince(startTime)
-        print("✅ [PERFORMANCE] Preload Community Recipes COMPLETED in \(String(format: "%.3f", totalDuration))s")
-        print("✅ [PERFORMANCE] Breakdown: Network=\(String(format: "%.3f", networkDuration))s, Processing=\(String(format: "%.3f", processingDuration))s, Success=\(successfulPages)/\(pages) pages")
-    }
-    
-    /// Helper function to load a page of community recipes
-    private func loadCommunityRecipesPage(page: Int, pageSize: Int, token: String) async throws -> [Recipe] {
-        let requestStartTime = Date()
-        var url = Config.supabaseURL
-        // PERFORMANCE FIX: Verwende Materialized View statt Tabelle
-        // Die View enthält nur die benötigten Felder und ist bereits gefiltert (is_public = true)
-        url.append(path: "/rest/v1/recipes_preview")
-        
-        let offset = page * pageSize
-        
-        // Manuelle URL-Konstruktion für Pagination
-        // Die View hat bereits is_public = true gefiltert, daher brauchen wir diesen Filter nicht
-        var urlString = url.absoluteString
-        urlString += "?order=created_at.desc"
-        urlString += "&limit=\(pageSize)"
-        urlString += "&offset=\(offset)"
-        
-        guard let finalURL = URL(string: urlString) else {
-            throw URLError(.badURL)
-        }
-        
-        url = finalURL
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.addValue("return=representation", forHTTPHeaderField: "Prefer")
-        // Timeout erhöht auf 30s, da Netzwerk manchmal langsam ist
-        // Aber mit korrekter select-Query sollte die Response <1s dauern
-        request.timeoutInterval = 30.0
-        
-        let networkStartTime = Date()
-        let (data, response) = try await SecureURLSession.shared.data(for: request)
-        let networkDuration = Date().timeIntervalSince(networkStartTime)
-        let dataSizeKB = Double(data.count) / 1024.0
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            let totalDuration = Date().timeIntervalSince(requestStartTime)
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            print("❌ [PERFORMANCE] Page \(page) request FAILED after \(String(format: "%.3f", totalDuration))s (HTTP \(statusCode))")
-            throw URLError(.badServerResponse)
-        }
-        
-        let decodeStartTime = Date()
-        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
-        let decodeDuration = Date().timeIntervalSince(decodeStartTime)
-        let totalDuration = Date().timeIntervalSince(requestStartTime)
-        
-        print("📡 [PERFORMANCE] Page \(page): Network=\(String(format: "%.3f", networkDuration))s, Decode=\(String(format: "%.3f", decodeDuration))s, Total=\(String(format: "%.3f", totalDuration))s, Size=\(String(format: "%.2f", dataSizeKB))KB, Recipes=\(recipes.count)")
-        
-        return recipes
-    }
-    
-    // MARK: - Menus (Supabase)
+        // MARK: - Menus (Supabase)
     func fetchMenus(accessToken: String, userId: String) async throws -> [Menu] {
         try await menuManager.fetchMenus(accessToken: accessToken, userId: userId)
     }

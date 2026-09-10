@@ -9,7 +9,7 @@ private struct RootViewModifiers: ViewModifier {
     var scenePhase: ScenePhase
     var localizationManager: LocalizationManager
     var checkOnboardingStatus: () -> Void
-    var checkSubscriptionStatus: () -> Void
+    var presentPaywallOnForeground: () -> Void
     
     func body(content: Content) -> some View {
         content
@@ -66,6 +66,9 @@ private struct RootViewModifiers: ViewModifier {
         if oldPhase == .background && newPhase == .active && !hasTrackedLaunch {
             AppStoreReviewManager.incrementLaunchCount()
             hasTrackedLaunch = true
+        }
+        if oldPhase == .background && newPhase == .active {
+            presentPaywallOnForeground()
         }
         if newPhase == .active {
             checkPendingSocialImport()
@@ -138,7 +141,7 @@ struct RootView: View {
                 scenePhase: scenePhase,
                 localizationManager: localizationManager,
                 checkOnboardingStatus: checkOnboardingStatus,
-                checkSubscriptionStatus: checkSubscriptionStatus
+                presentPaywallOnForeground: presentPaywallOnForeground
             ))
     }
     
@@ -229,9 +232,22 @@ struct RootView: View {
         }
     }
     
+    private func presentPaywallOnForeground() {
+        Task {
+            await app.refreshSubscriptionStatusFromStoreKit()
+            guard app.isAuthenticated else { return }
+            if showOnboarding || shouldShowOnboarding() { return }
+            Monetization.shared.presentSubscriptionPaywall(moment: .returningFromBackground)
+        }
+    }
+    
     private func checkSubscriptionStatus() {
-        app.loadSubscriptionStatus()
-        Monetization.shared.register(placement: SuperwallPlacements.campaignTrigger)
+        Task {
+            await app.refreshSubscriptionStatusFromStoreKit()
+            guard app.isAuthenticated else { return }
+            if showOnboarding || shouldShowOnboarding() { return }
+            Monetization.shared.presentSubscriptionPaywall(moment: .appOpen)
+        }
     }
 }
 

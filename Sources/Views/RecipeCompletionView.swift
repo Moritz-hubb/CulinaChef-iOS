@@ -185,7 +185,7 @@ struct RecipeCompletionView: View {
                     Text(L.completion_photo.localized)
                         .font(.headline)
                         .foregroundStyle(.white)
-                    Text(L.community_bild_ist_optional_max.localized)
+                    Text(L.completion_photo.localized)
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.65))
                 }

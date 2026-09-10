@@ -90,8 +90,35 @@ final class RevenueCatManager: NSObject, ObservableObject {
     }
     
     var isSubscribed: Bool {
-        customerInfo?.entitlements[Self.unlimitedEntitlementID]?.isActive == true
+        guard let info = customerInfo else { return false }
+        if info.entitlements[Self.unlimitedEntitlementID]?.isActive == true { return true }
+        if !info.entitlements.active.isEmpty { return true }
+        if info.subscriptionsByProductIdentifier.values.contains(where: \.isActive) { return true }
+        return !info.activeSubscriptions.isEmpty
     }
+    
+    /// True when Unlimited was purchased before but is not active now (cancelled / expired).
+    var hasLapsedSubscription: Bool {
+        guard !isSubscribed else { return false }
+        guard let info = customerInfo else { return false }
+        if let entitlement = info.entitlements.all[Self.unlimitedEntitlementID], !entitlement.isActive {
+            return true
+        }
+        let knownIds = Self.knownSubscriptionProductIDs
+        let purchasedKnown = info.allPurchasedProductIdentifiers.intersection(knownIds)
+        if !purchasedKnown.isEmpty {
+            return info.activeSubscriptions.intersection(knownIds).isEmpty
+        }
+        let knownSubs = info.subscriptionsByProductIdentifier.filter { knownIds.contains($0.key) }
+        guard !knownSubs.isEmpty else { return false }
+        return !knownSubs.values.contains(where: \.isActive)
+    }
+    
+    private static let knownSubscriptionProductIDs: Set<String> = [
+        AppleSubscriptionProductIDs.monthly,
+        SuperwallProductNames.weeklyPlanTrial,
+        SuperwallProductNames.monthlyPlanTrial
+    ]
     
     var expirationDate: Date? {
         customerInfo?.entitlements[Self.unlimitedEntitlementID]?.expirationDate

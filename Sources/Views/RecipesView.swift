@@ -7,8 +7,7 @@ struct RecipesView: View {
     
     var body: some View {
         NavigationView {
-            // MVP: nur persönliche Rezepte (Teilen über Rezept-Detail / Share)
-                    PersonalRecipesView()
+            PersonalRecipesView()
             .navigationBarHidden(true)
         }
         .navigationViewStyle(.stack)

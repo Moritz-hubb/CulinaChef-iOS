@@ -143,7 +143,6 @@ final class SubscriptionFlowIntegrationTests: XCTestCase {
         // Free features should be available
         XCTAssertTrue(appState.hasAccess(to: .manualRecipes))
         XCTAssertTrue(appState.hasAccess(to: .shoppingList))
-        XCTAssertTrue(appState.hasAccess(to: .communityLibrary))
         XCTAssertTrue(appState.hasAccess(to: .recipeManagement))
     }
     
@@ -159,7 +158,6 @@ final class SubscriptionFlowIntegrationTests: XCTestCase {
         // Free features should also be accessible
         XCTAssertTrue(appState.hasAccess(to: .manualRecipes))
         XCTAssertTrue(appState.hasAccess(to: .shoppingList))
-        XCTAssertTrue(appState.hasAccess(to: .communityLibrary))
     }
     
     // MARK: - Auto-Renewal Tests

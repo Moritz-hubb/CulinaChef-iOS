@@ -46,7 +46,6 @@ final class BackendClient {
         url.append(path: path)
         #if DEBUG
         Logger.debug("[BackendClient] Request: \(method) \(url.absoluteString)", category: .network)
-        print("🌐 [DEBUG] Backend Request: \(method) \(url.absoluteString)") // Direct print for visibility
         #endif
         var req = URLRequest(url: url)
         if let t = timeoutInterval, t > 0 {
@@ -142,7 +141,7 @@ final class BackendClient {
     /// Lässt das Backend ein bestehendes Rezept KI-gestützt überarbeiten und als **neue** Kopie speichern.
     ///
     /// - Parameters:
-    ///   - sourceRecipeId: UUID des Ausgangsrezepts (eigenes oder öffentliches Community-Rezept).
+    ///   - sourceRecipeId: UUID des Ausgangsrezepts.
     ///   - goals: Kurze Ziele (z. B. vegan, glutenfrei); leer erlaubt nur mit `freeText`.
     ///   - freeText: Optionaler Freitext (max. 500 Zeichen serverseitig).
     ///   - language: Ausgabesprache (`de`, `en`, …); nil = Gerät/App-Logik.

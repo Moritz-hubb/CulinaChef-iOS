@@ -81,10 +81,6 @@ struct RecipeDetailView: View {
         }
         .padding(24)
         .tag(1)
-        
-        if displayRecipe.is_public ?? false {
-            ratingPage.tag(2)
-        }
     }
     
     @ViewBuilder
@@ -94,9 +90,6 @@ struct RecipeDetailView: View {
                 ForEach(instructions.indices, id: \.self) { idx in
                     stepPage(index: idx + 1, instruction: instructions[idx])
                         .tag(idx + 1)
-                }
-                if displayRecipe.is_public ?? false {
-                    ratingPage.tag(instructions.count + 1)
                 }
             }
         }
@@ -552,11 +545,7 @@ struct RecipeDetailView: View {
         ZStack(alignment: .topTrailing) {
             placeholderHeaderImage
             
-            // Plus button to add photo
-            // Don't allow adding photos to public recipes that don't have images (no moderation)
-            let canAddPhoto = !(displayRecipe.is_public == true && displayRecipe.image_url == nil || displayRecipe.image_url?.isEmpty == true)
-            
-            if !isUploadingPhoto && photoData == nil && canAddPhoto {
+            if !isUploadingPhoto && photoData == nil {
                 RecipePhotoSourceButton { data in
                     photoData = data
                     Task { await uploadNewPhoto() }
@@ -588,10 +577,7 @@ struct RecipeDetailView: View {
                     .font(.headline)
                     .foregroundStyle(.white)
                 Spacer()
-                // Don't allow adding photos to public recipes that don't have images (no moderation)
-                let canAddPhoto = !(displayRecipe.is_public == true && displayRecipe.image_url == nil || displayRecipe.image_url?.isEmpty == true)
-                
-                if !isUploadingPhoto && photoData == nil && uploadedImageUrl == nil && canAddPhoto {
+                if !isUploadingPhoto && photoData == nil && uploadedImageUrl == nil {
                     RecipePhotoSourceButton { data in
                         photoData = data
                         Task { await uploadNewPhoto() }
@@ -727,40 +713,9 @@ struct RecipeDetailView: View {
                 }
                 
                 if isLastStep {
-                    if (displayRecipe.is_public ?? false) {
-                        Button(action: { 
-                            withAnimation(.spring(response: 0.3)) {
-                                currentPage = (displayRecipe.instructions?.count ?? 0) + 1
-                            }
-                        }) {
-                            HStack {
-                                Image(systemName: "star.fill")
-                                Text(L.button_rateRecipe.localized)
-                            }
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ), in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
-                            )
-                            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.top, 8)
-                    } else {
-                        Button(action: { 
-                            // For saved recipes, just dismiss the view
-                            dismiss()
-                        }) {
+                    Button(action: { 
+                        dismiss()
+                    }) {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
                                 Text(L.button_finishRecipe.localized)
@@ -784,7 +739,6 @@ struct RecipeDetailView: View {
                         }
                         .buttonStyle(.plain)
                         .padding(.top, 8)
-                    }
                 } else {
                     // Next button for non-last steps
                     Button(action: { 
@@ -835,12 +789,6 @@ struct RecipeDetailView: View {
         guard let data = photoData,
               let userId = KeychainManager.get(key: "user_id"),
               let token = app.accessToken else { return }
-        
-        // Prevent adding photos to public recipes that don't have images (no moderation)
-        if displayRecipe.is_public == true && (displayRecipe.image_url == nil || displayRecipe.image_url?.isEmpty == true) {
-            Logger.warning("Cannot add photo to public recipe without existing image (no moderation)", category: Logger.Category.data)
-            return
-        }
         
         isUploadingPhoto = true
         defer { isUploadingPhoto = false }
@@ -1314,14 +1262,6 @@ struct RecipeDetailView: View {
         // Generate Markdown
         let markdown = generateMarkdownExport()
         items.append(markdown)
-        
-        // Add Deep Link for public recipes
-        if displayRecipe.is_public == true {
-            let deepLink = "https://culinachef.app/recipe/\(displayRecipe.id)"
-            if let url = URL(string: deepLink) {
-                items.append(url)
-            }
-        }
         
         shareItems = items
         showShareSheet = true

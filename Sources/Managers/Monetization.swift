@@ -10,6 +10,18 @@ import UIKit
 enum SuperwallPlacements {
     static let campaignTrigger = "campaign_trigger"
     static let aiFeature = "ai_feature"
+    /// Win-back paywall for users who previously subscribed and then lapsed.
+    /// Superwall campaign placement must be this identifier, assigned to paywall `culinaaipaywall10-new-094d-2026-09-10`.
+    static let lapsedSubscriber = "culinaaipaywall10-new-094d-2026-09-10"
+}
+
+enum SubscriptionPaywallMoment {
+    /// Cold start / after onboarding — trial paywall for new users, win-back for lapsed users.
+    case appOpen
+    /// Returning from background — win-back only (never the first-time trial paywall).
+    case returningFromBackground
+    /// Settings / AI gate — the paywall that matches current subscription history.
+    case userRequested
 }
 
 /// Product names assigned in the Superwall paywall editor (`{{ products.<name>.price }}`).
@@ -119,6 +131,10 @@ final class Monetization {
                 purchaseController: purchaseController,
                 options: options
             )
+            Superwall.shared.preloadPaywalls(forPlacements: [
+                SuperwallPlacements.campaignTrigger,
+                SuperwallPlacements.lapsedSubscriber
+            ])
             Logger.info("[Superwall] Configured with RevenueCat purchase controller", category: .data)
         } else {
             Logger.warning("[Superwall] Missing API key — paywalls disabled until SUPERWALL_API_KEY is set", category: .data)
@@ -155,6 +171,41 @@ final class Monetization {
         Superwall.handleDeepLink(url)
     }
     
+    /// Shows the trial paywall or the lapsed-subscriber paywall based on RevenueCat history.
+    func presentSubscriptionPaywall(
+        moment: SubscriptionPaywallMoment = .userRequested,
+        feature: (() -> Void)? = nil
+    ) {
+        Task {
+            if RevenueCatManager.shared.customerInfo == nil {
+                await RevenueCatManager.shared.loadCustomerInfo()
+            }
+            guard !hasBlockingActiveSubscription() else {
+                feature?()
+                return
+            }
+            let isLapsed = RevenueCatManager.shared.hasLapsedSubscription
+            if moment == .returningFromBackground, !isLapsed {
+                feature?()
+                return
+            }
+            let placement = isLapsed
+                ? SuperwallPlacements.lapsedSubscriber
+                : SuperwallPlacements.campaignTrigger
+            Logger.info(
+                "[Paywall] present moment=\(moment) lapsed=\(isLapsed) placement=\(placement)",
+                category: .data
+            )
+            register(placement: placement, feature: feature)
+        }
+    }
+    
+    private func hasBlockingActiveSubscription() -> Bool {
+        if RevenueCatManager.shared.isSubscribed { return true }
+        if case .active = Superwall.shared.subscriptionStatus { return true }
+        return false
+    }
+    
     /// Shows the Superwall campaign assigned to this placement (no-op if the user is already entitled).
     ///
     /// Placement params must go through `register` so Superwall Parameter variables
@@ -167,6 +218,11 @@ final class Monetization {
         }
         Task {
             let context = await preparePaywallContext()
+            if hasBlockingActiveSubscription() {
+                Logger.info("[Paywall] skip register \(placement) — active subscription", category: .data)
+                feature?()
+                return
+            }
             Superwall.shared.setUserAttributes(context.userAttributes)
             if !context.productIdsBySuperwallName.isEmpty {
                 Superwall.shared.overrideProductsByName = context.productIdsBySuperwallName
@@ -215,6 +271,9 @@ final class Monetization {
         let storeProducts = await loadLocalizedStoreProducts()
         var params: [String: Any] = [:]
         var attributes: [String: Any?] = [:]
+        let isLapsed = RevenueCatManager.shared.hasLapsedSubscription
+        params["hasLapsedSubscription"] = isLapsed
+        attributes["hasLapsedSubscription"] = isLapsed
         
         if let monthly = storeProducts.monthly {
             let weeklyEquivalent = PaywallPriceMath.formattedMonthlyWeeklyPrice(

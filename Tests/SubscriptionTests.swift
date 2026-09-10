@@ -50,7 +50,6 @@ final class SubscriptionTests: XCTestCase {
         // Then
         XCTAssertTrue(appState.hasAccess(to: .manualRecipes), "Manual recipes should always be accessible")
         XCTAssertTrue(appState.hasAccess(to: .shoppingList), "Shopping list should always be accessible")
-        XCTAssertTrue(appState.hasAccess(to: .communityLibrary), "Community library should always be accessible")
         XCTAssertTrue(appState.hasAccess(to: .recipeManagement), "Recipe management should always be accessible")
     }
     

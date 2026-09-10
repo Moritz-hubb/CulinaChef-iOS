@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "FFADC5FD5D5C094834C6F95E"
-               BuildableName = "CulinaChef.app"
+               BuildableName = "CulinaAi.app"
                BlueprintName = "CulinaChef"
                ReferencedContainer = "container:CulinaChef.xcodeproj">
             </BuildableReference>
@@ -32,7 +32,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FFADC5FD5D5C094834C6F95E"
-            BuildableName = "CulinaChef.app"
+            BuildableName = "CulinaAi.app"
             BlueprintName = "CulinaChef"
             ReferencedContainer = "container:CulinaChef.xcodeproj">
          </BuildableReference>
@@ -66,7 +66,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FFADC5FD5D5C094834C6F95E"
-            BuildableName = "CulinaChef.app"
+            BuildableName = "CulinaAi.app"
             BlueprintName = "CulinaChef"
             ReferencedContainer = "container:CulinaChef.xcodeproj">
          </BuildableReference>
@@ -86,7 +86,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FFADC5FD5D5C094834C6F95E"
-            BuildableName = "CulinaChef.app"
+            BuildableName = "CulinaAi.app"
             BlueprintName = "CulinaChef"
             ReferencedContainer = "container:CulinaChef.xcodeproj">
          </BuildableReference>

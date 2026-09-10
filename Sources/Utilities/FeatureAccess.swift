@@ -10,7 +10,6 @@ enum Feature {
     // Free features (available to all users)
     case manualRecipes
     case shoppingList
-    case communityLibrary
     case recipeManagement
 }
 
@@ -22,7 +21,7 @@ extension AppState {
         switch feature {
         case .aiChat, .aiRecipeGenerator, .aiRecipeAnalysis:
             return isSubscribed
-        case .manualRecipes, .shoppingList, .communityLibrary, .recipeManagement:
+        case .manualRecipes, .shoppingList, .recipeManagement:
             return true
         }
     }
@@ -39,7 +38,7 @@ extension AppState {
     }
     
     func presentAIPaywall() {
-        Monetization.shared.register(placement: SuperwallPlacements.campaignTrigger)
+        Monetization.shared.presentSubscriptionPaywall(moment: .userRequested)
     }
     
     /// If the backend returned 403 SUBSCRIPTION_REQUIRED, show the paywall and return true.

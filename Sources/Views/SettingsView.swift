@@ -1091,11 +1091,11 @@ private struct ProfileSettingsSheet: View {
         defer { loading = false }
         
         do {
-            print("[Export] Starting recipe export")
+            Logger.info("[Export] Starting recipe export", category: .data)
             // Fetch all recipes from backend
             guard let token = app.accessToken else {
                 error = L.errorNotLoggedIn.localized
-                print("[Export] Failed: no access token")
+                Logger.error("[Export] Failed: no access token", category: .data)
                 return
             }
             
@@ -1112,18 +1112,18 @@ private struct ProfileSettingsSheet: View {
             request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
-            print("[Export] Requesting recipes from \(url.absoluteString)")
+            Logger.debug("[Export] Requesting recipes", category: .network)
             let (data, response) = try await SecureURLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
                 error = L.errorExportFailed.localized
-                print("[Export] Failed: HTTP status \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                Logger.error("[Export] Failed: HTTP status \((response as? HTTPURLResponse)?.statusCode ?? -1)", category: .network)
                 return
             }
             
             let recipes = try JSONDecoder().decode([Recipe].self, from: data)
-            print("[Export] Loaded \(recipes.count) recipes from backend")
+            Logger.info("[Export] Loaded \(recipes.count) recipes from backend", category: .data)
             
             // Create strongly-typed export payload so JSON encoding is always valid
             let payload = RecipesExportPayload(
@@ -1137,7 +1137,7 @@ private struct ProfileSettingsSheet: View {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let jsonData = try encoder.encode(payload)
-            print("[Export] Encoded export JSON, size: \(jsonData.count) bytes")
+            Logger.debug("[Export] Encoded export JSON, size: \(jsonData.count) bytes", category: .data)
             
             // Save to temporary file
             let tempDir = FileManager.default.temporaryDirectory
@@ -1145,7 +1145,7 @@ private struct ProfileSettingsSheet: View {
             let fileURL = tempDir.appendingPathComponent(fileName)
             
             try jsonData.write(to: fileURL)
-            print("[Export] Wrote export file to \(fileURL.path)")
+            Logger.debug("[Export] Wrote export file", category: .data)
             
             // Share via ShareSheet
             await MainActor.run {
@@ -1161,12 +1161,12 @@ private struct ProfileSettingsSheet: View {
                     activityVC.popoverPresentationController?.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 0, height: 0)
                     activityVC.popoverPresentationController?.permittedArrowDirections = []
                     rootVC.present(activityVC, animated: true)
-                    print("[Export] Presented share sheet for export file")
+                    Logger.debug("[Export] Presented share sheet for export file", category: .ui)
                 }
             }
             
         } catch {
-            print("[Export] Export failed with error: \(error.localizedDescription)")
+            Logger.error("[Export] Export failed", error: error, category: .data)
             self.error = error.localizedDescription
         }
     }
@@ -1192,6 +1192,22 @@ private struct RecipesExportPayload: Codable {
 private struct SubscriptionSettingsSheet: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
+    @State private var isRestoringPurchases = false
+    @State private var restoreAlert: RestorePurchasesAlert?
+    
+    private enum RestorePurchasesAlert: Identifiable {
+        case success
+        case noPurchases
+        case failed
+        
+        var id: String {
+            switch self {
+            case .success: return "success"
+            case .noPurchases: return "noPurchases"
+            case .failed: return "failed"
+            }
+        }
+    }
     
     private var backgroundGradient: LinearGradient {
         LinearGradient(
@@ -1215,6 +1231,14 @@ private struct SubscriptionSettingsSheet: View {
             return L.subscriptionPremiumMonthly.localized
         }
         return L.subscriptionUnlimitedActive.localized
+    }
+    
+    /// Restore is for cancelled or lapsed Apple IDs — not for an auto-renewing subscription.
+    private var shouldShowRestorePurchases: Bool {
+        if app.isSubscribed {
+            return !app.getSubscriptionAutoRenew()
+        }
+        return RevenueCatManager.shared.hasLapsedSubscription
     }
 
     var body: some View {
@@ -1264,7 +1288,7 @@ private struct SubscriptionSettingsSheet: View {
                         .accessibilityLabel(L.subscriptionCancelSubscription.localized)
                     } else {
                         Button {
-                            Monetization.shared.register(placement: SuperwallPlacements.campaignTrigger)
+                            Monetization.shared.presentSubscriptionPaywall(moment: .userRequested)
                         } label: {
                             Text(L.subscriptionSubscribeToPremium.localized)
                                 .font(.headline)
@@ -1285,6 +1309,32 @@ private struct SubscriptionSettingsSheet: View {
                         .accessibilityHint(L.a11y_subscribeUnlimitedHint.localized)
                     }
                     
+                    if shouldShowRestorePurchases {
+                        Button {
+                            Task { await restorePurchasesTapped() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isRestoringPurchases {
+                                    ProgressView()
+                                        .tint(.white)
+                                }
+                                Text(L.subscriptionRestorePurchases.localized)
+                                    .font(.headline)
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                            )
+                        }
+                        .disabled(isRestoringPurchases)
+                        .accessibilityLabel(L.subscriptionRestorePurchases.localized)
+                        .accessibilityHint(L.a11y_restorePurchasesHint.localized)
+                    }
+                    
                     Spacer()
                 }
                 .padding(20)
@@ -1297,11 +1347,45 @@ private struct SubscriptionSettingsSheet: View {
                         .font(.headline)
                 }
             }
+            .alert(item: $restoreAlert) { alert in
+                switch alert {
+                case .success:
+                    return Alert(
+                        title: Text(L.subscriptionRestoreSuccess.localized),
+                        message: Text(L.subscriptionRestoreSuccessMessage.localized),
+                        dismissButton: .default(Text(L.ok.localized))
+                    )
+                case .noPurchases:
+                    return Alert(
+                        title: Text(L.subscriptionRestoreNoPurchases.localized),
+                        message: Text(L.subscriptionRestoreNoPurchasesMessage.localized),
+                        dismissButton: .default(Text(L.ok.localized))
+                    )
+                case .failed:
+                    return Alert(
+                        title: Text(L.alert_error.localized),
+                        message: Text(L.errorRestoreFailed.localized),
+                        dismissButton: .default(Text(L.ok.localized))
+                    )
+                }
+            }
         }
         .onAppear {
             Task {
                 await app.refreshSubscriptionStatusFromStoreKit()
             }
+        }
+    }
+    
+    private func restorePurchasesTapped() async {
+        guard !isRestoringPurchases else { return }
+        isRestoringPurchases = true
+        defer { isRestoringPurchases = false }
+        do {
+            try await app.restorePurchases()
+            restoreAlert = app.isSubscribed ? .success : .noPurchases
+        } catch {
+            restoreAlert = .failed
         }
     }
 }

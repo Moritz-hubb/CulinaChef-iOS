@@ -37,8 +37,8 @@
 	<string>Zum Auswählen von Bildern aus deiner Galerie für Rezeptvorschläge.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Damit wir dich an Koch-Timer und Rezept-Updates erinnern können.</string>
-	<key>OpenAIAPIKey</key>
-	<string>$(OPENAI_API_KEY)</string>
+	<key>CFBundleDisplayName</key>
+	<string>CulinaAi</string>
 	<key>RevenueCatAPIKey</key>
 	<string>$(REVENUECAT_API_KEY)</string>
 	<key>SuperwallAPIKey</key>

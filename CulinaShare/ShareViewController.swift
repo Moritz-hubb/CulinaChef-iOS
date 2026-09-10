@@ -5,8 +5,8 @@ import UserNotifications
 
 private let shareLog = Logger(subsystem: "com.moritzserrin.culinachef.share", category: "CulinaShare")
 
-/// Share Extension: In Apps wie TikTok unter **Teilen → Mehr → CulinaChef** erscheinen
-/// (nach erstem Start ggf. „Bearbeiten" und CulinaChef aktivieren).
+/// Share Extension: In Apps wie TikTok unter **Teilen → Mehr → CulinaAi** erscheinen
+/// (nach erstem Start ggf. „Bearbeiten" und CulinaAi aktivieren).
 @objc(ShareViewController)
 final class ShareViewController: UIViewController {
 
@@ -144,7 +144,7 @@ final class ShareViewController: UIViewController {
     private func scheduleReminderNotification(link: String) {
         let content = UNMutableNotificationContent()
         content.title = "Rezept bereit zum Import"
-        content.body = "Tippe hier um das Rezept in CulinaChef zu importieren."
+        content.body = "Tippe hier um das Rezept in CulinaAi zu importieren."
         content.sound = .default
         content.userInfo = ["deep_link": "culinachef://import?url=\(link)"]
 
@@ -188,7 +188,7 @@ final class ShareViewController: UIViewController {
         title.textAlignment = .center
 
         let subtitle = UILabel()
-        subtitle.text = "Öffne CulinaChef — der Import startet automatisch."
+        subtitle.text = "Öffne CulinaAi — der Import startet automatisch."
         subtitle.font = .systemFont(ofSize: 15)
         subtitle.textColor = .secondaryLabel
         subtitle.textAlignment = .center

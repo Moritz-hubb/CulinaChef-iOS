@@ -187,7 +187,7 @@ enum Config {
     // MARK: - API Timeouts
     
     /// Zeit zwischen Datenpaketen für typische API-Calls.
-    static let apiTimeout: TimeInterval = 30.0
+    static let apiTimeout: TimeInterval = 90.0
     /// Gesamtzeit pro URLSession-Task (muss ≥ längste Einzelanfrage sein, z. B. Social-Import).
     static let imageUploadTimeout: TimeInterval = 180.0
     /// `POST /ai/import-from-social-url` und Metadaten-Vorschau (KI + langsames Netz).

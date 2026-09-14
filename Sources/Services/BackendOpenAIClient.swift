@@ -256,4 +256,54 @@ final class BackendOpenAIClient {
         
         return try JSONDecoder().decode(RecipePlan.self, from: data)
     }
+
+    func generateMealPlan(
+        mealCount: Int,
+        nutritionMode: String,
+        nutritionTargets: MealPlanNutritionTargets,
+        categories: [String],
+        dietaryContext: String?,
+        notes: String?
+    ) async throws -> GeneratedMealPlan {
+        guard let token = accessTokenProvider() else {
+            throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
+        }
+
+        struct Request: Encodable {
+            let meal_count: Int
+            let nutrition_mode: String
+            let nutrition_targets: MealPlanNutritionTargets
+            let categories: [String]
+            let dietary_context: String?
+            let notes: String?
+            let servings: Int
+        }
+
+        let body = Request(
+            meal_count: min(max(mealCount, 1), 6),
+            nutrition_mode: nutritionMode,
+            nutrition_targets: nutritionTargets,
+            categories: Array(categories.prefix(9)),
+            dietary_context: dietaryContext,
+            notes: notes,
+            servings: 1
+        )
+
+        var url = backend.baseURL
+        url.append(path: "/ai/generate-meal-plan")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 180
+        req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(body)
+
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        if !(200...299).contains(http.statusCode) {
+            Logger.error("[BackendOpenAI] Meal plan HTTP \(http.statusCode)", category: .network)
+            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
+        }
+        return try JSONDecoder().decode(GeneratedMealPlan.self, from: data)
+    }
 }

@@ -28,6 +28,11 @@
 		2D7D9BA5B7418663E41A578C /* ShoppingListManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EDB6B3A12DFC71D7A4F9185 /* ShoppingListManagerTests.swift */; };
 		3094EEED5AA9C2F94E4C8B3D /* TastePreferencesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447A6B8A84478C798910A5E1 /* TastePreferencesManager.swift */; };
 		315BFED8453D8F82AC7A274B /* RecipePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03D43DECD96C09C92E0F256F /* RecipePlan.swift */; };
+		A11E0AAD50011B0000000013 /* MealPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50012F0000000014 /* MealPlan.swift */; };
+		A11E0AAD50013B0000000015 /* MealPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50014F0000000016 /* MealPlanStore.swift */; };
+		A11E0AAD50015B0000000017 /* MealPlanCreatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50016F0000000018 /* MealPlanCreatorView.swift */; };
+		A11E0AAD50017B0000000019 /* MealPlanResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50018F0000000020 /* MealPlanResultView.swift */; };
+		A11E0AAD50019B0000000021 /* MealPlansListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5001AF0000000022 /* MealPlansListView.swift */; };
 		343CCF7B6DA0964871D87B7A /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD0B42FC2F1FB98BC6CC86F /* Logger.swift */; };
 		3463E88A4B483822C3D0CE30 /* RevenueCatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45789BE3D855430605B63CA /* RevenueCatManager.swift */; };
 		34E8505B050E67E121965039 /* ManualRecipeBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D77AED64D568CB376372637F /* ManualRecipeBuilderView.swift */; };
@@ -60,6 +65,8 @@
 		70F17A107ADAFC9D0D2D055E /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 919E865BA11391F1736AD81A /* App.swift */; };
 		A11E0AAD50001B0000000001 /* AppleSearchAdsAttribution.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50002F0000000002 /* AppleSearchAdsAttribution.swift */; };
 		A11E0AAD50003B0000000003 /* AppleSearchAdsAttributionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50004F0000000004 /* AppleSearchAdsAttributionTests.swift */; };
+		A11E0AAD50009B0000000009 /* SubscriptionLegal.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5000AF0000000010 /* SubscriptionLegal.swift */; };
+		A11E0AAD5000BB0000000011 /* SubscriptionLegalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5000CF0000000012 /* SubscriptionLegalTests.swift */; };
 		A11E0AAD50005B0000000005 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50006F0000000006 /* PrivacyInfo.xcprivacy */; };
 		A11E0AAD50007B0000000007 /* AdServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A11E0AAD50008F0000000008 /* AdServices.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		75BB4C9CB7F221549C30CD38 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38FC9C621974BD22ECB3E30C /* ChatMessage.swift */; };
@@ -158,6 +165,11 @@
 
 /* Begin PBXFileReference section */
 		03D43DECD96C09C92E0F256F /* RecipePlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipePlan.swift; sourceTree = "<group>"; };
+		A11E0AAD50012F0000000014 /* MealPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlan.swift; sourceTree = "<group>"; };
+		A11E0AAD50014F0000000016 /* MealPlanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanStore.swift; sourceTree = "<group>"; };
+		A11E0AAD50016F0000000018 /* MealPlanCreatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanCreatorView.swift; sourceTree = "<group>"; };
+		A11E0AAD50018F0000000020 /* MealPlanResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanResultView.swift; sourceTree = "<group>"; };
+		A11E0AAD5001AF0000000022 /* MealPlansListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlansListView.swift; sourceTree = "<group>"; };
 		0451F1C92A23B33ACA310B10 /* SubscriptionFlowIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionFlowIntegrationTests.swift; sourceTree = "<group>"; };
 		05B20B80B2F15E59F18F6667 /* UserPreferencesClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesClientTests.swift; sourceTree = "<group>"; };
 		0D90D4F59064989AF68E0CCD /* RecipeResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeResultView.swift; sourceTree = "<group>"; };
@@ -245,6 +257,8 @@
 		AD13634AB821020FF59626D0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A11E0AAD50002F0000000002 /* AppleSearchAdsAttribution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSearchAdsAttribution.swift; sourceTree = "<group>"; };
 		A11E0AAD50004F0000000004 /* AppleSearchAdsAttributionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSearchAdsAttributionTests.swift; sourceTree = "<group>"; };
+		A11E0AAD5000AF0000000010 /* SubscriptionLegal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionLegal.swift; sourceTree = "<group>"; };
+		A11E0AAD5000CF0000000012 /* SubscriptionLegalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionLegalTests.swift; sourceTree = "<group>"; };
 		A11E0AAD50006F0000000006 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A11E0AAD50008F0000000008 /* AdServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AdServices.framework; path = System/Library/Frameworks/AdServices.framework; sourceTree = SDKROOT; };
 		AE78D545F2774E763E6161F4 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -313,6 +327,7 @@
 				6EDB6B3A12DFC71D7A4F9185 /* ShoppingListManagerTests.swift */,
 				B9E42D1C5E3F02B8D6C71925 /* IngredientCategorizerTests.swift */,
 				2EF4F84771B3193FD68A9F08 /* StringValidationTests.swift */,
+				A11E0AAD5000CF0000000012 /* SubscriptionLegalTests.swift */,
 				52E07267E0858383C5231893 /* SubscriptionsClientTests.swift */,
 				2985EDED3592461554F441CD /* SubscriptionTests.swift */,
 				41612AD3F4BBB5C3EEDE0A28 /* SupabaseAuthClientTests.swift */,
@@ -333,6 +348,7 @@
 				FFD0B42FC2F1FB98BC6CC86F /* Logger.swift */,
 				13C7C61B04ADFA92C3C27DA5 /* ShareSheet.swift */,
 				EFC499A8A048E4852B3F3891 /* StepIngredientExtractor.swift */,
+				A11E0AAD5000AF0000000010 /* SubscriptionLegal.swift */,
 				447A6B8A84478C798910A5E1 /* TastePreferencesManager.swift */,
 			);
 			path = Utilities;
@@ -383,6 +399,7 @@
 				52C57269C0CC78F6FB79959D /* Menu.swift */,
 				5DC6727FAEE7015C38557317 /* Recipe.swift */,
 				03D43DECD96C09C92E0F256F /* RecipePlan.swift */,
+				A11E0AAD50012F0000000014 /* MealPlan.swift */,
 				DD51D9C2949825F126779695 /* ShoppingList.swift */,
 				728DA3A6CF6CD4E107415450 /* ShoppingListExtended.swift */,
 				61131757BC709F355AD8060B /* TermsContent_EN.swift */,
@@ -445,6 +462,7 @@
 				B90E6F0449C15CC5D631DE76 /* AppStoreReviewManager.swift */,
 				A9B0E04E90D5EB0F73662CDC /* AuthenticationManager.swift */,
 				6B1DFC7CBBC6F57AD4C82BD7 /* MenuManager.swift */,
+				A11E0AAD50014F0000000016 /* MealPlanStore.swift */,
 				22A46C888DB58070A57390BA /* Monetization.swift */,
 				5E5F4CA8CE1D4B7197A2FF80 /* RCPurchaseController.swift */,
 				655824500E76357F60D2FCEF /* RecipeManager.swift */,
@@ -524,6 +542,9 @@
 				835485D32390CCDE8D0E21E5 /* PrivacyPolicyView.swift */,
 				1497DA3E83CCF53D37AD7624 /* RecipeCompletionView.swift */,
 				1AE18E2F63067CE6BA3CB289 /* RecipeCreatorView.swift */,
+				A11E0AAD50016F0000000018 /* MealPlanCreatorView.swift */,
+				A11E0AAD50018F0000000020 /* MealPlanResultView.swift */,
+				A11E0AAD5001AF0000000022 /* MealPlansListView.swift */,
 				FD97221B4FA2497E34222673 /* RecipeDetailView.swift */,
 				E6EC018B288F78E5BA7B4130 /* RecipePhotoSourcePicker.swift */,
 				0D90D4F59064989AF68E0CCD /* RecipeResultView.swift */,
@@ -773,6 +794,11 @@
 				9D8A291F3DBC97C28CD95A08 /* RecipeManager.swift in Sources */,
 				F47F2BA4316F8D1E0E024177 /* RecipePhotoSourcePicker.swift in Sources */,
 				315BFED8453D8F82AC7A274B /* RecipePlan.swift in Sources */,
+				A11E0AAD50011B0000000013 /* MealPlan.swift in Sources */,
+				A11E0AAD50013B0000000015 /* MealPlanStore.swift in Sources */,
+				A11E0AAD50015B0000000017 /* MealPlanCreatorView.swift in Sources */,
+				A11E0AAD50017B0000000019 /* MealPlanResultView.swift in Sources */,
+				A11E0AAD50019B0000000021 /* MealPlansListView.swift in Sources */,
 				87AA84491856EA9895171924 /* RecipeResultView.swift in Sources */,
 				59E6066EEE66DB8FBA7CB2EB /* RecipesView.swift in Sources */,
 				DCD5B046A968E2F75C0C4C81 /* ResetPasswordView.swift in Sources */,
@@ -791,6 +817,7 @@
 				C2F3C579AEC6C9396D5433F4 /* StepIngredientExtractor.swift in Sources */,
 				28CEBB001420E1DBB835A730 /* StepIngredientsBlock.swift in Sources */,
 				A5606507852FC4E19C2DAE5E /* String+Validation.swift in Sources */,
+				A11E0AAD50009B0000000009 /* SubscriptionLegal.swift in Sources */,
 				7CE27D0310E2E8C4F56CACCB /* SubscriptionManager.swift in Sources */,
 				1BE78541CFC8463261323B44 /* SubscriptionsClient.swift in Sources */,
 				B74612E22263F9B53F9A7E78 /* SupabaseAuthClient.swift in Sources */,
@@ -842,6 +869,7 @@
 				2D7D9BA5B7418663E41A578C /* ShoppingListManagerTests.swift in Sources */,
 				A8F31C0B4D2E91A7C5B60814 /* IngredientCategorizerTests.swift in Sources */,
 				BCCE65B26AF0840BE3CACBEE /* StringValidationTests.swift in Sources */,
+				A11E0AAD5000BB0000000011 /* SubscriptionLegalTests.swift in Sources */,
 				138687AB9FE7D960B030AE5E /* SubscriptionFlowIntegrationTests.swift in Sources */,
 				85D6C5963BE88397721555E0 /* SubscriptionTests.swift in Sources */,
 				E6BC334F764E879CE0F31A90 /* SubscriptionsClientTests.swift in Sources */,

@@ -6,6 +6,7 @@ enum Feature {
     case aiChat
     case aiRecipeGenerator
     case aiRecipeAnalysis
+    case aiMealPlan
     
     // Free features (available to all users)
     case manualRecipes
@@ -19,7 +20,7 @@ extension AppState {
     /// The backend still re-checks RevenueCat; this only avoids sending the request.
     func hasAccess(to feature: Feature) -> Bool {
         switch feature {
-        case .aiChat, .aiRecipeGenerator, .aiRecipeAnalysis:
+        case .aiChat, .aiRecipeGenerator, .aiRecipeAnalysis, .aiMealPlan:
             return isSubscribed
         case .manualRecipes, .shoppingList, .recipeManagement:
             return true
@@ -54,7 +55,7 @@ extension AppState {
         switch feature {
         case .aiChat:
             return L.error_aiChatRestricted.localized
-        case .aiRecipeGenerator:
+        case .aiRecipeGenerator, .aiMealPlan:
             return L.error_aiRecipeRestricted.localized
         case .aiRecipeAnalysis:
             return L.error_aiAnalysisRestricted.localized

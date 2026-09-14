@@ -53,6 +53,12 @@ struct RecipeCreatorView: View {
     @State private var showImpossibleRecipeAlert = false
     @State private var impossibleRecipeMessage = ""
     @State private var showConsentDialog = false
+    @State private var creatorMode: CreatorMode = .recipe
+
+    private enum CreatorMode: String {
+        case recipe
+        case mealPlan
+    }
 
     var body: some View {
         recipeCreatorContent
@@ -63,10 +69,23 @@ struct RecipeCreatorView: View {
         ZStack {
 LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.95, green: 0.74, blue: 0.64), Color(red: 0.93, green: 0.66, blue: 0.55)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 .ignoresSafeArea()
-            
-            if generating {
-                SearchingPenguinView()
-            } else {
+
+            VStack(spacing: 0) {
+                Picker("", selection: $creatorMode) {
+                    Text(L.mealplan_tabRecipe.localized).tag(CreatorMode.recipe)
+                    Text(L.mealplan_tabPlan.localized).tag(CreatorMode.mealPlan)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
+
+                if creatorMode == .mealPlan {
+                    MealPlanCreatorView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if generating {
+                    SearchingPenguinView()
+                } else {
                 ScrollView {
                     VStack(spacing: 14) {
                     GroupBoxLabel(L.label_whatToCook.localized)
@@ -197,6 +216,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                 .onTapGesture {
                     isFocused = false
                 }
+            }
             }
             }
         }
@@ -398,7 +418,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
     }
 }
 
-private struct GroupBoxLabel: View {
+struct GroupBoxLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
@@ -425,7 +445,7 @@ TextField("", text: $text)
     }
 }
 
-private struct WrapChips: View {
+struct WrapChips: View {
     let options: [String]
     @Binding var selection: Set<String>
     @State private var totalHeight: CGFloat = .zero
@@ -490,7 +510,7 @@ ForEach(options, id: \.self) { opt in
 }
 
 // MARK: - Searching Penguin View
-private struct SearchingPenguinView: View {
+struct SearchingPenguinView: View {
     @State private var isAnimating = false
     
     var body: some View {

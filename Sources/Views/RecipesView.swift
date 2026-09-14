@@ -386,6 +386,7 @@ struct PersonalRecipesView: View {
     @State private var showManualRecipeBuilder = false
     @State private var showSocialImport = false
     @State private var deletedRecipeIds: Set<String> = [] // Track locally deleted recipes
+    @State private var bookSection = 0
     
     private var visibleRecipes: [Recipe] {
         let filteredRecipes = recipes.filter { !deletedRecipeIds.contains($0.id) }
@@ -779,7 +780,22 @@ struct PersonalRecipesView: View {
     
     @ViewBuilder
     private var mainContentWithModifiers: some View {
-        mainContent
+        VStack(spacing: 0) {
+            Picker("", selection: $bookSection) {
+                Text(L.mealplan_bookRecipes.localized).tag(0)
+                Text(L.mealplan_bookPlans.localized).tag(1)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            if bookSection == 1 {
+                MealPlansListView()
+            } else {
+                mainContent
+            }
+        }
             .navigationBarHidden(true)
             .task { 
                 await loadCachedRecipesIfAvailable()

@@ -344,7 +344,7 @@ final class Monetization {
             weekly: storeProducts.weekly?.localizedPrice,
             monthly: storeProducts.monthly?.localizedPrice
         )
-        let localeId = Superwall.shared.localeIdentifier
+        let localeId = Superwall.shared.localeIdentifier ?? LocalizationManager.shared.currentLanguage
         let language = localeId.lowercased().hasPrefix("de") ? "de" : LocalizationManager.shared.currentLanguage
         let footer = SubscriptionLegal.paywallFooter(language: language, prices: legalPrices)
         params["legalFooter"] = footer

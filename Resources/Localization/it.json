@@ -911,6 +911,7 @@
   "import.social_import_failed_hint": "Importazione non riuscita. Link/titolo riconosciuti — riprova tra un attimo.",
   "import.social_metadata_heading": "Metadati rilevati (test)",
   "recipe.revise.subtitle": "Scegli obiettivi e note facoltative. Viene salvata una nuova copia nella raccolta.",
+  "recipe.revise.subtitleUnsaved": "Scegli obiettivi e note facoltative. La ricetta viene aggiornata qui e non è ancora salvata.",
   "import.social_extra_placeholder": "Incolla ingredienti o descrizione…",
   "import.social_metadata_reload": "Aggiorna",
   "recipe.revise.tabRevise": "Revisione",

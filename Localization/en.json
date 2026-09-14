@@ -765,6 +765,7 @@
   "recipe.revise.tabRevise": "Revise",
   "recipe.revise.headline": "Adapt recipe",
   "recipe.revise.subtitle": "Pick goals and optional notes. A new copy is saved to your collection.",
+  "recipe.revise.subtitleUnsaved": "Pick goals and optional notes. The recipe is updated here and not saved yet.",
   "recipe.revise.goalVegan": "Vegan",
   "recipe.revise.goalVegetarian": "Vegetarian",
   "recipe.revise.goalGlutenFree": "Gluten-free",

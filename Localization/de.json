@@ -765,6 +765,7 @@
   "recipe.revise.tabRevise": "Überarbeiten",
   "recipe.revise.headline": "Rezept anpassen",
   "recipe.revise.subtitle": "Wähle Ziele und optional einen Freitext. Es wird eine neue Kopie in deiner Sammlung gespeichert.",
+  "recipe.revise.subtitleUnsaved": "Wähle Ziele und optional einen Freitext. Das Rezept wird hier angepasst und noch nicht gespeichert.",
   "recipe.revise.goalVegan": "Vegan",
   "recipe.revise.goalVegetarian": "Vegetarisch",
   "recipe.revise.goalGlutenFree": "Glutenfrei",

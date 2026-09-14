@@ -911,6 +911,7 @@
   "import.social_import_failed_hint": "Import failed. Your link/title was recognized — please wait a moment and try again.",
   "import.social_metadata_heading": "Detected metadata (test)",
   "recipe.revise.subtitle": "Pick goals and optional notes. A new copy is saved to your collection.",
+  "recipe.revise.subtitleUnsaved": "Pick goals and optional notes. The recipe is updated here and not saved yet.",
   "import.social_extra_placeholder": "Paste ingredients or description…",
   "import.social_metadata_reload": "Refresh",
   "recipe.revise.tabRevise": "Revise",

@@ -5,7 +5,11 @@ import AVFoundation
 struct RecipeResultView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
 
-    let plan: RecipePlan
+    @State private var plan: RecipePlan
+
+    init(plan: RecipePlan) {
+        _plan = State(initialValue: plan)
+    }
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var nutritionMode: NutritionMode = .perServing
@@ -100,7 +104,14 @@ ToolbarItem(placement: .navigationBarTrailing) {
                 }
             }
 .sheet(isPresented: $showAISheet) {
-                RecipeAISheet(plan: plan, currentStepIndex: max(currentPage - 1, -1))
+                RecipeAISheet(
+                    plan: plan,
+                    currentStepIndex: max(currentPage - 1, -1),
+                    onRevised: { newPlan in
+                        plan = newPlan
+                        currentPage = 0
+                    }
+                )
                     .environmentObject(app)
                     .presentationDetents([.fraction(0.6), .large])
                     .presentationDragIndicator(.visible)
@@ -405,12 +416,29 @@ private struct RecipeAISheet: View {
     let plan: RecipePlan
     // -1 means overview page (keine Schritt-spezifische Auswahl)
     let currentStepIndex: Int
+    var onRevised: ((RecipePlan) -> Void)? = nil
 
     @State private var messages: [ChatMessage] = []
     @State private var inputText: String = ""
     @State private var sending = false
     @State private var error: String?
     @State private var showConsentDialog = false
+
+    private enum AISheetTab: String, CaseIterable {
+        case chat
+        case revise
+    }
+
+    @State private var sheetTab: AISheetTab = .chat
+    @State private var goalVegan = false
+    @State private var goalVegetarian = false
+    @State private var goalGlutenFree = false
+    @State private var goalLactoseFree = false
+    @State private var goalLowCarb = false
+    @State private var goalLowSalt = false
+    @State private var reviseFreeText = ""
+    @State private var revising = false
+    @State private var reviseError: String?
 
     var body: some View {
         ZStack {
@@ -436,37 +464,48 @@ private struct RecipeAISheet: View {
                 }
 .padding(.horizontal, 16)
                 .padding(.top, 18)
+                .padding(.bottom, 6)
+
+                Picker("", selection: $sheetTab) {
+                    Text(L.recipe_revise_tab_chat.localized).tag(AISheetTab.chat)
+                    Text(L.recipe_revise_tab_revise.localized).tag(AISheetTab.revise)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
                 .padding(.bottom, 10)
 
-                // Chat list
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            if messages.isEmpty {
-                                VStack(spacing: 10) {
-                                    Text(L.recipe_stell_mir_fragen_zu_facc.localized)
-                                        .foregroundStyle(.white.opacity(0.9))
-                                    Text(L.recipe_zb_garzeiten_anpassen_ersatzzutaten_b588.localized)
-                                        .font(.footnote)
-                                        .foregroundStyle(.white.opacity(0.7))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 40)
-                            } else {
-                                ForEach(messages) { msg in
-                                    RecipeChatBubble(message: msg)
-                                }
-                                if sending {
-                                    CulinaThinkingPenguinView()
+                if sheetTab == .chat {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 12) {
+                                if messages.isEmpty {
+                                    VStack(spacing: 10) {
+                                        Text(L.recipe_stell_mir_fragen_zu_facc.localized)
+                                            .foregroundStyle(.white.opacity(0.9))
+                                        Text(L.recipe_zb_garzeiten_anpassen_ersatzzutaten_b588.localized)
+                                            .font(.footnote)
+                                            .foregroundStyle(.white.opacity(0.7))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 40)
+                                } else {
+                                    ForEach(messages) { msg in
+                                        RecipeChatBubble(message: msg)
+                                    }
+                                    if sending {
+                                        CulinaThinkingPenguinView()
+                                    }
                                 }
                             }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 12)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 12)
+                        .onChange(of: messages.count) { _, _ in
+                            withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
+                        }
                     }
-                    .onChange(of: messages.count) { _, _ in
-                        withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
-                    }
+                } else {
+                    unsavedReviseTabBody
                 }
             }
         }
@@ -479,50 +518,192 @@ private struct RecipeAISheet: View {
             )
         }
         .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 12) {
-                ZStack(alignment: .leading) {
-                    if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(L.chat_messageEllipsis.localized).foregroundStyle(.white.opacity(0.5))
-                    }
-                    TextField("", text: $inputText, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .foregroundStyle(.white)
-                        .tint(.white)
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
-                .background(.clear)
-                .frame(minHeight: 42)
+            Group {
+                if sheetTab == .chat {
+                    HStack(spacing: 12) {
+                        ZStack(alignment: .leading) {
+                            if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text(L.chat_messageEllipsis.localized).foregroundStyle(.white.opacity(0.5))
+                            }
+                            TextField("", text: $inputText, axis: .vertical)
+                                .textFieldStyle(.plain)
+                                .foregroundStyle(.white)
+                                .tint(.white)
+                        }
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
+                        .background(.clear)
+                        .frame(minHeight: 42)
 
-                Button(action: { Task { await sendText() } }) {
-                    Group { if sending { ProgressView().tint(.white) } else { Image(systemName: "paperplane.fill").foregroundStyle(.white) } }
-                        .frame(width: 42, height: 42)
-                        .background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                        .shadow(color: Color.orange.opacity(0.35), radius: 12, x: 0, y: 6)
-                }
-                .disabled(sending || inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.88)
-                    .overlay(
+                        Button(action: { Task { await sendText() } }) {
+                            Group { if sending { ProgressView().tint(.white) } else { Image(systemName: "paperplane.fill").foregroundStyle(.white) } }
+                                .frame(width: 42, height: 42)
+                                .background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())
+                                .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                                .shadow(color: Color.orange.opacity(0.35), radius: 12, x: 0, y: 6)
+                        }
+                        .disabled(sending || inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(10)
+                    .background(
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                            .opacity(0.6)
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.88)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                                    .opacity(0.6)
+                            )
+                            .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 10)
+                            .shadow(color: .purple.opacity(0.25), radius: 30, x: 0, y: 12)
                     )
-                    .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 10)
-                    .shadow(color: .purple.opacity(0.25), radius: 30, x: 0, y: 12)
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                }
+            }
         }
         .onAppear {
             if messages.isEmpty {
                 messages.append(.init(role: .assistant, text: "Hi! Ich helfe dir bei diesem Rezept. Was möchtest du wissen?"))
             }
+        }
+    }
+
+    private var unsavedReviseTabBody: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text(L.recipe_revise_headline.localized)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text(L.recipe_revise_subtitle_unsaved.localized)
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.85))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(L.recipe_revise_goal_vegan.localized, isOn: $goalVegan).tint(.orange)
+                    Toggle(L.recipe_revise_goal_vegetarian.localized, isOn: $goalVegetarian).tint(.orange)
+                    Toggle(L.recipe_revise_goal_gluten_free.localized, isOn: $goalGlutenFree).tint(.orange)
+                    Toggle(L.recipe_revise_goal_lactose_free.localized, isOn: $goalLactoseFree).tint(.orange)
+                    Toggle(L.recipe_revise_goal_low_carb.localized, isOn: $goalLowCarb).tint(.orange)
+                    Toggle(L.recipe_revise_goal_low_salt.localized, isOn: $goalLowSalt).tint(.orange)
+                }
+                .foregroundStyle(.white)
+
+                ZStack(alignment: .topLeading) {
+                    if reviseFreeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(L.recipe_revise_free_text_placeholder.localized)
+                            .foregroundStyle(.white.opacity(0.45))
+                            .padding(.top, 8)
+                            .padding(.leading, 4)
+                    }
+                    TextField("", text: $reviseFreeText, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .foregroundStyle(.white)
+                        .tint(.white)
+                        .lineLimit(3...6)
+                        .onChange(of: reviseFreeText) { _, newValue in
+                            if newValue.count > 500 {
+                                reviseFreeText = String(newValue.prefix(500))
+                            }
+                        }
+                }
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.12)))
+
+                if let reviseError {
+                    Text(reviseError)
+                        .font(.footnote)
+                        .foregroundStyle(.red.opacity(0.95))
+                }
+
+                Button(action: { Task { await runReviseUnsavedRecipe() } }) {
+                    HStack {
+                        if revising {
+                            ProgressView().tint(.white)
+                            Text(L.recipe_revise_loading.localized)
+                        } else {
+                            Image(systemName: "sparkles")
+                            Text(L.recipe_revise_button.localized)
+                        }
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    )
+                }
+                .disabled(revising)
+                .opacity(revising ? 0.55 : 1)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
+        }
+    }
+
+    private func runReviseUnsavedRecipe() async {
+        reviseError = nil
+        if app.isJailbroken {
+            reviseError = "KI-Funktionen sind auf modifizierten Geräten nicht verfügbar"
+            return
+        }
+        guard await app.ensureAIAccess(for: .aiRecipeGenerator) else { return }
+        guard OpenAIConsentManager.hasConsent else {
+            await MainActor.run { showConsentDialog = true }
+            return
+        }
+        var goals: [String] = []
+        if goalVegan { goals.append("vegan") }
+        if goalVegetarian { goals.append("vegetarian") }
+        if goalGlutenFree { goals.append("gluten-free") }
+        if goalLactoseFree { goals.append("lactose-free") }
+        if goalLowCarb { goals.append("low-carb") }
+        if goalLowSalt { goals.append("less salt") }
+        let free = reviseFreeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if goals.isEmpty && free.isEmpty {
+            reviseError = L.recipe_revise_need_goal_or_text.localized
+            return
+        }
+        await MainActor.run { revising = true }
+        do {
+            guard let token = app.accessToken else {
+                throw NSError(domain: "auth", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
+            }
+            let lang = deviceLanguageCodeForBackend()
+            let revised = try await app.backend.reviseRecipe(
+                sourceRecipe: plan.reviseSourceSnapshot(),
+                persist: false,
+                goals: goals,
+                freeText: free.isEmpty ? nil : free,
+                language: lang,
+                accessToken: token
+            )
+            let newPlan = RecipePlan.fromRevisedRecipe(revised, previous: plan)
+            await MainActor.run {
+                revising = false
+                onRevised?(newPlan)
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                revising = false
+                if app.handleAISubscriptionDenied(error) { return }
+                reviseError = ErrorMessageHelper.userFriendlyMessage(from: error)
+            }
+        }
+    }
+
+    private func deviceLanguageCodeForBackend() -> String? {
+        let code = Locale.current.language.languageCode?.identifier ?? "de"
+        switch code {
+        case "de", "en", "es", "fr", "it": return code
+        default: return "de"
         }
     }
 

@@ -765,6 +765,7 @@
   "recipe.revise.tabRevise": "Revisione",
   "recipe.revise.headline": "Adatta ricetta",
   "recipe.revise.subtitle": "Scegli obiettivi e note facoltative. Viene salvata una nuova copia nella raccolta.",
+  "recipe.revise.subtitleUnsaved": "Scegli obiettivi e note facoltative. La ricetta viene aggiornata qui e non è ancora salvata.",
   "recipe.revise.goalVegan": "Vegano",
   "recipe.revise.goalVegetarian": "Vegetariano",
   "recipe.revise.goalGlutenFree": "Senza glutine",

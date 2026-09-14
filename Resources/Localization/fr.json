@@ -911,6 +911,7 @@
   "import.social_import_failed_hint": "L’import a échoué. Le lien/titre a été reconnu — réessayez dans un instant.",
   "import.social_metadata_heading": "Métadonnées détectées (test)",
   "recipe.revise.subtitle": "Choisis des objectifs et des notes optionnelles. Une nouvelle copie est enregistrée dans ta collection.",
+  "recipe.revise.subtitleUnsaved": "Choisis des objectifs et des notes optionnelles. La recette est mise à jour ici et n’est pas encore enregistrée.",
   "import.social_extra_placeholder": "Collez ingrédients ou description…",
   "import.social_metadata_reload": "Actualiser",
   "recipe.revise.tabRevise": "Réviser",

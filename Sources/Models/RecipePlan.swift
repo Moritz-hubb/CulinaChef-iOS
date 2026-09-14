@@ -90,6 +90,108 @@ struct RecipePlan: Codable {
         self.steps = (try? c.decode([RecipeStep].self, forKey: .steps)) ?? []
         self.notes = try? c.decode(String.self, forKey: .notes)
     }
+
+    var ingredientLines: [String] {
+        ingredients.map { item in
+            var parts: [String] = []
+            if let amount = item.amount {
+                let amountStr = amount.truncatingRemainder(dividingBy: 1) == 0
+                    ? String(Int(amount))
+                    : String(format: "%.1f", amount)
+                parts.append(amountStr)
+            }
+            if let unit = item.unit, !unit.isEmpty {
+                parts.append(unit)
+            }
+            parts.append(item.name)
+            return parts.joined(separator: " ")
+        }
+    }
+
+    var instructionLines: [String] {
+        steps.map { "⟦label:\($0.title)⟧ " + $0.description }
+    }
+
+    func reviseSourceSnapshot() -> BackendClient.ReviseSourceSnapshot {
+        let cooking = total_time_minutes.map { "\($0) Min" }
+        var nut: Nutrition?
+        if let n = nutrition {
+            nut = Nutrition(
+                calories: n.calories,
+                protein_g: n.protein_g,
+                carbs_g: n.carbs_g,
+                fat_g: n.fat_g
+            )
+        }
+        return BackendClient.ReviseSourceSnapshot(
+            title: title,
+            ingredients: ingredientLines,
+            instructions: instructionLines,
+            nutrition: nut,
+            language: nil,
+            cooking_time: cooking,
+            filter_tags: filter_tags,
+            servings: servings,
+            total_time_minutes: total_time_minutes,
+            categories: categories
+        )
+    }
+
+    static func fromRevisedRecipe(_ recipe: Recipe, previous: RecipePlan) -> RecipePlan {
+        let ings = (recipe.ingredients ?? []).map { IngredientItem(name: $0) }
+        let steps: [RecipeStep] = (recipe.instructions ?? []).enumerated().map { idx, text in
+            Self.parseInstructionLine(text, fallbackIndex: idx + 1)
+        }
+        var minutes = previous.total_time_minutes
+        if let cook = recipe.cooking_time {
+            let digits = cook.split(whereSeparator: { !$0.isNumber }).first
+            if let digits, let n = Int(digits) { minutes = n }
+        }
+        var filterTags = recipe.filter_tags
+        if filterTags == nil, let tags = recipe.tags {
+            let extracted = tags.compactMap { tag -> String? in
+                guard tag.hasPrefix("_filter:") else { return nil }
+                return String(tag.dropFirst("_filter:".count))
+            }
+            if !extracted.isEmpty { filterTags = extracted }
+        }
+        let visibleCats = recipe.tagsForDisplay.filter { $0.count > 2 && $0 != (recipe.language ?? "") }
+        let nutritionInfo: NutritionInfo? = recipe.nutrition.map {
+            NutritionInfo(
+                calories: $0.calories,
+                protein_g: $0.protein_g,
+                fat_g: $0.fat_g,
+                carbs_g: $0.carbs_g
+            )
+        }
+        return RecipePlan(
+            title: recipe.title.isEmpty ? previous.title : recipe.title,
+            servings: previous.servings,
+            total_time_minutes: minutes,
+            categories: visibleCats.isEmpty ? previous.categories : visibleCats,
+            filter_tags: filterTags ?? previous.filter_tags,
+            nutrition: nutritionInfo ?? previous.nutrition,
+            ingredients: ings.isEmpty ? previous.ingredients : ings,
+            equipment: previous.equipment,
+            steps: steps.isEmpty ? previous.steps : steps,
+            notes: recipe.revision_note ?? previous.notes
+        )
+    }
+
+    private static func parseInstructionLine(_ text: String, fallbackIndex: Int) -> RecipeStep {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prefix = "⟦label:"
+        if trimmed.hasPrefix(prefix), let end = trimmed.range(of: "⟧") {
+            let titleStart = trimmed.index(trimmed.startIndex, offsetBy: prefix.count)
+            let title = String(trimmed[titleStart..<end.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+            let desc = String(trimmed[end.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            return RecipeStep(
+                title: title.isEmpty ? String(fallbackIndex) : title,
+                description: desc.isEmpty ? trimmed : desc
+            )
+        }
+        return RecipeStep(title: String(fallbackIndex), description: trimmed)
+    }
 }
 
 struct NutritionConstraint: Codable {

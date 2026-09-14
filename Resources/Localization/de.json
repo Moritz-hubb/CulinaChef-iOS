@@ -911,6 +911,7 @@
   "import.social_import_failed_hint": "Der Import ist fehlgeschlagen. Dein Link/Titel wurde erkannt — bitte kurz warten und erneut versuchen.",
   "import.social_metadata_heading": "Erkannte Metadaten (Test)",
   "recipe.revise.subtitle": "Wähle Ziele und optional einen Freitext. Es wird eine neue Kopie in deiner Sammlung gespeichert.",
+  "recipe.revise.subtitleUnsaved": "Wähle Ziele und optional einen Freitext. Das Rezept wird hier angepasst und noch nicht gespeichert.",
   "import.social_extra_placeholder": "Zutaten oder Beschreibung aus der App einfügen …",
   "import.social_metadata_reload": "Aktualisieren",
   "recipe.revise.tabRevise": "Überarbeiten",

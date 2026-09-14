@@ -138,28 +138,58 @@ final class BackendClient {
         return try JSONDecoder().decode(Recipe.self, from: respData)
     }
 
-    /// Lässt das Backend ein bestehendes Rezept KI-gestützt überarbeiten und als **neue** Kopie speichern.
+    struct ReviseSourceSnapshot: Encodable {
+        let title: String
+        let ingredients: [String]
+        let instructions: [String]
+        let nutrition: Nutrition?
+        let language: String?
+        let cooking_time: String?
+        let filter_tags: [String]?
+        let servings: Int?
+        let total_time_minutes: Int?
+        let categories: [String]?
+    }
+
+    /// Lässt das Backend ein Rezept KI-gestützt überarbeiten.
     ///
-    /// - Parameters:
-    ///   - sourceRecipeId: UUID des Ausgangsrezepts.
-    ///   - goals: Kurze Ziele (z. B. vegan, glutenfrei); leer erlaubt nur mit `freeText`.
-    ///   - freeText: Optionaler Freitext (max. 500 Zeichen serverseitig).
-    ///   - language: Ausgabesprache (`de`, `en`, …); nil = Gerät/App-Logik.
+    /// Gespeichert: `sourceRecipeId` — Ergebnis wird als neue Kopie angelegt.
+    /// Ungespeichert: `sourceRecipe` + `persist: false` — nur die überarbeitete Variante, ohne Speichern.
     func reviseRecipe(
-        sourceRecipeId: String,
+        sourceRecipeId: String? = nil,
+        sourceRecipe: ReviseSourceSnapshot? = nil,
+        persist: Bool? = nil,
         goals: [String],
         freeText: String?,
         language: String?,
         accessToken: String
     ) async throws -> Recipe {
         struct Body: Encodable {
-            let source_recipe_id: String
+            let source_recipe_id: String?
+            let source_recipe: ReviseSourceSnapshot?
+            let persist: Bool?
             let goals: [String]
             let free_text: String?
             let language: String?
+
+            enum CodingKeys: String, CodingKey {
+                case source_recipe_id, source_recipe, persist, goals, free_text, language
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encodeIfPresent(source_recipe_id, forKey: .source_recipe_id)
+                try c.encodeIfPresent(source_recipe, forKey: .source_recipe)
+                try c.encodeIfPresent(persist, forKey: .persist)
+                try c.encode(goals, forKey: .goals)
+                try c.encodeIfPresent(free_text, forKey: .free_text)
+                try c.encodeIfPresent(language, forKey: .language)
+            }
         }
         let body = Body(
             source_recipe_id: sourceRecipeId,
+            source_recipe: sourceRecipe,
+            persist: persist,
             goals: goals,
             free_text: freeText,
             language: language

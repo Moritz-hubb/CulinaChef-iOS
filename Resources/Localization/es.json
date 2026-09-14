@@ -911,6 +911,7 @@
   "import.social_import_failed_hint": "La importación falló. El enlace/título se reconoció — espera un momento e inténtalo de nuevo.",
   "import.social_metadata_heading": "Metadatos detectados (prueba)",
   "recipe.revise.subtitle": "Elige objetivos y notas opcionales. Se guarda una copia nueva en tu colección.",
+  "recipe.revise.subtitleUnsaved": "Elige objetivos y notas opcionales. La receta se actualiza aquí y aún no se guarda.",
   "import.social_extra_placeholder": "Pega ingredientes o descripción…",
   "import.social_metadata_reload": "Actualizar",
   "recipe.revise.tabRevise": "Revisar",

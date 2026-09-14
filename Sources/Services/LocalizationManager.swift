@@ -1059,6 +1059,7 @@ enum L {
     static let recipe_revise_tab_revise = "recipe.revise.tabRevise"
     static let recipe_revise_headline = "recipe.revise.headline"
     static let recipe_revise_subtitle = "recipe.revise.subtitle"
+    static let recipe_revise_subtitle_unsaved = "recipe.revise.subtitleUnsaved"
     static let recipe_revise_goal_vegan = "recipe.revise.goalVegan"
     static let recipe_revise_goal_vegetarian = "recipe.revise.goalVegetarian"
     static let recipe_revise_goal_gluten_free = "recipe.revise.goalGlutenFree"

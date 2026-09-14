@@ -85,6 +85,10 @@ struct CulinaChefApp: App {
         }
     }
     
+    private static func isCulinaChefUniversalLinkHost(_ host: String?) -> Bool {
+        host == "culinaai.com" || host == "www.culinaai.com"
+    }
+
     private func handleDeepLink(_ url: URL) {
         Logger.debug("Received deep link: \(url)", category: .ui)
         Monetization.shared.handleDeepLink(url)
@@ -93,8 +97,8 @@ struct CulinaChefApp: App {
         if url.scheme == "culinachef" {
             handleCulinaChefURL(url)
         }
-        // Handle Universal Links (https://culinachef.app/...)
-        else if url.host == "culinachef.app" {
+        // Handle Universal Links (https://culinaai.com/...)
+        else if Self.isCulinaChefUniversalLinkHost(url.host) {
             handleCulinaChefURL(url)
         }
     }
@@ -105,8 +109,8 @@ struct CulinaChefApp: App {
             openSocialImport(from: url)
             return
         }
-        // https://culinachef.app/import?url=…
-        if url.host == "culinachef.app", url.path.contains("import") {
+        // https://culinaai.com/import?url=…
+        if Self.isCulinaChefUniversalLinkHost(url.host), url.path.contains("import") {
             openSocialImport(from: url)
             return
         }

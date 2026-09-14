@@ -6,6 +6,11 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:culinaai.com</string>
+		<string>applinks:www.culinaai.com</string>
+	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.com.moritzserrin.culinachef.share</string>

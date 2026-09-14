@@ -70,6 +70,9 @@ targets:
       properties:
         com.apple.developer.applesignin:
           - Default
+        com.apple.developer.associated-domains:
+          - applinks:culinaai.com
+          - applinks:www.culinaai.com
         com.apple.security.application-groups:
           - group.com.moritzserrin.culinachef.share
           - group.com.moritzserrin.culinachef

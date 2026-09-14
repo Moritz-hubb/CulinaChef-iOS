@@ -34,7 +34,7 @@ final class BackendOpenAIClient {
     func chatReply(
         messages: [ChatMessage],
         maxHistory: Int = 8,
-        model: String = "gpt-4o-mini"
+        model: String = "gpt-5.4-mini"
     ) async throws -> String {
         guard let token = accessTokenProvider() else {
             throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
@@ -212,7 +212,7 @@ final class BackendOpenAIClient {
         var requestDict: [String: Any] = [
             "goal": goal,
             "categories": categories,
-            "model": "gpt-4o-mini"
+            "model": "gpt-5.4-mini"
         ]
         
         if let min = timeMinutesMin { requestDict["time_minutes_min"] = min }

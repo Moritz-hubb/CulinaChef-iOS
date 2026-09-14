@@ -2,7 +2,7 @@ import Foundation
 
 /// Complete English translation of Terms of Service
 /// This provides legally accurate translations for non-German speaking users
-struct TermsContent_EN {
+struct TermsContent_EN { // swiftlint:disable:this type_name
     
     // MARK: - Section 1: Scope and Contracting Parties
     static let section1_title = "1. Scope and Contracting Parties"
@@ -40,9 +40,9 @@ struct TermsContent_EN {
     
     // MARK: - Section 5: Subscription
     static let section5_title = "5. Subscription, Prices, and Payment Terms"
-    static let section5_p1 = "(1) The basic download of the app is free. Access to extended features requires a monthly subscription ('Unlimited') at a price of €5.99 (incl. VAT)."
+    static let section5_p1 = "(1) Downloading the app is free. AI features require the optional auto-renewing “CulinaAi Unlimited” weekly or monthly subscription. Prices are set by Apple per region and shown via StoreKit at purchase. Eligible Apple IDs receive a 3-day free trial."
     static let section5_p2 = "(2) The subscription is concluded, billed, and managed via Apple In-App Purchase. The provider does not receive payment data; these remain with Apple."
-    static let section5_p3 = "(3) The subscription automatically renews for one month each time unless canceled at least 24 hours before the end of the current period in the user's Apple account."
+    static let section5_p3 = "(3) The subscription automatically renews for the same term (week or month) unless canceled at least 24 hours before the end of the current period in the user's Apple account."
     static let section5_p4 = "(4) A pro-rata refund of fees already paid is excluded unless there is a statutory right of withdrawal."
     static let section5_p5 = "(5) Price changes can be made by the provider but only apply from the next subscription period and only after prior notification by Apple."
     

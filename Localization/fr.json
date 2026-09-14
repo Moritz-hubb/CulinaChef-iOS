@@ -953,5 +953,5 @@
   "a11y.longPressToMove": "Touche pour cocher. Appuie longuement pour choisir la catégorie.",
   "shopping.chooseCategory": "Choisir une catégorie",
   "label.beta": "Bêta",
-  "settings.accountDeletionFailed": "Le compte n'a pas pu être supprimé. Vérifiez votre connexion et réessayez. Aucune donnée n'a été supprimée."
+  "settings.accountDeletionFailed": "Le compte n'a pas pu être entièrement supprimé et reste actif. Veuillez réessayer. Si le problème persiste, contactez-nous via l'adresse indiquée dans la politique de confidentialité."
 }

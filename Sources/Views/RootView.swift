@@ -136,6 +136,8 @@ struct RootView: View {
     @State private var languageRefreshTrigger = UUID()
     @State private var hasTrackedLaunch = false
     @State private var hasSeenAppIntro = AppIntroView.hasCompleted
+    @State private var showLegalTermsFromPaywall = false
+    @State private var showLegalPrivacyFromPaywall = false
 
     var body: some View {
         contentView
@@ -149,6 +151,18 @@ struct RootView: View {
                 checkOnboardingStatus: checkOnboardingStatus,
                 presentPaywallOnForeground: presentPaywallOnForeground
             ))
+            .onReceive(NotificationCenter.default.publisher(for: .culinaPresentLegalTerms)) { _ in
+                showLegalTermsFromPaywall = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .culinaPresentLegalPrivacy)) { _ in
+                showLegalPrivacyFromPaywall = true
+            }
+            .sheet(isPresented: $showLegalTermsFromPaywall) {
+                TermsOfServiceView()
+            }
+            .sheet(isPresented: $showLegalPrivacyFromPaywall) {
+                PrivacyPolicyView()
+            }
     }
     
     @ViewBuilder

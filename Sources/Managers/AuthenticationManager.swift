@@ -99,8 +99,17 @@ final class AuthenticationManager {
     
     // MARK: - Apple Sign-In
     
-    func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp: Bool = false, appleUserId: String? = nil, authorizationCode: String? = nil) async throws -> SignInResult {
-        let response = try await auth.signInWithApple(idToken: idToken, nonce: nonce)
+    func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp _: Bool = false, appleUserId: String? = nil, authorizationCode: String? = nil) async throws -> SignInResult {
+        let response: AuthResponse
+        do {
+            response = try await auth.signInWithApple(idToken: idToken, nonce: nonce)
+        } catch {
+            if Self.isEmailAlreadyRegistered(error) {
+                response = try await auth.signInWithAppleLinkingExistingEmail(idToken: idToken, nonce: nonce)
+            } else {
+                throw error
+            }
+        }
         
         try KeychainManager.save(key: "access_token", value: response.access_token)
         try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
@@ -114,32 +123,15 @@ final class AuthenticationManager {
             await registerAppleAuthorizationCode(authorizationCode, accessToken: response.access_token)
         }
         
-        // Check if profile exists to determine if this is a new or existing user
-        // Note: We check the profile, not the auth user, because Supabase creates the auth user
-        // automatically even for new Apple Sign In users
-        // IMPORTANT: Apple Sign In remembers if the Apple ID was used before and will always
-        // show the Sign In dialog after first use, even with .signUp. This is expected behavior.
-        // Our app logic handles this by checking if the profile exists after authentication.
+        // Apple shows "Sign In" after the Apple ID was used once, even from the sign-up screen.
+        // If the auth user already exists, continue as sign-in instead of blocking with an error.
         let existingProfile: ProfileRow?
         do {
             existingProfile = try await fetchProfile(accessToken: response.access_token, userId: response.user.id)
         } catch {
-            // If fetch fails, assume new user (profile doesn't exist)
             existingProfile = nil
         }
-        
-        // Determine if this is truly a new user (no profile exists)
         let isNewUser = existingProfile == nil
-        
-        // If this is a sign up flow and user already exists (has profile), throw error
-        // This handles the case where Apple shows Sign In dialog but user is trying to sign up
-        if isSignUp && !isNewUser {
-            throw NSError(
-                domain: "SupabaseAuth",
-                code: 422,
-                userInfo: [NSLocalizedDescriptionKey: L.error_appleAccountExists.localized]
-            )
-        }
         
         if isNewUser {
             // New user - create profile with username from email
@@ -447,6 +439,17 @@ final class AuthenticationManager {
             }
             // Don't overwrite local status on error - preserve user's progress
         }
+    }
+
+    private static func isEmailAlreadyRegistered(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        let description = nsError.localizedDescription.lowercased()
+        if nsError.code == 422 { return true }
+        return description.contains("already")
+            || description.contains("registered")
+            || description.contains("exists")
+            || description.contains("bereits")
+            || description.contains("existiert")
     }
 
     private func registerAppleAuthorizationCode(_ authorizationCode: String, accessToken: String) async {

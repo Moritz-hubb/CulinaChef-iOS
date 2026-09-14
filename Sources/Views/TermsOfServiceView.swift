@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TermsOfServiceView: View {
 @ObservedObject private var localizationManager = LocalizationManager.shared
+    @ObservedObject private var storePricing = SubscriptionStorePricing.shared
 
     @Environment(\.dismiss) var dismiss
     @State private var showFairUsePolicy = false
@@ -21,6 +22,13 @@ struct TermsOfServiceView: View {
         if isGerman { return german }
         if isFrench { return french }
         return english
+    }
+
+    private var subscriptionTermsParagraphs: [String] {
+        SubscriptionLegal.termsParagraphs(
+            language: isGerman ? "de" : "en",
+            prices: storePricing.prices
+        )
     }
     
     var body: some View {
@@ -194,35 +202,10 @@ struct TermsOfServiceView: View {
                     }
                     
                     TermsSection(localized("5. Abonnement, Preise und Zahlungsbedingungen", "5. Abonnement, prix et conditions de paiement", "5. Subscription, Prices, and Payment Terms"), icon: "creditcard") {
-                        TermsParagraph(number: "(1)", text: localized(
-                            "Der Basis-Download der App ist kostenlos. Der Zugang zu erweiterten Funktionen erfordert ein monatliches Abonnement ('Unlimited') zum Preis von 5,99 € (inkl. MwSt.).",
-                            "Le téléchargement de base est gratuit. L'accès aux fonctions avancées nécessite un abonnement mensuel (Unlimited) de 5,99 € (TVA incluse).",
-                            "Downloading the app is free of charge. Access to extended features requires a monthly subscription ('Unlimited') at a price of €5.99 (incl. VAT)."
-                        ))
-                        
-                        TermsParagraph(number: "(2)", text: localized(
-                            "Das Abonnement wird über Apple In-App-Purchase abgeschlossen, abgerechnet und verwaltet. Der Anbieter erhält keine Zahlungsdaten; diese verbleiben bei Apple.",
-                            "L'abonnement est géré via Apple In-App Purchase. Le fournisseur ne reçoit aucune donnée de paiement.",
-                            "The subscription is concluded, billed, and managed through Apple In-App Purchase. The provider does not receive or store any payment data; such data remains with Apple."
-                        ))
-                        
-                        TermsParagraph(number: "(3)", text: localized(
-                            "Das Abonnement verlängert sich automatisch um jeweils einen Monat, wenn es nicht mindestens 24 Stunden vor Ablauf der aktuellen Laufzeit im Apple-Account des Nutzers gekündigt wird.",
-                            "L'abonnement se renouvelle automatiquement d'un mois si l'utilisateur ne résilie pas au moins 24 heures avant la fin de la période actuelle.",
-                            "The subscription automatically renews for one month unless it is cancelled at least 24 hours before the end of the current term in the user's Apple account."
-                        ))
-                        
-                        TermsParagraph(number: "(4)", text: localized(
-                            "Eine anteilige Rückerstattung bereits gezahlter Gebühren ist ausgeschlossen, soweit kein gesetzliches Widerrufsrecht besteht.",
-                            "Un remboursement partiel n'est pas possible, sauf droit légal de rétractation.",
-                            "Partial refunds of fees already paid are excluded unless a statutory right of withdrawal applies."
-                        ))
-                        
-                        TermsParagraph(number: "(5)", text: localized(
-                            "Preisänderungen können vom Anbieter vorgenommen werden, gelten jedoch erst ab der nächsten Abonnement-Periode und nur nach vorheriger Information durch Apple.",
-                            "Les modifications de prix s'appliquent à la période suivante et après information via Apple.",
-                            "The provider may change prices; however, such changes only take effect for the next subscription period and only after prior notification by Apple."
-                        ))
+                        ForEach(Array(subscriptionTermsParagraphs.enumerated()), id: \.offset) { index, text in
+                            let stripped = text.replacingOccurrences(of: #"^\(\d+\)\s*"#, with: "", options: .regularExpression)
+                            TermsParagraph(number: "(\(index + 1))", text: stripped)
+                        }
                     }
                     
                     TermsSection(localized("6. Widerrufsrecht", "6. Droit de rétractation", "6. Right of Withdrawal"), icon: "arrow.uturn.backward") {
@@ -455,7 +438,7 @@ struct TermsOfServiceView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             SummaryRow(label: isGerman ? "App-Name" : "App Name", value: "CulinaAI")
                             SummaryRow(label: isGerman ? "Anbieter" : "Provider", value: "CulinaAI – Moritz Serrin")
-                            SummaryRow(label: isGerman ? "Preis" : "Price", value: isGerman ? "5,99 €/Monat (Apple In-App-Purchase)" : "€5.99/month (Apple In-App Purchase)")
+                            SummaryRow(label: isGerman ? "Preis" : "Price", value: SubscriptionLegal.summaryPriceLine(language: isGerman ? "de" : "en", prices: storePricing.prices))
                             SummaryRow(label: isGerman ? "Kündigung" : "Cancellation", value: isGerman ? "Jederzeit über Apple-Einstellungen" : "Anytime via Apple settings")
                             SummaryRow(label: isGerman ? "Datenschutz" : "Privacy", value: isGerman ? "Keine Werbung, kein Tracking" : "No ads, no tracking")
                             SummaryRow(label: isGerman ? "Mindestalter" : "Minimum Age", value: isGerman ? "16 Jahre" : "16 years")
@@ -498,6 +481,9 @@ struct TermsOfServiceView: View {
                     .accessibilityHint(L.legalCloseHint.localized)
                 }
             }
+        }
+        .onAppear {
+            Task { await storePricing.refresh() }
         }
         .sheet(isPresented: $showPrivacy) {
             PrivacyPolicyView()

@@ -58,6 +58,10 @@
 		6FA2191F87525956BC3FBFC2 /* AppIntroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E6730BDEFA14B8922E5EA6C /* AppIntroView.swift */; };
 		703B54D82C0C13BC28C6A637 /* BackendHTTPError.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA0E27BE69045CEE296362C7 /* BackendHTTPError.swift */; };
 		70F17A107ADAFC9D0D2D055E /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 919E865BA11391F1736AD81A /* App.swift */; };
+		A11E0AAD50001B0000000001 /* AppleSearchAdsAttribution.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50002F0000000002 /* AppleSearchAdsAttribution.swift */; };
+		A11E0AAD50003B0000000003 /* AppleSearchAdsAttributionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50004F0000000004 /* AppleSearchAdsAttributionTests.swift */; };
+		A11E0AAD50005B0000000005 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50006F0000000006 /* PrivacyInfo.xcprivacy */; };
+		A11E0AAD50007B0000000007 /* AdServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A11E0AAD50008F0000000008 /* AdServices.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		75BB4C9CB7F221549C30CD38 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38FC9C621974BD22ECB3E30C /* ChatMessage.swift */; };
 		77EF0CE4FD311108E3379B9D /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C7C61B04ADFA92C3C27DA5 /* ShareSheet.swift */; };
 		7B8C4F644351423A14A74554 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 31B6CABC570BB62BC4321C79 /* Assets.xcassets */; };
@@ -239,6 +243,10 @@
 		A9B0E04E90D5EB0F73662CDC /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
 		ACF30C397D97250DF166AFDE /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
 		AD13634AB821020FF59626D0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A11E0AAD50002F0000000002 /* AppleSearchAdsAttribution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSearchAdsAttribution.swift; sourceTree = "<group>"; };
+		A11E0AAD50004F0000000004 /* AppleSearchAdsAttributionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSearchAdsAttributionTests.swift; sourceTree = "<group>"; };
+		A11E0AAD50006F0000000006 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A11E0AAD50008F0000000008 /* AdServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AdServices.framework; path = System/Library/Frameworks/AdServices.framework; sourceTree = SDKROOT; };
 		AE78D545F2774E763E6161F4 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		AE9CBB4591C8A19859D11DBE /* ShoppingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListView.swift; sourceTree = "<group>"; };
 		AEFC116B45F42B7AC65DE574 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
@@ -278,6 +286,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A11E0AAD50007B0000000007 /* AdServices.framework in Frameworks */,
 				8E98AFCD0C42ACBAA4332478 /* Sentry in Frameworks */,
 				2617275002BC335143B7BB81 /* RevenueCat in Frameworks */,
 				C39F392E9BF82F8CB1ED2580 /* SuperwallKit in Frameworks */,
@@ -293,6 +302,7 @@
 				5A01BC6A00C8038CB92733B5 /* Integration */,
 				EF0AE7C8D320DC89D24B22D8 /* Mocks */,
 				188555D9BE64E850BEE67F00 /* AnalyticsManagerTests.swift */,
+				A11E0AAD50004F0000000004 /* AppleSearchAdsAttributionTests.swift */,
 				87ADFE33C58FEF2A524B9C04 /* AppStateTests.swift */,
 				42169ED425055D7B0C7DCC4A /* BackendClientTests.swift */,
 				174E397B5850F0459C63D384 /* KeychainManagerTests.swift */,
@@ -338,6 +348,7 @@
 				0B4517B2259DC6F3B5AA8263 /* Tests */,
 				5314B2659F42242E58604121 /* Widgets */,
 				DB8C1F848D9255B8F1A42A68 /* Products */,
+				A11E0AAD50008F0000000008 /* AdServices.framework */,
 			);
 			sourceTree = "<group>";
 			usesTabs = 0;
@@ -408,6 +419,7 @@
 				919E865BA11391F1736AD81A /* App.swift */,
 				31B6CABC570BB62BC4321C79 /* Assets.xcassets */,
 				AD13634AB821020FF59626D0 /* Info.plist */,
+				A11E0AAD50006F0000000006 /* PrivacyInfo.xcprivacy */,
 				EAE72EEFB2F938867B00A5D1 /* LaunchScreen.storyboard */,
 				0E40B94362D780F677CD5609 /* ringtone-031-437514.mp3 */,
 				7D511C7C9E1408418D29B31F /* timer_ringtone.mp3 */,
@@ -456,6 +468,7 @@
 			isa = PBXGroup;
 			children = (
 				9CF6FA0F10E39BFDD46C6CF5 /* AnalyticsManager.swift */,
+				A11E0AAD50002F0000000002 /* AppleSearchAdsAttribution.swift */,
 				99C4F8F3DE07184AAFB7382E /* AppState.swift */,
 				DF262E16254E15667802A85D /* BackendClient.swift */,
 				EA0E27BE69045CEE296362C7 /* BackendHTTPError.swift */,
@@ -695,6 +708,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A11E0AAD50005B0000000005 /* PrivacyInfo.xcprivacy in Resources */,
 				7B8C4F644351423A14A74554 /* Assets.xcassets in Resources */,
 				ABF9438D01967639E9300DA0 /* LaunchScreen.storyboard in Resources */,
 				EC9915DFDE1D29CCAAD0B702 /* ringtone-031-437514.mp3 in Resources */,
@@ -715,6 +729,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C03A9DCD41BA6156094F3F11 /* AnalyticsManager.swift in Sources */,
+				A11E0AAD50001B0000000001 /* AppleSearchAdsAttribution.swift in Sources */,
 				70F17A107ADAFC9D0D2D055E /* App.swift in Sources */,
 				6FA2191F87525956BC3FBFC2 /* AppIntroView.swift in Sources */,
 				B7F7142CE863BED29C2914A7 /* AppState.swift in Sources */,
@@ -812,6 +827,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9065DC7E189BE3F70EF0F79B /* AnalyticsManagerTests.swift in Sources */,
+				A11E0AAD50003B0000000003 /* AppleSearchAdsAttributionTests.swift in Sources */,
 				80FDED29CD5AB53973129C49 /* AppStateTests.swift in Sources */,
 				88D188939F39E6A9ACB67617 /* AuthFlowIntegrationTests.swift in Sources */,
 				5FCBB858C3B0036C902DD553 /* BackendClientTests.swift in Sources */,

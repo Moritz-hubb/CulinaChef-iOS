@@ -33,6 +33,7 @@ enum SuperwallProductNames {
 /// Apple product identifiers. Superwall editor names are not StoreKit IDs.
 enum AppleSubscriptionProductIDs {
     static let monthly = "com.moritzserrin.culinachef.unlimited.subscription"
+    static let weekly = "com.moritzserrin.culinachef.unlimited.subscriptionweekly"
 }
 
 /// Savings / weekly-equivalent math for Superwall Parameter variables.
@@ -131,6 +132,7 @@ final class Monetization {
                 purchaseController: purchaseController,
                 options: options
             )
+            Superwall.shared.delegate = self
             Superwall.shared.preloadPaywalls(forPlacements: [
                 SuperwallPlacements.campaignTrigger,
                 SuperwallPlacements.lapsedSubscriber
@@ -314,6 +316,12 @@ final class Monetization {
         let isLapsed = RevenueCatManager.shared.hasLapsedSubscription
         params["hasLapsedSubscription"] = isLapsed
         attributes["hasLapsedSubscription"] = isLapsed
+        params["trialDays"] = SubscriptionLegal.trialDurationDays
+        attributes["trialDays"] = SubscriptionLegal.trialDurationDays
+        params["termsUrl"] = SubscriptionLegal.termsURL.absoluteString
+        params["privacyUrl"] = SubscriptionLegal.privacyURL.absoluteString
+        attributes["termsUrl"] = SubscriptionLegal.termsURL.absoluteString
+        attributes["privacyUrl"] = SubscriptionLegal.privacyURL.absoluteString
         
         if let monthly = storeProducts.monthly {
             let weeklyEquivalent = PaywallPriceMath.formattedMonthlyWeeklyPrice(
@@ -331,6 +339,16 @@ final class Monetization {
         if let weekly = storeProducts.weekly {
             params["weeklyPlanTrialPrice"] = weekly.localizedPrice
         }
+        
+        let legalPrices = SubscriptionLegal.Prices(
+            weekly: storeProducts.weekly?.localizedPrice,
+            monthly: storeProducts.monthly?.localizedPrice
+        )
+        let localeId = Superwall.shared.localeIdentifier
+        let language = localeId.lowercased().hasPrefix("de") ? "de" : LocalizationManager.shared.currentLanguage
+        let footer = SubscriptionLegal.paywallFooter(language: language, prices: legalPrices)
+        params["legalFooter"] = footer
+        attributes["legalFooter"] = footer
         
         if let weekly = storeProducts.weekly, let monthly = storeProducts.monthly {
             if let percentage = PaywallPriceMath.roundedSavingsPercentage(
@@ -443,7 +461,7 @@ final class Monetization {
         
         var identifiers = Set(packages.map(\.storeProduct.productIdentifier))
         identifiers.insert(AppleSubscriptionProductIDs.monthly)
-        identifiers.insert(SuperwallProductNames.weeklyPlanTrial)
+        identifiers.insert(AppleSubscriptionProductIDs.weekly)
         identifiers.insert(SuperwallProductNames.monthlyPlanTrial)
         
         let rcProductsById: [String: RevenueCat.StoreProduct]
@@ -547,13 +565,16 @@ final class Monetization {
             if store.productIdentifier == AppleSubscriptionProductIDs.monthly, monthly == nil {
                 monthly = fromRCProduct(store)
             }
+            if store.productIdentifier == AppleSubscriptionProductIDs.weekly, weekly == nil {
+                weekly = fromRCProduct(store)
+            }
         }
         
         if let sk2Week = sk2ById.values.first(where: { $0.subscription?.subscriptionPeriod.unit == .week }) {
             weekly = fromSK2(sk2Week)
         }
-        if let namedWeek = sk2ById[SuperwallProductNames.weeklyPlanTrial] {
-            weekly = fromSK2(namedWeek)
+        if let appleWeek = sk2ById[AppleSubscriptionProductIDs.weekly] {
+            weekly = fromSK2(appleWeek)
         }
         
         if let sk2Month = sk2ById.values.first(where: { $0.subscription?.subscriptionPeriod.unit == .month }) {
@@ -582,7 +603,40 @@ final class Monetization {
         return LoadedStoreProducts(weekly: weekly, monthly: monthly, appleIdsBySuperwallName: ids)
     }
     
+    func currentLocalizedSubscriptionPrices() async -> SubscriptionLegal.Prices {
+        let loaded = await loadLocalizedStoreProducts()
+        return SubscriptionLegal.Prices(
+            weekly: loaded.weekly?.localizedPrice,
+            monthly: loaded.monthly?.localizedPrice
+        )
+    }
+    
     private func allRevenueCatPackages() -> [Package] {
         RevenueCatManager.shared.availablePackages
+    }
+}
+
+extension Monetization: SuperwallDelegate {
+    func handleCustomPaywallAction(withName name: String) {
+        switch name.lowercased() {
+        case "open_terms", "terms", "agb":
+            SubscriptionLegal.postOpenLegal(.terms)
+        case "open_privacy", "privacy", "datenschutz":
+            SubscriptionLegal.postOpenLegal(.privacy)
+        default:
+            Logger.debug("[Paywall] custom action \(name)", category: .data)
+        }
+    }
+    
+    func paywallWillOpenURL(url: URL) {
+        if let destination = SubscriptionLegal.presentsInAppLegal(from: url) {
+            SubscriptionLegal.postOpenLegal(destination)
+        }
+    }
+    
+    func paywallWillOpenDeepLink(url: URL) {
+        if let destination = SubscriptionLegal.presentsInAppLegal(from: url) {
+            SubscriptionLegal.postOpenLegal(destination)
+        }
     }
 }

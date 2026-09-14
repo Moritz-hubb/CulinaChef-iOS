@@ -980,7 +980,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     ///   - idToken: Vom Apple-SDK geliefertes Token.
     ///   - nonce: Optionaler Nonce zur Absicherung gegen Replay-Angriffe.
     ///   - fullName: Optionaler vollständiger Name vom Apple Credential (nur beim ersten Sign In verfügbar).
-    ///   - isSignUp: Wenn true, wird geprüft ob Account bereits existiert und Fehler geworfen.
+    ///   - isSignUp: Unbenutzt für die Zugriffskontrolle; Apple-Nutzer mit bestehendem Konto werden angemeldet.
     /// - Throws: Fehler aus `SupabaseAuthClient` oder Keychain-Speicherung.
     func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp: Bool = false, appleUserId: String? = nil, authorizationCode: String? = nil) async throws {
         loading = true
@@ -1063,11 +1063,14 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     // moved to SubscriptionManager.addOneMonth(to:) and SubscriptionManager.key(_:for:)
     
     func subscribeSimulated() {
+        #if DEBUG
         subscriptionManager.subscribeSimulated(accessToken: self.accessToken)
         self.isSubscribed = true
-        // Immediately refresh from backend and start aggressive polling for 5 min
         self.loadSubscriptionStatus()
         self.startAggressiveSubscriptionPolling(durationSeconds: 5 * 60, intervalSeconds: 30)
+        #else
+        Logger.error("subscribeSimulated is disabled in Release", category: .data)
+        #endif
     }
     
     func cancelAutoRenew() {
@@ -1085,6 +1088,9 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     }
 
     func deleteAccountAndData() async throws {
+        guard self.accessToken != nil, KeychainManager.get(key: "user_id") != nil else {
+            throw NSError(domain: "Account", code: -1, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
+        }
         var appleCode: String?
         let provider = KeychainManager.get(key: "auth_provider")
         let email = userEmail ?? KeychainManager.get(key: "user_email")
@@ -1171,9 +1177,13 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         applyRevenueCatSubscriptionStatus()
     }
     
-    // Backward compatibility: keep existing API
+    // Backward compatibility: keep existing API (DEBUG/tests only)
     func setSubscriptionActive(_ active: Bool) {
+        #if DEBUG
         if active { subscribeSimulated() } else { cancelAutoRenew() }
+        #else
+        Logger.error("setSubscriptionActive is disabled in Release", category: .data)
+        #endif
     }
 
     // MARK: - Restore

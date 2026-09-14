@@ -50,7 +50,7 @@ struct PrivacyPolicyView: View {
                             .foregroundStyle(.white.opacity(0.8))
                             
                             HStack(spacing: 16) {
-                                Label(localized("Stand: 04.11.2025", "Date: 04.11.2025", "Date: November 4, 2025"), systemImage: "calendar")
+                                Label(localized("Stand: 14.09.2026", "Date: 14.09.2026", "Date: September 14, 2026"), systemImage: "calendar")
                                 Label(localized("Version: 1.0", "Version: 1.0", "Version: 1.0"), systemImage: "doc.text")
                             }
                             .font(.caption)
@@ -123,8 +123,12 @@ struct PrivacyPolicyView: View {
                                     text: localized("TLS-Verschlüsselung und sichere Speicherung.", "Chiffrement TLS et stockage sécurisé.", "TLS encryption and secure storage.")
                                 )
                                 PrivacyBullet(
-                                    title: localized("Keine Werbung:", "Pas de publicité:", "No Advertising:"),
-                                    text: localized("Wir zeigen keine Werbung und verwenden kein Tracking.", "Nous n'affichons pas de publicité et n'utilisons pas de suivi.", "We do not show ads or use tracking.")
+                                    title: localized("Keine In-App-Werbung:", "Pas de publicité in-app:", "No in-app ads:"),
+                                    text: localized(
+                                        "Wir zeigen keine Banner, Interstitials oder Tracker von Werbenetzwerken in der App. Kampagnen können über Apple Search Ads im App Store geschaltet werden.",
+                                        "Nous n'affichons pas de bannières, d'interstitiels ni de trackers de réseaux publicitaires dans l'app. Des campagnes peuvent être diffusées via Apple Search Ads dans l'App Store.",
+                                        "We do not show banners, interstitials, or ad-network trackers in the app. Campaigns may run via Apple Search Ads in the App Store."
+                                    )
                                 )
                             }
                         }
@@ -155,6 +159,14 @@ struct PrivacyPolicyView: View {
                                 DataCategory(
                                     title: localized("Nutzungsdaten", "Données d'utilisation", "Usage Data"),
                                     description: localized("App-Version, Gerätetyp, Betriebssystem-Version (anonymisiert)", "Version de l'app, type d'appareil, version du système d'exploitation (anonymisé)", "App version, device type, operating system version (anonymized)")
+                                )
+                                DataCategory(
+                                    title: localized("Apple Search Ads", "Apple Search Ads", "Apple Search Ads"),
+                                    description: localized(
+                                        "Ob die App über eine Apple-Search-Ads-Kampagne im App Store installiert wurde (Kampagnen-Attribution, ohne geräteübergreifendes Tracking).",
+                                        "Si l'app a été installée via une campagne Apple Search Ads dans l'App Store (attribution de campagne, sans suivi inter-apps).",
+                                        "Whether the app was installed from an Apple Search Ads campaign in the App Store (campaign attribution, without cross-app tracking)."
+                                    )
                                 )
                             }
                         }
@@ -236,13 +248,13 @@ struct PrivacyPolicyView: View {
                             .lineSpacing(5)
                         }
                         
-                        PrivacySection(localized("9. Keine Werbung oder Tracking", "9. Pas de publicité ou de suivi", "9. No Advertising or Tracking", spanish: "9. Sin publicidad ni seguimiento", italian: "9. Nessuna pubblicità o tracciamento"), icon: "hand.raised") {
+                        PrivacySection(localized("9. Werbung und Tracking", "9. Publicité et suivi", "9. Advertising and Tracking", spanish: "9. Publicidad y seguimiento", italian: "9. Pubblicità e tracciamento"), icon: "hand.raised") {
                             Text(localized(
-                                "Wir verzichten vollständig auf:",
-                                "Nous nous abstenons complètement d'utiliser:",
-                                "We strictly refrain from using:",
-                                spanish: "Nos abstenemos completamente de usar:",
-                                italian: "Ci asteniamo completamente dall'usare:"
+                                "Wir können Apple Search Ads nutzen, also Werbung im App Store. Dafür wird Apples AdServices-Attribution verwendet, um zu messen, welche Kampagne zu einer Installation oder einem Abo geführt hat. Es gibt keinen App-Tracking-Transparency-Dialog, weil wir keine Daten mit anderen Unternehmen für geräteübergreifendes Tracking teilen und keine Werbe-IDs (IDFA) auslesen. In der App selbst verzichten wir auf:",
+                                "Nous pouvons utiliser Apple Search Ads, c'est-à-dire de la publicité dans l'App Store. L'attribution AdServices d'Apple mesure quelle campagne a mené à une installation ou un abonnement. Il n'y a pas de demande App Tracking Transparency, car nous ne partageons pas de données avec d'autres entreprises pour un suivi inter-apps et nous ne lisons pas d'identifiants publicitaires (IDFA). Dans l'app elle-même, nous n'utilisons pas:",
+                                "We may use Apple Search Ads, which is advertising in the App Store. Apple's AdServices attribution measures which campaign led to an install or subscription. There is no App Tracking Transparency prompt, because we do not share data with other companies for cross-app tracking and we do not read advertising identifiers (IDFA). Inside the app we do not use:",
+                                spanish: "Podemos usar Apple Search Ads, es decir, anuncios en el App Store. La atribución AdServices de Apple mide qué campaña llevó a una instalación o suscripción. No hay aviso de App Tracking Transparency porque no compartimos datos con otras empresas para seguimiento entre apps ni leemos identificadores publicitarios (IDFA). Dentro de la app no usamos:",
+                                italian: "Possiamo usare Apple Search Ads, cioè pubblicità nell'App Store. L'attribuzione AdServices di Apple misura quale campagna ha portato a un'installazione o a un abbonamento. Non c'è la richiesta App Tracking Transparency perché non condividiamo dati con altre aziende per il tracciamento tra app e non leggiamo identificatori pubblicitari (IDFA). Nell'app non usiamo:"
                             ))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
@@ -272,11 +284,11 @@ struct PrivacyPolicyView: View {
                                 PrivacyBullet(
                                     title: "",
                                     text: localized(
-                                        "Werbung, Werbenetzwerke oder Profilbildung",
-                                        "Publicité, réseaux publicitaires ou profilage d'utilisateurs",
-                                        "Advertising, ad networks, or user profiling",
-                                        spanish: "Publicidad, redes publicitarias o perfilado de usuarios",
-                                        italian: "Pubblicità, reti pubblicitarie o profilazione utenti"
+                                        "In-App-Werbung, Werbenetzwerke (z. B. AdMob) oder Profilbildung",
+                                        "Publicité in-app, réseaux publicitaires (p. ex. AdMob) ou profilage d'utilisateurs",
+                                        "In-app advertising, ad networks (e.g. AdMob), or user profiling",
+                                        spanish: "Publicidad in-app, redes publicitarias (p. ej. AdMob) o perfilado de usuarios",
+                                        italian: "Pubblicità in-app, reti pubblicitarie (es. AdMob) o profilazione utenti"
                                     )
                                 )
                                 PrivacyBullet(

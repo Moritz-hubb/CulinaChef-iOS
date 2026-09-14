@@ -583,19 +583,12 @@ struct SignUpView: View {
         } catch {
             let errorDescription = error.localizedDescription.lowercased()
             let errorCode = (error as NSError).code
-            let errorDomain = (error as NSError).domain
-            
-            // Check if it's a 422 error (account already exists)
-            // This happens when user tries to sign up but account already exists
-            // IMPORTANT: After Apple Sign In is used once (even if it fails), Apple will
-            // always show the Sign In dialog, not Sign Up. This is expected Apple behavior.
-            // Our app detects this and shows the appropriate error message.
-            if errorCode == 422 || 
-               errorDomain == "SupabaseAuth" ||
-               errorDescription.contains("422") ||
-               errorDescription.contains("bereits") ||
-               errorDescription.contains("existiert") ||
-               (errorDescription.contains("account") && errorDescription.contains("bereits")) {
+            let looksLikeExistingAccount = errorCode == 422
+                || errorDescription.contains("already")
+                || errorDescription.contains("registered")
+                || errorDescription.contains("bereits")
+                || errorDescription.contains("existiert")
+            if looksLikeExistingAccount {
                 await MainActor.run {
                     self.showAccountExistsError = true
                     self.errorMessage = nil

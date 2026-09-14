@@ -50,6 +50,7 @@ final class RevenueCatManager: NSObject, ObservableObject {
         Purchases.configure(with: builder.build())
         Purchases.shared.delegate = self
         isConfigured = true
+        AppleSearchAdsAttribution.enable()
         
         Task {
             await loadCustomerInfo()
@@ -121,7 +122,7 @@ final class RevenueCatManager: NSObject, ObservableObject {
     
     private static let knownSubscriptionProductIDs: Set<String> = [
         AppleSubscriptionProductIDs.monthly,
-        SuperwallProductNames.weeklyPlanTrial,
+        AppleSubscriptionProductIDs.weekly,
         SuperwallProductNames.monthlyPlanTrial
     ]
     

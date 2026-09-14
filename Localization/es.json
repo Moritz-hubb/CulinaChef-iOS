@@ -953,5 +953,5 @@
   "a11y.longPressToMove": "Toca para marcar. Mantén pulsado para elegir la categoría.",
   "shopping.chooseCategory": "Elegir categoría",
   "label.beta": "Beta",
-  "settings.accountDeletionFailed": "No se pudo eliminar la cuenta. Comprueba tu conexión e inténtalo de nuevo. No se eliminó ningún dato."
+  "settings.accountDeletionFailed": "No se pudo eliminar la cuenta por completo y permanece activa. Inténtalo de nuevo. Si el problema continúa, contáctanos con la dirección de la política de privacidad."
 }

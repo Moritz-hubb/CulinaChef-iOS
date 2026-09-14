@@ -949,5 +949,5 @@
   "timer.rest": "Reposo",
   "timer.simmer": "Cocer a fuego lento",
   "timer.steep": "Infusionar",
-  "settings.accountDeletionFailed": "No se pudo eliminar la cuenta. Comprueba tu conexión e inténtalo de nuevo. No se eliminó ningún dato."
+  "settings.accountDeletionFailed": "No se pudo eliminar la cuenta por completo y permanece activa. Inténtalo de nuevo. Si el problema continúa, contáctanos con la dirección de la política de privacidad."
 }

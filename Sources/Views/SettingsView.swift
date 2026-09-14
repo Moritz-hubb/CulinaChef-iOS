@@ -277,8 +277,8 @@ struct SettingsView: View {
             // Initialize state
             hasConsent = OpenAIConsentManager.hasConsent
         }
-        .alert(L.deleteAccountConfirm.localized, isPresented: $showDeleteConfirm) {
-            Button(L.manageSubscription.localized, role: .none) {
+        .confirmationDialog(L.deleteAccountConfirm.localized, isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button(L.manageSubscription.localized) {
                 Task { await app.openManageSubscriptions() }
             }
             Button(L.deleteNow.localized, role: .destructive) {
@@ -1202,8 +1202,12 @@ private struct RecipesExportPayload: Codable {
 private struct SubscriptionSettingsSheet: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @ObservedObject private var storePricing = SubscriptionStorePricing.shared
     @State private var isRestoringPurchases = false
     @State private var restoreAlert: RestorePurchasesAlert?
+    @State private var showTerms = false
+    @State private var showPrivacy = false
     
     private enum RestorePurchasesAlert: Identifiable {
         case success
@@ -1342,6 +1346,22 @@ private struct SubscriptionSettingsSheet: View {
                         .accessibilityHint(L.a11y_restorePurchasesHint.localized)
                     }
                     
+                    Text(SubscriptionLegal.paywallFooter(
+                        language: localizationManager.currentLanguage,
+                        prices: storePricing.prices
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineSpacing(3)
+                    .padding(.top, 8)
+                    
+                    HStack(spacing: 16) {
+                        Button(L.legalTerms.localized) { showTerms = true }
+                        Button(L.legalPrivacy.localized) { showPrivacy = true }
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white)
+                    
                     Spacer()
                 }
                 .padding(20)
@@ -1380,7 +1400,14 @@ private struct SubscriptionSettingsSheet: View {
         .onAppear {
             Task {
                 await app.refreshSubscriptionStatusFromStoreKit()
+                await storePricing.refresh()
             }
+        }
+        .sheet(isPresented: $showTerms) {
+            TermsOfServiceView()
+        }
+        .sheet(isPresented: $showPrivacy) {
+            PrivacyPolicyView()
         }
     }
     

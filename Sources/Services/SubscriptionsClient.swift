@@ -103,13 +103,9 @@ final class SubscriptionsClient {
         }
     }
 
-    /// Legt eine Subscription an oder aktualisiert eine bestehende Zeile per Upsert.
-    ///
-    /// - Parameters:
-    ///   - params: Parameter für den Upsert.
-    ///   - accessToken: Access-Token des Nutzers.
-    /// - Throws: `NSError` mit Fehlermessage aus der REST-API oder `URLError` bei Transportfehlern.
+    /// DEBUG only. Release builds never write `public.subscriptions` from the client.
     func upsertSubscription(params: SubscriptionUpsertParams, accessToken: String) async throws {
+        #if DEBUG
         var url = baseURL
         url.append(path: "/rest/v1/subscriptions")
         var req = URLRequest(url: url)
@@ -139,6 +135,13 @@ final class SubscriptionsClient {
             let msg = String(data: data, encoding: .utf8) ?? "Unknown"
             throw NSError(domain: "SubscriptionsClient", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "Subscription upsert failed: \(msg)"])
         }
+        #else
+        throw NSError(
+            domain: "SubscriptionsClient",
+            code: -2,
+            userInfo: [NSLocalizedDescriptionKey: "Client writes to subscriptions are disabled"]
+        )
+        #endif
     }
     
     /// Updated Subscription-Status via Backend-Endpoint mit Apple-Validierung.

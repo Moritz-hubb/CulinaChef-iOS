@@ -93,9 +93,9 @@
               "locale" : "de"
             }
           ],
-          "productID" : "weeklyPlanTrial",
+          "productID" : "com.moritzserrin.culinachef.unlimited.subscriptionweekly",
           "recurringSubscriptionPeriod" : "P1W",
-          "referenceName" : "Weekly Plan Trial",
+          "referenceName" : "CulinaChef Unlimited Weekly",
           "subscriptionGroupID" : "8E3784C0",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

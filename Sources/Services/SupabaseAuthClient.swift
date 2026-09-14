@@ -177,6 +177,30 @@ final class SupabaseAuthClient {
             )
         }
     }
+
+    /// After a 422 (email already used), the backend links the Apple identity to that user and signs in.
+    func signInWithAppleLinkingExistingEmail(idToken: String, nonce: String?) async throws -> AuthResponse {
+        var url = Config.backendBaseURL
+        url.append(path: "/auth/apple")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = ["id_token": idToken]
+        if let nonce { body["nonce"] = nonce }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
+        guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        if http.statusCode == 200 {
+            return try JSONDecoder().decode(AuthResponse.self, from: data)
+        }
+        let detail = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["detail"] as? String
+        throw NSError(
+            domain: "SupabaseAuth",
+            code: http.statusCode,
+            userInfo: [NSLocalizedDescriptionKey: detail ?? L.errorAppleSignInFailed.localized]
+        )
+    }
     
     // MARK: - Token Refresh
     /// Erneuert eine bestehende Supabase-Session über das Refresh-Token.

@@ -16,7 +16,7 @@ enum Feature {
 extension AppState {
     /// Check if the current user has access to a specific feature.
     /// AI access is based on RevenueCat entitlement `CulinaAi Unlimited` (`isSubscribed`).
-    /// The backend still re-checks RevenueCat/DB; this only avoids sending the request.
+    /// The backend still re-checks RevenueCat; this only avoids sending the request.
     func hasAccess(to feature: Feature) -> Bool {
         switch feature {
         case .aiChat, .aiRecipeGenerator, .aiRecipeAnalysis:

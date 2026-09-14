@@ -268,11 +268,11 @@
   "paywall.feature.unlimitedRecipes": "Unbegrenzte Rezepte und Chat",
   "paywall.imprintPlaceholder": "Impressum\n\nPlatzhalter - Text hier einfügen",
   "paywall.perMonth": "/ Monat",
-  "paywall.price": "5,99 €",
+  "paywall.price": "",
   "paywall.restorePurchase": "Kauf wiederherstellen",
   "paywall.subscribeButton": "Unlimited für 5,99 €/Monat",
   "paywall.subtitle": "Alles unbegrenzt – Rezepte, Chat, Bibliothek",
-  "paywall.terms": "Monatlich kündbar. Preise inkl. MwSt. Die Abrechnung erfolgt über Apple.",
+  "paywall.terms": "3 Tage kostenlos, danach automatische Verlängerung zum im App Store angezeigten Preis. Jederzeit in den Apple-Einstellungen kündbar. Zahlung über Apple. AGB und Datenschutz gelten. Käufe wiederherstellen.",
   "paywall.unlimited": "Unlimited",
   "placeholder.allergies": "z.B. Nüsse, Gluten, Meeresfrüchte",
   "placeholder.askMe": "Frag mich was…",
@@ -693,7 +693,7 @@
   "auth.signUpButton": "Registrieren",
   "auth.termsOfServiceShort": "AGB",
   "legal.contractLanguageNotice": "Vertragssprache: Deutsch",
-  "legal.effectiveDate": "Stand: 04.11.2025",
+  "legal.effectiveDate": "Stand: 14.09.2026",
   "legal.version": "Version 1.0",
   "legal.terms.title": "Allgemeine Geschäftsbedingungen (AGB)",
   "legal.terms.subtitle": "für die App \"CulinaAI\"",
@@ -953,5 +953,5 @@
   "a11y.longPressToMove": "Antippen zum Abhaken. Lange drücken, um die Kategorie zu wählen.",
   "shopping.chooseCategory": "Kategorie wählen",
   "label.beta": "Beta",
-  "settings.accountDeletionFailed": "Das Konto konnte nicht gelöscht werden. Bitte prüfe deine Verbindung und versuche es erneut. Es wurden keine Daten entfernt."
+  "settings.accountDeletionFailed": "Das Konto konnte nicht vollständig gelöscht werden und bleibt aktiv. Bitte versuche es erneut. Wenn der Fehler bleibt, kontaktiere uns über die Adresse in der Datenschutzerklärung."
 }

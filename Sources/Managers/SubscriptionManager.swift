@@ -205,16 +205,15 @@ final class SubscriptionManager {
     // MARK: - Simulated Subscription (Legacy/Testing)
     
     func subscribeSimulated(accessToken: String?) {
+        #if DEBUG
         guard let userId = KeychainManager.get(key: "user_id") else { return }
         let now = Date()
         let periodEnd = addOneMonth(to: now)
         
-        // Store in Keychain (secure)
         try? KeychainManager.save(key: "subscription_last_payment", date: now)
         try? KeychainManager.save(key: "subscription_period_end", date: periodEnd)
         try? KeychainManager.save(key: "subscription_autorenew", bool: true)
         
-        // Push to Supabase
         if let token = accessToken {
             Task {
                 let params = SubscriptionUpsertParams(
@@ -231,33 +230,15 @@ final class SubscriptionManager {
                 try? await subscriptionsClient.upsertSubscription(params: params, accessToken: token)
             }
         }
+        #else
+        Logger.error("subscribeSimulated is disabled in Release", category: .data)
+        #endif
     }
     
     func cancelAutoRenew(accessToken: String?) {
-        guard let userId = KeychainManager.get(key: "user_id") else { return }
-        
-        // Store in Keychain (secure)
+        guard KeychainManager.get(key: "user_id") != nil else { return }
         try? KeychainManager.save(key: "subscription_autorenew", bool: false)
-        
-        if let token = accessToken {
-            let periodEnd = getSubscriptionPeriodEnd()
-            let now = Date()
-            let status = (periodEnd != nil && now < periodEnd!) ? "in_grace" : "expired"
-            Task {
-                let params = SubscriptionUpsertParams(
-                    userId: userId,
-                    plan: "unlimited",
-                    status: status,
-                    autoRenew: false,
-                    cancelAtPeriodEnd: true,
-                    lastPaymentAt: getSubscriptionLastPayment() ?? now,
-                    currentPeriodEnd: periodEnd ?? now,
-                    priceCents: 599,
-                    currency: "EUR"
-                )
-                try? await subscriptionsClient.upsertSubscription(params: params, accessToken: token)
-            }
-        }
+        _ = accessToken
     }
     
     // MARK: - Account Management
@@ -290,9 +271,16 @@ final class SubscriptionManager {
         if let appleAuthorizationCode, !appleAuthorizationCode.isEmpty {
             req.httpBody = try JSONEncoder().encode(["apple_authorization_code": appleAuthorizationCode])
         }
-        let (_, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
+        }
+        guard (200...299).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        let decoded = try JSONDecoder().decode(AccountDeletionAPIResponse.self, from: data)
+        guard decoded.status == "deleted" else {
+            throw URLError(.cannotParseResponse)
         }
     }
     
@@ -332,4 +320,8 @@ final class SubscriptionManager {
             }
         }
     }
+}
+
+private struct AccountDeletionAPIResponse: Decodable {
+    let status: String
 }

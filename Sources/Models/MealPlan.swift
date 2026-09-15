@@ -50,15 +50,49 @@ struct SavedMealPlanItem: Identifiable, Codable, Equatable {
     let nutrition_target: MealPlanNutritionTargets?
 }
 
+struct MealPlanMealPreference: Codable, Equatable {
+    var slot: String
+    var override_diets: Bool
+    var categories: [String]
+    var spicy_level: Int?
+}
+
 enum MealPlanSlot {
+    static let selectable: [String] = [
+        "breakfast",
+        "brunch",
+        "lunch",
+        "dinner",
+        "morning_snack",
+        "afternoon_snack",
+        "evening_snack",
+        "snack",
+        "protein_snack",
+        "dessert",
+        "bedtime",
+        "pre_workout",
+        "intra_workout",
+        "post_workout"
+    ]
+
+    static let defaultSelection: [String] = ["breakfast", "lunch", "dinner"]
+
     static func localizedTitle(_ slot: String) -> String {
         switch slot {
         case "breakfast": return L.mealplan_slot_breakfast.localized
+        case "brunch": return L.mealplan_slot_brunch.localized
         case "lunch": return L.mealplan_slot_lunch.localized
         case "dinner": return L.mealplan_slot_dinner.localized
         case "morning_snack": return L.mealplan_slot_morningSnack.localized
         case "afternoon_snack": return L.mealplan_slot_afternoonSnack.localized
         case "evening_snack": return L.mealplan_slot_eveningSnack.localized
+        case "snack": return L.mealplan_slot_snack.localized
+        case "protein_snack": return L.mealplan_slot_proteinSnack.localized
+        case "dessert": return L.mealplan_slot_dessert.localized
+        case "bedtime": return L.mealplan_slot_bedtime.localized
+        case "pre_workout": return L.mealplan_slot_preWorkout.localized
+        case "intra_workout": return L.mealplan_slot_intraWorkout.localized
+        case "post_workout": return L.mealplan_slot_postWorkout.localized
         default: return slot
         }
     }

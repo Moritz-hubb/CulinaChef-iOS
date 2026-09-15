@@ -91,11 +91,10 @@ final class RevenueCatManager: NSObject, ObservableObject {
         }
     }
     
+    /// Only the named Unlimited entitlement unlocks premium UI. Other active
+    /// entitlements or Store subscriptions must not grant access.
     static func hasActiveSubscription(_ info: CustomerInfo) -> Bool {
-        if info.entitlements[unlimitedEntitlementID]?.isActive == true { return true }
-        if !info.entitlements.active.isEmpty { return true }
-        if info.subscriptionsByProductIdentifier.values.contains(where: \.isActive) { return true }
-        return !info.activeSubscriptions.isEmpty
+        info.entitlements[unlimitedEntitlementID]?.isActive == true
     }
     
     var isSubscribed: Bool {
@@ -147,7 +146,7 @@ final class RevenueCatManager: NSObject, ObservableObject {
            let storeId = info.subscriptionsByProductIdentifier[productId]?.storeTransactionId {
             return storeId
         }
-        return info.subscriptionsByProductIdentifier.values.first { $0.isActive }?.storeTransactionId
+        return nil
     }
     
     func loadOfferings() async {

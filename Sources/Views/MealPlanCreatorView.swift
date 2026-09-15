@@ -5,7 +5,7 @@ struct MealPlanCreatorView: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @FocusState private var isFocused: Bool
 
-    @State private var mealCount: Int = 3
+    @State private var selectedSlots: [String] = MealPlanSlot.defaultSelection
     @State private var notes: String = ""
     @State private var nutritionModeExact = false
 
@@ -25,6 +25,8 @@ struct MealPlanCreatorView: View {
     @State private var selectedCategories: Set<String> = []
     @State private var spicyLevel: Double = 2
     @State private var tastePreferences: [String: Bool] = [:]
+    @State private var slotPrefs: [String: MealSlotPrefState] = [:]
+    @State private var expandedSlotPrefs: Set<String> = []
 
     @State private var generating = false
     @State private var error: String?
@@ -44,6 +46,10 @@ struct MealPlanCreatorView: View {
             L.category_halal.localized,
             L.category_kosher.localized
         ]
+    }
+
+    private var spicyLabels: [String] {
+        [L.spicy_mild.localized, L.spicy_normal.localized, L.spicy_hot.localized, L.spicy_veryHot.localized]
     }
 
     private var tastePreferenceKeys: [String] {
@@ -88,21 +94,18 @@ struct MealPlanCreatorView: View {
     private var form: some View {
         ScrollView {
             VStack(spacing: 14) {
-                HStack {
-                    GroupBoxLabel(L.mealplan_mealsCount.localized)
-                    Spacer()
-                    HStack(spacing: 8) {
-                        Button(action: { if mealCount > 1 { mealCount -= 1 } }) {
-                            Image(systemName: "minus.circle.fill").foregroundStyle(.white).font(.title3)
-                        }
-                        Text(String(mealCount))
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(minWidth: 28)
-                        Button(action: { if mealCount < 6 { mealCount += 1 } }) {
-                            Image(systemName: "plus.circle.fill").foregroundStyle(.white).font(.title3)
-                        }
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        GroupBoxLabel(L.mealplan_mealsCount.localized)
+                        Spacer()
+                        Text("\(selectedSlots.count)/6")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.85))
                     }
+                    Text(L.mealplan_mealsHint.localized)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.62))
+                    MealSlotChips(selected: $selectedSlots)
                 }
 
                 GroupBoxLabel(L.mealplan_notes.localized)
@@ -195,7 +198,7 @@ struct MealPlanCreatorView: View {
                     HStack {
                         Text(L.label_spicyLevel.localized).font(.callout).foregroundStyle(.white)
                         Spacer()
-                        Text([L.spicy_mild.localized, L.spicy_normal.localized, L.spicy_hot.localized, L.spicy_veryHot.localized][Int(spicyLevel)])
+                        Text(spicyLabels[Int(spicyLevel)])
                             .font(.callout.weight(.medium))
                             .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
                     }
@@ -212,6 +215,31 @@ struct MealPlanCreatorView: View {
                 }
                 .padding(12)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 10) {
+                    GroupBoxLabel(L.mealplan_perMealPrefs.localized)
+                    Text(L.mealplan_perMealPrefsHint.localized)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.62))
+                    ForEach(selectedSlots, id: \.self) { slot in
+                        MealSlotPreferenceCard(
+                            slot: slot,
+                            categoryOptions: categoryOptions,
+                            disabledCategories: disabledMacroCategories,
+                            spicyLabels: spicyLabels,
+                            state: Binding(
+                                get: { slotPrefs[slot] ?? MealSlotPrefState() },
+                                set: { slotPrefs[slot] = $0 }
+                            ),
+                            expanded: Binding(
+                                get: { expandedSlotPrefs.contains(slot) },
+                                set: { isOn in
+                                    if isOn { expandedSlotPrefs.insert(slot) } else { expandedSlotPrefs.remove(slot) }
+                                }
+                            )
+                        )
+                    }
+                }
 
                 Button(action: { Task { await generate() } }) {
                     HStack { Image(systemName: "wand.and.stars"); Text(L.mealplan_generate.localized) }
@@ -237,6 +265,11 @@ struct MealPlanCreatorView: View {
             .onChange(of: nutritionSpecified) { _, specified in
                 if specified { selectedCategories.subtract(macroCategoryLabels) }
             }
+            .onChange(of: selectedSlots) { _, slots in
+                let keep = Set(slots)
+                slotPrefs = slotPrefs.filter { keep.contains($0.key) }
+                expandedSlotPrefs = expandedSlotPrefs.intersection(keep)
+            }
         }
     }
 
@@ -259,7 +292,6 @@ struct MealPlanCreatorView: View {
         if !selectedCategories.subtracting(disabledMacroCategories).isEmpty {
             parts.append(L.creator_dietsLabel.localized + " " + selectedCategories.subtracting(disabledMacroCategories).sorted().joined(separator: ", "))
         }
-        let spicyLabels = [L.spicy_mild.localized, L.spicy_normal.localized, L.spicy_hot.localized, L.spicy_veryHot.localized]
         parts.append(L.creator_spicyLabel.localized + " " + spicyLabels[Int(spicyLevel)])
         var tastes: [String] = []
         if tastePreferences[L.taste_sweet.localized] == true { tastes.append(L.taste_sweet.localized) }
@@ -295,6 +327,21 @@ struct MealPlanCreatorView: View {
         return Array(cats)
     }
 
+    private func mealPreferencesPayload() -> [MealPlanMealPreference] {
+        selectedSlots.compactMap { slot in
+            let state = slotPrefs[slot] ?? MealSlotPrefState()
+            guard state.customized || state.spicyOverride != nil else { return nil }
+            var cats = state.categories
+            if nutritionSpecified { cats.subtract(macroCategoryLabels) }
+            return MealPlanMealPreference(
+                slot: slot,
+                override_diets: state.customized,
+                categories: state.customized ? Array(cats) : [],
+                spicy_level: state.spicyOverride
+            )
+        }
+    }
+
     private var dailyCalories: Double {
         max(0, Double(Int(calories) ?? 0))
     }
@@ -308,7 +355,7 @@ struct MealPlanCreatorView: View {
     }
 
     private var canGeneratePlan: Bool {
-        !generating && (!nutritionModeExact || macrosSumIs100)
+        !generating && !selectedSlots.isEmpty && (!nutritionModeExact || macrosSumIs100)
     }
 
     private var proteinGrams: Int {
@@ -387,14 +434,16 @@ struct MealPlanCreatorView: View {
         let trimmedNotes = String(notes.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
         do {
             let plan = try await openai.generateMealPlan(
-                mealCount: mealCount,
+                mealCount: selectedSlots.count,
+                slots: selectedSlots,
                 nutritionMode: nutritionModeExact ? "exact" : "range",
                 nutritionTargets: currentTargets(),
                 categories: categoriesForGeneration,
+                mealPreferences: mealPreferencesPayload(),
                 dietaryContext: fullContext.isEmpty ? nil : fullContext,
                 notes: trimmedNotes.isEmpty ? nil : trimmedNotes
             )
-            guard plan.meals.count == mealCount, plan.meals.allSatisfy({ !$0.recipe.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+            guard plan.meals.count == selectedSlots.count, plan.meals.allSatisfy({ !$0.recipe.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
                 self.error = L.errorInvalidRecipeRequest.localized
                 return
             }
@@ -404,6 +453,161 @@ struct MealPlanCreatorView: View {
         } catch {
             if app.handleAISubscriptionDenied(error) { return }
             self.error = ErrorMessageHelper.userFriendlyMessage(from: error)
+        }
+    }
+}
+
+private struct MealSlotPrefState: Equatable {
+    var customized = false
+    var categories: Set<String> = []
+    var spicyOverride: Int? = nil
+}
+
+private struct MealSlotPreferenceCard: View {
+    let slot: String
+    let categoryOptions: [String]
+    let disabledCategories: Set<String>
+    let spicyLabels: [String]
+    @Binding var state: MealSlotPrefState
+    @Binding var expanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                expanded.toggle()
+            } label: {
+                HStack {
+                    Text(MealPlanSlot.localizedTitle(slot))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    if state.customized || state.spicyOverride != nil {
+                        Text(L.mealplan_prefCustom.localized)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                    }
+                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+            .buttonStyle(.plain)
+
+            if expanded {
+                HStack(spacing: 8) {
+                    prefChip(title: L.mealplan_prefInherit.localized, isOn: !state.customized) {
+                        state.customized = false
+                        state.categories = []
+                    }
+                    prefChip(title: L.mealplan_prefCustom.localized, isOn: state.customized) {
+                        state.customized = true
+                    }
+                }
+                if state.customized {
+                    WrapChips(options: categoryOptions, selection: $state.categories, disabled: disabledCategories)
+                }
+
+                Text(L.label_spicyLevel.localized)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8)], spacing: 8) {
+                    prefChip(title: L.mealplan_prefInherit.localized, isOn: state.spicyOverride == nil) {
+                        state.spicyOverride = nil
+                    }
+                    ForEach(Array(spicyLabels.enumerated()), id: \.offset) { index, title in
+                        prefChip(title: title, isOn: state.spicyOverride == index) {
+                            state.spicyOverride = index
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func prefChip(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
+                .background(
+                    isOn
+                    ? AnyShapeStyle(LinearGradient(
+                        colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    : AnyShapeStyle(Color.white.opacity(0.08))
+                )
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.white.opacity(isOn ? 0 : 0.15), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct MealSlotChips: View {
+    @Binding var selected: [String]
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)], spacing: 8) {
+            ForEach(MealPlanSlot.selectable, id: \.self) { slot in
+                let isOn = selected.contains(slot)
+                Button {
+                    toggle(slot)
+                } label: {
+                    Text(MealPlanSlot.localizedTitle(slot))
+                        .font(.caption.weight(.semibold))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 9)
+                        .background(chipBackground(isOn: isOn))
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.white.opacity(isOn ? 0.0 : 0.15), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func toggle(_ slot: String) {
+        if let index = selected.firstIndex(of: slot) {
+            if selected.count > 1 {
+                selected.remove(at: index)
+            }
+            return
+        }
+        guard selected.count < 6 else { return }
+        selected.append(slot)
+        selected.sort { lhs, rhs in
+            let order = MealPlanSlot.selectable
+            return (order.firstIndex(of: lhs) ?? 0) < (order.firstIndex(of: rhs) ?? 0)
+        }
+    }
+
+    @ViewBuilder
+    private func chipBackground(isOn: Bool) -> some View {
+        if isOn {
+            LinearGradient(
+                colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else {
+            Color.white.opacity(0.08)
         }
     }
 }

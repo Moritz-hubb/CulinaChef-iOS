@@ -128,7 +128,6 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
-				<string>NSPrivacyCollectedDataTypePurposeDevelopersAdvertising</string>
 			</array>
 		</dict>
 	</array>

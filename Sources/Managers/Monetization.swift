@@ -162,8 +162,8 @@ final class Monetization {
         applySuperwallSubscriptionStatus(from: RevenueCatManager.shared.customerInfo)
     }
     
-    /// Superwall only skips paywalls when `subscriptionStatus` is active. Use any-environment
-    /// RevenueCat entitlements (sandbox + production) plus active Store subscriptions.
+    /// Superwall only skips paywalls when `subscriptionStatus` is active.
+    /// Status follows the named Unlimited entitlement only.
     func applySuperwallSubscriptionStatus(from info: RevenueCat.CustomerInfo?) {
         guard Config.isSuperwallConfigured else { return }
         let status = superwallStatus(from: info)
@@ -179,11 +179,8 @@ final class Monetization {
     
     private func superwallStatus(from info: RevenueCat.CustomerInfo?) -> SuperwallKit.SubscriptionStatus {
         guard let info else { return .unknown }
-        var entitlements = Set(info.entitlements.active.keys.map { SuperwallKit.Entitlement(id: $0) })
-        if entitlements.isEmpty, RevenueCatManager.hasActiveSubscription(info) {
-            entitlements.insert(SuperwallKit.Entitlement(id: RevenueCatManager.unlimitedEntitlementID))
-        }
-        return entitlements.isEmpty ? .inactive : .active(entitlements)
+        guard RevenueCatManager.hasActiveSubscription(info) else { return .inactive }
+        return .active(Set([SuperwallKit.Entitlement(id: RevenueCatManager.unlimitedEntitlementID)]))
     }
     
     func logOut() async {
@@ -243,8 +240,7 @@ final class Monetization {
     }
     
     private func hasBlockingActiveSubscription() -> Bool {
-        if RevenueCatManager.shared.isSubscribed { return true }
-        return Superwall.shared.subscriptionStatus.isActive
+        RevenueCatManager.shared.isSubscribed
     }
     
     /// Shows the Superwall campaign assigned to this placement (no-op if the user is already entitled).

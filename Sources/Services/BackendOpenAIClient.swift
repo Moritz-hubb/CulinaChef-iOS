@@ -259,9 +259,11 @@ final class BackendOpenAIClient {
 
     func generateMealPlan(
         mealCount: Int,
+        slots: [String],
         nutritionMode: String,
         nutritionTargets: MealPlanNutritionTargets,
         categories: [String],
+        mealPreferences: [MealPlanMealPreference] = [],
         dietaryContext: String?,
         notes: String?
     ) async throws -> GeneratedMealPlan {
@@ -271,19 +273,24 @@ final class BackendOpenAIClient {
 
         struct Request: Encodable {
             let meal_count: Int
+            let slots: [String]
             let nutrition_mode: String
             let nutrition_targets: MealPlanNutritionTargets
             let categories: [String]
+            let meal_preferences: [MealPlanMealPreference]
             let dietary_context: String?
             let notes: String?
             let servings: Int
         }
 
+        let cleanedSlots = Array(slots.prefix(6))
         let body = Request(
-            meal_count: min(max(mealCount, 1), 6),
+            meal_count: min(max(cleanedSlots.isEmpty ? mealCount : cleanedSlots.count, 1), 6),
+            slots: cleanedSlots,
             nutrition_mode: nutritionMode,
             nutrition_targets: nutritionTargets,
             categories: Array(categories.prefix(9)),
+            meal_preferences: Array(mealPreferences.prefix(6)),
             dietary_context: dietaryContext,
             notes: notes,
             servings: 1

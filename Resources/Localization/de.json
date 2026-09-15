@@ -726,7 +726,7 @@
   "auth.resetPasswordResendEmail": "E-Mail erneut senden",
   "auth.resetPasswordResendEmailSuccess": "E-Mail wurde erneut gesendet",
   "auth.resetPasswordCheckStatus": "Status prüfen",
-  "auth.resetPasswordLinkClicked": "Bitte klicke auf den Link in der E-Mail. Falls der Link zu einer Webseite führt, kopiere die URL aus der Adressleiste und öffne sie in der App.",
+  "auth.resetPasswordLinkClicked": "Öffne den Link aus der E-Mail auf diesem iPhone. CulinaAi öffnet sich automatisch. Kopiere den Link nicht.",
   "legal.fairUseCheckbox": "Ich habe die Fair Use Policy gelesen und akzeptiere sie",
   "legal.fairUseCheckboxLink": "Fair Use Policy",
   "legal.fairUseCheckboxRequired": "Bitte akzeptiere die Fair Use Policy, bevor du fortfährst",
@@ -957,7 +957,9 @@
   "mealplan.bookPlans": "Pläne",
   "mealplan.subtitle": "Plane deinen Tag: wähle die Mahlzeitenarten, Vorlieben und Nährwerte. Die KI verteilt die Werte und erstellt die Rezepte.",
   "mealplan.mealsCount": "Mahlzeiten",
-  "mealplan.mealsHint": "Wähle bis zu 6 Arten. Training, Snacks, Dessert und Schlafenszeit steuern, wohin Protein, Carbs und Kalorien gehen.",
+  "mealplan.mealsHint": "Wähle die Mahlzeiten für den Tag. Insgesamt höchstens 6.",
+  "mealplan.snacksCount": "Zwischenmahlzeiten",
+  "mealplan.snacksHint": "Optional, bis zu 3. Sie werden über den Tag verteilt.",
   "mealplan.notes": "Wünsche",
   "mealplan.notesPlaceholder": "z. B. viel Gemüse…",
   "mealplan.nutritionMode": "Nährwerte für den Tag",
@@ -994,7 +996,7 @@
   "mealplan.slot.bedtime": "Schlafenszeit",
   "mealplan.slot.intraWorkout": "Intra-Workout",
   "mealplan.perMealPrefs": "Pro Mahlzeit",
-  "mealplan.perMealPrefsHint": "Optional. Standard gilt für alle. Du kannst einzelne Mahlzeiten abweichend machen, z. B. nur eine vegetarisch oder scharf.",
+  "mealplan.perMealPrefsHint": "Optional. Standard gilt für alle. Du kannst einzelne Mahlzeiten abweichend machen, z. B. vegetarisch, scharf oder mit anderem Geschmack.",
   "mealplan.prefInherit": "Wie der Tag",
   "mealplan.prefCustom": "Eigene"
 }

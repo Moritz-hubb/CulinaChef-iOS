@@ -6,6 +6,7 @@ struct MealPlanCreatorView: View {
     @FocusState private var isFocused: Bool
 
     @State private var selectedSlots: [String] = MealPlanSlot.defaultSelection
+    @State private var snackCount: Int = 0
     @State private var notes: String = ""
     @State private var nutritionModeExact = false
 
@@ -98,14 +99,45 @@ struct MealPlanCreatorView: View {
                     HStack {
                         GroupBoxLabel(L.mealplan_mealsCount.localized)
                         Spacer()
-                        Text("\(selectedSlots.count)/6")
+                        Text("\(plannedSlots.count)/6")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.85))
                     }
                     Text(L.mealplan_mealsHint.localized)
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.62))
-                    MealSlotChips(selected: $selectedSlots)
+                    MealSlotChips(selected: $selectedSlots, reservedCount: snackCount)
+                    HStack {
+                        Text(L.mealplan_snacksCount.localized)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        HStack(spacing: 8) {
+                            Button {
+                                if snackCount > 0 { snackCount -= 1 }
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .foregroundStyle(.white)
+                                    .font(.title3)
+                            }
+                            .disabled(snackCount == 0)
+                            Text("\(snackCount)")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(minWidth: 28)
+                            Button {
+                                if snackCount < maxSnackCount { snackCount += 1 }
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundStyle(.white)
+                                    .font(.title3)
+                            }
+                            .disabled(snackCount >= maxSnackCount)
+                        }
+                    }
+                    Text(L.mealplan_snacksHint.localized)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.62))
                 }
 
                 GroupBoxLabel(L.mealplan_notes.localized)
@@ -221,12 +253,13 @@ struct MealPlanCreatorView: View {
                     Text(L.mealplan_perMealPrefsHint.localized)
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.62))
-                    ForEach(selectedSlots, id: \.self) { slot in
+                    ForEach(plannedSlots, id: \.self) { slot in
                         MealSlotPreferenceCard(
                             slot: slot,
                             categoryOptions: categoryOptions,
                             disabledCategories: disabledMacroCategories,
                             spicyLabels: spicyLabels,
+                            tasteKeys: tastePreferenceKeys,
                             state: Binding(
                                 get: { slotPrefs[slot] ?? MealSlotPrefState() },
                                 set: { slotPrefs[slot] = $0 }
@@ -266,9 +299,11 @@ struct MealPlanCreatorView: View {
                 if specified { selectedCategories.subtract(macroCategoryLabels) }
             }
             .onChange(of: selectedSlots) { _, slots in
-                let keep = Set(slots)
-                slotPrefs = slotPrefs.filter { keep.contains($0.key) }
-                expandedSlotPrefs = expandedSlotPrefs.intersection(keep)
+                pruneSlotPrefs(keep: MealPlanSlot.assembled(types: slots, snackCount: snackCount))
+                if snackCount > maxSnackCount { snackCount = maxSnackCount }
+            }
+            .onChange(of: snackCount) { _, count in
+                pruneSlotPrefs(keep: MealPlanSlot.assembled(types: selectedSlots, snackCount: count))
             }
         }
     }
@@ -328,16 +363,18 @@ struct MealPlanCreatorView: View {
     }
 
     private func mealPreferencesPayload() -> [MealPlanMealPreference] {
-        selectedSlots.compactMap { slot in
+        plannedSlots.compactMap { slot in
             let state = slotPrefs[slot] ?? MealSlotPrefState()
-            guard state.customized || state.spicyOverride != nil else { return nil }
+            guard state.customized || state.spicyOverride != nil || state.overrideTastes else { return nil }
             var cats = state.categories
             if nutritionSpecified { cats.subtract(macroCategoryLabels) }
             return MealPlanMealPreference(
                 slot: slot,
                 override_diets: state.customized,
                 categories: state.customized ? Array(cats) : [],
-                spicy_level: state.spicyOverride
+                spicy_level: state.spicyOverride,
+                override_tastes: state.overrideTastes,
+                tastes: state.overrideTastes ? tastePreferenceKeys.filter { state.tastes[$0] == true } : []
             )
         }
     }
@@ -354,8 +391,22 @@ struct MealPlanCreatorView: View {
         macrosTotalPercent == 100
     }
 
+    private var plannedSlots: [String] {
+        MealPlanSlot.assembled(types: selectedSlots, snackCount: snackCount)
+    }
+
+    private var maxSnackCount: Int {
+        min(MealPlanSlot.maxSnacks, MealPlanSlot.maxMeals - selectedSlots.count)
+    }
+
+    private func pruneSlotPrefs(keep: [String]) {
+        let keepSet = Set(keep)
+        slotPrefs = slotPrefs.filter { keepSet.contains($0.key) }
+        expandedSlotPrefs = expandedSlotPrefs.intersection(keepSet)
+    }
+
     private var canGeneratePlan: Bool {
-        !generating && !selectedSlots.isEmpty && (!nutritionModeExact || macrosSumIs100)
+        !generating && !plannedSlots.isEmpty && (!nutritionModeExact || macrosSumIs100)
     }
 
     private var proteinGrams: Int {
@@ -434,8 +485,8 @@ struct MealPlanCreatorView: View {
         let trimmedNotes = String(notes.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
         do {
             let plan = try await openai.generateMealPlan(
-                mealCount: selectedSlots.count,
-                slots: selectedSlots,
+                mealCount: plannedSlots.count,
+                slots: plannedSlots,
                 nutritionMode: nutritionModeExact ? "exact" : "range",
                 nutritionTargets: currentTargets(),
                 categories: categoriesForGeneration,
@@ -443,7 +494,7 @@ struct MealPlanCreatorView: View {
                 dietaryContext: fullContext.isEmpty ? nil : fullContext,
                 notes: trimmedNotes.isEmpty ? nil : trimmedNotes
             )
-            guard plan.meals.count == selectedSlots.count, plan.meals.allSatisfy({ !$0.recipe.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+            guard plan.meals.count == plannedSlots.count, plan.meals.allSatisfy({ !$0.recipe.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
                 self.error = L.errorInvalidRecipeRequest.localized
                 return
             }
@@ -461,6 +512,8 @@ private struct MealSlotPrefState: Equatable {
     var customized = false
     var categories: Set<String> = []
     var spicyOverride: Int? = nil
+    var overrideTastes = false
+    var tastes: [String: Bool] = [:]
 }
 
 private struct MealSlotPreferenceCard: View {
@@ -468,6 +521,7 @@ private struct MealSlotPreferenceCard: View {
     let categoryOptions: [String]
     let disabledCategories: Set<String>
     let spicyLabels: [String]
+    let tasteKeys: [String]
     @Binding var state: MealSlotPrefState
     @Binding var expanded: Bool
 
@@ -481,7 +535,7 @@ private struct MealSlotPreferenceCard: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                     Spacer()
-                    if state.customized || state.spicyOverride != nil {
+                    if state.customized || state.spicyOverride != nil || state.overrideTastes {
                         Text(L.mealplan_prefCustom.localized)
                             .font(.caption.weight(.semibold))
                             .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
@@ -517,6 +571,32 @@ private struct MealSlotPreferenceCard: View {
                     ForEach(Array(spicyLabels.enumerated()), id: \.offset) { index, title in
                         prefChip(title: title, isOn: state.spicyOverride == index) {
                             state.spicyOverride = index
+                        }
+                    }
+                }
+
+                Text(L.label_tastePreferences.localized)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                HStack(spacing: 8) {
+                    prefChip(title: L.mealplan_prefInherit.localized, isOn: !state.overrideTastes) {
+                        state.overrideTastes = false
+                        state.tastes = [:]
+                    }
+                    prefChip(title: L.mealplan_prefCustom.localized, isOn: state.overrideTastes) {
+                        state.overrideTastes = true
+                    }
+                }
+                if state.overrideTastes {
+                    VStack(spacing: 8) {
+                        ForEach(tasteKeys, id: \.self) { key in
+                            Toggle(key, isOn: Binding(
+                                get: { state.tastes[key] ?? false },
+                                set: { state.tastes[key] = $0 }
+                            ))
+                            .font(.callout)
+                            .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
+                            .foregroundStyle(.white)
                         }
                     }
                 }
@@ -556,6 +636,7 @@ private struct MealSlotPreferenceCard: View {
 
 private struct MealSlotChips: View {
     @Binding var selected: [String]
+    var reservedCount: Int = 0
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)], spacing: 8) {
@@ -585,15 +666,15 @@ private struct MealSlotChips: View {
 
     private func toggle(_ slot: String) {
         if let index = selected.firstIndex(of: slot) {
-            if selected.count > 1 {
+            if selected.count + reservedCount > 1 {
                 selected.remove(at: index)
             }
             return
         }
-        guard selected.count < 6 else { return }
+        guard selected.count + reservedCount < MealPlanSlot.maxMeals else { return }
         selected.append(slot)
         selected.sort { lhs, rhs in
-            let order = MealPlanSlot.selectable
+            let order = MealPlanSlot.dayOrder
             return (order.firstIndex(of: lhs) ?? 0) < (order.firstIndex(of: rhs) ?? 0)
         }
     }

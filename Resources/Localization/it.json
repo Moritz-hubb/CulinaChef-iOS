@@ -726,7 +726,7 @@
   "auth.resetPasswordResendEmail": "Reinvia email",
   "auth.resetPasswordResendEmailSuccess": "Email reinviata",
   "auth.resetPasswordCheckStatus": "Verifica stato",
-  "auth.resetPasswordLinkClicked": "Fai clic sul link nell'email. Se il link apre un sito web, copia l'URL dalla barra degli indirizzi e aprilo nell'app.",
+  "auth.resetPasswordLinkClicked": "Apri il link dell'email su questo iPhone. CulinaAi si apre automaticamente. Non copiare il link.",
   "legal.fairUseCheckbox": "Ho letto e accetto la Politica di utilizzo equo",
   "legal.fairUseCheckboxLink": "Politica di utilizzo equo",
   "legal.fairUseCheckboxRequired": "Si prega di accettare la Politica di utilizzo equo prima di continuare",
@@ -957,7 +957,9 @@
   "mealplan.bookPlans": "Piani",
   "mealplan.subtitle": "Pianifica la giornata: scegli i tipi di pasto, preferenze e nutrienti. L’IA ripartisce i valori e crea le ricette.",
   "mealplan.mealsCount": "Pasti",
-  "mealplan.mealsHint": "Scegli fino a 6 tipi. Allenamento, spuntini, dessert e sera guidano proteine, carboidrati e calorie.",
+  "mealplan.mealsHint": "Scegli i pasti della giornata. Al massimo 6 in totale.",
+  "mealplan.snacksCount": "Spuntini",
+  "mealplan.snacksHint": "Opzionale, fino a 3. Vengono distribuiti nella giornata.",
   "mealplan.notes": "Note",
   "mealplan.notesPlaceholder": "es. tante verdure…",
   "mealplan.nutritionMode": "Nutrienti del giorno",
@@ -994,7 +996,7 @@
   "mealplan.slot.bedtime": "Prima di dormire",
   "mealplan.slot.intraWorkout": "Intra-workout",
   "mealplan.perMealPrefs": "Per pasto",
-  "mealplan.perMealPrefsHint": "Opzionale. Le impostazioni del giorno valgono per tutti. Puoi cambiarne uno, es. solo vegetariano o piccante.",
+  "mealplan.perMealPrefsHint": "Opzionale. Le impostazioni del giorno valgono per tutti. Puoi cambiare dieta, piccante o gusto di un pasto.",
   "mealplan.prefInherit": "Come il giorno",
   "mealplan.prefCustom": "Proprio"
 }

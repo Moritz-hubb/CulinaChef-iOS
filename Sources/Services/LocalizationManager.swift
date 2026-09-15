@@ -1587,6 +1587,8 @@ enum L {
     static let mealplan_subtitle = "mealplan.subtitle"
     static let mealplan_mealsCount = "mealplan.mealsCount"
     static let mealplan_mealsHint = "mealplan.mealsHint"
+    static let mealplan_snacksCount = "mealplan.snacksCount"
+    static let mealplan_snacksHint = "mealplan.snacksHint"
     static let mealplan_notes = "mealplan.notes"
     static let mealplan_notesPlaceholder = "mealplan.notesPlaceholder"
     static let mealplan_nutritionMode = "mealplan.nutritionMode"

@@ -36,6 +36,17 @@ struct AuthError: Codable {
     let message: String
 }
 
+private struct RecoverRequestBody: Encodable {
+    let email: String
+    let code_challenge: String
+    let code_challenge_method: String
+}
+
+private struct PKCETokenRequest: Encodable {
+    let auth_code: String
+    let code_verifier: String
+}
+
 /// Client für alle Authentifizierungs-Flows gegen Supabase (E-Mail, Passwort, Apple, Refresh).
 ///
 /// Verantwortlichkeiten:
@@ -263,34 +274,86 @@ final class SupabaseAuthClient {
     /// - Parameter email: E-Mail-Adresse des Nutzers, für die das Passwort zurückgesetzt werden soll.
     /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
     func resetPasswordForEmail(email: String) async throws {
+        let verifier = PKCE.generateCodeVerifier()
+        try KeychainManager.save(key: PasswordResetLink.codeVerifierKeychainKey, value: verifier)
+
         var url = baseURL
         url.append(path: "/auth/v1/recover")
-        
-        var req = URLRequest(url: url)
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "redirect_to", value: Config.passwordResetRedirectURL.absoluteString)
+        ]
+        guard let recoverURL = components?.url else {
+            throw URLError(.badURL)
+        }
+
+        var req = URLRequest(url: recoverURL)
         req.httpMethod = "POST"
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         req.addValue(apiKey, forHTTPHeaderField: "apikey")
-        
-        // Supabase requires redirectTo URL for password reset
-        // For iOS apps, we can use a deep link or a custom URL scheme
-        let redirectTo = "culinachef://reset-password"
-        let body = ["email": email, "redirect_to": redirectTo]
+
+        let body = RecoverRequestBody(
+            email: email,
+            code_challenge: PKCE.codeChallenge(for: verifier),
+            code_challenge_method: "s256"
+        )
         req.httpBody = try JSONEncoder().encode(body)
-        
+
         let (data, response) = try await SecureURLSession.shared.data(for: req)
-        
+
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
-        
+
         // Supabase returns 200 on success (even if email doesn't exist, for security)
         if http.statusCode == 200 {
             return
         } else {
+            KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
             let error = try? JSONDecoder().decode(AuthError.self, from: data)
             throw NSError(domain: "SupabaseAuth", code: http.statusCode,
                          userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordResetEmailFailed.localized])
         }
+    }
+
+    /// Exchanges a one-time PKCE `code` from the Universal Link for a recovery session.
+    func exchangePKCECode(_ code: String) async throws -> AuthResponse {
+        guard let verifier = KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey),
+              !verifier.isEmpty else {
+            throw NSError(
+                domain: "SupabaseAuth",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: L.resetPasswordError.localized]
+            )
+        }
+
+        var url = baseURL
+        url.append(path: "/auth/v1/token")
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "grant_type", value: "pkce")]
+        guard let tokenURL = components?.url else {
+            throw URLError(.badURL)
+        }
+
+        var req = URLRequest(url: tokenURL)
+        req.httpMethod = "POST"
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.addValue(apiKey, forHTTPHeaderField: "apikey")
+        req.httpBody = try JSONEncoder().encode(PKCETokenRequest(auth_code: code, code_verifier: verifier))
+
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
+        KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
+
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        if http.statusCode == 200 {
+            return try JSONDecoder().decode(AuthResponse.self, from: data)
+        }
+        let error = try? JSONDecoder().decode(AuthError.self, from: data)
+        throw NSError(domain: "SupabaseAuth", code: http.statusCode,
+                     userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordResetEmailFailed.localized])
     }
     
     // MARK: - Update Password (from reset token)

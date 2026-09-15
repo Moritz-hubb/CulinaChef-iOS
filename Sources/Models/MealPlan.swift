@@ -55,6 +55,8 @@ struct MealPlanMealPreference: Codable, Equatable {
     var override_diets: Bool
     var categories: [String]
     var spicy_level: Int?
+    var override_tastes: Bool
+    var tastes: [String]
 }
 
 enum MealPlanSlot {
@@ -63,10 +65,6 @@ enum MealPlanSlot {
         "brunch",
         "lunch",
         "dinner",
-        "morning_snack",
-        "afternoon_snack",
-        "evening_snack",
-        "snack",
         "protein_snack",
         "dessert",
         "bedtime",
@@ -75,7 +73,42 @@ enum MealPlanSlot {
         "post_workout"
     ]
 
+    static let snackSequence: [String] = [
+        "morning_snack",
+        "afternoon_snack",
+        "evening_snack"
+    ]
+
+    static let dayOrder: [String] = [
+        "breakfast",
+        "brunch",
+        "morning_snack",
+        "pre_workout",
+        "intra_workout",
+        "lunch",
+        "protein_snack",
+        "afternoon_snack",
+        "post_workout",
+        "dinner",
+        "dessert",
+        "evening_snack",
+        "bedtime"
+    ]
+
     static let defaultSelection: [String] = ["breakfast", "lunch", "dinner"]
+    static let maxMeals = 6
+    static let maxSnacks = 3
+
+    static func snackSlots(count: Int) -> [String] {
+        Array(snackSequence.prefix(max(0, min(maxSnacks, count))))
+    }
+
+    static func assembled(types: [String], snackCount: Int) -> [String] {
+        let combined = types + snackSlots(count: snackCount)
+        return combined.sorted { lhs, rhs in
+            (dayOrder.firstIndex(of: lhs) ?? 99) < (dayOrder.firstIndex(of: rhs) ?? 99)
+        }
+    }
 
     static func localizedTitle(_ slot: String) -> String {
         switch slot {

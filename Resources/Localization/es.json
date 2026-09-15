@@ -726,7 +726,7 @@
   "auth.resetPasswordResendEmail": "Reenviar correo",
   "auth.resetPasswordResendEmailSuccess": "El correo ha sido reenviado",
   "auth.resetPasswordCheckStatus": "Verificar estado",
-  "auth.resetPasswordLinkClicked": "Por favor, haz clic en el enlace del correo. Si el enlace abre un sitio web, copia la URL de la barra de direcciones y ábrela en la aplicación.",
+  "auth.resetPasswordLinkClicked": "Abre el enlace del correo en este iPhone. CulinaAi se abre automáticamente. No copies el enlace.",
   "legal.fairUseCheckbox": "He leído y acepto la Política de uso justo",
   "legal.fairUseCheckboxLink": "Política de uso justo",
   "legal.fairUseCheckboxRequired": "Por favor, acepta la Política de uso justo antes de continuar",
@@ -957,7 +957,9 @@
   "mealplan.bookPlans": "Planes",
   "mealplan.subtitle": "Planifica el día: elige tipos de comida, preferencias y nutrientes. La IA reparte los valores y crea las recetas.",
   "mealplan.mealsCount": "Comidas",
-  "mealplan.mealsHint": "Elige hasta 6 tipos. Entrenamiento, tentempiés, postre y noche dirigen proteína, hidratos y calorías.",
+  "mealplan.mealsHint": "Elige las comidas del día. Como máximo 6 en total.",
+  "mealplan.snacksCount": "Tentempiés",
+  "mealplan.snacksHint": "Opcional, hasta 3. Se reparte a lo largo del día.",
   "mealplan.notes": "Notas",
   "mealplan.notesPlaceholder": "p. ej. mucha verdura…",
   "mealplan.nutritionMode": "Nutrientes del día",
@@ -994,7 +996,7 @@
   "mealplan.slot.bedtime": "Antes de dormir",
   "mealplan.slot.intraWorkout": "Intra-entreno",
   "mealplan.perMealPrefs": "Por comida",
-  "mealplan.perMealPrefsHint": "Opcional. Lo del día vale para todas. Puedes cambiar una, p. ej. solo vegetariana o picante.",
+  "mealplan.perMealPrefsHint": "Opcional. Lo del día vale para todas. Puedes cambiar dieta, picante o sabor de una comida.",
   "mealplan.prefInherit": "Como el día",
   "mealplan.prefCustom": "Propio"
 }

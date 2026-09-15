@@ -726,7 +726,7 @@
   "auth.resetPasswordResendEmail": "Resend email",
   "auth.resetPasswordResendEmailSuccess": "Email has been resent",
   "auth.resetPasswordCheckStatus": "Check status",
-  "auth.resetPasswordLinkClicked": "Please click the link in the email. If the link opens a website, copy the URL from the address bar and open it in the app.",
+  "auth.resetPasswordLinkClicked": "Open the link from the email on this iPhone. CulinaAi opens automatically. Do not copy the link.",
   "legal.fairUseCheckbox": "I have read and accept the Fair Use Policy",
   "legal.fairUseCheckboxLink": "Fair Use Policy",
   "legal.fairUseCheckboxRequired": "Please accept the Fair Use Policy before continuing",
@@ -957,7 +957,9 @@
   "mealplan.bookPlans": "Plans",
   "mealplan.subtitle": "Plan your day: pick meal types, preferences, and nutrition. AI splits the targets and creates the recipes.",
   "mealplan.mealsCount": "Meals",
-  "mealplan.mealsHint": "Choose up to 6 types. Training, snacks, dessert, and bedtime steer where protein, carbs, and calories go.",
+  "mealplan.mealsHint": "Pick the meals for the day. Six in total at most.",
+  "mealplan.snacksCount": "Snacks",
+  "mealplan.snacksHint": "Optional, up to 3. They are spread across the day.",
   "mealplan.notes": "Notes",
   "mealplan.notesPlaceholder": "e.g. lots of veg…",
   "mealplan.nutritionMode": "Nutrition for the day",
@@ -994,7 +996,7 @@
   "mealplan.slot.bedtime": "Bedtime",
   "mealplan.slot.intraWorkout": "Intra-workout",
   "mealplan.perMealPrefs": "Per meal",
-  "mealplan.perMealPrefsHint": "Optional. Day defaults apply to all meals. You can override one meal, e.g. make only that one vegetarian or spicy.",
+  "mealplan.perMealPrefsHint": "Optional. Day defaults apply to all meals. You can change one meal’s diet, spice, or taste.",
   "mealplan.prefInherit": "Same as day",
   "mealplan.prefCustom": "Custom"
 }

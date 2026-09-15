@@ -179,61 +179,6 @@ private struct InfoSection: View {
     }
 }
 
-// MARK: - Storage for consent status
-enum OpenAIConsentManager {
-    private static let consentKeyPrefix = "openai_consent_granted_"
-    
-    // Notification name for consent changes
-    static let consentChangedNotification = Notification.Name("OpenAIConsentChanged")
-    
-    // Generate user-specific key to prevent cache bleeding
-    private static func consentKey(for userId: String) -> String {
-        return "\(consentKeyPrefix)\(userId)"
-    }
-    
-    static var hasConsent: Bool {
-        get {
-            // Get consent for current user only
-            guard let userId = KeychainManager.get(key: "user_id") else {
-                return false // No user logged in = no consent
-            }
-            return UserDefaults.standard.bool(forKey: consentKey(for: userId))
-        }
-        set {
-            // Set consent for current user only
-            guard let userId = KeychainManager.get(key: "user_id") else {
-                Logger.debug("[OpenAIConsent] Cannot save consent: no user_id", category: .auth)
-                return
-            }
-            UserDefaults.standard.set(newValue, forKey: consentKey(for: userId))
-            Logger.sensitive("[OpenAIConsent] Consent set to \(newValue) for user \(userId)", category: .auth)
-            
-            // Broadcast change notification
-            NotificationCenter.default.post(
-                name: consentChangedNotification,
-                object: nil,
-                userInfo: ["hasConsent": newValue]
-            )
-        }
-    }
-    
-    static func resetConsent() {
-        guard let userId = KeychainManager.get(key: "user_id") else {
-            Logger.debug("[OpenAIConsent] Cannot reset consent: no user_id", category: .auth)
-            return
-        }
-        UserDefaults.standard.removeObject(forKey: consentKey(for: userId))
-        Logger.sensitive("[OpenAIConsent] Reset consent for user \(userId)", category: .auth)
-        
-        // Broadcast change notification
-        NotificationCenter.default.post(
-            name: consentChangedNotification,
-            object: nil,
-            userInfo: ["hasConsent": false]
-        )
-    }
-}
-
 #Preview {
     OpenAIConsentDialog(
         onAccept: { Logger.debug("[OpenAIConsentDialog] Accepted", category: .ui) },

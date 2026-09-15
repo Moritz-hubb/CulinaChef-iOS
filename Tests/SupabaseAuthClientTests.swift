@@ -314,4 +314,48 @@ final class SupabaseAuthClientTests: XCTestCase {
             XCTAssertTrue(error.localizedDescription.contains("Rate limit"))
         }
     }
+
+    func testResetPasswordForEmailUsesUniversalLinkAndPKCE() async throws {
+        KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
+        var captured: URLRequest?
+        MockURLProtocol.requestHandler = { request in
+            captured = request
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, Data())
+        }
+
+        try await client.resetPasswordForEmail(email: "user@example.com")
+
+        let request = try XCTUnwrap(captured)
+        let url = try XCTUnwrap(request.url)
+        XCTAssertTrue(url.path.contains("/auth/v1/recover"))
+        let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        XCTAssertEqual(
+            comps?.queryItems?.first(where: { $0.name == "redirect_to" })?.value,
+            "https://culinaai.com/reset-password"
+        )
+        XCTAssertFalse(url.absoluteString.contains("culinachef://"))
+
+        let body = try JSONSerialization.jsonObject(with: try XCTUnwrap(request.httpBody)) as? [String: String]
+        XCTAssertEqual(body?["email"], "user@example.com")
+        XCTAssertEqual(body?["code_challenge_method"], "s256")
+        XCTAssertFalse(body?["code_challenge"]?.isEmpty ?? true)
+        XCTAssertNotNil(KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey))
+        KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
+    }
+    
+    func testExchangePKCECodeRequiresStoredVerifier() async {
+        KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
+        do {
+            _ = try await client.exchangePKCECode("auth-code")
+            XCTFail("Should fail without verifier")
+        } catch {
+            XCTAssertTrue(true)
+        }
+    }
 }

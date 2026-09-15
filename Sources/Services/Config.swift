@@ -185,6 +185,10 @@ enum Config {
         !revenueCatAPIKey.isEmpty
     }
     
+    /// HTTPS Universal Link for Supabase password recovery (`redirect_to`).
+    /// Allowlist this URL in the Supabase Auth redirect settings. Never use a custom scheme.
+    static let passwordResetRedirectURL = URL(string: "https://culinaai.com/reset-password")!
+
     // MARK: - API Timeouts
     
     /// Zeit zwischen Datenpaketen für typische API-Calls.

@@ -33,6 +33,25 @@ struct RecipeCreatorView: View {
         ]
     }
     @State private var selectedCategories: Set<String> = []
+
+    private var macroCategoryLabels: Set<String> {
+        [L.category_lowCarb.localized, L.category_highProtein.localized]
+    }
+
+    private var nutritionSpecified: Bool {
+        [caloriesMin, caloriesMax, proteinMin, proteinMax, fatMin, fatMax, carbsMin, carbsMax]
+            .contains { (Int($0) ?? 0) > 0 }
+    }
+
+    private var disabledMacroCategories: Set<String> {
+        nutritionSpecified ? macroCategoryLabels : []
+    }
+
+    private var categoriesForGeneration: [String] {
+        var cats = selectedCategories
+        if nutritionSpecified { cats.subtract(macroCategoryLabels) }
+        return Array(cats)
+    }
     
     @State private var spicyLevel: Double = 2
     private var tastePreferenceKeys: [String] {
@@ -55,7 +74,7 @@ struct RecipeCreatorView: View {
     @State private var showConsentDialog = false
     @State private var creatorMode: CreatorMode = .recipe
 
-    private enum CreatorMode: String {
+    private enum CreatorMode: String, Hashable {
         case recipe
         case mealPlan
     }
@@ -71,11 +90,14 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Picker("", selection: $creatorMode) {
-                    Text(L.mealplan_tabRecipe.localized).tag(CreatorMode.recipe)
-                    Text(L.mealplan_tabPlan.localized).tag(CreatorMode.mealPlan)
-                }
-                .pickerStyle(.segmented)
+                CulinaTabChips(
+                    items: [
+                        (CreatorMode.recipe, L.mealplan_tabRecipe.localized),
+                        (CreatorMode.mealPlan, L.mealplan_tabPlan.localized)
+                    ],
+                    selection: $creatorMode,
+                    style: .onGradient
+                )
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
                 .padding(.bottom, 6)
@@ -165,7 +187,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                         .accessibilityLabel(L.recipe_ernährung.localized)
                         .accessibilityHint(L.a11y_openDietarySettings.localized)
                     }
-                    WrapChips(options: categoryOptions, selection: $selectedCategories)
+                    WrapChips(options: categoryOptions, selection: $selectedCategories, disabled: disabledMacroCategories)
                     
                     GroupBoxLabel(L.label_tastePreferences.localized)
                     VStack(spacing: 10) {
@@ -215,6 +237,9 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     isFocused = false
+                }
+                .onChange(of: nutritionSpecified) { _, specified in
+                    if specified { selectedCategories.subtract(macroCategoryLabels) }
                 }
             }
             }
@@ -278,8 +303,8 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         }
         
         // Use current form values for categories (dietary types)
-        if !selectedCategories.isEmpty {
-            parts.append(L.creator_dietsLabel.localized + " " + selectedCategories.sorted().joined(separator: ", "))
+        if !selectedCategories.subtracting(disabledMacroCategories).isEmpty {
+            parts.append(L.creator_dietsLabel.localized + " " + selectedCategories.subtracting(disabledMacroCategories).sorted().joined(separator: ", "))
         }
         
         // Use current form values for spiciness
@@ -376,7 +401,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                 timeMinutesMin: nil,
                 timeMinutesMax: Int(timeMinutesMax),
                 nutrition: nutrition,
-                categories: Array(selectedCategories),
+                categories: categoriesForGeneration,
                 servings: 4,
                 dietaryContext: fullContext
             )
@@ -418,6 +443,62 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
     }
 }
 
+struct CulinaTabChips<Value: Hashable>: View {
+    enum Style {
+        case onGradient
+        case onLight
+    }
+
+    let items: [(Value, String)]
+    @Binding var selection: Value
+    var style: Style = .onGradient
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(items, id: \.0) { value, title in
+                let isOn = selection == value
+                Button {
+                    selection = value
+                } label: {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(chipBackground(isOn: isOn))
+                        .foregroundColor(chipForeground(isOn: isOn))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.white.opacity(style == .onGradient ? 0.15 : 0.0), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func chipBackground(isOn: Bool) -> some View {
+        if isOn {
+            LinearGradient(
+                colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else if style == .onGradient {
+            Color.white.opacity(0.12)
+        } else {
+            Color(UIColor.systemGray6)
+        }
+    }
+
+    private func chipForeground(isOn: Bool) -> Color {
+        if isOn { return .white }
+        return style == .onGradient ? .white.opacity(0.9) : .black.opacity(0.7)
+    }
+}
+
 struct GroupBoxLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
@@ -448,6 +529,7 @@ TextField("", text: $text)
 struct WrapChips: View {
     let options: [String]
     @Binding var selection: Set<String>
+    var disabled: Set<String> = []
     @State private var totalHeight: CGFloat = .zero
     var body: some View {
         VStack {
@@ -458,23 +540,29 @@ struct WrapChips: View {
         }
     }
     private func chip(_ text: String) -> some View {
-        let isOn = selection.contains(text)
+        let isDisabled = disabled.contains(text)
+        let isOn = selection.contains(text) && !isDisabled
         return Text(text)
             .font(.callout.weight(.medium))
             .padding(.horizontal, 12).padding(.vertical, 8)
             .background(
                 Group {
-                    if isOn {
+                    if isDisabled {
+                        Color.white.opacity(0.04)
+                    } else if isOn {
                         LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
                     } else {
                         Color.white.opacity(0.08)
                     }
                 }
             )
-            .foregroundStyle(.white)
+            .foregroundStyle(isDisabled ? Color.white.opacity(0.32) : Color.white)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-            .onTapGesture { if isOn { selection.remove(text) } else { selection.insert(text) } }
+            .overlay(Capsule().stroke(Color.white.opacity(isDisabled ? 0.08 : 0.15), lineWidth: 1))
+            .onTapGesture {
+                guard !isDisabled else { return }
+                if isOn { selection.remove(text) } else { selection.insert(text) }
+            }
     }
     private func generateContent(in g: GeometryProxy) -> some View {
         var width = CGFloat.zero

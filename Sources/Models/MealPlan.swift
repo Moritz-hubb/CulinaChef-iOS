@@ -1,6 +1,6 @@
 import Foundation
 
-struct MealPlanNutritionTargets: Codable {
+struct MealPlanNutritionTargets: Codable, Equatable {
     var calories: Int?
     var protein_g: Int?
     var fat_g: Int?

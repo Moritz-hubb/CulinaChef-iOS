@@ -10,9 +10,9 @@ struct MealPlanCreatorView: View {
     @State private var nutritionModeExact = false
 
     @State private var calories: String = ""
-    @State private var protein: String = ""
-    @State private var fat: String = ""
-    @State private var carbs: String = ""
+    @State private var proteinPct: Double = 30
+    @State private var fatPct: Double = 30
+    @State private var carbsPct: Double = 40
     @State private var caloriesMin: String = ""
     @State private var caloriesMax: String = ""
     @State private var proteinMin: String = ""
@@ -88,54 +88,64 @@ struct MealPlanCreatorView: View {
     private var form: some View {
         ScrollView {
             VStack(spacing: 14) {
-                Text(L.mealplan_subtitle.localized)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.85))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                GroupBoxLabel(L.mealplan_mealsCount.localized)
                 HStack {
-                    Stepper(value: $mealCount, in: 1...6) {
-                        Text("\(mealCount)")
-                            .font(.title2.bold())
+                    GroupBoxLabel(L.mealplan_mealsCount.localized)
+                    Spacer()
+                    HStack(spacing: 8) {
+                        Button(action: { if mealCount > 1 { mealCount -= 1 } }) {
+                            Image(systemName: "minus.circle.fill").foregroundStyle(.white).font(.title3)
+                        }
+                        Text(String(mealCount))
+                            .font(.headline)
                             .foregroundStyle(.white)
+                            .frame(minWidth: 28)
+                        Button(action: { if mealCount < 6 { mealCount += 1 } }) {
+                            Image(systemName: "plus.circle.fill").foregroundStyle(.white).font(.title3)
+                        }
                     }
-                    .tint(.white)
                 }
-                .padding(12)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                Text(L.mealplan_mealsHint.localized)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
 
                 GroupBoxLabel(L.mealplan_notes.localized)
-                TextField(L.mealplan_notesPlaceholder.localized, text: $notes, axis: .vertical)
-                    .lineLimit(2...4)
+                TextField(L.mealplan_notesPlaceholder.localized, text: $notes)
+                    .textFieldStyle(.plain)
                     .padding(12)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .foregroundStyle(.white)
+                    .tint(.white)
                     .focused($isFocused)
 
-                GroupBoxLabel(L.mealplan_nutritionMode.localized)
-                Picker("", selection: $nutritionModeExact) {
-                    Text(L.mealplan_modeRange.localized).tag(false)
-                    Text(L.mealplan_modeExact.localized).tag(true)
+                HStack {
+                    GroupBoxLabel(L.label_nutrition.localized)
+                    Spacer()
+                    CulinaTabChips(
+                        items: [
+                            (false, L.mealplan_modeRange.localized),
+                            (true, L.mealplan_modeExact.localized)
+                        ],
+                        selection: $nutritionModeExact,
+                        style: .onGradient
+                    )
+                    .frame(maxWidth: 220)
                 }
-                .pickerStyle(.segmented)
-                .padding(.bottom, 4)
 
-                GroupBoxLabel(L.label_nutrition.localized)
                 if nutritionModeExact {
-                    Grid(horizontalSpacing: 12, verticalSpacing: 12) {
-                        GridRow {
-                            MealPlanNutrField(title: L.mealplan_kcal.localized, text: $calories, isFocused: $isFocused)
-                            MealPlanNutrField(title: L.mealplan_protein.localized, text: $protein, isFocused: $isFocused)
+                    MealPlanNutrField(title: L.mealplan_kcal.localized, text: $calories, isFocused: $isFocused)
+                    VStack(spacing: 14) {
+                        HStack {
+                            Text(L.mealplan_macroTotal.localized)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Spacer()
+                            Text("\(macrosTotalPercent) %")
+                                .font(.headline.monospacedDigit())
+                                .foregroundStyle(macrosSumIs100 ? Color.white : Color.red)
                         }
-                        GridRow {
-                            MealPlanNutrField(title: L.mealplan_fat.localized, text: $fat, isFocused: $isFocused)
-                            MealPlanNutrField(title: L.mealplan_carbs.localized, text: $carbs, isFocused: $isFocused)
-                        }
+                        MealPlanMacroSlider(title: L.mealplan_protein.localized, percent: $proteinPct, grams: proteinGrams)
+                        MealPlanMacroSlider(title: L.mealplan_fat.localized, percent: $fatPct, grams: fatGrams)
+                        MealPlanMacroSlider(title: L.mealplan_carbs.localized, percent: $carbsPct, grams: carbsGrams)
                     }
+                    .padding(14)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 } else {
                     Grid(horizontalSpacing: 12, verticalSpacing: 12) {
                         GridRow {
@@ -178,7 +188,7 @@ struct MealPlanCreatorView: View {
                         )
                     }
                 }
-                WrapChips(options: categoryOptions, selection: $selectedCategories)
+                WrapChips(options: categoryOptions, selection: $selectedCategories, disabled: disabledMacroCategories)
 
                 GroupBoxLabel(L.label_tastePreferences.localized)
                 VStack(spacing: 10) {
@@ -203,32 +213,30 @@ struct MealPlanCreatorView: View {
                 .padding(12)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-                Text(L.mealplan_quotaHint.localized)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
-
                 Button(action: { Task { await generate() } }) {
-                    HStack {
-                        Image(systemName: "calendar")
-                        Text(L.mealplan_generate.localized)
-                    }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 16)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ),
-                        in: Capsule()
-                    )
+                    HStack { Image(systemName: "wand.and.stars"); Text(L.mealplan_generate.localized) }
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .shadow(color: .blue.opacity(0.4), radius: 10, x: 0, y: 6)
+                        .opacity(canGeneratePlan ? 1 : 0.45)
                 }
-                .disabled(generating)
+                .disabled(!canGeneratePlan)
             }
             .foregroundStyle(.white)
             .padding(16)
             .onTapGesture { isFocused = false }
+            .onChange(of: nutritionSpecified) { _, specified in
+                if specified { selectedCategories.subtract(macroCategoryLabels) }
+            }
         }
     }
 
@@ -248,8 +256,8 @@ struct MealPlanCreatorView: View {
         if !app.dietary.allergies.isEmpty {
             parts.append(L.creator_allergiesLabel.localized + " " + app.dietary.allergies.joined(separator: ", "))
         }
-        if !selectedCategories.isEmpty {
-            parts.append(L.creator_dietsLabel.localized + " " + selectedCategories.sorted().joined(separator: ", "))
+        if !selectedCategories.subtracting(disabledMacroCategories).isEmpty {
+            parts.append(L.creator_dietsLabel.localized + " " + selectedCategories.subtracting(disabledMacroCategories).sorted().joined(separator: ", "))
         }
         let spicyLabels = [L.spicy_mild.localized, L.spicy_normal.localized, L.spicy_hot.localized, L.spicy_veryHot.localized]
         parts.append(L.creator_spicyLabel.localized + " " + spicyLabels[Int(spicyLevel)])
@@ -265,13 +273,64 @@ struct MealPlanCreatorView: View {
         return L.creator_systemPrompt.localized + " " + parts.joined(separator: " | ")
     }
 
+    private var macroCategoryLabels: Set<String> {
+        [L.category_lowCarb.localized, L.category_highProtein.localized]
+    }
+
+    private var nutritionSpecified: Bool {
+        if nutritionModeExact {
+            return (Int(calories) ?? 0) > 0
+        }
+        return [caloriesMin, caloriesMax, proteinMin, proteinMax, fatMin, fatMax, carbsMin, carbsMax]
+            .contains { (Int($0) ?? 0) > 0 }
+    }
+
+    private var disabledMacroCategories: Set<String> {
+        nutritionSpecified ? macroCategoryLabels : []
+    }
+
+    private var categoriesForGeneration: [String] {
+        var cats = selectedCategories
+        if nutritionSpecified { cats.subtract(macroCategoryLabels) }
+        return Array(cats)
+    }
+
+    private var dailyCalories: Double {
+        max(0, Double(Int(calories) ?? 0))
+    }
+
+    private var macrosTotalPercent: Int {
+        Int(proteinPct.rounded()) + Int(fatPct.rounded()) + Int(carbsPct.rounded())
+    }
+
+    private var macrosSumIs100: Bool {
+        macrosTotalPercent == 100
+    }
+
+    private var canGeneratePlan: Bool {
+        !generating && (!nutritionModeExact || macrosSumIs100)
+    }
+
+    private var proteinGrams: Int {
+        Int((dailyCalories * proteinPct / 100 / 4).rounded())
+    }
+
+    private var fatGrams: Int {
+        Int((dailyCalories * fatPct / 100 / 9).rounded())
+    }
+
+    private var carbsGrams: Int {
+        Int((dailyCalories * carbsPct / 100 / 4).rounded())
+    }
+
     private func currentTargets() -> MealPlanNutritionTargets {
         if nutritionModeExact {
+            let kcal = Int(calories)
             return MealPlanNutritionTargets(
-                calories: Int(calories),
-                protein_g: Int(protein),
-                fat_g: Int(fat),
-                carbs_g: Int(carbs)
+                calories: kcal,
+                protein_g: kcal == nil || kcal == 0 ? nil : proteinGrams,
+                fat_g: kcal == nil || kcal == 0 ? nil : fatGrams,
+                carbs_g: kcal == nil || kcal == 0 ? nil : carbsGrams
             )
         }
         return MealPlanNutritionTargets(
@@ -287,6 +346,10 @@ struct MealPlanCreatorView: View {
     }
 
     private func generate() async {
+        if nutritionModeExact && !macrosSumIs100 {
+            error = L.mealplan_macrosMustBe100.localized
+            return
+        }
         if app.isJailbroken {
             error = L.errorJailbreakDetected.localized
             return
@@ -327,7 +390,7 @@ struct MealPlanCreatorView: View {
                 mealCount: mealCount,
                 nutritionMode: nutritionModeExact ? "exact" : "range",
                 nutritionTargets: currentTargets(),
-                categories: Array(selectedCategories),
+                categories: categoriesForGeneration,
                 dietaryContext: fullContext.isEmpty ? nil : fullContext,
                 notes: trimmedNotes.isEmpty ? nil : trimmedNotes
             )
@@ -360,6 +423,29 @@ private struct MealPlanNutrField: View {
                 .padding(10)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .focused($isFocused)
+        }
+    }
+}
+
+private struct MealPlanMacroSlider: View {
+    let title: String
+    @Binding var percent: Double
+    let grams: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                Spacer()
+                Text("\(Int(percent.rounded())) %  ·  \(grams) g")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .monospacedDigit()
+            }
+            Slider(value: $percent, in: 0...100, step: 1)
+                .tint(Color(red: 0.95, green: 0.5, blue: 0.3))
         }
     }
 }

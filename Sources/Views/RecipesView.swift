@@ -65,7 +65,7 @@ private struct TagChips: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.12))
-                    .clipShape(Capsule())
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
         }
     }
@@ -87,8 +87,8 @@ private struct FilterChipsBar: View {
                         .padding(.vertical, 6)
                         .background(isOn ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
                         .foregroundColor(isOn ? .white : .black.opacity(0.7))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.black.opacity(0.07), lineWidth: 0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.black.opacity(0.07), lineWidth: 0.5))
                         .onTapGesture {
                             if isOn { selection.remove(opt) } else { selection.insert(opt) }
                         }
@@ -103,7 +103,7 @@ private struct FilterChipsBar: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(Color(UIColor.systemGray5))
-                        .clipShape(Capsule())
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
@@ -118,44 +118,40 @@ private struct MenusBar: View {
     let menus: [Menu]
     @Binding var selected: Menu?
     var onAdd: () -> Void
-    var onRenameSelected: () -> Void
-    var onDeleteSelected: () -> Void
+    var onRename: (Menu) -> Void
+    var onDelete: (Menu) -> Void
     var body: some View {
         HStack(spacing: 8) {
             Button(action: onAdd) {
-                HStack(spacing: 6) { Image(systemName: "plus"); Text(L.recipe_menü_539e.localized) }
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10).padding(.vertical, 6)
-                    .background(Color(UIColor.systemGray6))
-                    .clipShape(Capsule())
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(L.recipe_menü_539e.localized)
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     MenuChip(title: L.label_all.localized, isOn: selected == nil) { selected = nil }
                     ForEach(menus) { m in
                         MenuChip(title: m.title, isOn: selected?.id == m.id) { selected = m }
+                            .contextMenu {
+                                Button {
+                                    onRename(m)
+                                } label: {
+                                    Label(L.recipes_renameMenuHeadline.localized, systemImage: "pencil")
+                                }
+                                Button(role: .destructive) {
+                                    onDelete(m)
+                                } label: {
+                                    Label(L.delete.localized, systemImage: "trash")
+                                }
+                            }
                     }
                 }
-            }
-            if selected != nil {
-                Button(action: onRenameSelected) {
-                    Image(systemName: "pencil")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 6)
-                        .background(Color(UIColor.systemGray6))
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L.recipes_renameMenuHeadline.localized)
-                Button(role: .destructive, action: onDeleteSelected) {
-                    Image(systemName: "trash")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 6)
-                        .background(Color(UIColor.systemGray6))
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
+                .padding(.vertical, 2)
             }
         }
     }
@@ -169,10 +165,11 @@ private struct MenuChip: View {
         Button(action: action) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .padding(.horizontal, 10).padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
                 .background(isOn ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color(UIColor.systemGray6))
                 .foregroundColor(isOn ? .white : .black.opacity(0.7))
-                .clipShape(Capsule())
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -439,6 +436,57 @@ struct PersonalRecipesView: View {
             recipesListView
         }
     }
+
+    private func bookSectionTab(_ index: Int, _ title: String) -> some View {
+        let isOn = bookSection == index
+        return Button {
+            bookSection = index
+        } label: {
+            VStack(spacing: 7) {
+                Text(title)
+                    .font(.subheadline.weight(isOn ? .semibold : .regular))
+                    .foregroundColor(isOn ? Color(red: 0.85, green: 0.4, blue: 0.2) : .black.opacity(0.38))
+                Rectangle()
+                    .fill(isOn ? Color(red: 0.95, green: 0.5, blue: 0.3) : Color.clear)
+                    .frame(height: 2)
+            }
+        }
+        .buttonStyle(.plain)
+        .animation(nil, value: bookSection)
+    }
+
+    private var recipeBookFloatingActions: some View {
+        HStack(spacing: 10) {
+            Button(action: { showSocialImport = true }) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 48, height: 48)
+                    .background(Color(red: 0.2, green: 0.45, blue: 0.85), in: Circle())
+                    .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L.import_social_title.localized)
+
+            Button(action: { showManualRecipeBuilder = true }) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 48, height: 48)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        in: Circle()
+                    )
+                    .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L.button_ownRecipeCreate.localized)
+        }
+    }
     
     private var emptyStateView: some View {
                 ScrollView {
@@ -447,11 +495,15 @@ struct PersonalRecipesView: View {
                             menus: menus,
                             selected: $selectedMenu,
                             onAdd: { showNewMenuSheet = true },
-                            onRenameSelected: {
-                                renameMenuTitle = selectedMenu?.title ?? ""
+                            onRename: { menu in
+                                selectedMenu = menu
+                                renameMenuTitle = menu.title
                                 showRenameMenuSheet = true
                             },
-                            onDeleteSelected: { showDeleteMenuAlert = true }
+                            onDelete: { menu in
+                                selectedMenu = menu
+                                showDeleteMenuAlert = true
+                            }
                         )
                             .onChange(of: selectedMenu?.id) { _, _ in
                                 if let mid = selectedMenu?.id {
@@ -499,13 +551,12 @@ struct PersonalRecipesView: View {
                                     .font(.subheadline)
                                     .foregroundColor(.black.opacity(0.7))
                             }
-                            .padding(12)
+                            .padding(14)
                             .background(Color(UIColor.systemGray6))
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                         
-                        VStack(spacing: 16) {
-                            // Neuer Empty-State Pinguin
+                        VStack(spacing: 18) {
                             if let bundlePath = Bundle.main.path(forResource: "penguin-empty", ofType: "png", inDirectory: "Assets.xcassets/penguin-empty.imageset"),
                                let uiImage = UIImage(contentsOfFile: bundlePath) {
                                 Image(uiImage: uiImage)
@@ -517,11 +568,8 @@ struct PersonalRecipesView: View {
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 140, height: 140)
-                            } else {
-                                Text("🐧")
-                                    .font(.system(size: 80))
                             }
-                            
+
                             Text(L.text_prettyEmptyHere.localized)
                                 .font(.title3.bold())
                                 .foregroundColor(.black.opacity(0.7))
@@ -529,126 +577,30 @@ struct PersonalRecipesView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.black.opacity(0.5))
                                 .multilineTextAlignment(.center)
-                            
-                            VStack(spacing: 12) {
-                                Button(action: { showManualRecipeBuilder = true }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "square.and.pencil")
-                                        Text(L.button_ownRecipeCreate.localized)
-                                    }
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal, 14)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                            startPoint: .leading, endPoint: .trailing
-                                        ), in: Capsule()
-                                    )
-                                }
-                                
-                                Button(action: { app.selectedTab = 1 }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "wand.and.stars")
-                                        Text(L.recipe_mit_ki_erstellen.localized)
-                                    }
-                                    .font(.headline)
-                                    .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal, 14)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                            .stroke(Color(red: 0.85, green: 0.4, blue: 0.2), lineWidth: 2)
-                                    )
-                                }
-                                .buttonStyle(.plain)
-
-                                Button(action: { showSocialImport = true }) {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.headline)
-                                        .foregroundColor(Color(red: 0.2, green: 0.45, blue: 0.85))
-                                        .padding(.vertical, 10)
-                                        .padding(.horizontal, 12)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                                .stroke(Color(red: 0.2, green: 0.45, blue: 0.85), lineWidth: 2)
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(L.import_social_title.localized)
-                            }
                         }
-                        .padding(.vertical, 40)
+                        .padding(.vertical, 36)
                     }
                     .padding(16)
+                    .padding(.bottom, 88)
                 }
     }
     
     private var recipesListView: some View {
                     ScrollView {
-                        VStack(spacing: 12) {
-                            // Create Recipe Button
-                            HStack(spacing: 8) {
-                                Button(action: { showManualRecipeBuilder = true }) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "square.and.pencil")
-                                        Text(L.button_ownRecipe.localized)
-                                    }
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(.white)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 12)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                                            startPoint: .leading, endPoint: .trailing
-                                        ), in: Capsule()
-                                    )
-                                }
-                                
-                                Button(action: { app.selectedTab = 1 }) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "wand.and.stars")
-                                        Text(L.button_kiGenerator.localized)
-                                    }
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2))
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 12)
-                                    .background(
-                                        Capsule()
-                                            .stroke(Color(red: 0.85, green: 0.4, blue: 0.2), lineWidth: 1.5)
-                                    )
-                                }
-                                .buttonStyle(.plain)
-
-                                Button(action: { showSocialImport = true }) {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.subheadline.bold())
-                                        .foregroundColor(Color(red: 0.2, green: 0.45, blue: 0.85))
-                                        .padding(.vertical, 8)
-                                        .padding(.horizontal, 10)
-                                        .background(
-                                            Capsule()
-                                                .stroke(Color(red: 0.2, green: 0.45, blue: 0.85), lineWidth: 1.5)
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(L.import_social_title.localized)
-                                
-                                Spacer()
-                            }
-                            
+                        VStack(spacing: 16) {
                             MenusBar(
                             menus: menus,
                             selected: $selectedMenu,
                             onAdd: { showNewMenuSheet = true },
-                            onRenameSelected: {
-                                renameMenuTitle = selectedMenu?.title ?? ""
+                            onRename: { menu in
+                                selectedMenu = menu
+                                renameMenuTitle = menu.title
                                 showRenameMenuSheet = true
                             },
-                            onDeleteSelected: { showDeleteMenuAlert = true }
+                            onDelete: { menu in
+                                selectedMenu = menu
+                                showDeleteMenuAlert = true
+                            }
                         )
                                 .onChange(of: app.lastCreatedRecipe?.id) { _, _ in
                                     if let r = app.lastCreatedRecipe {
@@ -716,27 +668,34 @@ struct PersonalRecipesView: View {
                                         .foregroundColor(.black.opacity(0.7))
                                     Spacer()
                                 }
-                                .padding(12)
+                                .padding(14)
                                 .background(Color(UIColor.systemGray6))
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
                             
-                            LazyVStack(spacing: 12) {
+                            LazyVStack(spacing: 16) {
                                 if let mid = selectedMenu?.id {
                                     let groups = groupedByCourse(menuId: mid)
                                     ForEach(groups, id: \.course) { group in
-                                        VStack(alignment: .leading, spacing: 8) {
+                                        VStack(alignment: .leading, spacing: 12) {
                                             Text(group.course)
                                                 .font(.headline)
                                                 .foregroundColor(.black)
                                             ForEach(group.recipes) { recipe in
                                                 RecipeCard(
                                                     recipe: recipe,
-                                                    onDelete: { toDelete = recipe; showDeleteAlert = true },
                                                     onAssign: { assigningRecipe = recipe }
                                                 )
                                                 .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                                 .onTapGesture { navigationRecipeId = recipe.id }
+                                                .contextMenu {
+                                                    Button(role: .destructive) {
+                                                        toDelete = recipe
+                                                        showDeleteAlert = true
+                                                    } label: {
+                                                        Label(L.delete.localized, systemImage: "trash")
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -744,11 +703,18 @@ struct PersonalRecipesView: View {
                                     ForEach(visibleRecipes) { recipe in
                                         RecipeCard(
                                             recipe: recipe,
-                                            onDelete: { toDelete = recipe; showDeleteAlert = true },
                                             onAssign: { assigningRecipe = recipe }
                                         )
                                         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                         .onTapGesture { navigationRecipeId = recipe.id }
+                                        .contextMenu {
+                                            Button(role: .destructive) {
+                                                toDelete = recipe
+                                                showDeleteAlert = true
+                                            } label: {
+                                                Label(L.delete.localized, systemImage: "trash")
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -774,29 +740,47 @@ struct PersonalRecipesView: View {
                                 }
                             }
                         }
-                        .padding(16)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 4)
+                        .padding(.bottom, 88)
                     }
     }
     
     @ViewBuilder
     private var mainContentWithModifiers: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $bookSection) {
-                Text(L.mealplan_bookRecipes.localized).tag(0)
-                Text(L.mealplan_bookPlans.localized).tag(1)
+            HStack(spacing: 22) {
+                bookSectionTab(0, L.mealplan_bookRecipes.localized)
+                bookSectionTab(1, L.mealplan_bookPlans.localized)
+                Spacer(minLength: 0)
             }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 4)
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
 
-            if bookSection == 1 {
-                MealPlansListView()
-            } else {
-                mainContent
+            Group {
+                if bookSection == 1 {
+                    MealPlansListView()
+                } else {
+                    ZStack(alignment: .bottomTrailing) {
+                        mainContent
+                        if !loading, error == nil {
+                            recipeBookFloatingActions
+                                .padding(.trailing, 16)
+                                .padding(.bottom, 16)
+                        }
+                    }
+                }
             }
+            .transaction { $0.animation = nil }
         }
             .navigationBarHidden(true)
+            .onReceive(NotificationCenter.default.publisher(for: .culinaDeletedRecipeIds)) { note in
+                guard let ids = note.object as? [String], !ids.isEmpty else { return }
+                let set = Set(ids)
+                deletedRecipeIds.formUnion(set)
+                recipes.removeAll { set.contains($0.id) }
+            }
             .task { 
                 await loadCachedRecipesIfAvailable()
                 if app.recipesCacheTimestamp == nil {
@@ -1409,7 +1393,6 @@ private struct ShareRecipeSheet: View {
 struct RecipeCard: View {
     @EnvironmentObject var app: AppState
     let recipe: Recipe
-    var onDelete: (() -> Void)? = nil
     var onAssign: (() -> Void)? = nil
     
     // OPTIMIZATION: Pre-compute image URLs once (lazy evaluation)
@@ -1446,21 +1429,17 @@ struct RecipeCard: View {
     }
     
     var body: some View {
-        // OPTIMIZATION: Use @ViewBuilder to reduce view hierarchy complexity
         VStack(alignment: .leading, spacing: 0) {
-            // Recipe Image(s) with swipe
-            ZStack(alignment: .topTrailing) {
-                ZStack(alignment: .bottomLeading) {
-                    // Image - OPTIMIZATION: Simplified view hierarchy
+            ZStack(alignment: .bottomLeading) {
+                Group {
                     if !imageURLs.isEmpty {
-                        // OPTIMIZATION: Single image doesn't need TabView (better performance)
                         if imageURLs.count == 1 {
                             CachedAsyncImage(url: imageURLs[0]) { image in
                                 image
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 180)
+                                    .frame(height: 200)
                                     .clipped()
                             } placeholder: {
                                 placeholderImage
@@ -1473,7 +1452,7 @@ struct RecipeCard: View {
                                             .resizable()
                                             .aspectRatio(contentMode: .fill)
                                             .frame(maxWidth: .infinity)
-                                            .frame(height: 180)
+                                            .frame(height: 200)
                                             .clipped()
                                     } placeholder: {
                                         placeholderImage
@@ -1485,28 +1464,25 @@ struct RecipeCard: View {
                     } else {
                         placeholderImage
                     }
-                
-                    // Gradient overlay for better text readability
-                    LinearGradient(
-                        colors: [.clear, .black.opacity(0.7)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 180)
-                    
-                    // Recipe title overlay
-                    Text(recipe.title)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
                 }
-                
+
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.7)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 200)
+
+                Text(recipe.title)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
             }
-            .frame(height: 180)
+            .frame(height: 200)
             .frame(maxWidth: .infinity)
             .clipped()
             .background(
@@ -1519,50 +1495,36 @@ struct RecipeCard: View {
                     endPoint: .bottomTrailing
                 )
             )
-            
-            // Recipe Info
-            VStack(alignment: .leading, spacing: 8) {
+
+            VStack(alignment: .leading, spacing: 10) {
                 if !visibleTags.isEmpty {
                     TagChips(tags: Array(visibleTags.prefix(3)))
                 }
-                
+
                 HStack(spacing: 12) {
                     if let cookTime = recipe.cooking_time {
                         Label(cookTime, systemImage: "clock")
                             .font(.caption)
                             .foregroundColor(.black.opacity(0.6))
                     }
-                    
+
                     Spacer()
-                    
-                        HStack(spacing: 6) {
-                            if let onAssign {
-                                Button(action: onAssign) {
-                                    Image(systemName: "folder.badge.plus")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 6)
-                                        .background(Color.orange.opacity(0.1))
-                                        .clipShape(Capsule())
-                                }
-                            }
-                            if let onDelete {
-                                Button(action: onDelete) {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.red)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 6)
-                                        .background(Color.red.opacity(0.08))
-                                        .clipShape(Capsule())
-                                }
-                            }
+
+                    if let onAssign {
+                        Button(action: onAssign) {
+                            Image(systemName: "folder.badge.plus")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(Color.orange.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         }
                         .buttonStyle(.plain)
+                    }
                 }
             }
-            .padding(12)
+            .padding(14)
         }
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -1579,11 +1541,11 @@ struct RecipeCard: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            
+
             Image(systemName: "frying.pan.fill")
                 .font(.system(size: 48))
                 .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.5))
         }
-        .frame(height: 180)
+        .frame(height: 200)
     }
 }

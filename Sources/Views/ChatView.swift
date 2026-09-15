@@ -893,7 +893,7 @@ private struct RecipeSuggestionsView: View {
             
             // Show loading state below suggestions when generating automatically
             if generatingAuto {
-                SearchingPenguinView()
+                ChatSearchingPenguinView()
                     .frame(maxWidth: .infinity)
                     .id("autoGenerating")
             }
@@ -1569,7 +1569,7 @@ private struct RecipeSuggestion: Equatable {
 }
 
 // MARK: - Searching Penguin View
-private struct SearchingPenguinView: View {
+private struct ChatSearchingPenguinView: View {
     @State private var isAnimating = false
     
     var body: some View {

@@ -214,9 +214,28 @@ final class BackendClient {
         let body = Body(original_transaction_id: originalTransactionId)
         let jsonBody = try JSONEncoder().encode(body)
 
-        let (data, _) = try await request(path: "/ai/usage/increment", method: "POST", token: accessToken, jsonBody: jsonBody)
-        let c = try JSONDecoder().decode(AIUsageIncrementCounts.self, from: data)
-        return (c.daily_count, c.monthly_count)
+        do {
+            let (data, _) = try await request(path: "/ai/usage/increment", method: "POST", token: accessToken, jsonBody: jsonBody)
+            let c = try JSONDecoder().decode(AIUsageIncrementCounts.self, from: data)
+            return (c.daily_count, c.monthly_count)
+        } catch {
+            if BackendHTTPError.isSubscriptionRequired(error) { throw error }
+            let ns = error as NSError
+            if ns.domain == "Backend", (500...599).contains(ns.code) {
+                Logger.error("[BackendClient] AI usage fetch failed (\(ns.code)), continuing", category: .network)
+                return (0, 0)
+            }
+            if let urlError = error as? URLError {
+                switch urlError.code {
+                case .cannotFindHost, .cannotConnectToHost, .timedOut, .networkConnectionLost, .notConnectedToInternet, .dnsLookupFailed:
+                    Logger.info("[BackendClient] Backend unreachable for AI usage, continuing", category: .network)
+                    return (0, 0)
+                default:
+                    break
+                }
+            }
+            throw error
+        }
     }
 
     /// DTO für den vom Backend gemeldeten Abo-Status.

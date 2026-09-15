@@ -15,53 +15,43 @@ struct MealPlansListView: View {
             } else if let error {
                 Text(error).foregroundColor(.red).padding()
             } else if plans.isEmpty {
-                VStack(spacing: 12) {
-                    Text("🗓️").font(.system(size: 56))
+                VStack(spacing: 14) {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.system(size: 34, weight: .light))
+                        .foregroundColor(Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.75))
                     Text(L.mealplan_emptyTitle.localized)
-                        .font(.title3.bold())
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(.black.opacity(0.78))
+                        .multilineTextAlignment(.center)
                     Text(L.mealplan_emptyBody.localized)
                         .font(.subheadline)
-                        .foregroundColor(.black.opacity(0.55))
+                        .foregroundColor(.black.opacity(0.42))
                         .multilineTextAlignment(.center)
                     Button {
                         app.selectedTab = 1
                     } label: {
                         Text(L.mealplan_createCta.localized)
                             .font(.headline)
-                            .foregroundStyle(.white)
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 16)
+                            .foregroundColor(.white)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 20)
                             .background(
                                 LinearGradient(
                                     colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
                                     startPoint: .leading, endPoint: .trailing
                                 ),
-                                in: Capsule()
+                                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                             )
                     }
+                    .padding(.top, 4)
                 }
                 .padding(24)
             } else {
                 ScrollView {
-                    VStack(spacing: 10) {
+                    LazyVStack(spacing: 14) {
                         ForEach(plans) { plan in
                             Button { selected = plan } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(plan.title)
-                                            .font(.headline)
-                                            .foregroundColor(.black.opacity(0.85))
-                                        Text(L.mealplan_cardSubtitle.localized(replacing: ["count": "\(plan.meal_count)"]))
-                                            .font(.caption)
-                                            .foregroundColor(.black.opacity(0.5))
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.black.opacity(0.3))
-                                }
-                                .padding(14)
-                                .background(Color(UIColor.systemGray6))
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                MealPlanBookCard(plan: plan)
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
@@ -71,7 +61,9 @@ struct MealPlansListView: View {
                             }
                         }
                     }
-                    .padding(16)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 4)
+                    .padding(.bottom, 24)
                 }
             }
         }
@@ -87,6 +79,8 @@ struct MealPlansListView: View {
                 }
             }
             Button(L.cancel.localized, role: .cancel) { toDelete = nil }
+        } message: {
+            Text(L.mealplan_deleteBody.localized)
         }
     }
 
@@ -109,12 +103,80 @@ struct MealPlansListView: View {
     private func delete(_ plan: SavedMealPlan) async {
         guard let token = app.accessToken else { return }
         do {
-            try await MealPlanStore().deletePlan(id: plan.id, accessToken: token)
+            let recipeIds = try await MealPlanStore().deletePlan(id: plan.id, accessToken: token)
             plans.removeAll { $0.id == plan.id }
+            if selected?.id == plan.id { selected = nil }
+            removeRecipesFromCache(recipeIds)
         } catch {
             self.error = ErrorMessageHelper.userFriendlyMessage(from: error)
         }
         toDelete = nil
+    }
+
+    private func removeRecipesFromCache(_ recipeIds: [String]) {
+        guard !recipeIds.isEmpty else { return }
+        let ids = Set(recipeIds)
+        app.cachedRecipes.removeAll { ids.contains($0.id) }
+        app.saveCachedRecipesToDisk(recipes: app.cachedRecipes, menus: app.cachedMenus)
+        NotificationCenter.default.post(name: .culinaDeletedRecipeIds, object: recipeIds)
+    }
+}
+
+private struct MealPlanBookCard: View {
+    let plan: SavedMealPlan
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 0) {
+            Rectangle()
+                .fill(Color(red: 0.95, green: 0.5, blue: 0.3))
+                .frame(width: 3)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(plan.title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.black.opacity(0.86))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Text(metaLine)
+                    .font(.system(size: 13))
+                    .foregroundColor(.black.opacity(0.42))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.black.opacity(0.22))
+                .padding(.trailing, 14)
+        }
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.black.opacity(0.06), lineWidth: 1)
+        )
+    }
+
+    private var metaLine: String {
+        var parts = [L.mealplan_cardSubtitle.localized(replacing: ["count": "\(plan.meal_count)"])]
+        if let date = formattedDate { parts.append(date) }
+        return parts.joined(separator: "  ·  ")
+    }
+
+    private var formattedDate: String? {
+        guard let raw = plan.created_at, !raw.isEmpty else { return nil }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = iso.date(from: raw) ?? {
+            iso.formatOptions = [.withInternetDateTime]
+            return iso.date(from: raw)
+        }()
+        guard let date else { return nil }
+        let out = DateFormatter()
+        out.dateStyle = .medium
+        out.timeStyle = .none
+        return out.string(from: date)
     }
 }
 
@@ -129,33 +191,59 @@ struct MealPlanDetailView: View {
 
     var body: some View {
         NavigationView {
-            Group {
+            ZStack {
+                MealPlanChrome.background.ignoresSafeArea()
+
                 if loading {
-                    ProgressView()
+                    ProgressView().tint(.white)
                 } else {
-                    List {
-                        ForEach(items) { item in
-                            if let recipe = recipes.first(where: { $0.id == item.recipe_id }) {
-                                Button {
-                                    pushRecipe = recipe
-                                } label: {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(MealPlanSlot.localizedTitle(item.slot))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                        Text(recipe.title)
-                                            .foregroundColor(.primary)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            MealPlanHeroCard(
+                                title: plan.title,
+                                mealCount: plan.meal_count,
+                                calories: plan.nutrition_targets?.calories,
+                                protein: plan.nutrition_targets?.protein_g,
+                                fat: plan.nutrition_targets?.fat_g,
+                                carbs: plan.nutrition_targets?.carbs_g,
+                                onLight: false
+                            )
+
+                            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                                if let recipe = recipes.first(where: { $0.id == item.recipe_id }) {
+                                    Button {
+                                        pushRecipe = recipe
+                                    } label: {
+                                        MealPlanMealCard(
+                                            index: index,
+                                            slot: item.slot,
+                                            title: recipe.title,
+                                            calories: recipe.nutrition?.calories,
+                                            proteinG: recipe.nutrition?.protein_g.map { Int($0.rounded()) },
+                                            minutes: cookingMinutes(recipe.cooking_time),
+                                            onLight: false
+                                        )
                                     }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
+                        .padding(16)
                     }
                 }
             }
-            .navigationTitle(plan.title)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L.button_done.localized) { dismiss() }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(.ultraThinMaterial, in: Circle())
+                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                    }
+                    .accessibilityLabel(L.close.localized)
                 }
             }
             .task { await load() }
@@ -168,6 +256,12 @@ struct MealPlanDetailView: View {
         .navigationViewStyle(.stack)
     }
 
+    private func cookingMinutes(_ cookingTime: String?) -> Int? {
+        guard let cookingTime else { return nil }
+        let digits = cookingTime.filter(\.isNumber)
+        return Int(digits)
+    }
+
     private func load() async {
         guard let token = app.accessToken else {
             loading = false
@@ -175,7 +269,7 @@ struct MealPlanDetailView: View {
         }
         do {
             let fetched = try await MealPlanStore().fetchItems(accessToken: token, planId: plan.id)
-            items = fetched
+            items = fetched.sorted { $0.sort_order < $1.sort_order }
             let ids = fetched.map(\.recipe_id)
             recipes = try await fetchRecipes(ids: ids, token: token)
         } catch {
@@ -205,4 +299,3 @@ struct MealPlanDetailView: View {
         return try JSONDecoder().decode([Recipe].self, from: data)
     }
 }
-

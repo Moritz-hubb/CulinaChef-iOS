@@ -106,7 +106,8 @@ enum Config {
     /// Generate with: `./ios/scripts/download_ssl_certificates.sh`
     /// Include both the current and a backup hash for smoother key rotations.
     static let backendPublicKeyHashes: Set<String> = [
-        "VYxe9LAwK2QozwAdcQXon+QWur/Wn6o01PdWoMq1jiw=",  // Current (as of 2026-04-08)
+        "ErIMn03cxhS+PK7UKUcSOY5pqegEhCn8Xvw4k3LqAnw=",  // Current (as of 2026-09-14)
+        "VYxe9LAwK2QozwAdcQXon+QWur/Wn6o01PdWoMq1jiw=",  // Previous (2026-04-08)
     ]
     
     /// Base64-encoded SHA-256 hashes of the Supabase server's SPKI.

@@ -1,5 +1,9 @@
 import Foundation
 
+extension Notification.Name {
+    static let culinaDeletedRecipeIds = Notification.Name("culinaDeletedRecipeIds")
+}
+
 @MainActor
 final class MealPlanStore {
     func fetchPlans(accessToken: String, userId: String) async throws -> [SavedMealPlan] {
@@ -83,18 +87,63 @@ final class MealPlanStore {
         return created
     }
 
-    func deletePlan(id: String, accessToken: String) async throws {
-        var url = Config.supabaseURL
-        url.append(path: "/rest/v1/meal_plans")
-        url.append(queryItems: [URLQueryItem(name: "id", value: "eq.\(id)")])
-        var req = URLRequest(url: url)
-        req.httpMethod = "DELETE"
-        req.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        let (_, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+    /// Deletes the plan, its meals, and recipes that are not used by another plan.
+    @discardableResult
+    func deletePlan(id: String, accessToken: String) async throws -> [String] {
+        let items = try await fetchItems(accessToken: accessToken, planId: id)
+        let recipeIds = Array(Set(items.map(\.recipe_id).compactMap { UUID(uuidString: $0)?.uuidString.lowercased() }))
+
+        var sharedRecipeIds = Set<String>()
+        if !recipeIds.isEmpty {
+            var usageURL = Config.supabaseURL
+            usageURL.append(path: "/rest/v1/meal_plan_items")
+            usageURL.append(queryItems: [
+                URLQueryItem(name: "select", value: "recipe_id"),
+                URLQueryItem(name: "recipe_id", value: "in.(\(recipeIds.joined(separator: ",")))"),
+                URLQueryItem(name: "meal_plan_id", value: "neq.\(id)")
+            ])
+            var usageReq = URLRequest(url: usageURL)
+            usageReq.httpMethod = "GET"
+            usageReq.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+            usageReq.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            let (usageData, usageResp) = try await SecureURLSession.shared.data(for: usageReq)
+            guard let usageHTTP = usageResp as? HTTPURLResponse, (200...299).contains(usageHTTP.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            struct Ref: Decodable { let recipe_id: String }
+            sharedRecipeIds = Set(
+                (try JSONDecoder().decode([Ref].self, from: usageData))
+                    .compactMap { UUID(uuidString: $0.recipe_id)?.uuidString.lowercased() }
+            )
+        }
+
+        var planURL = Config.supabaseURL
+        planURL.append(path: "/rest/v1/meal_plans")
+        planURL.append(queryItems: [URLQueryItem(name: "id", value: "eq.\(id)")])
+        var planReq = URLRequest(url: planURL)
+        planReq.httpMethod = "DELETE"
+        planReq.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        planReq.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        let (_, planResp) = try await SecureURLSession.shared.data(for: planReq)
+        guard let planHTTP = planResp as? HTTPURLResponse, (200...299).contains(planHTTP.statusCode) else {
             throw URLError(.badServerResponse)
         }
+
+        let orphaned = recipeIds.filter { !sharedRecipeIds.contains($0) }
+        if !orphaned.isEmpty {
+            var recipesURL = Config.supabaseURL
+            recipesURL.append(path: "/rest/v1/recipes")
+            recipesURL.append(queryItems: [URLQueryItem(name: "id", value: "in.(\(orphaned.joined(separator: ",")))")])
+            var recipesReq = URLRequest(url: recipesURL)
+            recipesReq.httpMethod = "DELETE"
+            recipesReq.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+            recipesReq.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            let (_, recipesResp) = try await SecureURLSession.shared.data(for: recipesReq)
+            guard let recipesHTTP = recipesResp as? HTTPURLResponse, (200...299).contains(recipesHTTP.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+        }
+        return orphaned
     }
 
     private func insertRecipe(_ recipe: Recipe, accessToken: String, userId: String) async throws -> Recipe {

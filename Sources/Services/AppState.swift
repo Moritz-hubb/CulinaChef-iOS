@@ -158,6 +158,7 @@ final class AppState: ObservableObject {
         
         recipeManager = RecipeManager()
         recipeManager.accessTokenProvider = { [weak self] in self?.accessToken }
+        recipeManager.userIdProvider = { KeychainManager.get(key: "user_id") }
         
         // Network reachability monitor for flushing offline queue
         let monitor = NWPathMonitor()
@@ -1119,6 +1120,9 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         TastePreferencesManager.delete()
         shoppingListManager.clearShoppingList()
         IngredientCategorizer.clearOverrides()
+        if let userId = KeychainManager.get(key: "user_id") {
+            recipeManager.clearOfflineQueue(for: userId)
+        }
         clearLocalUserSessionData(userId: KeychainManager.get(key: "user_id"))
     }
 

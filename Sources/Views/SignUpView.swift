@@ -30,8 +30,8 @@ struct SignUpView: View {
     
     var passwordStrengthColor: Color {
         if password.isEmpty { return .gray }
-        if password.count < 6 { return .red }
-        if password.count < 8 { return Color(red: 0.95, green: 0.5, blue: 0.3) }
+        if password.count < 8 { return .red }
+        if !password.isStrongPassword { return Color(red: 0.95, green: 0.5, blue: 0.3) }
         return .green
     }
     
@@ -486,15 +486,15 @@ struct SignUpView: View {
     
     private var strengthBars: Int {
         if password.isEmpty { return 0 }
-        if password.count < 6 { return 1 }
-        if password.count < 8 { return 2 }
+        if password.count < 8 { return 1 }
+        if !password.isStrongPassword { return 2 }
         return 3
     }
     
     private var isFormValid: Bool {
         let trimmedEmail = email.trimmed
         return !trimmedEmail.isEmpty && trimmedEmail.isValidEmail &&
-        password.isValidPassword && passwordsMatch &&
+        password.isStrongPassword && passwordsMatch &&
         acceptedTerms && confirmedAge
     }
     
@@ -517,8 +517,8 @@ struct SignUpView: View {
             return
         }
         
-        guard password.isValidPassword else {
-            errorMessage = String.validationError(for: .password)
+        guard password.isStrongPassword else {
+            errorMessage = String.validationError(for: .passwordStrong)
             return
         }
         

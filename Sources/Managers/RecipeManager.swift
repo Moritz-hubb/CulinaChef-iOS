@@ -19,10 +19,12 @@ final class RecipeManager {
         let timestamp: Date
     }
     
-    private let queueKey = "offline_recipe_deletion_queue"
+    private static let legacyQueueKey = "offline_recipe_deletion_queue"
     private let defaults: UserDefaults
     /// Live token for the network-monitor flush. Without a token the queue must stay intact.
     var accessTokenProvider: (() -> String?)?
+    /// Current user for queue isolation. Defaults to Keychain `user_id`.
+    var userIdProvider: (() -> String?)?
     
     init(userDefaults: UserDefaults = .standard, enableNetworkMonitor: Bool = true) {
         self.defaults = userDefaults
@@ -55,6 +57,9 @@ final class RecipeManager {
         guard let token = accessToken else {
             throw URLError(.userAuthenticationRequired)
         }
+        guard let userId = resolvedUserId(), !userId.isEmpty else {
+            throw URLError(.userAuthenticationRequired)
+        }
         
         if isOnline && isNetworkAvailable {
             // Try immediate deletion
@@ -62,13 +67,17 @@ final class RecipeManager {
                 try await deleteRecipeFromSupabase(recipeId: recipeId, accessToken: token)
             } catch {
                 // Network error - queue for later
-                addToOfflineQueue(recipeId: recipeId)
+                addToOfflineQueue(recipeId: recipeId, userId: userId)
                 throw error
             }
         } else {
             // Offline - queue immediately
-            addToOfflineQueue(recipeId: recipeId)
+            addToOfflineQueue(recipeId: recipeId, userId: userId)
         }
+    }
+    
+    private struct DeletedRecipeRow: Decodable {
+        let id: String
     }
     
     private func deleteRecipeFromSupabase(recipeId: String, accessToken: String) async throws {
@@ -84,37 +93,72 @@ final class RecipeManager {
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         req.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
         req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        req.addValue("return=minimal", forHTTPHeaderField: "Prefer")
+        req.addValue("return=representation", forHTTPHeaderField: "Prefer")
         
-        let (_, resp) = try await SecureURLSession.shared.data(for: req)
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw URLError(.badServerResponse)
         }
+        if data.isEmpty {
+            return
+        }
+        _ = try JSONDecoder().decode([DeletedRecipeRow].self, from: data)
     }
     
     // MARK: - Offline Queue Management
     
-    private func addToOfflineQueue(recipeId: String) {
-        var queue = loadOfflineQueue()
-        // Avoid duplicates
+    private func resolvedUserId() -> String? {
+        if let userIdProvider {
+            return userIdProvider()
+        }
+        return KeychainManager.get(key: "user_id")
+    }
+    
+    private func queueKey(for userId: String) -> String {
+        "\(Self.legacyQueueKey)_\(userId)"
+    }
+    
+    private func addToOfflineQueue(recipeId: String, userId: String) {
+        migrateLegacyQueueIfNeeded(into: userId)
+        var queue = loadOfflineQueue(for: userId)
         if !queue.contains(where: { $0.recipeId == recipeId }) {
             queue.append(RecipeDeletion(recipeId: recipeId, timestamp: Date()))
-            saveOfflineQueue(queue)
+            saveOfflineQueue(queue, for: userId)
         }
     }
     
-    private func loadOfflineQueue() -> [RecipeDeletion] {
-        guard let data = defaults.data(forKey: queueKey),
+    private func loadOfflineQueue(for userId: String) -> [RecipeDeletion] {
+        guard let data = defaults.data(forKey: queueKey(for: userId)),
               let queue = try? JSONDecoder().decode([RecipeDeletion].self, from: data) else {
             return []
         }
         return queue
     }
     
-    private func saveOfflineQueue(_ queue: [RecipeDeletion]) {
-        if let data = try? JSONEncoder().encode(queue) {
-            defaults.set(data, forKey: queueKey)
+    private func saveOfflineQueue(_ queue: [RecipeDeletion], for userId: String) {
+        let key = queueKey(for: userId)
+        if queue.isEmpty {
+            defaults.removeObject(forKey: key)
+            return
         }
+        if let data = try? JSONEncoder().encode(queue) {
+            defaults.set(data, forKey: key)
+        }
+    }
+    
+    /// One-time: move the pre-isolation queue onto the first logged-in user, then drop it.
+    private func migrateLegacyQueueIfNeeded(into userId: String) {
+        guard let data = defaults.data(forKey: Self.legacyQueueKey) else { return }
+        defaults.removeObject(forKey: Self.legacyQueueKey)
+        guard let legacy = try? JSONDecoder().decode([RecipeDeletion].self, from: data), !legacy.isEmpty else {
+            return
+        }
+        var queue = loadOfflineQueue(for: userId)
+        let existing = Set(queue.map(\.recipeId))
+        for item in legacy where !existing.contains(item.recipeId) {
+            queue.append(item)
+        }
+        saveOfflineQueue(queue, for: userId)
     }
     
     /// Network-monitor entry point. Must not DELETE or dequeue without an access token.
@@ -128,7 +172,9 @@ final class RecipeManager {
     
     /// Process offline queue with access token (called by AppState when network returns)
     func processOfflineQueueWithAuth(accessToken: String) async {
-        var queue = loadOfflineQueue()
+        guard let userId = resolvedUserId(), !userId.isEmpty else { return }
+        migrateLegacyQueueIfNeeded(into: userId)
+        var queue = loadOfflineQueue(for: userId)
         guard !queue.isEmpty else { return }
         
         var successfulIndices: [Int] = []
@@ -142,20 +188,25 @@ final class RecipeManager {
                 try await deleteRecipeFromSupabase(recipeId: deletion.recipeId, accessToken: accessToken)
                 successfulIndices.append(index)
             } catch {
-                // Keep in queue, will retry later
                 Logger.error("Failed to process offline deletion for recipe \(deletion.recipeId)", error: error, category: .data)
             }
         }
         
-        // Remove successful deletions from queue
         for index in successfulIndices.reversed() {
             queue.remove(at: index)
         }
         
-        saveOfflineQueue(queue)
+        saveOfflineQueue(queue, for: userId)
     }
     
     func getPendingDeletionCount() -> Int {
-        return loadOfflineQueue().count
+        guard let userId = resolvedUserId(), !userId.isEmpty else { return 0 }
+        migrateLegacyQueueIfNeeded(into: userId)
+        return loadOfflineQueue(for: userId).count
+    }
+    
+    func clearOfflineQueue(for userId: String) {
+        defaults.removeObject(forKey: queueKey(for: userId))
+        defaults.removeObject(forKey: Self.legacyQueueKey)
     }
 }

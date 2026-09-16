@@ -53,9 +53,10 @@ struct TimerProvider: TimelineProvider {
         let timers = loadTimers()
         os_log("[Widget] getTimeline() loaded %d timers", log: Self.log, type: .info, timers.count)
         
-        // Real-time updates: every 1 second for running timers, every 30 seconds for paused timers
+        // Precompute 1s entries for a countdown, then reload the timeline after that window.
+        // Requesting getTimeline every 1s is throttled by WidgetKit and drains battery.
         let hasRunningTimers = timers.contains { $0.running }
-        let updateInterval: TimeInterval = hasRunningTimers ? 1 : 30
+        let updateInterval: TimeInterval = hasRunningTimers ? 60 : 30
         os_log("[Widget] getTimeline() hasRunningTimers: %{private}@, updateInterval: %.0f seconds", log: Self.log, type: .info, String(hasRunningTimers), updateInterval)
         
         // Load raw timer data to get endTime for future entries

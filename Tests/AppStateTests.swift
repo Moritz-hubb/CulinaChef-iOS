@@ -559,6 +559,11 @@ final class AppStateTests: XCTestCase {
         let types = Set(apis.compactMap { $0["NSPrivacyAccessedAPIType"] as? String })
         XCTAssertTrue(types.contains("NSPrivacyAccessedAPICategoryUserDefaults"))
         XCTAssertTrue(types.contains("NSPrivacyAccessedAPICategoryFileTimestamp"))
+        let collected = try XCTUnwrap(plist["NSPrivacyCollectedDataTypes"] as? [[String: Any]])
+        let collectedTypes = Set(collected.compactMap { $0["NSPrivacyCollectedDataType"] as? String })
+        XCTAssertTrue(collectedTypes.contains("NSPrivacyCollectedDataTypeHealth"))
+        XCTAssertTrue(collectedTypes.contains("NSPrivacyCollectedDataTypeName"))
+        XCTAssertTrue(collectedTypes.contains("NSPrivacyCollectedDataTypeEmailAddress"))
     }
 
     private static func makeJWT(expFromNow: TimeInterval) -> String {

@@ -1044,9 +1044,8 @@ private struct ProfileSettingsSheet: View {
             return
         }
         
-        // Validate password length (same as SignUp)
-        guard newPassword.count >= 6 else {
-            passwordError = L.settings_passwordTooShort.localized
+        guard newPassword.isStrongPassword else {
+            passwordError = L.validation_passwordWeak.localized
             return
         }
         

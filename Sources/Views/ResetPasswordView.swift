@@ -230,9 +230,8 @@ struct ResetPasswordView: View {
             return
         }
         
-        // Validate password length
-        guard newPassword.count >= 6 else {
-            errorMessage = L.resetPasswordTooShort.localized
+        guard newPassword.isStrongPassword else {
+            errorMessage = L.validation_passwordWeak.localized
             return
         }
         

@@ -65,6 +65,16 @@ final class StringValidationTests: XCTestCase {
         }
     }
     
+    func testLoginAllowsLegacySixCharacterPasswords() {
+        XCTAssertTrue("123456".isValidPassword)
+        XCTAssertFalse("123456".isStrongPassword)
+    }
+
+    func testNewAccountPasswordMustBeStrong() {
+        XCTAssertFalse("123456".isStrongPassword)
+        XCTAssertTrue("Password1".isStrongPassword)
+    }
+
     func testStrongPasswords() {
         let strongPasswords = [
             "Password1",      // 8+ chars, upper, lower, number

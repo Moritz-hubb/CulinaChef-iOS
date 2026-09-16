@@ -139,7 +139,7 @@ struct DietarySettingsView: View {
                             .font(.subheadline)
                             .foregroundStyle(.white)
                         HStack(spacing: 8) {
-                            TextField(L.dietary_allergiesPlaceholder.localized, text: $newAllergyText)
+                            TextField(L.dietary_allergiesPlaceholder.localized, text: $newAllergyText.limited(to: AIInputLimit.preferenceItem))
                                 .textFieldStyle(.plain)
                                 .foregroundStyle(.white)
                                 .tint(.white)
@@ -148,7 +148,7 @@ struct DietarySettingsView: View {
                                 .padding(10)
                                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             Button(L.common_add.localized) {
-                                let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let trimmed = AIInputLimit.clamp(newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.preferenceItem)
                                 if !trimmed.isEmpty {
                                     allergies.append(trimmed)
                                     newAllergyText = ""
@@ -198,7 +198,7 @@ struct DietarySettingsView: View {
                             .font(.subheadline)
                             .foregroundStyle(.white)
                         HStack(spacing: 8) {
-                            TextField(L.dietary_dislikesPlaceholder.localized, text: $newDislikeText)
+                            TextField(L.dietary_dislikesPlaceholder.localized, text: $newDislikeText.limited(to: AIInputLimit.preferenceItem))
                                 .textFieldStyle(.plain)
                                 .foregroundStyle(.white)
                                 .tint(.white)
@@ -207,7 +207,7 @@ struct DietarySettingsView: View {
                                 .padding(10)
                                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             Button(L.common_add.localized) {
-                                let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let trimmed = AIInputLimit.clamp(newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.preferenceItem)
                                 if !trimmed.isEmpty {
                                     dislikes.append(trimmed)
                                     newDislikeText = ""
@@ -295,7 +295,7 @@ struct DietarySettingsView: View {
                         Text(L.settings_hints.localized)
                             .font(.subheadline)
                             .foregroundStyle(.white)
-                        TextField(L.dietary_notesPlaceholder.localized, text: $notesText)
+                        TextField(L.dietary_notesPlaceholder.localized, text: $notesText.limited(to: AIInputLimit.freeText))
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
                             .tint(.white)
@@ -469,7 +469,7 @@ struct DietarySettingsView: View {
         d.diets = diets
         d.allergies = allergies
         d.dislikes = dislikes
-        d.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines)
+        d.notes = AIInputLimit.clamp(notesText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.freeText)
         
         Logger.debug("[DietarySettingsView] Updating app.dietary - old: \(oldDietary), new: \(d)", category: .data)
         app.dietary = d

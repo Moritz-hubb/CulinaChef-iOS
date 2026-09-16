@@ -667,7 +667,7 @@ struct OnboardingView: View {
                 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
-                        TextField(L.placeholder_newAllergy.localized, text: $newAllergyText)
+                        TextField(L.placeholder_newAllergy.localized, text: $newAllergyText.limited(to: AIInputLimit.preferenceItem))
                             .id(localizationManager.currentLanguage)
                             .textFieldStyle(.plain)
                             .accessibilityLabel(L.a11y_enterAllergy.localized)
@@ -678,7 +678,7 @@ struct OnboardingView: View {
                             .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
                         
                         Button {
-                            let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let trimmed = AIInputLimit.clamp(newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.preferenceItem)
                             if !trimmed.isEmpty {
                                 // Light haptic only (no sound for adding items)
                                 OnboardingFeedback.playHaptic(style: .light)
@@ -909,7 +909,7 @@ struct OnboardingView: View {
                 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
-                        TextField(L.placeholder_newDislike.localized, text: $newDislikeText)
+                        TextField(L.placeholder_newDislike.localized, text: $newDislikeText.limited(to: AIInputLimit.preferenceItem))
                             .id(localizationManager.currentLanguage)
                             .textFieldStyle(.plain)
                             .padding(12)
@@ -918,7 +918,7 @@ struct OnboardingView: View {
                             .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
                         
                         Button {
-                            let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let trimmed = AIInputLimit.clamp(newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.preferenceItem)
                             if !trimmed.isEmpty {
                                 // Light haptic only (no sound for adding items)
                                 OnboardingFeedback.playHaptic(style: .light)

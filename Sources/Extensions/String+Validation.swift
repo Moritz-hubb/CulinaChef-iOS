@@ -1,4 +1,35 @@
 import Foundation
+import SwiftUI
+
+/// Character caps for AI-bound text. Must stay in sync with `backend/app/ai_input_limits.py`.
+enum AIInputLimit {
+    static let chatMessage = 2500
+    static let recipeGoal = 500
+    static let freeText = 500
+    static let imagePrompt = 500
+    static let dietaryContext = 1000
+    static let ingredient = 100
+    static let ingredientList = 20
+    static let cookingTime = 40
+    static let socialURL = 2048
+    static let socialExtra = 4000
+    static let mealPlanNotes = 500
+    static let preferenceItem = 80
+    static let nutritionNumber = 6
+
+    static func clamp(_ text: String, to max: Int) -> String {
+        String(text.prefix(max))
+    }
+}
+
+extension Binding where Value == String {
+    func limited(to max: Int) -> Binding<String> {
+        Binding(
+            get: { self.wrappedValue },
+            set: { self.wrappedValue = String($0.prefix(max)) }
+        )
+    }
+}
 
 extension String {
     /// Validate if string is a valid email address
@@ -160,13 +191,100 @@ enum SocialImportURL {
         }
     }
 
-    private static func isIPv4Literal(_ host: String) -> Bool {
+    fileprivate static func isIPv4Literal(_ host: String) -> Bool {
         let parts = host.split(separator: ".", omittingEmptySubsequences: false)
         guard parts.count == 4 else { return false }
         return parts.allSatisfy { part in
             guard let n = Int(part), (0...255).contains(n) else { return false }
             return true
         }
+    }
+}
+
+/// Recipe photos are stored on Supabase / GCS. Arbitrary hosts must not be fetched.
+enum RecipeImageURL {
+    static let allowedHostSuffixes = [
+        "supabase.co",
+        "supabase.in",
+        "storage.googleapis.com"
+    ]
+
+    static func isAllowed(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "https" else { return false }
+        guard let host = url.host?.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".")) else {
+            return false
+        }
+        if host.contains(":") { return false }
+        if SocialImportURL.isIPv4Literal(host) { return false }
+        return allowedHostSuffixes.contains { suffix in
+            host == suffix || host.hasSuffix("." + suffix)
+        }
+    }
+
+    static func isAllowed(_ raw: String) -> Bool {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed) else { return false }
+        return isAllowed(url)
+    }
+}
+
+enum SocialImportPendingStore {
+    static let suiteName = "group.com.moritzserrin.culinachef.share"
+    static let urlKey = "pending_social_import_url"
+
+    static func save(_ url: String, defaults: UserDefaults? = UserDefaults(suiteName: suiteName)) {
+        defaults?.set(url, forKey: urlKey)
+        defaults?.synchronize()
+    }
+
+    @discardableResult
+    static func consume(defaults: UserDefaults? = UserDefaults(suiteName: suiteName)) -> String? {
+        guard let defaults else { return nil }
+        let value = defaults.string(forKey: urlKey)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        defaults.removeObject(forKey: urlKey)
+        guard let value, !value.isEmpty else { return nil }
+        return value
+    }
+}
+
+enum SocialImportLink {
+    struct Payload: Equatable {
+        let url: String
+        let extra: String?
+    }
+
+    /// Custom scheme ignores query `url` (any app can open it). Share Extension writes the App Group first.
+    static func payload(from incoming: URL, pendingAppGroupURL: String?) -> Payload? {
+        if incoming.scheme == "culinachef", incoming.host == "import" {
+            guard let pending = pendingAppGroupURL, SocialImportURL.isAllowed(pending) else { return nil }
+            return Payload(url: pending, extra: nil)
+        }
+        let host = incoming.host?.lowercased()
+        let isUniversal = incoming.scheme?.lowercased() == "https"
+            && (host == "culinaai.com" || host == "www.culinaai.com")
+            && incoming.path.contains("import")
+        guard isUniversal else { return nil }
+        let items = URLComponents(url: incoming, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        guard let raw = items.first(where: { $0.name == "url" })?.value else { return nil }
+        let decoded = raw.removingPercentEncoding ?? raw
+        guard SocialImportURL.isAllowed(decoded) else { return nil }
+        let extra = items.first(where: { $0.name == "extra" })?.value.map { $0.removingPercentEncoding ?? $0 }
+        return Payload(url: decoded, extra: extra)
+    }
+}
+
+enum SentryPrivacy {
+    static func sanitizedURL(_ raw: String) -> String {
+        guard let url = URL(string: raw), let host = url.host, !host.isEmpty else { return "" }
+        let scheme = url.scheme ?? "https"
+        let path = url.path
+        return "\(scheme)://\(host)\(path)"
+    }
+
+    static func isSensitiveBreadcrumb(message: String?, dataDescription: String?) -> Bool {
+        let combined = ((message ?? "") + " " + (dataDescription ?? "")).lowercased()
+        let sensitive = ["user_id", "token", "email", "password", "consent", "auth", "apikey", "key"]
+        return sensitive.contains { combined.contains($0) }
     }
 }
 

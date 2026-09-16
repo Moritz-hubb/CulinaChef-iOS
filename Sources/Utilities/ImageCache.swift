@@ -62,6 +62,10 @@ final class ImageCache {
     ///   - placeholder: Optional placeholder image while loading
     /// - Returns: Cached or downloaded UIImage, or nil if failed
     func image(for url: URL) async -> UIImage? {
+        guard RecipeImageURL.isAllowed(url) else {
+            Logger.error("[ImageCache] Blocked image host=\(url.host ?? "")", category: .data)
+            return nil
+        }
         let cacheKey = cacheKey(for: url)
         
         // 1. Check memory cache first (fastest)
@@ -231,21 +235,17 @@ final class ImageCache {
     
     private func downloadAndCache(url: URL, cacheKey: String) async -> UIImage? {
         do {
-            // Validate URL
-            guard url.scheme == "http" || url.scheme == "https" else {
-                Logger.error("[ImageCache] Invalid URL scheme: \(url.scheme ?? "nil")", category: .data)
+            guard RecipeImageURL.isAllowed(url) else {
+                Logger.error("[ImageCache] Invalid image URL scheme or host: \(url.host ?? "")", category: .data)
                 return nil
             }
-            
-            // Use URLSession with optimized configuration for faster downloads
-            let configuration = URLSessionConfiguration.default
-            configuration.timeoutIntervalForRequest = 10
-            configuration.timeoutIntervalForResource = 30
-            configuration.requestCachePolicy = .returnCacheDataElseLoad
-            let session = URLSession(configuration: configuration)
-            
+
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 10
+            request.cachePolicy = .returnCacheDataElseLoad
+
             Logger.debug("[ImageCache] Downloading host=\(url.host ?? "")", category: .data)
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await SecureURLSession.shared.data(for: request)
             
             // Check HTTP response
             if let httpResponse = response as? HTTPURLResponse {

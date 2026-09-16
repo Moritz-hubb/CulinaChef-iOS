@@ -132,7 +132,10 @@ final class BackendClient {
             }
         }()
 
-        let body = Body(ingredients: ingredients, language: deviceLanguage)
+        let body = Body(
+            ingredients: Array(ingredients.prefix(AIInputLimit.ingredientList)).map { AIInputLimit.clamp($0, to: AIInputLimit.ingredient) },
+            language: deviceLanguage
+        )
         let data = try JSONEncoder().encode(body)
         let (respData, _) = try await request(path: "/ai/generate_recipe", method: "POST", token: accessToken, jsonBody: data)
         return try JSONDecoder().decode(Recipe.self, from: respData)
@@ -191,7 +194,7 @@ final class BackendClient {
             source_recipe: sourceRecipe,
             persist: persist,
             goals: goals,
-            free_text: freeText,
+            free_text: freeText.map { AIInputLimit.clamp($0, to: AIInputLimit.freeText) },
             language: language
         )
         let data = try JSONEncoder().encode(body)
@@ -370,14 +373,14 @@ final class BackendClient {
         }
         let trimmedTweakText = tweakText?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedExtra = extraText?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cappedExtra = trimmedExtra.map { String($0.prefix(12000)) }
+        let cappedExtra = trimmedExtra.map { AIInputLimit.clamp($0, to: AIInputLimit.socialExtra) }
         let body = Body(
             url: trimmedURL,
             extra_text: (cappedExtra?.isEmpty == true) ? nil : cappedExtra,
             language: lang,
-            dietary_context: dietaryContext,
+            dietary_context: dietaryContext.map { AIInputLimit.clamp($0, to: AIInputLimit.dietaryContext) },
             recipe_tweaks: recipeTweaks?.isEmpty == true ? nil : recipeTweaks,
-            tweak_text: (trimmedTweakText?.isEmpty == true) ? nil : trimmedTweakText
+            tweak_text: (trimmedTweakText?.isEmpty == true) ? nil : trimmedTweakText.map { AIInputLimit.clamp($0, to: AIInputLimit.freeText) }
         )
         #if DEBUG
         Logger.debug(

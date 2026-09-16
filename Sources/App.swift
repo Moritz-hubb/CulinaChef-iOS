@@ -37,6 +37,25 @@ struct CulinaChefApp: App {
                 // Enable breadcrumbs for better debugging
                 options.enableAutoBreadcrumbTracking = true
                 options.enableNetworkBreadcrumbs = true
+                options.beforeBreadcrumb = { crumb in
+                    if crumb.type == "http" {
+                        if var data = crumb.data {
+                            if let urlString = data["url"] as? String {
+                                data["url"] = SentryPrivacy.sanitizedURL(urlString)
+                            }
+                            data.removeValue(forKey: "request_body")
+                            data.removeValue(forKey: "response_body")
+                            crumb.data = data
+                        }
+                    }
+                    if SentryPrivacy.isSensitiveBreadcrumb(
+                        message: crumb.message,
+                        dataDescription: crumb.data?.description
+                    ) {
+                        return nil
+                    }
+                    return crumb
+                }
                 
                 // GDPR: Scrub PII (Personally Identifiable Information) before sending to Sentry
                 options.beforeSend = { event in
@@ -144,23 +163,20 @@ struct CulinaChefApp: App {
 
     private func openSocialImport(from url: URL) {
         Logger.debug("[SocialImport] openSocialImport received: \(PasswordResetLink.safeDescription(url))", category: .ui)
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let items = components.queryItems,
-              let raw = items.first(where: { $0.name == "url" })?.value else {
-            Logger.error("[SocialImport] deep link missing url query: \(PasswordResetLink.safeDescription(url))", category: .ui)
+        let pending = url.scheme == "culinachef" ? SocialImportPendingStore.consume() : nil
+        guard let payload = SocialImportLink.payload(from: url, pendingAppGroupURL: pending) else {
+            Logger.error("[SocialImport] ignored import link: \(PasswordResetLink.safeDescription(url))", category: .ui)
             return
         }
-        let decoded = raw.removingPercentEncoding ?? raw
-        let extra = items.first(where: { $0.name == "extra" })?.value.map { $0.removingPercentEncoding ?? $0 }
         #if DEBUG
         Logger.debug(
-            "[SocialImport] decoded url len=\(decoded.count) extra=\(extra != nil) tab=2 sheet=true preview=\(decoded.prefix(120))",
+            "[SocialImport] decoded url len=\(payload.url.count) extra=\(payload.extra != nil) tab=2 sheet=true",
             category: .ui
         )
         #endif
         Task { @MainActor in
-            appState.pendingSocialImportURL = decoded
-            appState.pendingSocialImportExtra = extra
+            appState.pendingSocialImportURL = payload.url
+            appState.pendingSocialImportExtra = payload.extra
             appState.selectedTab = 2
             appState.showSocialImportFromShare = true
         }

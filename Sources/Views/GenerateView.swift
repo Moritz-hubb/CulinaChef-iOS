@@ -16,15 +16,15 @@ struct GenerateView: View {
             Form {
                 Section(header: Text(L.ui_zutaten.localized)) {
                     HStack(spacing: 8) {
-TextField("z.B. Tomaten", text: $newIngredientText)
+TextField("z.B. Tomaten", text: $newIngredientText.limited(to: AIInputLimit.ingredient))
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
                             .foregroundStyle(.white)
                             .accessibilityLabel(L.a11y_enterIngredient.localized)
                             .accessibilityHint(L.a11y_enterIngredientHint.localized)
                         Button(L.common_add.localized) {
-                            let trimmed = newIngredientText.trimmingCharacters(in: .whitespacesAndNewlines)
-                            if !trimmed.isEmpty {
+                            let trimmed = AIInputLimit.clamp(newIngredientText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.ingredient)
+                            if !trimmed.isEmpty, ingredients.count < AIInputLimit.ingredientList {
                                 ingredients.append(trimmed)
                                 newIngredientText = ""
                             }

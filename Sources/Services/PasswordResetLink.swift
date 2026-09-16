@@ -68,3 +68,62 @@ enum PasswordResetLink {
         items.first(where: { $0.name == name })?.value
     }
 }
+
+/// Stores PKCE verifiers for in-flight password resets.
+/// Resend for the same email replaces that email's verifier. A second email on the
+/// same device keeps both (capped) so an earlier mail can still be exchanged.
+enum PasswordResetPKCEStore {
+    struct Entry: Codable, Equatable {
+        var email: String
+        var verifier: String
+    }
+
+    static let maxEntries = 3
+
+    static func snapshot() -> [Entry] {
+        load()
+    }
+
+    static func restore(_ entries: [Entry]) throws {
+        if entries.isEmpty {
+            clear()
+            return
+        }
+        try KeychainManager.save(key: PasswordResetLink.codeVerifierKeychainKey, value: encode(entries))
+    }
+
+    static func upsert(verifier: String, email: String) throws {
+        let normalized = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        var entries = load().filter { $0.email != normalized }
+        entries.append(Entry(email: normalized, verifier: verifier))
+        if entries.count > maxEntries {
+            entries = Array(entries.suffix(maxEntries))
+        }
+        try restore(entries)
+    }
+
+    static func verifiersNewestFirst() -> [String] {
+        load().reversed().map(\.verifier).filter { !$0.isEmpty }
+    }
+
+    static func clear() {
+        KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
+    }
+
+    private static func load() -> [Entry] {
+        guard let raw = KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey),
+              !raw.isEmpty else {
+            return []
+        }
+        if let data = raw.data(using: .utf8),
+           let entries = try? JSONDecoder().decode([Entry].self, from: data) {
+            return entries
+        }
+        return [Entry(email: "", verifier: raw)]
+    }
+
+    private static func encode(_ entries: [Entry]) -> String {
+        let data = (try? JSONEncoder().encode(entries)) ?? Data("[]".utf8)
+        return String(data: data, encoding: .utf8) ?? "[]"
+    }
+}

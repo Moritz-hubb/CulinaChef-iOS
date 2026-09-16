@@ -55,7 +55,7 @@ struct SocialRecipeImportView: View {
                             HStack(spacing: 10) {
                                 Image(systemName: "link")
                                     .foregroundStyle(.white.opacity(0.6))
-                                TextField(L.import_social_url_placeholder.localized, text: $urlText)
+                                TextField(L.import_social_url_placeholder.localized, text: $urlText.limited(to: AIInputLimit.socialURL))
                                     .keyboardType(.URL)
                                     .autocorrectionDisabled()
                                     .textInputAutocapitalization(.never)
@@ -80,7 +80,7 @@ struct SocialRecipeImportView: View {
                                 .foregroundStyle(.white.opacity(0.75))
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                            TextField(L.import_social_extra_placeholder.localized, text: $extraText, axis: .vertical)
+                            TextField(L.import_social_extra_placeholder.localized, text: $extraText.limited(to: AIInputLimit.socialExtra), axis: .vertical)
                                 .lineLimit(3...8)
                                 .textFieldStyle(.plain)
                                 .foregroundStyle(.white)
@@ -169,10 +169,10 @@ struct SocialRecipeImportView: View {
             }
             .onAppear {
                 if urlText.isEmpty, let initialURL, !initialURL.isEmpty {
-                    urlText = initialURL
+                    urlText = AIInputLimit.clamp(initialURL, to: AIInputLimit.socialURL)
                 }
                 if extraText.isEmpty, let initialExtraText, !initialExtraText.isEmpty {
-                    extraText = initialExtraText
+                    extraText = AIInputLimit.clamp(initialExtraText, to: AIInputLimit.socialExtra)
                 }
             }
         }
@@ -260,7 +260,7 @@ struct SocialRecipeImportView: View {
                     selection: $selectedTweaks
                 )
 
-                TextField(L.import_social_tweak_prompt_placeholder.localized, text: $tweakText, axis: .vertical)
+                TextField(L.import_social_tweak_prompt_placeholder.localized, text: $tweakText.limited(to: AIInputLimit.freeText), axis: .vertical)
                     .lineLimit(2...4)
                     .textFieldStyle(.plain)
                     .foregroundStyle(.white)
@@ -315,12 +315,12 @@ struct SocialRecipeImportView: View {
             return
         }
 
-        let dietary = app.systemContext()
+        let dietary = AIInputLimit.clamp(app.systemContext(), to: AIInputLimit.dietaryContext)
         let lang = app.currentLanguageCode()
         do {
             let tweaks = selectedTweaks.isEmpty ? nil : Array(selectedTweaks)
-            let trimmedTweak = tweakText.trimmingCharacters(in: .whitespacesAndNewlines)
-            let trimmedExtra = String(extraText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(12000))
+            let trimmedTweak = AIInputLimit.clamp(tweakText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.freeText)
+            let trimmedExtra = AIInputLimit.clamp(extraText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.socialExtra)
             let recipe = try await app.backend.importRecipeFromSocialURL(
                 url: trimmedURL,
                 recipeLanguage: lang,

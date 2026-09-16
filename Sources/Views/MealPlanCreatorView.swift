@@ -141,7 +141,7 @@ struct MealPlanCreatorView: View {
                 }
 
                 GroupBoxLabel(L.mealplan_notes.localized)
-                TextField(L.mealplan_notesPlaceholder.localized, text: $notes)
+                TextField(L.mealplan_notesPlaceholder.localized, text: $notes.limited(to: AIInputLimit.mealPlanNotes))
                     .textFieldStyle(.plain)
                     .padding(12)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -482,7 +482,7 @@ struct MealPlanCreatorView: View {
         let fullContext = [customContext, app.languageSystemPrompt(), app.hiddenIntentContext()]
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
-        let trimmedNotes = String(notes.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
+        let trimmedNotes = AIInputLimit.clamp(notes.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.mealPlanNotes)
         do {
             let plan = try await openai.generateMealPlan(
                 mealCount: plannedSlots.count,
@@ -491,7 +491,7 @@ struct MealPlanCreatorView: View {
                 nutritionTargets: currentTargets(),
                 categories: categoriesForGeneration,
                 mealPreferences: mealPreferencesPayload(),
-                dietaryContext: fullContext.isEmpty ? nil : fullContext,
+                dietaryContext: fullContext.isEmpty ? nil : AIInputLimit.clamp(fullContext, to: AIInputLimit.dietaryContext),
                 notes: trimmedNotes.isEmpty ? nil : trimmedNotes
             )
             guard plan.meals.count == plannedSlots.count, plan.meals.allSatisfy({ !$0.recipe.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
@@ -701,7 +701,7 @@ private struct MealPlanNutrField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.caption).foregroundStyle(.white.opacity(0.7))
-            TextField("", text: $text)
+            TextField("", text: $text.limited(to: AIInputLimit.nutritionNumber))
                 .keyboardType(.numberPad)
                 .foregroundStyle(.white)
                 .tint(.white)

@@ -488,7 +488,7 @@ final class AppState: ObservableObject {
         }
         
         if let notes = dietary.notes, !notes.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
-            strictParts.append("Hinweise: " + notes)
+            strictParts.append("Hinweise: " + AIInputLimit.clamp(notes, to: AIInputLimit.freeText))
         }
         
         var result: [String] = []
@@ -506,7 +506,7 @@ final class AppState: ObservableObject {
         }
         let finalPrompt = result.joined(separator: "\n")
         Logger.debug("[Dietary] Prompt length=\(finalPrompt.count)", category: .data)
-        return finalPrompt
+        return AIInputLimit.clamp(finalPrompt, to: AIInputLimit.dietaryContext)
     }
 
     func languageSystemPrompt() -> String {

@@ -496,7 +496,7 @@ private struct DietarySettingsSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(.white)
                         HStack(spacing: 8) {
-                            TextField(L.placeholder_newAllergy.localized, text: $newAllergyText)
+                            TextField(L.placeholder_newAllergy.localized, text: $newAllergyText.limited(to: AIInputLimit.preferenceItem))
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
                             .tint(.white)
@@ -505,7 +505,7 @@ private struct DietarySettingsSheet: View {
                             .padding(10)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             Button {
-                                let trimmed = newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let trimmed = AIInputLimit.clamp(newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.preferenceItem)
                                 if !trimmed.isEmpty {
                                     // Check if allergy already exists (case-insensitive)
                                     let alreadyExists = allergies.contains { $0.lowercased() == trimmed.lowercased() }
@@ -538,7 +538,7 @@ private struct DietarySettingsSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(.white)
                         HStack(spacing: 8) {
-                            TextField(L.placeholder_newDislike.localized, text: $newDislikeText)
+                            TextField(L.placeholder_newDislike.localized, text: $newDislikeText.limited(to: AIInputLimit.preferenceItem))
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
                             .tint(.white)
@@ -547,7 +547,7 @@ private struct DietarySettingsSheet: View {
                             .padding(10)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             Button {
-                                let trimmed = newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let trimmed = AIInputLimit.clamp(newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.preferenceItem)
                                 if !trimmed.isEmpty {
                                     // Check if dislike already exists (case-insensitive)
                                     let alreadyExists = dislikes.contains { $0.lowercased() == trimmed.lowercased() }
@@ -612,7 +612,7 @@ private struct DietarySettingsSheet: View {
                         Text(L.settings_hints.localized)
                             .font(.subheadline)
                             .foregroundStyle(.white)
-                        TextField(L.placeholder_notes.localized, text: $notesText)
+                        TextField(L.placeholder_notes.localized, text: $notesText.limited(to: AIInputLimit.freeText))
                             .textFieldStyle(.plain)
                             .foregroundStyle(.white)
                             .tint(.white)
@@ -705,7 +705,7 @@ private struct DietarySettingsSheet: View {
         d.diets = diets
         d.allergies = allergies
         d.dislikes = dislikes
-        d.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines)
+        d.notes = AIInputLimit.clamp(notesText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.freeText)
         app.dietary = d
         
         // Convert to dictionary for Supabase sync

@@ -282,18 +282,13 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                     .foregroundStyle(.white.opacity(0.5))
                     .font(.system(size: 14))
             }
-            TextField("", text: $inputText, axis: .vertical)
+            TextField("", text: $inputText.limited(to: AIInputLimit.chatMessage), axis: .vertical)
                 .textFieldStyle(.plain)
                 .foregroundStyle(.white)
                 .tint(.white)
                 .focused($isInputFocused)
                 .accessibilityLabel(L.placeholder_askMe.localized)
                 .accessibilityHint(L.chat_frage_mich_alles_übers.localized)
-                .onChange(of: inputText) { _, newValue in
-                    if newValue.count > 5000 {
-                        inputText = String(newValue.prefix(5000))
-                    }
-                }
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
@@ -341,7 +336,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
     }
 
     private func sendText() async {
-        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = AIInputLimit.clamp(inputText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.chatMessage)
         guard !text.isEmpty else { return }
         
         // Block AI features on jailbroken devices
@@ -407,7 +402,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
 
     private func sendImage() async {
         guard let data = pickedImageData else { return }
-        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = AIInputLimit.clamp(inputText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.chatMessage)
         guard !text.isEmpty else { return }
         
         // Block AI features on jailbroken devices

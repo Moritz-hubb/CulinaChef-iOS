@@ -209,6 +209,49 @@ final class StringValidationTests: XCTestCase {
         XCTAssertFalse("  test  ".isBlank)
         XCTAssertFalse(" a ".isBlank)
     }
+
+    func testRecipeImageURLAllowsSupabaseAndGCSHttps() {
+        XCTAssertTrue(RecipeImageURL.isAllowed("https://ywduddopwudltshxiqyp.supabase.co/storage/v1/object/public/recipe-photo/a.jpg"))
+        XCTAssertTrue(RecipeImageURL.isAllowed("https://storage.googleapis.com/bucket/photo.jpg"))
+        XCTAssertTrue(RecipeImageURL.isAllowed("https://abc.storage.googleapis.com/photo.jpg"))
+    }
+
+    func testRecipeImageURLRejectsArbitraryAndCleartext() {
+        XCTAssertFalse(RecipeImageURL.isAllowed("http://ywduddopwudltshxiqyp.supabase.co/storage/v1/object/public/recipe-photo/a.jpg"))
+        XCTAssertFalse(RecipeImageURL.isAllowed("https://evil.example/photo.jpg"))
+        XCTAssertFalse(RecipeImageURL.isAllowed("https://evil-supabase.co/photo.jpg"))
+        XCTAssertFalse(RecipeImageURL.isAllowed("https://127.0.0.1/photo.jpg"))
+        XCTAssertFalse(RecipeImageURL.isAllowed("file:///tmp/a.jpg"))
+    }
+
+    func testCustomSchemeImportIgnoresQueryAndRequiresAppGroup() {
+        let injected = URL(string: "culinachef://import?url=https://tiktok.com/x")!
+        XCTAssertNil(SocialImportLink.payload(from: injected, pendingAppGroupURL: nil))
+        XCTAssertNil(SocialImportLink.payload(from: injected, pendingAppGroupURL: "https://evil.example/x"))
+        let allowed = SocialImportLink.payload(
+            from: URL(string: "culinachef://import")!,
+            pendingAppGroupURL: "https://www.tiktok.com/@chef/video/1"
+        )
+        XCTAssertEqual(allowed?.url, "https://www.tiktok.com/@chef/video/1")
+    }
+
+    func testUniversalImportUsesQueryAllowlist() {
+        let url = URL(string: "https://culinaai.com/import?url=https://youtu.be/abc123&extra=hello")!
+        let payload = SocialImportLink.payload(from: url, pendingAppGroupURL: nil)
+        XCTAssertEqual(payload?.url, "https://youtu.be/abc123")
+        XCTAssertEqual(payload?.extra, "hello")
+        XCTAssertNil(SocialImportLink.payload(
+            from: URL(string: "https://culinaai.com/import?url=https://evil.example/x")!,
+            pendingAppGroupURL: nil
+        ))
+    }
+
+    func testSocialImportPendingStoreConsumeClearsValue() {
+        let defaults = UserDefaults(suiteName: "test.social.import.\(UUID().uuidString)")!
+        SocialImportPendingStore.save("https://tiktok.com/a", defaults: defaults)
+        XCTAssertEqual(SocialImportPendingStore.consume(defaults: defaults), "https://tiktok.com/a")
+        XCTAssertNil(SocialImportPendingStore.consume(defaults: defaults))
+    }
     
     // MARK: - Validation Error Messages
     
@@ -224,6 +267,15 @@ final class StringValidationTests: XCTestCase {
         
         let requiredError = String.validationError(for: .required)
         XCTAssertFalse(requiredError.isEmpty, "Required error message should not be empty")
+    }
+
+    func testAIInputLimitClamp() {
+        XCTAssertEqual(AIInputLimit.clamp("hello", to: 3), "hel")
+        XCTAssertEqual(AIInputLimit.clamp("hi", to: 5), "hi")
+        XCTAssertEqual(AIInputLimit.chatMessage, 2500)
+        XCTAssertEqual(AIInputLimit.recipeGoal, 500)
+        XCTAssertEqual(AIInputLimit.socialExtra, 4000)
+        XCTAssertEqual(AIInputLimit.ingredient, 100)
     }
 }
 

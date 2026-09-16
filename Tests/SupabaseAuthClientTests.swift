@@ -458,4 +458,53 @@ final class SupabaseAuthClientTests: XCTestCase {
             XCTAssertNil(KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey))
         }
     }
+
+    func testResendForSameEmailReplacesVerifierButKeepsOtherEmail() async throws {
+        PasswordResetPKCEStore.clear()
+        try PasswordResetPKCEStore.upsert(verifier: "old-a", email: "a@example.com")
+        try PasswordResetPKCEStore.upsert(verifier: "b-verifier", email: "b@example.com")
+        try PasswordResetPKCEStore.upsert(verifier: "new-a", email: "a@example.com")
+        let verifiers = PasswordResetPKCEStore.verifiersNewestFirst()
+        XCTAssertEqual(verifiers, ["new-a", "b-verifier"])
+        PasswordResetPKCEStore.clear()
+    }
+
+    func testExchangePKCETriesPreviousVerifierAfterClientError() async throws {
+        PasswordResetPKCEStore.clear()
+        try PasswordResetPKCEStore.upsert(verifier: "older", email: "first@example.com")
+        try PasswordResetPKCEStore.upsert(verifier: "newer", email: "second@example.com")
+
+        var calls = 0
+        MockURLProtocol.requestHandler = { request in
+            calls += 1
+            let status = calls == 1 ? 400 : 200
+            let body = status == 200
+                ? (try? MockSupabaseResponses.successAuthResponseData()) ?? Data()
+                : Data("{\"message\":\"invalid\"}".utf8)
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: status,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, body)
+        }
+
+        _ = try await client.exchangePKCECode("auth-code")
+        XCTAssertEqual(calls, 2)
+        XCTAssertNil(KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey))
+    }
+
+    func testFailedRecoverDoesNotWipeOtherEmailVerifier() async {
+        PasswordResetPKCEStore.clear()
+        try? PasswordResetPKCEStore.upsert(verifier: "keep-me", email: "keep@example.com")
+        MockURLProtocol.mockResponse(statusCode: 500, data: Data("{\"message\":\"nope\"}".utf8))
+        do {
+            try await client.resetPasswordForEmail(email: "other@example.com")
+            XCTFail("Should fail")
+        } catch {
+            XCTAssertEqual(PasswordResetPKCEStore.verifiersNewestFirst(), ["keep-me"])
+        }
+        PasswordResetPKCEStore.clear()
+    }
 }

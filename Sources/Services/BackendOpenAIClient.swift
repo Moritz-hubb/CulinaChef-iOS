@@ -59,7 +59,7 @@ final class BackendOpenAIClient {
         let requestMessages = trimmed.map { msg in
             RequestMessage(
                 role: msg.role.rawValue,
-                content: msg.text,
+                content: AIInputLimit.clamp(msg.text, to: AIInputLimit.chatMessage),
                 image_data_base64: msg.imageDataBase64
             )
         }
@@ -128,7 +128,7 @@ final class BackendOpenAIClient {
         
         let request = Request(
             image_data_base64: imageData.base64EncodedString(),
-            prompt: userPrompt,
+            prompt: AIInputLimit.clamp(userPrompt, to: AIInputLimit.imagePrompt),
             model: model
         )
         
@@ -210,7 +210,7 @@ final class BackendOpenAIClient {
         
         // Build request dictionary
         var requestDict: [String: Any] = [
-            "goal": goal,
+            "goal": AIInputLimit.clamp(goal, to: AIInputLimit.recipeGoal),
             "categories": categories,
             "model": "gpt-5.4-mini"
         ]
@@ -219,8 +219,8 @@ final class BackendOpenAIClient {
         if let max = timeMinutesMax { requestDict["time_minutes_max"] = max }
         if let s = servings { requestDict["servings"] = s }
         if let ctx = dietaryContext {
-            requestDict["dietary_context"] = ctx
-            Logger.debug("[Dietary] Sending dietary_context length=\(ctx.count)", category: .data)
+            requestDict["dietary_context"] = AIInputLimit.clamp(ctx, to: AIInputLimit.dietaryContext)
+            Logger.debug("[Dietary] Sending dietary_context length=\(AIInputLimit.clamp(ctx, to: AIInputLimit.dietaryContext).count)", category: .data)
         } else {
             Logger.debug("[Dietary] No dietary_context", category: .data)
         }
@@ -291,8 +291,8 @@ final class BackendOpenAIClient {
             nutrition_targets: nutritionTargets,
             categories: Array(categories.prefix(9)),
             meal_preferences: Array(mealPreferences.prefix(6)),
-            dietary_context: dietaryContext,
-            notes: notes,
+            dietary_context: dietaryContext.map { AIInputLimit.clamp($0, to: AIInputLimit.dietaryContext) },
+            notes: notes.map { AIInputLimit.clamp($0, to: AIInputLimit.mealPlanNotes) },
             servings: 1
         )
 

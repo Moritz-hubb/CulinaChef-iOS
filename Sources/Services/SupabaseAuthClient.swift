@@ -297,7 +297,8 @@ final class SupabaseAuthClient {
     /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
     func resetPasswordForEmail(email: String) async throws {
         let verifier = PKCE.generateCodeVerifier()
-        try KeychainManager.save(key: PasswordResetLink.codeVerifierKeychainKey, value: verifier)
+        let previous = PasswordResetPKCEStore.snapshot()
+        try PasswordResetPKCEStore.upsert(verifier: verifier, email: email)
 
         var url = baseURL
         url.append(path: "/auth/v1/recover")
@@ -306,6 +307,7 @@ final class SupabaseAuthClient {
             URLQueryItem(name: "redirect_to", value: Config.passwordResetRedirectURL.absoluteString)
         ]
         guard let recoverURL = components?.url else {
+            try? PasswordResetPKCEStore.restore(previous)
             throw URLError(.badURL)
         }
 
@@ -324,6 +326,7 @@ final class SupabaseAuthClient {
         let (data, response) = try await SecureURLSession.shared.data(for: req)
 
         guard let http = response as? HTTPURLResponse else {
+            try? PasswordResetPKCEStore.restore(previous)
             throw URLError(.badServerResponse)
         }
 
@@ -331,7 +334,7 @@ final class SupabaseAuthClient {
         if http.statusCode == 200 {
             return
         } else {
-            KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
+            try? PasswordResetPKCEStore.restore(previous)
             let error = try? JSONDecoder().decode(AuthError.self, from: data)
             throw NSError(domain: "SupabaseAuth", code: http.statusCode,
                          userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordResetEmailFailed.localized])
@@ -340,8 +343,8 @@ final class SupabaseAuthClient {
 
     /// Exchanges a one-time PKCE `code` from the Universal Link for a recovery session.
     func exchangePKCECode(_ code: String) async throws -> AuthResponse {
-        guard let verifier = KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey),
-              !verifier.isEmpty else {
+        let verifiers = PasswordResetPKCEStore.verifiersNewestFirst()
+        guard !verifiers.isEmpty else {
             throw NSError(
                 domain: "SupabaseAuth",
                 code: -1,
@@ -357,37 +360,58 @@ final class SupabaseAuthClient {
             throw URLError(.badURL)
         }
 
-        var req = URLRequest(url: tokenURL)
-        req.httpMethod = "POST"
-        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.addValue(apiKey, forHTTPHeaderField: "apikey")
-        req.httpBody = try JSONEncoder().encode(PKCETokenRequest(auth_code: code, code_verifier: verifier))
+        var lastClientError: NSError?
+        for verifier in verifiers {
+            var req = URLRequest(url: tokenURL)
+            req.httpMethod = "POST"
+            req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.addValue(apiKey, forHTTPHeaderField: "apikey")
+            req.httpBody = try JSONEncoder().encode(PKCETokenRequest(auth_code: code, code_verifier: verifier))
 
-        let (data, response) = try await SecureURLSession.shared.data(for: req)
+            let (data, response) = try await SecureURLSession.shared.data(for: req)
 
-        guard let http = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
-        }
-
-        if http.statusCode == 200 {
-            do {
-                let decoded = try JSONDecoder().decode(AuthResponse.self, from: data)
-                KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
-                return decoded
-            } catch {
-                throw NSError(
-                    domain: "SupabaseAuth",
-                    code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: L.resetPasswordError.localized]
-                )
+            guard let http = response as? HTTPURLResponse else {
+                throw URLError(.badServerResponse)
             }
+
+            if http.statusCode == 200 {
+                do {
+                    let decoded = try JSONDecoder().decode(AuthResponse.self, from: data)
+                    PasswordResetPKCEStore.clear()
+                    return decoded
+                } catch {
+                    throw NSError(
+                        domain: "SupabaseAuth",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: L.resetPasswordError.localized]
+                    )
+                }
+            }
+            if (500...599).contains(http.statusCode) {
+                let error = try? JSONDecoder().decode(AuthError.self, from: data)
+                throw NSError(domain: "SupabaseAuth", code: http.statusCode,
+                             userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordResetEmailFailed.localized])
+            }
+            if (400...499).contains(http.statusCode) {
+                let error = try? JSONDecoder().decode(AuthError.self, from: data)
+                lastClientError = NSError(
+                    domain: "SupabaseAuth",
+                    code: http.statusCode,
+                    userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordResetEmailFailed.localized]
+                )
+                continue
+            }
+            let error = try? JSONDecoder().decode(AuthError.self, from: data)
+            throw NSError(domain: "SupabaseAuth", code: http.statusCode,
+                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordResetEmailFailed.localized])
         }
-        if (400...499).contains(http.statusCode) {
-            KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
-        }
-        let error = try? JSONDecoder().decode(AuthError.self, from: data)
-        throw NSError(domain: "SupabaseAuth", code: http.statusCode,
-                     userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordResetEmailFailed.localized])
+
+        PasswordResetPKCEStore.clear()
+        throw lastClientError ?? NSError(
+            domain: "SupabaseAuth",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: L.resetPasswordError.localized]
+        )
     }
     
     // MARK: - Update Password (from reset token)
@@ -626,7 +650,7 @@ enum KeychainManager {
         delete(key: "taste_preferences_secure")
         delete(key: "auth_provider")
         delete(key: "apple_user_id")
-        delete(key: PasswordResetLink.codeVerifierKeychainKey)
+        PasswordResetPKCEStore.clear()
         if let userId, !userId.isEmpty {
             delete(key: DietaryPreferences.storageKey(for: userId))
             delete(key: TastePreferencesManager.storageKey(for: userId))

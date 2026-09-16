@@ -11,7 +11,6 @@ struct ForgotPasswordView: View {
     @State private var errorMessage: String?
     @State private var showSuccess = false
     @State private var showResendSuccess = false
-    @State private var pollingTask: Task<Void, Never>?
     @FocusState private var isEmailFocused: Bool
     
     var body: some View {
@@ -132,26 +131,6 @@ struct ForgotPasswordView: View {
                                 .opacity((isResending || email.isEmpty) ? 0.6 : 1)
                                 .padding(.horizontal, 24)
                                 .padding(.top, 8)
-                                
-                                // Manual check button (fallback if polling doesn't work)
-                                Button {
-                                    Task { await checkPasswordResetStatus() }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "checkmark.circle")
-                                            .font(.system(size: 16, weight: .semibold))
-                                        Text(L.resetPasswordCheckStatus.localized)
-                                            .font(.system(size: 16, weight: .semibold))
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(Color.gray.opacity(0.2))
-                                    .foregroundColor(.black)
-                                    .cornerRadius(10)
-                                }
-                                .accessibilityLabel(L.resetPasswordCheckStatus.localized)
-                                .padding(.horizontal, 24)
-                                .padding(.top, 8)
                             }
                             .padding(.vertical, 40)
                         } else {
@@ -244,12 +223,7 @@ struct ForgotPasswordView: View {
                 }
             }
         }
-        .id(localizationManager.currentLanguage) // Force re-render on language change
-        .onDisappear {
-            // Stop polling when view disappears
-            pollingTask?.cancel()
-            pollingTask = nil
-        }
+        .id(localizationManager.currentLanguage)
     }
     
     private func resetPassword() async {
@@ -277,8 +251,6 @@ struct ForgotPasswordView: View {
             await MainActor.run {
                 showSuccess = true
                 showResendSuccess = false
-                // Start polling for password reset link click
-                startPollingForPasswordReset()
             }
         } catch {
             await MainActor.run {
@@ -287,74 +259,9 @@ struct ForgotPasswordView: View {
         }
     }
     
-    private func startPollingForPasswordReset() {
-        // Stop any existing polling
-        pollingTask?.cancel()
-        
-        // Store the email before starting polling
-        let emailToCheck = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        let initialTokens = (KeychainManager.get(key: "access_token"), KeychainManager.get(key: "refresh_token"))
-        
-        // Start new polling task
-        pollingTask = Task {
-            var pollCount = 0
-            let maxPolls = 60 // Poll for 5 minutes (60 * 5 seconds)
-            
-            while !Task.isCancelled && pollCount < maxPolls {
-                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
-                
-                if Task.isCancelled {
-                    break
-                }
-                
-                // Check if user clicked the link by checking for new or changed tokens in Keychain
-                // When user clicks the reset link, Supabase authenticates them and tokens are stored
-                let currentAccessToken = KeychainManager.get(key: "access_token")
-                let currentRefreshToken = KeychainManager.get(key: "refresh_token")
-                let userEmail = KeychainManager.get(key: "user_email")
-                
-                // Check if tokens exist and match the email, and are different from initial tokens
-                if let accessToken = currentAccessToken,
-                   let refreshToken = currentRefreshToken,
-                   let email = userEmail,
-                   email.lowercased() == emailToCheck.lowercased(),
-                   // Tokens changed (user clicked the link) OR tokens didn't exist before
-                   (currentAccessToken != initialTokens.0 || currentRefreshToken != initialTokens.1 || initialTokens.0 == nil) {
-                    
-                    // Verify the token is valid and is a password reset token
-                    // by checking if we can get user info
-                    do {
-                        if let _ = try await app.getUser(accessToken: accessToken) {
-                            // User is authenticated via password reset link
-                            await MainActor.run {
-                                app.passwordResetToken = accessToken
-                                app.passwordResetRefreshToken = refreshToken
-                                app.showPasswordReset = true
-                                // Stop polling
-                                pollingTask?.cancel()
-                                pollingTask = nil
-                            }
-                            return
-                        }
-                    } catch {
-                        // Token might not be valid yet, continue polling
-                    }
-                }
-                
-                pollCount += 1
-            }
-            
-            // Stop polling after max attempts
-            await MainActor.run {
-                pollingTask = nil
-            }
-        }
-    }
-    
     private func resendEmail() async {
         errorMessage = nil
         
-        // Validate email
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard !trimmedEmail.isEmpty else {
@@ -374,9 +281,6 @@ struct ForgotPasswordView: View {
             try await app.resetPassword(email: trimmedEmail)
             await MainActor.run {
                 showResendSuccess = true
-                // Restart polling for password reset link click
-                startPollingForPasswordReset()
-                // Reset the resend success message after 3 seconds
                 Task {
                     try? await Task.sleep(nanoseconds: 3_000_000_000)
                     await MainActor.run {
@@ -390,68 +294,9 @@ struct ForgotPasswordView: View {
             }
         }
     }
-    
-    private func checkPasswordResetStatus() async {
-        let emailToCheck = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        Logger.debug("[ForgotPasswordView] Checking password reset status", category: .auth)
-        
-        // Check if user clicked the link by checking for tokens in Keychain
-        let accessToken = KeychainManager.get(key: "access_token")
-        let refreshToken = KeychainManager.get(key: "refresh_token")
-        let userEmail = KeychainManager.get(key: "user_email")
-        
-        Logger.debug("[ForgotPasswordView] Keychain check - hasAccessToken=\(accessToken != nil) hasRefreshToken=\(refreshToken != nil)", category: .auth)
-        
-        if let token = accessToken,
-           let refresh = refreshToken,
-           let email = userEmail,
-           email.lowercased() == emailToCheck.lowercased() {
-            
-            Logger.debug("[ForgotPasswordView] Tokens found, verifying with Supabase...", category: .auth)
-            
-            // Verify the token is valid
-            do {
-                if try await app.getUser(accessToken: token) != nil {
-                    Logger.debug("[ForgotPasswordView] Token verified", category: .auth)
-                    // User is authenticated via password reset link
-                    await MainActor.run {
-                        app.passwordResetToken = token
-                        app.passwordResetRefreshToken = refresh
-                        app.showPasswordReset = true
-                        Logger.debug("[ForgotPasswordView] Navigating to password reset view", category: .auth)
-                    }
-                    return
-                } else {
-                    Logger.debug("[ForgotPasswordView] getUser returned nil", category: .auth)
-                }
-            } catch {
-                Logger.error("[ForgotPasswordView] Error verifying token: \(error.localizedDescription)", category: .auth)
-                await MainActor.run {
-                    errorMessage = L.resetPasswordError.localized
-                }
-                return
-            }
-        } else {
-            Logger.debug("[ForgotPasswordView] Tokens not found or email mismatch", category: .auth)
-        }
-        
-        // If we get here, the link hasn't been clicked yet or tokens aren't in Keychain
-        // This can happen if the link redirects to localhost instead of opening the app
-        await MainActor.run {
-            if accessToken == nil || refreshToken == nil {
-                errorMessage = L.resetPasswordLinkClicked.localized
-            } else if let email = userEmail, email.lowercased() != emailToCheck.lowercased() {
-                errorMessage = L.resetPasswordInvalidEmail.localized
-            } else {
-                errorMessage = L.resetPasswordCheckEmail.localized
-            }
-        }
-    }
 }
 
 #Preview {
     ForgotPasswordView()
         .environmentObject(AppState())
 }
-

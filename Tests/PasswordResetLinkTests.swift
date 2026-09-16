@@ -39,6 +39,19 @@ final class PasswordResetLinkTests: XCTestCase {
         XCTAssertFalse(PasswordResetLink.safeDescription(url).contains("tok"))
     }
 
+    func testPKCEStoreCapsEntriesAndReplacesSameEmail() throws {
+        PasswordResetPKCEStore.clear()
+        try PasswordResetPKCEStore.upsert(verifier: "v1", email: "a@x.com")
+        try PasswordResetPKCEStore.upsert(verifier: "v2", email: "b@x.com")
+        try PasswordResetPKCEStore.upsert(verifier: "v3", email: "c@x.com")
+        try PasswordResetPKCEStore.upsert(verifier: "v4", email: "d@x.com")
+        XCTAssertEqual(PasswordResetPKCEStore.verifiersNewestFirst().count, 3)
+        XCTAssertEqual(PasswordResetPKCEStore.verifiersNewestFirst().first, "v4")
+        try PasswordResetPKCEStore.upsert(verifier: "v4b", email: "d@x.com")
+        XCTAssertEqual(PasswordResetPKCEStore.verifiersNewestFirst().first, "v4b")
+        PasswordResetPKCEStore.clear()
+    }
+
     func testPKCEChallengeIsS256Base64URL() {
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
         XCTAssertEqual(

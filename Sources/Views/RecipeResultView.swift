@@ -525,7 +525,7 @@ private struct RecipeAISheet: View {
                             if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 Text(L.chat_messageEllipsis.localized).foregroundStyle(.white.opacity(0.5))
                             }
-                            TextField("", text: $inputText, axis: .vertical)
+                            TextField("", text: $inputText.limited(to: AIInputLimit.chatMessage), axis: .vertical)
                                 .textFieldStyle(.plain)
                                 .foregroundStyle(.white)
                                 .tint(.white)
@@ -596,16 +596,11 @@ private struct RecipeAISheet: View {
                             .padding(.top, 8)
                             .padding(.leading, 4)
                     }
-                    TextField("", text: $reviseFreeText, axis: .vertical)
+                    TextField("", text: $reviseFreeText.limited(to: AIInputLimit.freeText), axis: .vertical)
                         .textFieldStyle(.plain)
                         .foregroundStyle(.white)
                         .tint(.white)
                         .lineLimit(3...6)
-                        .onChange(of: reviseFreeText) { _, newValue in
-                            if newValue.count > 500 {
-                                reviseFreeText = String(newValue.prefix(500))
-                            }
-                        }
                 }
                 .padding(10)
                 .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.12)))
@@ -708,7 +703,7 @@ private struct RecipeAISheet: View {
     }
 
     private func sendText() async {
-        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = AIInputLimit.clamp(inputText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.chatMessage)
         guard !text.isEmpty else { return }
         
         // Block AI features on jailbroken devices

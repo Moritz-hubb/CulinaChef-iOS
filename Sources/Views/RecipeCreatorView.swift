@@ -111,7 +111,7 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                 ScrollView {
                     VStack(spacing: 14) {
                     GroupBoxLabel(L.label_whatToCook.localized)
-TextField(L.placeholder_describeDish.localized, text: $goal)
+TextField(L.placeholder_describeDish.localized, text: $goal.limited(to: AIInputLimit.recipeGoal))
                         .textFieldStyle(.plain)
                         .padding(12)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -124,9 +124,9 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
                             if let pending = app.pendingRecipeGoal {
                                 // Combine name and description if description exists
                                 if let desc = app.pendingRecipeDescription, !desc.isEmpty {
-                                    goal = "\(pending): \(desc)"
+                                    goal = AIInputLimit.clamp("\(pending): \(desc)", to: AIInputLimit.recipeGoal)
                                 } else {
-                                    goal = pending
+                                    goal = AIInputLimit.clamp(pending, to: AIInputLimit.recipeGoal)
                                 }
                                 app.pendingRecipeGoal = nil
                                 app.pendingRecipeDescription = nil
@@ -136,7 +136,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
 
                     VStack(alignment: .leading) {
                         GroupBoxLabel(L.label_maxTimeMinutes.localized)
-                        TextField(L.placeholder_maxTime.localized, text: $timeMinutesMax)
+                        TextField(L.placeholder_maxTime.localized, text: $timeMinutesMax.limited(to: AIInputLimit.cookingTime))
                             .keyboardType(.numberPad)
                             .foregroundStyle(.white)
                             .tint(.white)
@@ -382,13 +382,13 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         
         do {
             let plan = try await openai.generateRecipePlan(
-                goal: goal,
+                goal: AIInputLimit.clamp(goal, to: AIInputLimit.recipeGoal),
                 timeMinutesMin: nil,
                 timeMinutesMax: Int(timeMinutesMax),
                 nutrition: nutrition,
                 categories: categoriesForGeneration,
                 servings: 4,
-                dietaryContext: fullContext
+                dietaryContext: AIInputLimit.clamp(fullContext, to: AIInputLimit.dietaryContext)
             )
             
             // Validate that the AI returned a usable recipe
@@ -500,7 +500,7 @@ private struct NutrField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.caption).foregroundStyle(.white.opacity(0.7))
-TextField("", text: $text)
+TextField("", text: $text.limited(to: AIInputLimit.nutritionNumber))
                 .keyboardType(.numberPad)
                 .foregroundStyle(.white)
                 .tint(.white)

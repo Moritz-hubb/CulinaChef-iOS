@@ -17,4 +17,13 @@ final class LoggerTests: XCTestCase {
         XCTAssertFalse(logged.contains("tok"))
         XCTAssertFalse(logged.contains("access_token"))
     }
+
+    func testSentryPrivacyStripsQueryAndDropsSensitiveCrumbs() {
+        XCTAssertEqual(
+            SentryPrivacy.sanitizedURL("https://api.example.com/recipes?id=eq.abc&access_token=secret"),
+            "https://api.example.com/recipes"
+        )
+        XCTAssertTrue(SentryPrivacy.isSensitiveBreadcrumb(message: "Bearer token refresh", dataDescription: nil))
+        XCTAssertFalse(SentryPrivacy.isSensitiveBreadcrumb(message: "loaded recipes", dataDescription: "count=3"))
+    }
 }

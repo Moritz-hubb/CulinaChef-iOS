@@ -83,16 +83,14 @@ private struct RootViewModifiers: ViewModifier {
 
     private func checkPendingSocialImport() {
         guard !app.showSocialImportFromShare else { return }
-        guard let defaults = UserDefaults(suiteName: "group.com.moritzserrin.culinachef.share"),
-              let pending = defaults.string(forKey: "pending_social_import_url"),
-              !pending.isEmpty else { return }
+        guard let pending = SocialImportPendingStore.consume(),
+              SocialImportURL.isAllowed(pending) else { return }
         #if DEBUG
         Logger.debug(
-            "[SocialImport] scenePhase fallback: recovered pending url len=\(pending.count) preview=\(pending.prefix(100))",
+            "[SocialImport] scenePhase fallback: recovered pending url len=\(pending.count)",
             category: .ui
         )
         #endif
-        defaults.removeObject(forKey: "pending_social_import_url")
         app.pendingSocialImportURL = pending
         app.selectedTab = 2
         app.showSocialImportFromShare = true
@@ -430,15 +428,14 @@ LinearGradient(
         }
         .onAppear {
             previousTab = app.selectedTab
-            if let defaults = UserDefaults(suiteName: "group.com.moritzserrin.culinachef.share"),
-               let pending = defaults.string(forKey: "pending_social_import_url") {
+            if let pending = SocialImportPendingStore.consume(),
+               SocialImportURL.isAllowed(pending) {
                 #if DEBUG
                 Logger.debug(
-                    "[SocialImport] App Group fallback: recovered pending url len=\(pending.count) preview=\(pending.prefix(100))",
+                    "[SocialImport] App Group fallback: recovered pending url len=\(pending.count)",
                     category: .ui
                 )
                 #endif
-                defaults.removeObject(forKey: "pending_social_import_url")
                 app.pendingSocialImportURL = pending
                 app.selectedTab = 2
                 app.showSocialImportFromShare = true

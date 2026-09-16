@@ -188,7 +188,6 @@ final class ShareViewController: UIViewController {
         var components = URLComponents()
         components.scheme = "culinachef"
         components.host = "import"
-        components.queryItems = [URLQueryItem(name: "url", value: link)]
 
         guard let openURL = components.url else {
             shareLog.error("[CulinaShare] failed to build culinachef://import URL")
@@ -215,12 +214,12 @@ final class ShareViewController: UIViewController {
 
     // MARK: - Local Notification Fallback
 
-    private func scheduleReminderNotification(link: String) {
+    private func scheduleReminderNotification(link _: String) {
         let content = UNMutableNotificationContent()
         content.title = ShareL10n.string(.notificationTitle)
         content.body = ShareL10n.string(.notificationBody)
         content.sound = .default
-        content.userInfo = ["deep_link": "culinachef://import?url=\(link)"]
+        content.userInfo = ["deep_link": "culinachef://import"]
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(

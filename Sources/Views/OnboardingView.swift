@@ -142,7 +142,7 @@ struct OnboardingView: View {
         } catch {
             Logger.error("[OnboardingView] ❌ Failed to update name/username from onboarding: \(error.localizedDescription)", category: .data)
             #if DEBUG
-            print("[OnboardingView] Error updating name/username: \(error)")
+            Logger.debug("[OnboardingView] Error updating name/username: \(error)")
             #endif
         }
         

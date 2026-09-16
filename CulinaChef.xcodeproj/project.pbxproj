@@ -15,6 +15,7 @@
 		A11E0AAD5004CF0000000041 /* PasswordResetLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5004AF0000000040 /* PasswordResetLink.swift */; };
 		A11E0AAD5004DF0000000043 /* PKCE.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5004BF0000000042 /* PKCE.swift */; };
 		A11E0AAD5004EF0000000045 /* PasswordResetLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5004E00000000044 /* PasswordResetLinkTests.swift */; };
+		A11E0AAD5005F00000000047 /* LoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5005E00000000046 /* LoggerTests.swift */; };
 		0AB207A3FD11684A6ED1AA0C /* CulinaChefTimerWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F6DB3309F82637183AA90A4 /* CulinaChefTimerWidgetBundle.swift */; };
 		0B13F2E963FF7D25BF9341CA /* TimerCenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7EDB047334A2D67F7492CC /* TimerCenterTests.swift */; };
 		0B84752B5F9DCFBA11FF2F26 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C4F2055099FDED27B71EBC /* SignUpView.swift */; };
@@ -266,6 +267,7 @@
 		A11E0AAD5004AF0000000040 /* PasswordResetLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordResetLink.swift; sourceTree = "<group>"; };
 		A11E0AAD5004BF0000000042 /* PKCE.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCE.swift; sourceTree = "<group>"; };
 		A11E0AAD5004E00000000044 /* PasswordResetLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordResetLinkTests.swift; sourceTree = "<group>"; };
+		A11E0AAD5005E00000000046 /* LoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerTests.swift; sourceTree = "<group>"; };
 		A11E0AAD50004F0000000004 /* AppleSearchAdsAttributionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSearchAdsAttributionTests.swift; sourceTree = "<group>"; };
 		A11E0AAD5000AF0000000010 /* SubscriptionLegal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionLegal.swift; sourceTree = "<group>"; };
 		A11E0AAD5000CF0000000012 /* SubscriptionLegalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionLegalTests.swift; sourceTree = "<group>"; };
@@ -331,6 +333,7 @@
 				42169ED425055D7B0C7DCC4A /* BackendClientTests.swift */,
 				174E397B5850F0459C63D384 /* KeychainManagerTests.swift */,
 				7675AB2EAF24B0AEC5A02AED /* LocalizationManagerTests.swift */,
+				A11E0AAD5005E00000000046 /* LoggerTests.swift */,
 				7E3211EFE8C499247FFEE1F8 /* OpenAIClientTests.swift */,
 				A11E0AAD5003DF0000000032 /* OpenAIConsentManagerTests.swift */,
 				A11E0AAD5004E00000000044 /* PasswordResetLinkTests.swift */,
@@ -878,6 +881,7 @@
 				5FCBB858C3B0036C902DD553 /* BackendClientTests.swift in Sources */,
 				FFF8F29956D8F6369821BC24 /* KeychainManagerTests.swift in Sources */,
 				E9A27A948CF2AE019F73144D /* LocalizationManagerTests.swift in Sources */,
+				A11E0AAD5005F00000000047 /* LoggerTests.swift in Sources */,
 				1BE1A83CC516A86B8C327BF3 /* MenuManagementIntegrationTests.swift in Sources */,
 				260C6211C9EBA6C621E6EA5C /* MockSupabaseResponses.swift in Sources */,
 				411070A7F64F24545ECD2240 /* MockURLProtocol.swift in Sources */,

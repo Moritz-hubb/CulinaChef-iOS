@@ -793,10 +793,10 @@ struct PersonalRecipesView: View {
             }
             .refreshable { 
                 let refreshStartTime = Date()
-                print("🔄 [PERFORMANCE] Pull-to-refresh STARTED")
+                Logger.debug("🔄 [PERFORMANCE] Pull-to-refresh STARTED")
                 await loadRecipes(keepVisible: true)
                 let refreshDuration = Date().timeIntervalSince(refreshStartTime)
-                print("✅ [PERFORMANCE] Pull-to-refresh COMPLETED in \(String(format: "%.3f", refreshDuration))s")
+                Logger.debug("✅ [PERFORMANCE] Pull-to-refresh COMPLETED in \(String(format: "%.3f", refreshDuration))s")
             }
             .sheet(isPresented: $showNewMenuSheet) {
             NewMenuSheet(title: $newMenuTitle, onCreate: { t in Task { await createMenu(title: t) } })
@@ -1079,9 +1079,9 @@ struct PersonalRecipesView: View {
     
     func loadRecipes(keepVisible: Bool = false) async {
         let tabOpenTime = Date()
-        print("📱 [PERFORMANCE] ========================================")
-        print("📱 [PERFORMANCE] 'Meine Rezepte' Tab OPENED at \(tabOpenTime)")
-        print("📱 [PERFORMANCE] keepVisible: \(keepVisible)")
+        Logger.debug("📱 [PERFORMANCE] ========================================")
+        Logger.debug("📱 [PERFORMANCE] 'Meine Rezepte' Tab OPENED at \(tabOpenTime)")
+        Logger.debug("📱 [PERFORMANCE] keepVisible: \(keepVisible)")
         
         guard let userId = KeychainManager.get(key: "user_id"),
               let token = app.accessToken else {
@@ -1089,7 +1089,7 @@ struct PersonalRecipesView: View {
                 self.error = "Nicht angemeldet"
                 self.loading = false
             }
-            print("❌ [PERFORMANCE] Not authenticated")
+            Logger.debug("❌ [PERFORMANCE] Not authenticated")
             return
         }
         
@@ -1098,8 +1098,8 @@ struct PersonalRecipesView: View {
         if !keepVisible {
             if !app.cachedRecipes.isEmpty {
                 let cacheAge = app.recipesCacheTimestamp.map { Date().timeIntervalSince($0) } ?? 0
-                print("💾 [PERFORMANCE] Cache found: \(app.cachedRecipes.count) recipes, \(app.cachedMenus.count) menus")
-                print("💾 [PERFORMANCE] Cache age: \(String(format: "%.1f", cacheAge))s")
+                Logger.debug("💾 [PERFORMANCE] Cache found: \(app.cachedRecipes.count) recipes, \(app.cachedMenus.count) menus")
+                Logger.debug("💾 [PERFORMANCE] Cache age: \(String(format: "%.1f", cacheAge))s")
                 
                 let uiUpdateStartTime = Date()
                 await MainActor.run {
@@ -1108,27 +1108,27 @@ struct PersonalRecipesView: View {
                     self.loading = false // Seite sofort anzeigen!
                     let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
                     let totalDuration = Date().timeIntervalSince(tabOpenTime)
-                    print("⚡ [PERFORMANCE] UI updated from cache in \(String(format: "%.3f", uiUpdateDuration))s")
-                    print("⚡ [PERFORMANCE] Total time to display: \(String(format: "%.3f", totalDuration))s")
-                    print("✅ [PERFORMANCE] Recipes displayed INSTANTLY from cache")
+                    Logger.debug("⚡ [PERFORMANCE] UI updated from cache in \(String(format: "%.3f", uiUpdateDuration))s")
+                    Logger.debug("⚡ [PERFORMANCE] Total time to display: \(String(format: "%.3f", totalDuration))s")
+                    Logger.debug("✅ [PERFORMANCE] Recipes displayed INSTANTLY from cache")
                     Logger.info("[PersonalRecipesView] Using cache (\(app.cachedRecipes.count) recipes) - instant display", category: .data)
                 }
                 
                 // Lade im Hintergrund aktualisiert (auch wenn Cache frisch ist, für Background-Refresh)
-                print("🔄 [PERFORMANCE] Starting background refresh...")
+                Logger.debug("🔄 [PERFORMANCE] Starting background refresh...")
                 Task.detached(priority: .utility) {
                     await self.loadRecipesFromNetwork(userId: userId, token: token, keepVisible: true)
                 }
                 return
             } else {
-                print("⚠️ [PERFORMANCE] No cache available - loading from network")
+                Logger.debug("⚠️ [PERFORMANCE] No cache available - loading from network")
             }
         }
         
         // Kein Cache vorhanden: Lade sofort
         if !keepVisible { 
             loading = true
-            print("⏳ [PERFORMANCE] Loading state set to true - showing loading indicator")
+            Logger.debug("⏳ [PERFORMANCE] Loading state set to true - showing loading indicator")
         }
         
         await loadRecipesFromNetwork(userId: userId, token: token, keepVisible: keepVisible)
@@ -1136,8 +1136,8 @@ struct PersonalRecipesView: View {
     
     private func loadRecipesFromNetwork(userId: String, token: String, keepVisible: Bool) async {
         let networkStartTime = Date()
-        print("📡 [PERFORMANCE] Network load STARTED at \(networkStartTime)")
-        print("📡 [PERFORMANCE] Mode: \(keepVisible ? "Background refresh" : "Foreground load")")
+        Logger.debug("📡 [PERFORMANCE] Network load STARTED at \(networkStartTime)")
+        Logger.debug("📡 [PERFORMANCE] Mode: \(keepVisible ? "Background refresh" : "Foreground load")")
         
         do {
             // Wenn ein Menü aktiv ist, markiere als nicht geladen bis IDs neu geladen wurden
@@ -1146,15 +1146,15 @@ struct PersonalRecipesView: View {
             // OPTIMIZATION: Lade alle Rezepte und Menüs in einem einzigen parallelen Call
             // Keine separaten Calls mehr - alles auf einmal
             let parallelStartTime = Date()
-            print("📡 [PERFORMANCE] Starting parallel requests (recipes + menus)...")
+            Logger.debug("📡 [PERFORMANCE] Starting parallel requests (recipes + menus)...")
             async let recipesTask = loadRecipesFromSupabase(userId: userId, token: token)
             async let menusTask = app.fetchMenus(accessToken: token, userId: userId)
             
             // Warte auf beide Calls parallel
             let (allRecipes, menusResult) = try await (recipesTask, menusTask)
             let parallelDuration = Date().timeIntervalSince(parallelStartTime)
-            print("📡 [PERFORMANCE] Parallel requests completed in \(String(format: "%.3f", parallelDuration))s")
-            print("📡 [PERFORMANCE] Received: \(allRecipes.count) recipes, \(menusResult.count) menus")
+            Logger.debug("📡 [PERFORMANCE] Parallel requests completed in \(String(format: "%.3f", parallelDuration))s")
+            Logger.debug("📡 [PERFORMANCE] Received: \(allRecipes.count) recipes, \(menusResult.count) menus")
             
             let list = allRecipes
             
@@ -1175,9 +1175,9 @@ struct PersonalRecipesView: View {
                     }
                 let uiUpdateDuration = Date().timeIntervalSince(uiUpdateStartTime)
                 let totalDuration = Date().timeIntervalSince(networkStartTime)
-                print("⚡ [PERFORMANCE] UI updated in \(String(format: "%.3f", uiUpdateDuration))s")
-                print("✅ [PERFORMANCE] Network load COMPLETED in \(String(format: "%.3f", totalDuration))s")
-                print("✅ [PERFORMANCE] Displaying \(list.count) recipes and \(menusResult.count) menus")
+                Logger.debug("⚡ [PERFORMANCE] UI updated in \(String(format: "%.3f", uiUpdateDuration))s")
+                Logger.debug("✅ [PERFORMANCE] Network load COMPLETED in \(String(format: "%.3f", totalDuration))s")
+                Logger.debug("✅ [PERFORMANCE] Displaying \(list.count) recipes and \(menusResult.count) menus")
                 Logger.info("[PersonalRecipesView] Loaded \(list.count) recipes and \(menusResult.count) menus", category: .data)
                 }
             
@@ -1188,15 +1188,15 @@ struct PersonalRecipesView: View {
                 app.cachedMenus = menusResult
                 app.recipesCacheTimestamp = Date()
                 let cacheUpdateDuration = Date().timeIntervalSince(cacheUpdateStartTime)
-                print("💾 [PERFORMANCE] Cache updated in \(String(format: "%.3f", cacheUpdateDuration))s")
-                print("💾 [PERFORMANCE] Cached \(list.count) recipes and \(menusResult.count) menus")
+                Logger.debug("💾 [PERFORMANCE] Cache updated in \(String(format: "%.3f", cacheUpdateDuration))s")
+                Logger.debug("💾 [PERFORMANCE] Cached \(list.count) recipes and \(menusResult.count) menus")
             }
             
             // Speichere auch auf Disk für Persistenz
             let diskSaveStartTime = Date()
             app.saveCachedRecipesToDisk(recipes: list, menus: menusResult)
             let diskSaveDuration = Date().timeIntervalSince(diskSaveStartTime)
-            print("💿 [PERFORMANCE] Disk save completed in \(String(format: "%.3f", diskSaveDuration))s")
+            Logger.debug("💿 [PERFORMANCE] Disk save completed in \(String(format: "%.3f", diskSaveDuration))s")
             
             // OPTIMIZATION: Preload Menü-Rezept-IDs für alle Menüs parallel im Hintergrund
             // Dies macht das Wechseln zwischen Menüs viel schneller
@@ -1210,8 +1210,8 @@ struct PersonalRecipesView: View {
             }
         } catch {
             let errorDuration = Date().timeIntervalSince(networkStartTime)
-            print("❌ [PERFORMANCE] Network load FAILED after \(String(format: "%.3f", errorDuration))s")
-            print("❌ [PERFORMANCE] Error: \(error.localizedDescription)")
+            Logger.debug("❌ [PERFORMANCE] Network load FAILED after \(String(format: "%.3f", errorDuration))s")
+            Logger.debug("❌ [PERFORMANCE] Error: \(error.localizedDescription)")
             Logger.error("Failed to load personal recipes", error: error, category: .data)
             await MainActor.run {
                 // CRITICAL: Always set loading = false so empty state can be shown
@@ -1226,7 +1226,7 @@ struct PersonalRecipesView: View {
                         self.recipes = []
                         self.menus = []
                         self.error = nil
-                        print("⚠️ [PERFORMANCE] Personal recipes timed out - showing empty state")
+                        Logger.debug("⚠️ [PERFORMANCE] Personal recipes timed out - showing empty state")
                     default:
                         // Bei Fehlern Liste beibehalten, keine Leerstates forcieren
                         self.error = nil
@@ -1267,7 +1267,7 @@ struct PersonalRecipesView: View {
               (200...299).contains(httpResponse.statusCode) else {
             let totalDuration = Date().timeIntervalSince(requestStartTime)
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            print("❌ [PERFORMANCE] Recipes request FAILED after \(String(format: "%.3f", totalDuration))s (HTTP \(statusCode))")
+            Logger.debug("❌ [PERFORMANCE] Recipes request FAILED after \(String(format: "%.3f", totalDuration))s (HTTP \(statusCode))")
             throw URLError(.badServerResponse)
         }
         
@@ -1276,7 +1276,7 @@ struct PersonalRecipesView: View {
         let decodeDuration = Date().timeIntervalSince(decodeStartTime)
         let totalDuration = Date().timeIntervalSince(requestStartTime)
         
-        print("📡 [PERFORMANCE] Recipes API: Network=\(String(format: "%.3f", networkDuration))s, Decode=\(String(format: "%.3f", decodeDuration))s, Total=\(String(format: "%.3f", totalDuration))s, Size=\(String(format: "%.2f", dataSizeKB))KB, Recipes=\(recipes.count)")
+        Logger.debug("📡 [PERFORMANCE] Recipes API: Network=\(String(format: "%.3f", networkDuration))s, Decode=\(String(format: "%.3f", decodeDuration))s, Total=\(String(format: "%.3f", totalDuration))s, Size=\(String(format: "%.2f", dataSizeKB))KB, Recipes=\(recipes.count)")
         
         return recipes
     }

@@ -8,7 +8,7 @@ struct CulinaChefTimerWidget: Widget {
     private static let log = OSLog(subsystem: "com.moritzserrin.culinachef.widget", category: "CulinaChefTimerWidget")
     
     init() {
-        os_log("[Widget] CulinaChefTimerWidget initialized with kind: %{public}@", log: Self.log, type: .info, kind)
+        os_log("[Widget] CulinaChefTimerWidget initialized with kind: %{private}@", log: Self.log, type: .info, kind)
     }
     
     var body: some WidgetConfiguration {
@@ -39,7 +39,7 @@ struct TimerProvider: TimelineProvider {
     }
     
     func getSnapshot(in context: Context, completion: @escaping (TimerEntry) -> Void) {
-        os_log("[Widget] getSnapshot() called - context.isPreview: %{public}@", log: Self.log, type: .info, String(context.isPreview))
+        os_log("[Widget] getSnapshot() called - context.isPreview: %{private}@", log: Self.log, type: .info, String(context.isPreview))
         let timers = loadTimers()
         os_log("[Widget] getSnapshot() loaded %d timers", log: Self.log, type: .info, timers.count)
         let entry = TimerEntry(date: Date(), timers: timers)
@@ -48,7 +48,7 @@ struct TimerProvider: TimelineProvider {
     }
     
     func getTimeline(in context: Context, completion: @escaping (Timeline<TimerEntry>) -> Void) {
-        os_log("[Widget] getTimeline() called - context.isPreview: %{public}@", log: Self.log, type: .info, String(context.isPreview))
+        os_log("[Widget] getTimeline() called - context.isPreview: %{private}@", log: Self.log, type: .info, String(context.isPreview))
         let currentDate = Date()
         let timers = loadTimers()
         os_log("[Widget] getTimeline() loaded %d timers", log: Self.log, type: .info, timers.count)
@@ -56,7 +56,7 @@ struct TimerProvider: TimelineProvider {
         // Real-time updates: every 1 second for running timers, every 30 seconds for paused timers
         let hasRunningTimers = timers.contains { $0.running }
         let updateInterval: TimeInterval = hasRunningTimers ? 1 : 30
-        os_log("[Widget] getTimeline() hasRunningTimers: %{public}@, updateInterval: %.0f seconds", log: Self.log, type: .info, String(hasRunningTimers), updateInterval)
+        os_log("[Widget] getTimeline() hasRunningTimers: %{private}@, updateInterval: %.0f seconds", log: Self.log, type: .info, String(hasRunningTimers), updateInterval)
         
         // Load raw timer data to get endTime for future entries
         let appGroupID = "group.com.moritzserrin.culinachef"
@@ -103,7 +103,7 @@ struct TimerProvider: TimelineProvider {
             return
         }
         
-        os_log("[Widget] getTimeline() nextUpdate: %{public}@, created %d entries", log: Self.log, type: .info, nextUpdate.description, entries.count)
+        os_log("[Widget] getTimeline() nextUpdate: %{private}@, created %d entries", log: Self.log, type: .info, nextUpdate.description, entries.count)
         let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
         os_log("[Widget] getTimeline() completing with %d timers, next update in %.0f seconds", log: Self.log, type: .info, timers.count, updateInterval)
         completion(timeline)
@@ -111,10 +111,10 @@ struct TimerProvider: TimelineProvider {
     
     private func loadTimers() -> [TimerInfo] {
         let appGroupID = "group.com.moritzserrin.culinachef"
-        os_log("[Widget] loadTimers() called, appGroupID: %{public}@", log: Self.log, type: .debug, appGroupID)
+        os_log("[Widget] loadTimers() called, appGroupID: %{private}@", log: Self.log, type: .debug, appGroupID)
         
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
-            os_log("[Widget] loadTimers() ERROR: Could not access UserDefaults with suiteName: %{public}@", log: Self.log, type: .error, appGroupID)
+            os_log("[Widget] loadTimers() ERROR: Could not access UserDefaults with suiteName: %{private}@", log: Self.log, type: .error, appGroupID)
             return []
         }
         
@@ -132,7 +132,7 @@ struct TimerProvider: TimelineProvider {
             guard let label = data["label"] as? String,
                   let remaining = data["remaining"] as? Int,
                   let running = data["running"] as? Bool else {
-                os_log("[Widget] loadTimers() ERROR: Invalid timer data at index %d: %{public}@", log: Self.log, type: .error, index, String(describing: data))
+                os_log("[Widget] loadTimers() ERROR: Invalid timer data at index %d: %{private}@", log: Self.log, type: .error, index, String(describing: data))
                 continue
             }
             
@@ -141,10 +141,10 @@ struct TimerProvider: TimelineProvider {
             if running, let endTimeInterval = data["endTime"] as? TimeInterval, endTimeInterval > 0 {
                 let endTime = Date(timeIntervalSince1970: endTimeInterval)
                 actualRemaining = max(0, Int(endTime.timeIntervalSinceNow))
-                os_log("[Widget] loadTimers() Timer '%{public}@' is running, recalculated remaining: %d seconds", log: Self.log, type: .debug, label, actualRemaining)
+                os_log("[Widget] loadTimers() Timer '%{private}@' is running, recalculated remaining: %d seconds", log: Self.log, type: .debug, label, actualRemaining)
             }
             
-            os_log("[Widget] loadTimers() Adding timer: label='%{public}@', remaining=%d, running=%{public}@", log: Self.log, type: .debug, label, actualRemaining, String(running))
+            os_log("[Widget] loadTimers() Adding timer: label='%{private}@', remaining=%d, running=%{private}@", log: Self.log, type: .debug, label, actualRemaining, String(running))
             timers.append(TimerInfo(label: label, remaining: actualRemaining, running: running))
         }
         
@@ -200,10 +200,10 @@ struct TimerWidgetEntryView: View {
         case .systemLarge: familyName = "Large"
         default: familyName = "Unknown"
         }
-        os_log("[Widget] TimerWidgetEntryView rendering - family: %{public}@, timers: %d", log: Self.log, type: .info, familyName, entry.timers.count)
+        os_log("[Widget] TimerWidgetEntryView rendering - family: %{private}@, timers: %d", log: Self.log, type: .info, familyName, entry.timers.count)
         if !entry.timers.isEmpty {
             for (index, timer) in entry.timers.enumerated() {
-                os_log("[Widget] Timer %d: label='%{public}@', remaining=%d, running=%{public}@", log: Self.log, type: .debug, index, timer.label, timer.remaining, String(timer.running))
+                os_log("[Widget] Timer %d: label='%{private}@', remaining=%d, running=%{private}@", log: Self.log, type: .debug, index, timer.label, timer.remaining, String(timer.running))
             }
         }
     }

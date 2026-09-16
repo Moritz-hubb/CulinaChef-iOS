@@ -378,22 +378,7 @@ TextField(L.placeholder_describeDish.localized, text: $goal)
         let customContext = buildDietaryContext()
         let languageContext = app.languageSystemPrompt()
         let fullContext = [customContext, languageContext, app.hiddenIntentContext()].filter { !$0.isEmpty }.joined(separator: "\n")
-        
-        // DEBUG: Log dietary context in RecipeCreatorView
-        Logger.info("[DEBUG Dietary RecipeCreator] ========== RECIPECREATOR DIETARY PREFERENCES DEBUG ==========", category: .data)
-        Logger.info("[DEBUG Dietary RecipeCreator] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")", category: .data)
-        Logger.info("[DEBUG Dietary RecipeCreator] app.dietary.diets: \(app.dietary.diets)", category: .data)
-        Logger.info("[DEBUG Dietary RecipeCreator] app.dietary.allergies: \(app.dietary.allergies)", category: .data)
-        Logger.info("[DEBUG Dietary RecipeCreator] Custom context: \(customContext)", category: .data)
-        Logger.info("[DEBUG Dietary RecipeCreator] Full context: \(fullContext)", category: .data)
-        Logger.info("[DEBUG Dietary RecipeCreator] ========== END RECIPECREATOR DIETARY PREFERENCES DEBUG ==========", category: .data)
-        print("🔍 [DEBUG Dietary RecipeCreator] ========== RECIPECREATOR DIETARY PREFERENCES DEBUG ==========")
-        print("🔍 [DEBUG Dietary RecipeCreator] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")")
-        print("🔍 [DEBUG Dietary RecipeCreator] app.dietary.diets: \(app.dietary.diets)")
-        print("🔍 [DEBUG Dietary RecipeCreator] app.dietary.allergies: \(app.dietary.allergies)")
-        print("🔍 [DEBUG Dietary RecipeCreator] Custom context: \(customContext)")
-        print("🔍 [DEBUG Dietary RecipeCreator] Full context: \(fullContext)")
-        print("🔍 [DEBUG Dietary RecipeCreator] ========== END RECIPECREATOR DIETARY PREFERENCES DEBUG ==========")
+        Logger.debug("[Dietary] Recipe creator context length=\(fullContext.count)", category: .data)
         
         do {
             let plan = try await openai.generateRecipePlan(

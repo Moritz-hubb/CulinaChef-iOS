@@ -444,27 +444,21 @@ final class AppState: ObservableObject {
         var strictParts: [String] = []  // Allergien & Ernährungsweisen - IMMER beachten
         var preferencesParts: [String] = []  // Geschmack - nur als Vorschlag
         
-        // DEBUG: Log all dietary preferences
-        Logger.info("[DEBUG Dietary] ========== DIETARY PREFERENCES DEBUG ==========", category: .data)
-        Logger.info("[DEBUG Dietary] User ID: \(KeychainManager.get(key: "user_id") ?? "nil")", category: .data)
-        Logger.info("[DEBUG Dietary] Dietary.diets: \(dietary.diets)", category: .data)
-        Logger.info("[DEBUG Dietary] Dietary.allergies: \(dietary.allergies)", category: .data)
-        Logger.info("[DEBUG Dietary] Dietary.dislikes: \(dietary.dislikes)", category: .data)
-        Logger.info("[DEBUG Dietary] Dietary.notes: \(dietary.notes ?? "nil")", category: .data)
-        
+        Logger.debug(
+            "[Dietary] Building prompt diets=\(dietary.diets.count) allergies=\(dietary.allergies.count) dislikes=\(dietary.dislikes.count)",
+            category: .data
+        )
+
         // STRIKTE Anforderungen (Allergien & Ernährungsweisen)
         // WICHTIG: Ernährungsweisen müssen IMMER respektiert werden - Rezepte entsprechend anpassen
         if !dietary.diets.isEmpty {
             strictParts.append("Ernährungsweisen (IMMER respektieren, Rezepte entsprechend anpassen): " + dietary.diets.sorted().joined(separator: ", "))
-            Logger.info("[DEBUG Dietary] Added diets to strictParts: \(dietary.diets)", category: .data)
         }
         if !dietary.allergies.isEmpty {
             strictParts.append("Allergien/Unverträglichkeiten (IMMER vermeiden): " + dietary.allergies.joined(separator: ", "))
-            Logger.info("[DEBUG Dietary] Added allergies to strictParts: \(dietary.allergies)", category: .data)
         }
         if !dietary.dislikes.isEmpty {
             strictParts.append("Bitte meiden: " + dietary.dislikes.joined(separator: ", "))
-            Logger.info("[DEBUG Dietary] Added dislikes to strictParts: \(dietary.dislikes)", category: .data)
         }
         
         // OPTIONALE Geschmackspräferenzen
@@ -516,12 +510,11 @@ final class AppState: ObservableObject {
         }
         
         if result.isEmpty {
-            Logger.info("[DEBUG Dietary] Result is EMPTY - no dietary preferences", category: .data)
+            Logger.debug("[Dietary] No dietary preferences", category: .data)
             return ""
         }
         let finalPrompt = result.joined(separator: "\n")
-        Logger.info("[DEBUG Dietary] Final dietary prompt: \(finalPrompt)", category: .data)
-        Logger.info("[DEBUG Dietary] ========== END DIETARY PREFERENCES DEBUG ==========", category: .data)
+        Logger.debug("[Dietary] Prompt length=\(finalPrompt.count)", category: .data)
         return finalPrompt
     }
 

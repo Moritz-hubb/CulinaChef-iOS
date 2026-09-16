@@ -158,7 +158,7 @@ struct ShoppingListProvider: TimelineProvider {
     }
     
     func getSnapshot(in context: Context, completion: @escaping (ShoppingListEntry) -> Void) {
-        os_log("[ShoppingListWidget] getSnapshot() called - context.isPreview: %{public}@", log: Self.log, type: .info, String(context.isPreview))
+        os_log("[ShoppingListWidget] getSnapshot() called - context.isPreview: %{private}@", log: Self.log, type: .info, String(context.isPreview))
         let items = loadShoppingList()
         os_log("[ShoppingListWidget] getSnapshot() loaded %d items", log: Self.log, type: .info, items.count)
         let entry = ShoppingListEntry(date: Date(), items: items, animatingItemId: nil, checkmarkScale: 1.0)
@@ -226,7 +226,7 @@ struct ShoppingListProvider: TimelineProvider {
             return
         }
         
-        os_log("[ShoppingListWidget] getTimeline() nextUpdate: %{public}@, created %d entries", log: Self.log, type: .info, nextUpdate.description, entries.count)
+        os_log("[ShoppingListWidget] getTimeline() nextUpdate: %{private}@, created %d entries", log: Self.log, type: .info, nextUpdate.description, entries.count)
         let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
         os_log("[ShoppingListWidget] getTimeline() completing with %d items, next update in %.0f seconds", log: Self.log, type: .info, items.count, updateInterval)
         completion(timeline)
@@ -234,10 +234,10 @@ struct ShoppingListProvider: TimelineProvider {
     
     private func loadShoppingList() -> [ShoppingListItemInfo] {
         let appGroupID = "group.com.moritzserrin.culinachef"
-        os_log("[ShoppingListWidget] loadShoppingList() called, appGroupID: %{public}@", log: Self.log, type: .debug, appGroupID)
+        os_log("[ShoppingListWidget] loadShoppingList() called, appGroupID: %{private}@", log: Self.log, type: .debug, appGroupID)
         
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
-            os_log("[ShoppingListWidget] loadShoppingList() ERROR: Could not access UserDefaults with suiteName: %{public}@", log: Self.log, type: .error, appGroupID)
+            os_log("[ShoppingListWidget] loadShoppingList() ERROR: Could not access UserDefaults with suiteName: %{private}@", log: Self.log, type: .error, appGroupID)
             return []
         }
         
@@ -290,7 +290,7 @@ struct ShoppingListProvider: TimelineProvider {
             os_log("[ShoppingListWidget] loadShoppingList() ERROR: Unknown data format", log: Self.log, type: .error)
             return []
         } catch {
-            os_log("[ShoppingListWidget] loadShoppingList() ERROR: Failed to decode shopping list: %{public}@", log: Self.log, type: .error, error.localizedDescription)
+            os_log("[ShoppingListWidget] loadShoppingList() ERROR: Failed to decode shopping list: %{private}@", log: Self.log, type: .error, error.localizedDescription)
             return []
         }
     }
@@ -359,9 +359,9 @@ struct ShoppingListWidgetEntryView: View {
     }
     
     private func logWidgetRender() {
-        os_log("[ShoppingListWidget] ShoppingListWidgetEntryView rendering - family: %{public}@, items: %d", log: Self.log, type: .info, String(describing: family), entry.items.count)
+        os_log("[ShoppingListWidget] ShoppingListWidgetEntryView rendering - family: %{private}@, items: %d", log: Self.log, type: .info, String(describing: family), entry.items.count)
         for (index, item) in entry.items.enumerated() {
-            os_log("[ShoppingListWidget] Item %d: name='%{public}@', completed=%{public}@", log: Self.log, type: .debug, index, item.name, String(item.isCompleted))
+            os_log("[ShoppingListWidget] Item %d: name='%{private}@', completed=%{private}@", log: Self.log, type: .debug, index, item.name, String(item.isCompleted))
         }
     }
     

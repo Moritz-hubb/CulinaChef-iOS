@@ -233,7 +233,7 @@ final class ImageCache {
         do {
             // Validate URL
             guard url.scheme == "http" || url.scheme == "https" else {
-                Logger.error("[ImageCache] Invalid URL scheme: \(url.absoluteString)", category: .data)
+                Logger.error("[ImageCache] Invalid URL scheme: \(url.scheme ?? "nil")", category: .data)
                 return nil
             }
             
@@ -244,7 +244,7 @@ final class ImageCache {
             configuration.requestCachePolicy = .returnCacheDataElseLoad
             let session = URLSession(configuration: configuration)
             
-            Logger.debug("[ImageCache] Downloading from: \(url.absoluteString)", category: .data)
+            Logger.debug("[ImageCache] Downloading host=\(url.host ?? "")", category: .data)
             let (data, response) = try await session.data(from: url)
             
             // Check HTTP response
@@ -272,7 +272,7 @@ final class ImageCache {
             
             return image
         } catch {
-            Logger.error("[ImageCache] Download failed: \(url.absoluteString)", error: error, category: .data)
+            Logger.error("[ImageCache] Download failed host=\(url.host ?? "")", error: error, category: .data)
             return nil
         }
     }

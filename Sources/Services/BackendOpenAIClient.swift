@@ -220,9 +220,9 @@ final class BackendOpenAIClient {
         if let s = servings { requestDict["servings"] = s }
         if let ctx = dietaryContext {
             requestDict["dietary_context"] = ctx
-            Logger.info("[DEBUG Dietary] Sending dietary_context to backend: \(ctx)", category: .data)
+            Logger.debug("[Dietary] Sending dietary_context length=\(ctx.count)", category: .data)
         } else {
-            Logger.info("[DEBUG Dietary] NO dietary_context sent to backend (nil)", category: .data)
+            Logger.debug("[Dietary] No dietary_context", category: .data)
         }
         
         requestDict["nutrition_constraints"] = [

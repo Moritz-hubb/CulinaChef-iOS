@@ -394,14 +394,14 @@ struct ForgotPasswordView: View {
     private func checkPasswordResetStatus() async {
         let emailToCheck = email.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        Logger.debug("[ForgotPasswordView] Checking password reset status for: \(emailToCheck)", category: .auth)
+        Logger.debug("[ForgotPasswordView] Checking password reset status", category: .auth)
         
         // Check if user clicked the link by checking for tokens in Keychain
         let accessToken = KeychainManager.get(key: "access_token")
         let refreshToken = KeychainManager.get(key: "refresh_token")
         let userEmail = KeychainManager.get(key: "user_email")
         
-        Logger.debug("[ForgotPasswordView] Keychain check - accessToken: \(accessToken != nil), refreshToken: \(refreshToken != nil), userEmail: \(userEmail ?? "nil")", category: .auth)
+        Logger.debug("[ForgotPasswordView] Keychain check - hasAccessToken=\(accessToken != nil) hasRefreshToken=\(refreshToken != nil)", category: .auth)
         
         if let token = accessToken,
            let refresh = refreshToken,
@@ -412,8 +412,8 @@ struct ForgotPasswordView: View {
             
             // Verify the token is valid
             do {
-                if let user = try await app.getUser(accessToken: token) {
-                    Logger.debug("[ForgotPasswordView] Token verified, user authenticated: \(user.email)", category: .auth)
+                if try await app.getUser(accessToken: token) != nil {
+                    Logger.debug("[ForgotPasswordView] Token verified", category: .auth)
                     // User is authenticated via password reset link
                     await MainActor.run {
                         app.passwordResetToken = token
@@ -434,7 +434,6 @@ struct ForgotPasswordView: View {
             }
         } else {
             Logger.debug("[ForgotPasswordView] Tokens not found or email mismatch", category: .auth)
-            Logger.debug("[ForgotPasswordView] Expected email: \(emailToCheck), Found email: \(userEmail ?? "nil")", category: .auth)
         }
         
         // If we get here, the link hasn't been clicked yet or tokens aren't in Keychain

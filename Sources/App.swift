@@ -136,11 +136,11 @@ struct CulinaChefApp: App {
     }
 
     private func openSocialImport(from url: URL) {
-        Logger.debug("[SocialImport] openSocialImport received: \(url.absoluteString.prefix(200))", category: .ui)
+        Logger.debug("[SocialImport] openSocialImport received: \(PasswordResetLink.safeDescription(url))", category: .ui)
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let items = components.queryItems,
               let raw = items.first(where: { $0.name == "url" })?.value else {
-            Logger.error("[SocialImport] deep link missing url query: \(url.absoluteString)", category: .ui)
+            Logger.error("[SocialImport] deep link missing url query: \(PasswordResetLink.safeDescription(url))", category: .ui)
             return
         }
         let decoded = raw.removingPercentEncoding ?? raw

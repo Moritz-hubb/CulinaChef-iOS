@@ -80,7 +80,7 @@ final class BackendClient {
         }
         return (data, http)
         } catch {
-            Logger.error("[BackendClient] Request failed: \(method) \(url.absoluteString) - \(error.localizedDescription)", category: .network)
+            Logger.error("[BackendClient] Request failed: \(method) \(url.path)", error: error, category: .network)
             if let urlError = error as? URLError {
                 Logger.error("[BackendClient] URLError code: \(urlError.code.rawValue) (\(urlError.code)), description: \(urlError.localizedDescription)", category: .network)
             } else if let nsError = error as NSError? {

@@ -199,16 +199,10 @@ final class BackendClient {
         return try JSONDecoder().decode(Recipe.self, from: respData)
     }
 
-    // Rate limiting: increment and check server-side counters
-    // If originalTransactionId is provided, uses transaction-based limiting (prevents multi-account abuse)
-    // If nil, uses user-based limiting (free tier)
-    /// Erhöht die AI-Nutzung für den aktuellen Nutzer und liefert die Zählerstände zurück.
-    ///
-    /// - Parameters:
-    ///   - accessToken: Supabase-Access-Token.
-    ///   - originalTransactionId: Optionaler StoreKit-Original-Transaction-Identifier
-    ///     zur besseren Betrugserkennung.
-    /// - Returns: Aktuelle tägliche und monatliche AI-Usage-Zähler.
+    /// Reads current daily/monthly AI usage. Does **not** increment counters.
+    /// Server-side counting and subscription checks happen on the real `/ai/*` routes.
+    /// Transient failures return `(0, 0)` so a downed status endpoint cannot block those routes.
+    /// Auth and subscription denials still throw.
     func incrementAIUsage(accessToken: String, originalTransactionId: String? = nil) async throws -> (daily: Int, monthly: Int) {
         struct Body: Encodable { let original_transaction_id: String? }
         let body = Body(original_transaction_id: originalTransactionId)
@@ -370,11 +364,15 @@ final class BackendClient {
             default: return "de"
             }
         }()
+        let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SocialImportURL.isAllowed(trimmedURL) else {
+            throw URLError(.badURL)
+        }
         let trimmedTweakText = tweakText?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedExtra = extraText?.trimmingCharacters(in: .whitespacesAndNewlines)
         let cappedExtra = trimmedExtra.map { String($0.prefix(12000)) }
         let body = Body(
-            url: url,
+            url: trimmedURL,
             extra_text: (cappedExtra?.isEmpty == true) ? nil : cappedExtra,
             language: lang,
             dietary_context: dietaryContext,
@@ -383,7 +381,7 @@ final class BackendClient {
         )
         #if DEBUG
         Logger.debug(
-            "[SocialImport] importRecipeFromSocialURL start url=\(url.prefix(160)) lang=\(lang)",
+            "[SocialImport] importRecipeFromSocialURL start url=\(trimmedURL.prefix(160)) lang=\(lang)",
             category: .network
         )
         #endif
@@ -411,9 +409,13 @@ final class BackendClient {
             #endif
             return recipe
         } catch {
-            let bodyPrefix = String(data: respData.prefix(2500), encoding: .utf8) ?? ""
             Logger.error(
-                "[SocialImport] import decode FAILED status=\(httpResponse.statusCode) bytes=\(respData.count) describing=\(String(describing: error))",
+                "[SocialImport] import decode FAILED status=\(httpResponse.statusCode) bytes=\(respData.count)",
+                category: .network
+            )
+            #if DEBUG
+            Logger.error(
+                "[SocialImport] import decode detail: \(String(describing: error))",
                 category: .network
             )
             if let decodingError = error as? DecodingError {
@@ -422,10 +424,12 @@ final class BackendClient {
                     category: .network
                 )
             }
+            let bodyPrefix = String(data: respData.prefix(2500), encoding: .utf8) ?? ""
             Logger.error(
                 "[SocialImport] import response body prefix: \(bodyPrefix.prefix(1200))",
                 category: .network
             )
+            #endif
             throw error
         }
     }
@@ -435,10 +439,14 @@ final class BackendClient {
         struct Body: Encodable {
             let url: String
         }
+        let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SocialImportURL.isAllowed(trimmedURL) else {
+            throw URLError(.badURL)
+        }
         #if DEBUG
-        Logger.debug("[SocialImport] previewSocialMetadata start url=\(url.prefix(160))", category: .network)
+        Logger.debug("[SocialImport] previewSocialMetadata start url=\(trimmedURL.prefix(160))", category: .network)
         #endif
-        let data = try JSONEncoder().encode(Body(url: url))
+        let data = try JSONEncoder().encode(Body(url: trimmedURL))
         let (respData, _) = try await request(
             path: "/ai/preview-social-metadata",
             method: "POST",

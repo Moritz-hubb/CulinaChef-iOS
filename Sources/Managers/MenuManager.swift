@@ -29,6 +29,7 @@ final class MenuManager {
     
     /// Fetch all menus for a user from Supabase
     func fetchMenus(accessToken: String, userId: String) async throws -> [Menu] {
+        try PostgRESTFilter.requireEqValue(userId)
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/menus")
         url.append(queryItems: [
@@ -79,6 +80,7 @@ final class MenuManager {
     
     /// Menü umbenennen (PATCH auf `menus`)
     func renameMenu(menuId: String, newTitle: String, accessToken: String) async throws -> Menu {
+        try PostgRESTFilter.requireEqValue(menuId)
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw URLError(.cannotParseResponse)
@@ -111,6 +113,8 @@ final class MenuManager {
     
     /// Add a recipe to a menu
     func addRecipeToMenu(menuId: String, recipeId: String, accessToken: String) async throws {
+        try PostgRESTFilter.requireEqValue(menuId)
+        try PostgRESTFilter.requireEqValue(recipeId)
         struct Row: Encodable {
             let menu_id: String
             let recipe_id: String
@@ -135,6 +139,8 @@ final class MenuManager {
     
     /// Remove a recipe from a menu
     func removeRecipeFromMenu(menuId: String, recipeId: String, accessToken: String) async throws {
+        try PostgRESTFilter.requireEqValue(menuId)
+        try PostgRESTFilter.requireEqValue(recipeId)
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/recipe_menus")
         url.append(queryItems: [
@@ -156,6 +162,7 @@ final class MenuManager {
     
     /// Fetch recipe IDs associated with a menu
     func fetchMenuRecipeIds(menuId: String, accessToken: String) async throws -> [String] {
+        try PostgRESTFilter.requireEqValue(menuId)
         struct Row: Decodable {
             let recipe_id: String
         }
@@ -184,6 +191,7 @@ final class MenuManager {
     
     /// Delete a menu from Supabase
     func deleteMenu(menuId: String, accessToken: String) async throws {
+        try PostgRESTFilter.requireEqValue(menuId)
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/menus")
         url.append(queryItems: [URLQueryItem(name: "id", value: "eq.\(menuId)")])

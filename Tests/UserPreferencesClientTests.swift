@@ -266,4 +266,16 @@ final class UserPreferencesClientTests: XCTestCase {
             accessToken: "token"
         )
     }
+
+    func testFetchPreferencesRejectsFilterInjection() async {
+        do {
+            _ = try await client.fetchPreferences(
+                userId: "user123,or(user_id.neq.null)",
+                accessToken: "token"
+            )
+            XCTFail("Injected user id must be rejected")
+        } catch {
+            XCTAssertEqual((error as? URLError)?.code, .badURL)
+        }
+    }
 }

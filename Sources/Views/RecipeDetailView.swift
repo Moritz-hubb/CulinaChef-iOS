@@ -835,6 +835,7 @@ struct RecipeDetailView: View {
     }
     
     private func updateRecipePhoto(recipeId: String, imageUrl: String, token: String) async throws {
+        try PostgRESTFilter.requireEqValue(recipeId)
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/recipes")
         url.append(queryItems: [URLQueryItem(name: "id", value: "eq.\(recipeId)")])
@@ -1376,6 +1377,7 @@ struct RecipeDetailView: View {
         }
         
         do {
+            try PostgRESTFilter.requireEqValue(recipe.id)
             var url = Config.supabaseURL
             url.append(path: "/rest/v1/recipes")
             url.append(queryItems: [

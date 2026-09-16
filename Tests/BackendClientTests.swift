@@ -98,10 +98,8 @@ final class BackendClientTests: XCTestCase {
     }
     
     func testNoInternetConnection() async {
-        // Arrange
         MockURLProtocol.mockError(MockSupabaseResponses.noInternetConnectionError())
         
-        // Act & Assert
         do {
             try await client.health()
             XCTFail("Should throw network error")
@@ -109,6 +107,60 @@ final class BackendClientTests: XCTestCase {
             XCTAssertEqual(error.code, .notConnectedToInternet)
         } catch {
             XCTFail("Wrong error type")
+        }
+    }
+
+    func testIncrementAIUsageSwallowsServerErrorsBecauseCountsAreReadOnly() async throws {
+        MockURLProtocol.mockResponse(
+            statusCode: 500,
+            data: #"{"detail":"temporary"}"#.data(using: .utf8)
+        )
+        let counts = try await client.incrementAIUsage(accessToken: "token")
+        XCTAssertEqual(counts.daily, 0)
+        XCTAssertEqual(counts.monthly, 0)
+    }
+
+    func testIncrementAIUsageStillThrowsSubscriptionRequired() async {
+        let body = #"{"error_code":"SUBSCRIPTION_REQUIRED","detail":{"error_code":"SUBSCRIPTION_REQUIRED","message":"Aktives Abo ist erforderlich"}}"#
+        MockURLProtocol.mockResponse(statusCode: 403, data: body.data(using: .utf8))
+        do {
+            _ = try await client.incrementAIUsage(accessToken: "token")
+            XCTFail("Subscription denial must throw")
+        } catch {
+            XCTAssertTrue(BackendHTTPError.isSubscriptionRequired(error))
+        }
+    }
+
+    func testImportRecipeFromSocialURLRejectsDisallowedHost() async {
+        do {
+            _ = try await client.importRecipeFromSocialURL(
+                url: "https://127.0.0.1/internal",
+                recipeLanguage: "de",
+                dietaryContext: nil,
+                recipeTweaks: nil,
+                tweakText: nil,
+                extraText: nil,
+                accessToken: "token"
+            )
+            XCTFail("Loopback import URL must be rejected before the network call")
+        } catch let error as URLError {
+            XCTAssertEqual(error.code, .badURL)
+        } catch {
+            XCTFail("Wrong error type: \(error)")
+        }
+    }
+
+    func testPreviewSocialMetadataRejectsArbitraryHosts() async {
+        do {
+            _ = try await client.previewSocialMetadata(
+                url: "https://example.com/recipe",
+                accessToken: "token"
+            )
+            XCTFail("Non-allowlisted host must be rejected")
+        } catch let error as URLError {
+            XCTAssertEqual(error.code, .badURL)
+        } catch {
+            XCTFail("Wrong error type: \(error)")
         }
     }
 }

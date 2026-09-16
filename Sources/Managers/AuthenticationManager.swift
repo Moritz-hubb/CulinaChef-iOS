@@ -243,6 +243,7 @@ final class AuthenticationManager {
     
     func fetchProfile(accessToken: String?, userId: String?) async throws -> ProfileRow? {
         guard let token = accessToken, let uid = userId else { return nil }
+        try PostgRESTFilter.requireEqValue(uid)
         
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/profiles")

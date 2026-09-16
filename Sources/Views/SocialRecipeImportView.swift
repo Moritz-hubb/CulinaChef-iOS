@@ -343,6 +343,9 @@ struct SocialRecipeImportView: View {
     }
 
     private func importErrorMessage(for error: Error) -> String {
+        if let urlError = error as? URLError, urlError.code == .badURL {
+            return L.import_social_url_label.localized
+        }
         let ns = error as NSError
         if ns.domain == "Backend",
            ns.code == 422,

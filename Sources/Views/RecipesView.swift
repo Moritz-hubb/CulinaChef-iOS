@@ -1241,6 +1241,7 @@ struct PersonalRecipesView: View {
     // Helper function to load the first recipe immediately
     // Helper function to load all recipes from Supabase
     private func loadRecipesFromSupabase(userId: String, token: String) async throws -> [Recipe] {
+        try PostgRESTFilter.requireEqValue(userId)
         let requestStartTime = Date()
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/recipes")

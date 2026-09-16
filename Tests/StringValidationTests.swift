@@ -172,6 +172,38 @@ final class StringValidationTests: XCTestCase {
         XCTAssertFalse(PostgRESTUUID.isValid("not-a-uuid"))
     }
 
+    func testPostgRESTFilterAcceptsUUIDAndSafeTokens() {
+        XCTAssertTrue(PostgRESTFilter.isSafeEqValue("550e8400-e29b-41d4-a716-446655440000"))
+        XCTAssertTrue(PostgRESTFilter.isSafeEqValue("test_user_123"))
+        XCTAssertTrue(PostgRESTFilter.isSafeEqValue("menu_123"))
+        XCTAssertTrue(PostgRESTFilter.isSafeEqValue("user123"))
+    }
+
+    func testPostgRESTFilterRejectsInjection() {
+        XCTAssertFalse(PostgRESTFilter.isSafeEqValue(""))
+        XCTAssertFalse(PostgRESTFilter.isSafeEqValue("id,or(id.neq.null)"))
+        XCTAssertFalse(PostgRESTFilter.isSafeEqValue("abc)or(id.eq.1"))
+        XCTAssertFalse(PostgRESTFilter.isSafeEqValue("a b"))
+        XCTAssertFalse(PostgRESTFilter.isSafeEqValue(String(repeating: "a", count: 65)))
+    }
+
+    func testSocialImportURLAllowsKnownHttpsHosts() {
+        XCTAssertTrue(SocialImportURL.isAllowed("https://www.tiktok.com/@chef/video/123"))
+        XCTAssertTrue(SocialImportURL.isAllowed("https://youtu.be/abc123"))
+        XCTAssertTrue(SocialImportURL.isAllowed("http://instagram.com/p/xyz"))
+        XCTAssertTrue(SocialImportURL.isAllowed("https://vm.tiktok.com/ZMabc/"))
+    }
+
+    func testSocialImportURLRejectsUnsafeTargets() {
+        XCTAssertFalse(SocialImportURL.isAllowed("file:///etc/passwd"))
+        XCTAssertFalse(SocialImportURL.isAllowed("javascript:alert(1)"))
+        XCTAssertFalse(SocialImportURL.isAllowed("https://127.0.0.1/ssrf"))
+        XCTAssertFalse(SocialImportURL.isAllowed("http://192.168.0.1/recipe"))
+        XCTAssertFalse(SocialImportURL.isAllowed("https://evil-tiktok.com/video/1"))
+        XCTAssertFalse(SocialImportURL.isAllowed("https://example.com/recipe"))
+        XCTAssertFalse(SocialImportURL.isAllowed("not a url"))
+    }
+
     func testIsNotBlank() {
         XCTAssertFalse("test".isBlank)
         XCTAssertFalse("  test  ".isBlank)

@@ -566,6 +566,24 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(collectedTypes.contains("NSPrivacyCollectedDataTypeEmailAddress"))
     }
 
+    func testDietarySystemPromptSurvivesOutOfRangeSpicyLevel() throws {
+        var prefs = TastePreferencesManager.TastePreferences()
+        prefs.spicyLevel = 99
+        try TastePreferencesManager.save(prefs)
+        let prompt = appState.dietarySystemPrompt()
+        XCTAssertTrue(prompt.contains("Sehr Scharf"))
+
+        prefs.spicyLevel = -8
+        try TastePreferencesManager.save(prefs)
+        let mild = appState.dietarySystemPrompt()
+        XCTAssertTrue(mild.contains("Mild"))
+
+        prefs.spicyLevel = .nan
+        try TastePreferencesManager.save(prefs)
+        let fallback = appState.dietarySystemPrompt()
+        XCTAssertTrue(fallback.contains("Scharf"))
+    }
+
     private static func makeJWT(expFromNow: TimeInterval) -> String {
         func base64URL(_ string: String) -> String {
             Data(string.utf8).base64EncodedString()

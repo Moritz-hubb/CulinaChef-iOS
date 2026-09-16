@@ -452,7 +452,7 @@ final class AppState: ObservableObject {
         let prefs = TastePreferencesManager.load()
         let spicyLevel = prefs.spicyLevel
         let spicyLabels = ["Mild", "Normal", "Scharf", "Sehr Scharf"]
-        preferencesParts.append("Schärfe-Präferenz: " + spicyLabels[Int(spicyLevel)])
+        preferencesParts.append("Schärfe-Präferenz: " + spicyLabels[TastePreferencesManager.clampedSpicyIndex(spicyLevel)])
         
         var tastes: [String] = []
         if prefs.sweet { tastes.append("süß") }
@@ -470,7 +470,7 @@ final class AppState: ObservableObject {
                let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 let spicyLevel = dict["spicy_level"] as? Double ?? 2
                 let spicyLabels = ["Mild", "Normal", "Scharf", "Sehr Scharf"]
-                preferencesParts.append("Schärfe-Präferenz: " + spicyLabels[Int(spicyLevel)])
+                preferencesParts.append("Schärfe-Präferenz: " + spicyLabels[TastePreferencesManager.clampedSpicyIndex(spicyLevel)])
                 
                 var tastes: [String] = []
                 if dict["sweet"] as? Bool == true { tastes.append("süß") }
@@ -1292,6 +1292,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     }
     
     private func fetchRecipeForStateRestore(id: String, token: String) async throws -> Recipe {
+        try PostgRESTFilter.requireEqValue(id)
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/recipes")
         url.append(queryItems: [
@@ -1460,6 +1461,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     
     /// Lädt Rezepte für den Cache
     private func loadRecipesForCache(userId: String, token: String) async throws -> [Recipe] {
+        try PostgRESTFilter.requireEqValue(userId)
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/recipes")
         url.append(queryItems: [

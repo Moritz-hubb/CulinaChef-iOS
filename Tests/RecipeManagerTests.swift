@@ -120,3 +120,32 @@ final class RecipeManagerTests: XCTestCase {
         return manager
     }
 }
+
+@MainActor
+final class MenuManagerFilterTests: XCTestCase {
+    func testRenameMenuRejectsPostgRESTInjection() async {
+        let manager = MenuManager()
+        do {
+            _ = try await manager.renameMenu(
+                menuId: "abc,or(id.neq.null)",
+                newTitle: "Dinner",
+                accessToken: "token"
+            )
+            XCTFail("Injected menu id must be rejected")
+        } catch {
+            XCTAssertEqual((error as? URLError)?.code, .badURL)
+        }
+    }
+
+    func testDeleteMenuAllowsExistingTestTokens() async {
+        MockURLProtocol.reset()
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [MockURLProtocol.self]
+        SecureURLSession.testConfiguration = config
+        defer { SecureURLSession.testConfiguration = nil }
+
+        MockURLProtocol.mockResponse(statusCode: 204)
+        let manager = MenuManager()
+        try? await manager.deleteMenu(menuId: "menu_123", accessToken: "token")
+    }
+}

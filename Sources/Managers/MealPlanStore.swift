@@ -7,6 +7,7 @@ extension Notification.Name {
 @MainActor
 final class MealPlanStore {
     func fetchPlans(accessToken: String, userId: String) async throws -> [SavedMealPlan] {
+        try PostgRESTFilter.requireEqValue(userId)
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/meal_plans")
         url.append(queryItems: [
@@ -27,6 +28,7 @@ final class MealPlanStore {
     }
 
     func fetchItems(accessToken: String, planId: String) async throws -> [SavedMealPlanItem] {
+        try PostgRESTFilter.requireEqValue(planId)
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/meal_plan_items")
         url.append(queryItems: [
@@ -90,6 +92,7 @@ final class MealPlanStore {
     /// Deletes the plan, its meals, and recipes that are not used by another plan.
     @discardableResult
     func deletePlan(id: String, accessToken: String) async throws -> [String] {
+        try PostgRESTFilter.requireEqValue(id)
         let items = try await fetchItems(accessToken: accessToken, planId: id)
         let recipeIds = Array(Set(items.map(\.recipe_id).compactMap { UUID(uuidString: $0)?.uuidString.lowercased() }))
 

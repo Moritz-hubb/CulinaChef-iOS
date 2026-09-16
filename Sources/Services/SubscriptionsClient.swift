@@ -77,6 +77,7 @@ final class SubscriptionsClient {
     /// - Returns: Gefundene Subscription oder `nil`, falls keine vorhanden ist.
     /// - Throws: `NSError` bei HTTP-Fehlern ungleich 200/404 oder `URLError` bei Transportfehlern.
     func fetchSubscription(userId: String, accessToken: String) async throws -> SubscriptionRow? {
+        try PostgRESTFilter.requireEqValue(userId)
         var url = baseURL
         url.append(path: "/rest/v1/subscriptions")
         url.append(queryItems: [

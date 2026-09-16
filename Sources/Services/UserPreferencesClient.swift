@@ -63,6 +63,7 @@ final class UserPreferencesClient {
     /// - Returns: Preferences-Datensatz oder `nil`, wenn noch keine Zeile existiert.
     /// - Throws: `NSError` bei HTTP-Fehlern oder `URLError` bei Transportfehlern.
     func fetchPreferences(userId: String, accessToken: String) async throws -> UserPreferences? {
+        try PostgRESTFilter.requireEqValue(userId)
         Logger.sensitive("[UserPreferencesClient] Fetching preferences for user: \(userId)", category: .data)
         var url = baseURL
         url.append(path: "/rest/v1/user_preferences")
@@ -192,6 +193,7 @@ final class UserPreferencesClient {
         notes: String?,
         accessToken: String
     ) async throws {
+        try PostgRESTFilter.requireEqValue(userId)
         var url = baseURL
         url.append(path: "/rest/v1/user_preferences")
         url.append(queryItems: [

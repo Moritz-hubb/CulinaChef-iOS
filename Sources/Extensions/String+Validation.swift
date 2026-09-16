@@ -108,6 +108,68 @@ enum PostgRESTUUID {
     }
 }
 
+/// Values interpolated into PostgREST `eq.<value>` query items.
+/// UUIDs are preferred; non-UUID tokens are allowed only if they cannot introduce extra filters.
+enum PostgRESTFilter {
+    static func isSafeEqValue(_ raw: String) -> Bool {
+        if PostgRESTUUID.isValid(raw) { return true }
+        guard (1...64).contains(raw.count) else { return false }
+        return raw.unicodeScalars.allSatisfy { scalar in
+            CharacterSet.alphanumerics.contains(scalar) || scalar == "_" || scalar == "-"
+        }
+    }
+
+    static func requireEqValue(_ raw: String) throws {
+        guard isSafeEqValue(raw) else { throw URLError(.badURL) }
+    }
+}
+
+/// Client-side allowlist matching backend `social_import._ALLOWED_HOST_SUFFIXES`.
+enum SocialImportURL {
+    static let allowedHostSuffixes: [String] = [
+        "youtube.com",
+        "youtu.be",
+        "tiktok.com",
+        "instagram.com",
+        "facebook.com",
+        "fb.watch",
+        "pinterest.com",
+        "pin.it",
+        "reddit.com",
+        "snapchat.com",
+        "vimeo.com",
+        "twitch.tv",
+        "threads.net",
+        "twitter.com",
+        "x.com",
+        "dailymotion.com",
+        "dai.ly"
+    ]
+
+    static func isAllowed(_ raw: String) -> Bool {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed), let scheme = url.scheme?.lowercased() else { return false }
+        guard scheme == "https" || scheme == "http" else { return false }
+        guard let host = url.host?.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".")) else {
+            return false
+        }
+        if host.contains(":") { return false }
+        if isIPv4Literal(host) { return false }
+        return allowedHostSuffixes.contains { suffix in
+            host == suffix || host.hasSuffix("." + suffix)
+        }
+    }
+
+    private static func isIPv4Literal(_ host: String) -> Bool {
+        let parts = host.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 4 else { return false }
+        return parts.allSatisfy { part in
+            guard let n = Int(part), (0...255).contains(n) else { return false }
+            return true
+        }
+    }
+}
+
 // MARK: - Localized Error Messages
 extension String {
     static func validationError(for field: ValidationField) -> String {

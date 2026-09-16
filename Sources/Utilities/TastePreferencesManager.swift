@@ -14,6 +14,13 @@ enum TastePreferencesManager {
         var umami: Bool = false
     }
     
+    static func clampedSpicyIndex(_ level: Double) -> Int {
+        let labels = 4
+        guard level.isFinite else { return 2 }
+        let index = Int(level.rounded(.towardZero))
+        return min(max(index, 0), labels - 1)
+    }
+
     /// Save taste preferences to Keychain (secure storage)
     static func save(_ preferences: TastePreferences) throws {
         Logger.debug("[TastePreferencesManager] save() called - spicyLevel: \(preferences.spicyLevel), sweet: \(preferences.sweet), sour: \(preferences.sour), bitter: \(preferences.bitter), umami: \(preferences.umami)", category: .data)

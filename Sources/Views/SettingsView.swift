@@ -585,7 +585,7 @@ private struct DietarySettingsSheet: View {
                                     .font(.callout)
                                     .foregroundStyle(.white)
                                 Spacer()
-                                Text([L.spicy_mild.localized, L.spicy_normal.localized, L.spicy_hot.localized, L.spicy_veryHot.localized][Int(spicyLevel)])
+                                Text([L.spicy_mild.localized, L.spicy_normal.localized, L.spicy_hot.localized, L.spicy_veryHot.localized][TastePreferencesManager.clampedSpicyIndex(spicyLevel)])
                                     .font(.callout.weight(.medium))
                                     .foregroundStyle(.white)
                             }

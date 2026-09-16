@@ -1000,7 +1000,9 @@
   "mealplan.slot.bedtime": "Prima di dormire",
   "mealplan.slot.intraWorkout": "Intra-workout",
   "mealplan.perMealPrefs": "Per pasto",
-  "mealplan.perMealPrefsHint": "Opzionale. Le impostazioni del giorno valgono per tutti. Puoi cambiare dieta, piccante o gusto di un pasto.",
+  "mealplan.perMealPrefsHint": "Opzionale. Le impostazioni del giorno valgono per tutti. Puoi cambiare dieta, piccante o gusto di un pasto e aggiungere brevi indicazioni per l’IA.",
   "mealplan.prefInherit": "Come il giorno",
-  "mealplan.prefCustom": "Proprio"
+  "mealplan.prefCustom": "Proprio",
+  "mealplan.slotNotes": "Indicazioni per questo pasto",
+  "mealplan.slotNotesPlaceholder": "es. più proteine, senza aglio, rapido da cucinare"
 }

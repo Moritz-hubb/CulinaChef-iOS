@@ -269,7 +269,8 @@ struct MealPlanCreatorView: View {
                                 set: { isOn in
                                     if isOn { expandedSlotPrefs.insert(slot) } else { expandedSlotPrefs.remove(slot) }
                                 }
-                            )
+                            ),
+                            isFocused: $isFocused
                         )
                     }
                 }
@@ -365,7 +366,8 @@ struct MealPlanCreatorView: View {
     private func mealPreferencesPayload() -> [MealPlanMealPreference] {
         plannedSlots.compactMap { slot in
             let state = slotPrefs[slot] ?? MealSlotPrefState()
-            guard state.customized || state.spicyOverride != nil || state.overrideTastes else { return nil }
+            let slotNotes = AIInputLimit.clamp(state.notes.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.mealSlotNotes)
+            guard state.customized || state.spicyOverride != nil || state.overrideTastes || !slotNotes.isEmpty else { return nil }
             var cats = state.categories
             if nutritionSpecified { cats.subtract(macroCategoryLabels) }
             return MealPlanMealPreference(
@@ -374,7 +376,8 @@ struct MealPlanCreatorView: View {
                 categories: state.customized ? Array(cats) : [],
                 spicy_level: state.spicyOverride,
                 override_tastes: state.overrideTastes,
-                tastes: state.overrideTastes ? tastePreferenceKeys.filter { state.tastes[$0] == true } : []
+                tastes: state.overrideTastes ? tastePreferenceKeys.filter { state.tastes[$0] == true } : [],
+                notes: slotNotes.isEmpty ? nil : slotNotes
             )
         }
     }
@@ -514,6 +517,7 @@ private struct MealSlotPrefState: Equatable {
     var spicyOverride: Int? = nil
     var overrideTastes = false
     var tastes: [String: Bool] = [:]
+    var notes: String = ""
 }
 
 private struct MealSlotPreferenceCard: View {
@@ -524,6 +528,7 @@ private struct MealSlotPreferenceCard: View {
     let tasteKeys: [String]
     @Binding var state: MealSlotPrefState
     @Binding var expanded: Bool
+    @FocusState.Binding var isFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -535,7 +540,7 @@ private struct MealSlotPreferenceCard: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                     Spacer()
-                    if state.customized || state.spicyOverride != nil || state.overrideTastes {
+                    if state.customized || state.spicyOverride != nil || state.overrideTastes || !state.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text(L.mealplan_prefCustom.localized)
                             .font(.caption.weight(.semibold))
                             .foregroundColor(Color(red: 0.95, green: 0.5, blue: 0.3))
@@ -600,6 +605,18 @@ private struct MealSlotPreferenceCard: View {
                         }
                     }
                 }
+
+                Text(L.mealplan_slotNotes.localized)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                TextField(L.mealplan_slotNotesPlaceholder.localized, text: $state.notes.limited(to: AIInputLimit.mealSlotNotes), axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .lineLimit(2...4)
+                    .foregroundStyle(.white)
+                    .tint(.white)
+                    .padding(10)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .focused($isFocused)
             }
         }
         .padding(12)

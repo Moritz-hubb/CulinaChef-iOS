@@ -14,6 +14,7 @@ enum AIInputLimit {
     static let socialURL = 2048
     static let socialExtra = 4000
     static let mealPlanNotes = 500
+    static let mealSlotNotes = 400
     static let preferenceItem = 80
     static let nutritionNumber = 6
 

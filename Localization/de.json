@@ -1000,7 +1000,9 @@
   "mealplan.slot.bedtime": "Schlafenszeit",
   "mealplan.slot.intraWorkout": "Intra-Workout",
   "mealplan.perMealPrefs": "Pro Mahlzeit",
-  "mealplan.perMealPrefsHint": "Optional. Standard gilt für alle. Du kannst einzelne Mahlzeiten abweichend machen, z. B. vegetarisch, scharf oder mit anderem Geschmack.",
+  "mealplan.perMealPrefsHint": "Optional. Standard gilt für alle. Du kannst einzelne Mahlzeiten abweichend machen und Hinweise für die KI ergänzen.",
   "mealplan.prefInherit": "Wie der Tag",
-  "mealplan.prefCustom": "Eigene"
+  "mealplan.prefCustom": "Eigene",
+  "mealplan.slotNotes": "Hinweise für diese Mahlzeit",
+  "mealplan.slotNotesPlaceholder": "z. B. extra Protein, ohne Knoblauch, schnell zubereitet"
 }

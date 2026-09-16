@@ -57,6 +57,7 @@ struct MealPlanMealPreference: Codable, Equatable {
     var spicy_level: Int?
     var override_tastes: Bool
     var tastes: [String]
+    var notes: String?
 }
 
 enum MealPlanSlot {

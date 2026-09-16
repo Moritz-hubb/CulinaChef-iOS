@@ -1000,7 +1000,9 @@
   "mealplan.slot.bedtime": "Coucher",
   "mealplan.slot.intraWorkout": "Intra-workout",
   "mealplan.perMealPrefs": "Par repas",
-  "mealplan.perMealPrefsHint": "Optionnel. Les réglages du jour s’appliquent à tous. Tu peux changer régime, piment ou goût d’un repas.",
+  "mealplan.perMealPrefsHint": "Optionnel. Les réglages du jour s’appliquent à tous. Tu peux changer régime, piment ou goût d’un repas et ajouter de courtes consignes pour l’IA.",
   "mealplan.prefInherit": "Comme le jour",
-  "mealplan.prefCustom": "Perso"
+  "mealplan.prefCustom": "Perso",
+  "mealplan.slotNotes": "Consignes pour ce repas",
+  "mealplan.slotNotesPlaceholder": "ex. plus de protéines, sans ail, rapide à préparer"
 }

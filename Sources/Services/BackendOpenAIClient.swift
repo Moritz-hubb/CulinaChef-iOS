@@ -290,7 +290,11 @@ final class BackendOpenAIClient {
             nutrition_mode: nutritionMode,
             nutrition_targets: nutritionTargets,
             categories: Array(categories.prefix(9)),
-            meal_preferences: Array(mealPreferences.prefix(6)),
+            meal_preferences: Array(mealPreferences.prefix(6)).map { pref in
+                var next = pref
+                next.notes = pref.notes.map { AIInputLimit.clamp($0, to: AIInputLimit.mealSlotNotes) }
+                return next
+            },
             dietary_context: dietaryContext.map { AIInputLimit.clamp($0, to: AIInputLimit.dietaryContext) },
             notes: notes.map { AIInputLimit.clamp($0, to: AIInputLimit.mealPlanNotes) },
             servings: 1

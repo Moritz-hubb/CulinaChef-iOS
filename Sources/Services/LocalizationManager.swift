@@ -1626,6 +1626,8 @@ enum L {
     static let mealplan_slot_bedtime = "mealplan.slot.bedtime"
     static let mealplan_perMealPrefs = "mealplan.perMealPrefs"
     static let mealplan_perMealPrefsHint = "mealplan.perMealPrefsHint"
+    static let mealplan_slotNotes = "mealplan.slotNotes"
+    static let mealplan_slotNotesPlaceholder = "mealplan.slotNotesPlaceholder"
     static let mealplan_prefInherit = "mealplan.prefInherit"
     static let mealplan_prefCustom = "mealplan.prefCustom"
 }

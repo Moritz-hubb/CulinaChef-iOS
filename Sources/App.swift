@@ -96,6 +96,13 @@ struct CulinaChefApp: App {
 
     private func handleDeepLink(_ url: URL) {
         Logger.debug("Received deep link: \(PasswordResetLink.safeDescription(url))", category: .ui)
+
+        // Recovery links (code / access_token / refresh_token) must never reach Superwall.
+        if PasswordResetLink.isResetURL(url) {
+            handlePasswordResetLink(url: url)
+            return
+        }
+
         Monetization.shared.handleDeepLink(url)
         
         // Handle culinachef:// scheme (non-secret routes only: import, recipe)

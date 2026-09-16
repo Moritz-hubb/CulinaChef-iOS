@@ -192,7 +192,8 @@ final class Monetization {
     
     func handleDeepLink(_ url: URL) {
         guard Config.isSuperwallConfigured else { return }
-        Superwall.handleDeepLink(url)
+        guard let sanitized = SuperwallDeepLink.urlToForward(url) else { return }
+        Superwall.handleDeepLink(sanitized)
     }
     
     /// Shows the trial paywall or the lapsed-subscriber paywall based on RevenueCat history.

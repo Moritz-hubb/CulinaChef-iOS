@@ -54,14 +54,8 @@ enum Config {
     static var backendBaseURL: URL {
         switch currentEnvironment {
         case .development:
-            // Development: Use production backend for local testing
-            // Change to localhost if you want to test with local backend
-            // #if targetEnvironment(simulator)
-            // return URL(string: "http://127.0.0.1:8000")!
-            // #else
-            // return URL(string: "http://192.168.178.170:8000")!
-            // #endif
-                return URL(string: "https://culinachef-backend-production.up.railway.app")!
+            // Development currently uses the production backend for local app testing.
+            return URL(string: "https://culinachef-backend-production.up.railway.app")!
             
         case .staging:
             // Staging environment (optional - for testing before production)
@@ -86,34 +80,6 @@ enum Config {
         currentEnvironment != .development
     }
 
-    // MARK: - Security / SSL Pinning (SPKI – Public Key Hash Pinning)
-    
-    /// Whether SSL public key pinning should be enforced.
-    /// Uses SPKI (Subject Public Key Info) hashes instead of full certificate data,
-    /// which survives certificate rotations when the server reuses the same key pair.
-    /// If a pin mismatch occurs but system trust passes, the connection is still
-    /// allowed (graceful degradation) to prevent the app from breaking on cert rotation.
-    static var enableSSLPinning: Bool {
-        currentEnvironment == .production
-    }
-    
-    /// Whether Supabase traffic should be pinned.
-    static var enableSupabasePinning: Bool {
-        false
-    }
-    
-    /// Base64-encoded SHA-256 hashes of the backend server's SPKI.
-    /// Generate with: `./ios/scripts/download_ssl_certificates.sh`
-    /// Include both the current and a backup hash for smoother key rotations.
-    static let backendPublicKeyHashes: Set<String> = [
-        "ErIMn03cxhS+PK7UKUcSOY5pqegEhCn8Xvw4k3LqAnw=",  // Current (as of 2026-09-14)
-        "VYxe9LAwK2QozwAdcQXon+QWur/Wn6o01PdWoMq1jiw=",  // Previous (2026-04-08)
-    ]
-    
-    /// Base64-encoded SHA-256 hashes of the Supabase server's SPKI.
-    /// Only used when `enableSupabasePinning` is true.
-    static let supabasePublicKeyHashes: Set<String> = []
-    
     /// Check if we're in a development/testing environment where backend validation might not work
     /// (Development builds, TestFlight, or staging)
     /// In these environments, StoreKit should be trusted as the primary source

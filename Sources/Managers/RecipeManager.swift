@@ -20,9 +20,15 @@ final class RecipeManager {
     }
     
     private let queueKey = "offline_recipe_deletion_queue"
+    private let defaults: UserDefaults
+    /// Live token for the network-monitor flush. Without a token the queue must stay intact.
+    var accessTokenProvider: (() -> String?)?
     
-    init() {
-        setupNetworkMonitoring()
+    init(userDefaults: UserDefaults = .standard, enableNetworkMonitor: Bool = true) {
+        self.defaults = userDefaults
+        if enableNetworkMonitor {
+            setupNetworkMonitoring()
+        }
     }
     
     // MARK: - Network Monitoring
@@ -92,7 +98,7 @@ final class RecipeManager {
     }
     
     private func loadOfflineQueue() -> [RecipeDeletion] {
-        guard let data = UserDefaults.standard.data(forKey: queueKey),
+        guard let data = defaults.data(forKey: queueKey),
               let queue = try? JSONDecoder().decode([RecipeDeletion].self, from: data) else {
             return []
         }
@@ -101,32 +107,17 @@ final class RecipeManager {
     
     private func saveOfflineQueue(_ queue: [RecipeDeletion]) {
         if let data = try? JSONEncoder().encode(queue) {
-            UserDefaults.standard.set(data, forKey: queueKey)
+            defaults.set(data, forKey: queueKey)
         }
     }
     
-    private func processOfflineQueue() async {
-        var queue = loadOfflineQueue()
-        guard !queue.isEmpty else { return }
-        
-        // Try to get access token from AppState (via callback or similar)
-        // For now, we'll assume the caller provides it via a method parameter
-        // This is a design consideration for later integration
-        
-        var processedIndices: [Int] = []
-        
-        for (index, _) in queue.enumerated() {
-            // Skip processing if we don't have auth
-            // This will be handled during integration with AppState
-            processedIndices.append(index)
+    /// Network-monitor entry point. Must not DELETE or dequeue without an access token.
+    func processOfflineQueue() async {
+        guard let token = accessTokenProvider?(), !token.isEmpty else {
+            Logger.debug("Skipping offline deletion flush — no access token", category: .data)
+            return
         }
-        
-        // Remove processed items
-        for index in processedIndices.reversed() {
-            queue.remove(at: index)
-        }
-        
-        saveOfflineQueue(queue)
+        await processOfflineQueueWithAuth(accessToken: token)
     }
     
     /// Process offline queue with access token (called by AppState when network returns)

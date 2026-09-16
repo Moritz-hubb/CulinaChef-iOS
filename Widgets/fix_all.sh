@@ -19,11 +19,6 @@ echo "Running Entitlements fix script..."
 echo "Checking resource references..."
 ./scripts/fix_resources.sh
 
-# Check SSL certificates (required for SSL pinning)
-echo ""
-echo "Checking SSL certificates..."
-./scripts/fix_certificates.sh
-
 echo ""
 echo "✅ All fixes applied!"
 

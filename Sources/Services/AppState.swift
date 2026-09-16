@@ -5,37 +5,6 @@ import Network
 import UIKit
 #endif
 
-/// Lokale Darstellung der Ernährungspräferenzen eines Nutzers.
-///
-/// Dieses Modell ist bewusst schlank und wird sowohl für das In-Memory-State-Management
-/// als auch für die Persistenz in `UserDefaults` verwendet.
-struct DietaryPreferences: Codable, Equatable {
-    var diets: Set<String> = []
-    var allergies: [String] = []
-    var dislikes: [String] = []
-    var notes: String? = nil
-}
-
-extension DietaryPreferences {
-    static let storageKey = "dietary_preferences"
-    
-    static func load() -> DietaryPreferences {
-        let d = UserDefaults.standard
-        if let data = d.data(forKey: storageKey),
-           let obj = try? JSONDecoder().decode(DietaryPreferences.self, from: data) {
-            return obj
-        }
-        return DietaryPreferences()
-    }
-
-    /// Persistiert die aktuellen Präferenzen in `UserDefaults`.
-    func save() {
-        if let data = try? JSONEncoder().encode(self) {
-            UserDefaults.standard.set(data, forKey: Self.storageKey)
-        }
-    }
-}
-
 /// Zentrale App-weite Statusverwaltung für Auth, Subscriptions, AI-Kontext, Menüs und Präferenzen.
 ///
 /// - Diese Klasse ist `@MainActor`, d.h. alle veröffentlichten Properties und die
@@ -184,6 +153,7 @@ final class AppState: ObservableObject {
         menuManager = MenuManager()
         
         recipeManager = RecipeManager()
+        recipeManager.accessTokenProvider = { [weak self] in self?.accessToken }
         
         // Network reachability monitor for flushing offline queue
         let monitor = NWPathMonitor()

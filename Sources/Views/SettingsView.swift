@@ -9,7 +9,6 @@ struct SettingsView: View {
     @State private var showSubscription = false
     @State private var showNotifications = false
     @State private var showDeleteConfirm = false
-    @State private var showDeleteSuccess = false
     @State private var showTerms = false
     @State private var showPrivacy = false
     @State private var showImprint = false
@@ -287,7 +286,6 @@ struct SettingsView: View {
                     defer { isDeletingAccount = false }
                     do {
                         try await app.deleteAccountAndData()
-                        showDeleteSuccess = true
                     } catch {
                         Logger.error("[AccountDeletion] Backend deletion failed", error: error, category: .data)
                         errorMessage = L.accountDeletionFailed.localized
@@ -298,13 +296,6 @@ struct SettingsView: View {
             Button(L.cancel.localized, role: .cancel) { }
         } message: {
             Text(L.deleteAccountMessage.localized)
-        }
-        .alert(L.accountDeleted.localized, isPresented: $showDeleteSuccess) {
-            Button(L.ok.localized, role: .cancel) {
-                Task { await app.signOut() }
-            }
-        } message: {
-            Text(L.accountDeletedMessage.localized)
         }
         .alert(L.alert_error.localized, isPresented: $showError) {
             Button(L.button_ok.localized, role: .cancel) { }
@@ -1063,21 +1054,7 @@ private struct ProfileSettingsSheet: View {
         defer { loading = false }
         
         do {
-            // First verify current password by attempting to sign in
-            guard let email = app.userEmail else {
-                passwordError = L.settings_emailNotFound.localized
-                return
-            }
-            
-            _ = try await app.auth.signIn(email: email, password: currentPassword)
-            
-            // If sign in successful, change password
-            guard let token = app.accessToken else {
-                passwordError = L.settings_notLoggedIn.localized
-                return
-            }
-            
-            try await app.auth.changePassword(accessToken: token, newPassword: newPassword)
+            try await app.changePassword(currentPassword: currentPassword, newPassword: newPassword)
             
             // Clear fields and show success
             currentPassword = ""

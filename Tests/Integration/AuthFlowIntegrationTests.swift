@@ -94,15 +94,13 @@ final class AuthFlowIntegrationTests: XCTestCase {
         
         // Simulate app restart - Create new AppState instance
         appState = nil
-        
-        // New AppState should restore session from Keychain
+
+        MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
         appState = AppState()
+        await appState.checkSession()
         
-        // Give checkSession() time to run
-        try await Task.sleep(nanoseconds: 100_000_000) // 0.1s
-        
-        // Assert session restored
-        XCTAssertTrue(appState.isAuthenticated, "Session should be restored from Keychain")
+        // Assert session restored via refresh, not merely Keychain presence
+        XCTAssertTrue(appState.isAuthenticated, "Session should be restored after refresh")
         XCTAssertNotNil(appState.accessToken, "Access token should be restored")
         XCTAssertEqual(appState.userEmail, "test@example.com", "Email should be restored")
     }
@@ -113,16 +111,12 @@ final class AuthFlowIntegrationTests: XCTestCase {
         try KeychainManager.save(key: "refresh_token", value: "valid_refresh_token")
         try KeychainManager.save(key: "user_email", value: "test@example.com")
         try KeychainManager.save(key: "user_id", value: "user123")
-        
-        // Create AppState with expired token
-        appState = AppState()
-        
-        // Mock refresh token response
+
         let mockData = try MockSupabaseResponses.successAuthResponseData()
         MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
-        
-        // Act - Trigger token refresh
-        await appState.refreshSessionIfNeeded()
+
+        appState = AppState()
+        await appState.checkSession()
         
         // Assert token refreshed
         XCTAssertTrue(appState.isAuthenticated, "Should remain authenticated after refresh")

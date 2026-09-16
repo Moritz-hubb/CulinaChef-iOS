@@ -21,15 +21,31 @@ enum Config {
     
     // MARK: - Supabase Configuration
     
-    /// Supabase URL loaded from Info.plist (configured via Build Settings or xcconfig)
-    static let supabaseURL: URL = {
-        guard let urlString = Bundle.main.object(forInfoDictionaryKey: "SupabaseURL") as? String,
-              let url = URL(string: urlString) else {
-            Logger.error("SupabaseURL not configured in Info.plist. Using fallback URL.", category: .config)
-            // Fallback to a placeholder URL - app will fail gracefully with network errors
-            return URL(string: "https://placeholder.supabase.co")!
+    /// Parses `SupabaseURL` from an Info.plist dictionary. Returns nil instead of a fake host.
+    static func resolvedSupabaseURL(from infoDictionary: [String: Any]?) -> URL? {
+        guard let urlString = infoDictionary?["SupabaseURL"] as? String else { return nil }
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("$") else { return nil }
+        guard let url = URL(string: trimmed), url.scheme?.lowercased() == "https" else { return nil }
+        let host = url.host?.lowercased() ?? ""
+        if host == "placeholder.supabase.co" || host.hasSuffix(".placeholder.supabase.co") {
+            return nil
         }
         return url
+    }
+
+    /// Supabase URL loaded from Info.plist (configured via Build Settings or xcconfig).
+    /// Missing/invalid values must not silently talk to a placeholder host.
+    static let supabaseURL: URL = {
+        if let url = resolvedSupabaseURL(from: Bundle.main.infoDictionary) {
+            return url
+        }
+        Logger.error("SupabaseURL not configured in Info.plist.", category: .config)
+        #if DEBUG
+        return URL(string: "https://invalid.invalid")!
+        #else
+        preconditionFailure("SupabaseURL must be a https URL in Info.plist (Secrets.xcconfig)")
+        #endif
     }()
     
     /// Supabase Anon Key loaded from Info.plist (configured via Build Settings or xcconfig)
@@ -50,22 +66,40 @@ enum Config {
     }()
     
     // MARK: - Backend URL (Environment-based)
-    
+
+    static let productionBackendURL = URL(string: "https://culinachef-backend-production.up.railway.app")!
+    static let developmentBackendURL = URL(string: "http://127.0.0.1:8000")!
+    static let stagingBackendURL = URL(string: "https://staging-api.culinaai.com")!
+
     static var backendBaseURL: URL {
-        switch currentEnvironment {
+        backendBaseURL(for: currentEnvironment)
+    }
+
+    /// Development talks to localhost unless `CULINA_BACKEND_URL` is set. Production is never overridden.
+    static func backendBaseURL(
+        for environment: Environment,
+        processEnv: [String: String] = ProcessInfo.processInfo.environment
+    ) -> URL {
+        switch environment {
         case .development:
-            // Development currently uses the production backend for local app testing.
-            return URL(string: "https://culinachef-backend-production.up.railway.app")!
-            
+            if let override = resolvedBackendOverride(processEnv["CULINA_BACKEND_URL"]) {
+                return override
+            }
+            return developmentBackendURL
         case .staging:
-            // Staging environment (optional - for testing before production)
-            // Set the staging backend URL here when available
-            return URL(string: "https://staging-api.culinaai.com")!
-            
+            return stagingBackendURL
         case .production:
-            // Production environment (live App Store version)
-            return URL(string: "https://culinachef-backend-production.up.railway.app")!
+            return productionBackendURL
         }
+    }
+
+    static func resolvedBackendOverride(_ raw: String?) -> URL? {
+        guard let raw else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("$") else { return nil }
+        guard let url = URL(string: trimmed), let scheme = url.scheme?.lowercased() else { return nil }
+        guard scheme == "http" || scheme == "https" else { return nil }
+        return url
     }
     
     // MARK: - Feature Flags
@@ -103,32 +137,18 @@ enum Config {
     /// Release/TestFlight must use an Apple key (`appl_`). A Test Store key (`test_`)
     /// makes RevenueCat call `fatalError` on configure and crashes the app on launch.
     static let revenueCatAPIKey: String = {
-        let raw: String
+        let raw: String?
         if let key = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
            !key.isEmpty,
            !key.hasPrefix("$") {
             raw = key
         } else {
-            #if DEBUG
-            Logger.warning("RevenueCatAPIKey not configured in Info.plist. Using test key for development.", category: .config)
-            raw = "test_nYAqGXmJwAhLGWnwCXWzRyQjWsk"
-            #else
-            Logger.error("RevenueCatAPIKey not configured in Info.plist. RevenueCat will not work in production!", category: .config)
-            return ""
-            #endif
+            raw = nil
         }
-        
         #if DEBUG
-        return raw
+        return sanitizedRevenueCatAPIKey(raw, allowTestStoreKey: true)
         #else
-        if raw.hasPrefix("test_") {
-            Logger.error(
-                "RevenueCat Test Store API key (test_…) is not allowed in Release/TestFlight. Use the Apple public SDK key (appl_…) from RevenueCat → Apps → Apple.",
-                category: .config
-            )
-            return ""
-        }
-        return raw
+        return sanitizedRevenueCatAPIKey(raw, allowTestStoreKey: false)
         #endif
     }()
     
@@ -154,6 +174,32 @@ enum Config {
     /// HTTPS Universal Link for Supabase password recovery (`redirect_to`).
     /// Allowlist this URL in the Supabase Auth redirect settings. Never use a custom scheme.
     static let passwordResetRedirectURL = URL(string: "https://culinaai.com/reset-password")!
+
+    /// Release builds must never configure RevenueCat with a Test Store key (`test_`).
+    static func sanitizedRevenueCatAPIKey(_ raw: String?, allowTestStoreKey: Bool) -> String {
+        guard let raw, !raw.isEmpty, !raw.hasPrefix("$") else {
+            if allowTestStoreKey {
+                Logger.warning("RevenueCatAPIKey not configured in Info.plist.", category: .config)
+            } else {
+                Logger.error("RevenueCatAPIKey not configured in Info.plist. RevenueCat will not work in production!", category: .config)
+            }
+            return ""
+        }
+        if !allowTestStoreKey, raw.hasPrefix("test_") {
+            Logger.error(
+                "RevenueCat Test Store API key (test_…) is not allowed in Release/TestFlight. Use the Apple public SDK key (appl_…) from RevenueCat → Apps → Apple.",
+                category: .config
+            )
+            return ""
+        }
+        return raw
+    }
+
+    static func isProductionPasswordResetRedirect(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == "https"
+            && PasswordResetLink.isAllowedHost(url.host)
+            && (url.path == "/reset-password" || url.path.hasPrefix("/reset-password/"))
+    }
 
     // MARK: - API Timeouts
     

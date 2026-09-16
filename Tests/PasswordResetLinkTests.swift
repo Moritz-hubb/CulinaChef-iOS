@@ -7,12 +7,19 @@ final class PasswordResetLinkTests: XCTestCase {
         XCTAssertEqual(PasswordResetLink.parse(url), .pkce(code: "abc123"))
     }
 
-    func testParsesImplicitTokensFromHTTPSFragmentOnly() {
+    func testRejectsImplicitTokensFromHTTPSFragment() {
         let url = URL(string: "https://www.culinaai.com/reset-password#access_token=tok&refresh_token=ref&type=recovery")!
-        XCTAssertEqual(
-            PasswordResetLink.parse(url),
-            .implicit(accessToken: "tok", refreshToken: "ref")
-        )
+        XCTAssertEqual(PasswordResetLink.parse(url), .rejectedImplicit)
+    }
+
+    func testRejectsImplicitTokensFromQuery() {
+        let url = URL(string: "https://culinaai.com/reset-password?access_token=tok&refresh_token=ref")!
+        XCTAssertEqual(PasswordResetLink.parse(url), .rejectedImplicit)
+    }
+
+    func testPrefersPKCECodeWhenTokensAreAlsoPresent() {
+        let url = URL(string: "https://culinaai.com/reset-password?code=abc123#access_token=tok&refresh_token=ref")!
+        XCTAssertEqual(PasswordResetLink.parse(url), .pkce(code: "abc123"))
     }
 
     func testRejectsCustomSchemeEvenWithTokens() {
@@ -38,5 +45,54 @@ final class PasswordResetLinkTests: XCTestCase {
             PKCE.codeChallenge(for: verifier),
             "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         )
+    }
+
+    func testProductionPasswordResetRedirectIsHTTPSUniversalLink() {
+        XCTAssertTrue(Config.isProductionPasswordResetRedirect(Config.passwordResetRedirectURL))
+        XCTAssertFalse(Config.isProductionPasswordResetRedirect(URL(string: "culinachef://reset-password")!))
+        XCTAssertFalse(Config.isProductionPasswordResetRedirect(URL(string: "http://culinaai.com/reset-password")!))
+    }
+
+    func testReleaseRejectsRevenueCatTestStoreKey() {
+        XCTAssertEqual(Config.sanitizedRevenueCatAPIKey("test_abc", allowTestStoreKey: false), "")
+        XCTAssertEqual(Config.sanitizedRevenueCatAPIKey("appl_live", allowTestStoreKey: false), "appl_live")
+        XCTAssertEqual(Config.sanitizedRevenueCatAPIKey("$REVENUECAT_API_KEY", allowTestStoreKey: false), "")
+        XCTAssertEqual(Config.sanitizedRevenueCatAPIKey(nil, allowTestStoreKey: false), "")
+    }
+
+    func testDebugMayKeepConfiguredRevenueCatKeyIncludingTestStore() {
+        XCTAssertEqual(Config.sanitizedRevenueCatAPIKey("test_abc", allowTestStoreKey: true), "test_abc")
+        XCTAssertEqual(Config.sanitizedRevenueCatAPIKey("appl_live", allowTestStoreKey: true), "appl_live")
+    }
+
+    func testSupabaseURLRejectsMissingUnsubstitutedAndPlaceholder() {
+        XCTAssertNil(Config.resolvedSupabaseURL(from: [:]))
+        XCTAssertNil(Config.resolvedSupabaseURL(from: ["SupabaseURL": "$(SUPABASE_URL)"]))
+        XCTAssertNil(Config.resolvedSupabaseURL(from: ["SupabaseURL": ""]))
+        XCTAssertNil(Config.resolvedSupabaseURL(from: ["SupabaseURL": "http://project.supabase.co"]))
+        XCTAssertNil(Config.resolvedSupabaseURL(from: ["SupabaseURL": "https://placeholder.supabase.co"]))
+        XCTAssertEqual(
+            Config.resolvedSupabaseURL(from: ["SupabaseURL": "https://abcdefgh.supabase.co"])?.absoluteString,
+            "https://abcdefgh.supabase.co"
+        )
+    }
+
+    func testDevelopmentBackendDoesNotUseProductionHost() {
+        let development = Config.backendBaseURL(for: .development, processEnv: [:])
+        XCTAssertEqual(development, Config.developmentBackendURL)
+        XCTAssertNotEqual(development.host, Config.productionBackendURL.host)
+        XCTAssertEqual(
+            Config.backendBaseURL(for: .production, processEnv: ["CULINA_BACKEND_URL": "http://127.0.0.1:9"]),
+            Config.productionBackendURL
+        )
+        XCTAssertEqual(
+            Config.backendBaseURL(
+                for: .development,
+                processEnv: ["CULINA_BACKEND_URL": "https://staging-api.culinaai.com"]
+            ).absoluteString,
+            "https://staging-api.culinaai.com"
+        )
+        XCTAssertNil(Config.resolvedBackendOverride("$(CULINA_BACKEND_URL)"))
+        XCTAssertNil(Config.resolvedBackendOverride("ftp://example.com"))
     }
 }

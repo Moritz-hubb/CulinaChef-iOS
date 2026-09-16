@@ -31,7 +31,11 @@ class MockURLProtocol: URLProtocol {
         }
         
         do {
-            let (response, data) = try handler(request)
+            var inspectable = request
+            if inspectable.httpBody == nil, let stream = inspectable.httpBodyStream {
+                inspectable.httpBody = Self.data(from: stream)
+            }
+            let (response, data) = try handler(inspectable)
             
             // Send response
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -51,6 +55,21 @@ class MockURLProtocol: URLProtocol {
     
     override func stopLoading() {
         // Nothing to stop in mock
+    }
+
+    private static func data(from stream: InputStream) -> Data {
+        stream.open()
+        defer { stream.close() }
+        let bufferSize = 1024
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+        var data = Data()
+        while stream.hasBytesAvailable {
+            let read = stream.read(buffer, maxLength: bufferSize)
+            if read <= 0 { break }
+            data.append(buffer, count: read)
+        }
+        return data
     }
 }
 

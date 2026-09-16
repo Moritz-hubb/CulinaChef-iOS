@@ -18,7 +18,9 @@
 		A11E0AAD5005F00000000047 /* LoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5005E00000000046 /* LoggerTests.swift */; };
 		A11E0AAD5006CF0000000051 /* SuperwallDeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5006AF0000000050 /* SuperwallDeepLink.swift */; };
 		A11E0AAD5006EF0000000053 /* SuperwallDeepLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5006E00000000052 /* SuperwallDeepLinkTests.swift */; };
+		A11E0AAD500ABF0000000091 /* DietaryPreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD500AAF0000000090 /* DietaryPreferencesTests.swift */; };
 		A11E0AAD5007EF0000000061 /* RecipeManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5007E00000000060 /* RecipeManagerTests.swift */; };
+		A11E0AAD5008BF0000000071 /* AuthenticationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5008AF0000000070 /* AuthenticationManagerTests.swift */; };
 		0AB207A3FD11684A6ED1AA0C /* CulinaChefTimerWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F6DB3309F82637183AA90A4 /* CulinaChefTimerWidgetBundle.swift */; };
 		0B13F2E963FF7D25BF9341CA /* TimerCenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7EDB047334A2D67F7492CC /* TimerCenterTests.swift */; };
 		0B84752B5F9DCFBA11FF2F26 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C4F2055099FDED27B71EBC /* SignUpView.swift */; };
@@ -76,6 +78,7 @@
 		A11E0AAD50009B0000000009 /* SubscriptionLegal.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5000AF0000000010 /* SubscriptionLegal.swift */; };
 		A11E0AAD5000BB0000000011 /* SubscriptionLegalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5000CF0000000012 /* SubscriptionLegalTests.swift */; };
 		A11E0AAD50005B0000000005 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A11E0AAD50006F0000000006 /* PrivacyInfo.xcprivacy */; };
+		A11E0AAD5009BF0000000081 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A11E0AAD5009AF0000000080 /* PrivacyInfo.xcprivacy */; };
 		A11E0AAD50007B0000000007 /* AdServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A11E0AAD50008F0000000008 /* AdServices.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		75BB4C9CB7F221549C30CD38 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38FC9C621974BD22ECB3E30C /* ChatMessage.swift */; };
 		77EF0CE4FD311108E3379B9D /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C7C61B04ADFA92C3C27DA5 /* ShareSheet.swift */; };
@@ -203,7 +206,7 @@
 		364BC5FAF792DA770F9DF3A7 /* PaywallPriceMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallPriceMathTests.swift; sourceTree = "<group>"; };
 		38FC9C621974BD22ECB3E30C /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		3C5E4EE6A762DDA8E67A951C /* DietaryPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietaryPreferences.swift; sourceTree = "<group>"; };
-		3F0982C606E537CF58C2E853 /* CulinaChefTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = CulinaChefTests.xctest; path = .xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F0982C606E537CF58C2E853 /* CulinaChefTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CulinaChefTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F507943A1CBD339AE23C041 /* TimerCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCenter.swift; sourceTree = "<group>"; };
 		41612AD3F4BBB5C3EEDE0A28 /* SupabaseAuthClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthClientTests.swift; sourceTree = "<group>"; };
 		42169ED425055D7B0C7DCC4A /* BackendClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClientTests.swift; sourceTree = "<group>"; };
@@ -272,10 +275,13 @@
 		A11E0AAD5006AF0000000050 /* SuperwallDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuperwallDeepLink.swift; sourceTree = "<group>"; };
 		A11E0AAD5006E00000000052 /* SuperwallDeepLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuperwallDeepLinkTests.swift; sourceTree = "<group>"; };
 		A11E0AAD5007E00000000060 /* RecipeManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeManagerTests.swift; sourceTree = "<group>"; };
+		A11E0AAD5008AF0000000070 /* AuthenticationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManagerTests.swift; sourceTree = "<group>"; };
+		A11E0AAD500AAF0000000090 /* DietaryPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietaryPreferencesTests.swift; sourceTree = "<group>"; };
 		A11E0AAD50004F0000000004 /* AppleSearchAdsAttributionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSearchAdsAttributionTests.swift; sourceTree = "<group>"; };
 		A11E0AAD5000AF0000000010 /* SubscriptionLegal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionLegal.swift; sourceTree = "<group>"; };
 		A11E0AAD5000CF0000000012 /* SubscriptionLegalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionLegalTests.swift; sourceTree = "<group>"; };
 		A11E0AAD50006F0000000006 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A11E0AAD5009AF0000000080 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A11E0AAD50008F0000000008 /* AdServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AdServices.framework; path = System/Library/Frameworks/AdServices.framework; sourceTree = SDKROOT; };
 		AE78D545F2774E763E6161F4 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		AE9CBB4591C8A19859D11DBE /* ShoppingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListView.swift; sourceTree = "<group>"; };
@@ -333,6 +339,8 @@
 				EF0AE7C8D320DC89D24B22D8 /* Mocks */,
 				188555D9BE64E850BEE67F00 /* AnalyticsManagerTests.swift */,
 				A11E0AAD50004F0000000004 /* AppleSearchAdsAttributionTests.swift */,
+				A11E0AAD5008AF0000000070 /* AuthenticationManagerTests.swift */,
+				A11E0AAD500AAF0000000090 /* DietaryPreferencesTests.swift */,
 				87ADFE33C58FEF2A524B9C04 /* AppStateTests.swift */,
 				42169ED425055D7B0C7DCC4A /* BackendClientTests.swift */,
 				174E397B5850F0459C63D384 /* KeychainManagerTests.swift */,
@@ -543,6 +551,7 @@
 			isa = PBXGroup;
 			children = (
 				194DF8D93E02C37F7C9DE712 /* ShareViewController.swift */,
+				A11E0AAD5009AF0000000080 /* PrivacyInfo.xcprivacy */,
 			);
 			path = CulinaShare;
 			sourceTree = "<group>";
@@ -628,6 +637,7 @@
 			buildConfigurationList = 18409BBCFA86B2BB9FAC95EB /* Build configuration list for PBXNativeTarget "CulinaShare" */;
 			buildPhases = (
 				92550081B879953FD7E24CF5 /* Sources */,
+				A11E0AAD5009CF0000000082 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -745,6 +755,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				83E4E320ED906816DDF6E7E3 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A11E0AAD5009CF0000000082 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A11E0AAD5009BF0000000081 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -882,6 +900,8 @@
 			files = (
 				9065DC7E189BE3F70EF0F79B /* AnalyticsManagerTests.swift in Sources */,
 				A11E0AAD50003B0000000003 /* AppleSearchAdsAttributionTests.swift in Sources */,
+				A11E0AAD5008BF0000000071 /* AuthenticationManagerTests.swift in Sources */,
+				A11E0AAD500ABF0000000091 /* DietaryPreferencesTests.swift in Sources */,
 				80FDED29CD5AB53973129C49 /* AppStateTests.swift in Sources */,
 				88D188939F39E6A9ACB67617 /* AuthFlowIntegrationTests.swift in Sources */,
 				5FCBB858C3B0036C902DD553 /* BackendClientTests.swift in Sources */,
@@ -891,7 +911,6 @@
 				1BE1A83CC516A86B8C327BF3 /* MenuManagementIntegrationTests.swift in Sources */,
 				260C6211C9EBA6C621E6EA5C /* MockSupabaseResponses.swift in Sources */,
 				411070A7F64F24545ECD2240 /* MockURLProtocol.swift in Sources */,
-				C5DA197679F432B7B8AE0B08 /* OpenAIClientTests.swift in Sources */,
 				A11E0AAD5003EF0000000033 /* OpenAIConsentManagerTests.swift in Sources */,
 				A11E0AAD5004EF0000000045 /* PasswordResetLinkTests.swift in Sources */,
 				A11E0AAD5006EF0000000053 /* SuperwallDeepLinkTests.swift in Sources */,
@@ -904,9 +923,7 @@
 				A11E0AAD5000BB0000000011 /* SubscriptionLegalTests.swift in Sources */,
 				138687AB9FE7D960B030AE5E /* SubscriptionFlowIntegrationTests.swift in Sources */,
 				85D6C5963BE88397721555E0 /* SubscriptionTests.swift in Sources */,
-				E6BC334F764E879CE0F31A90 /* SubscriptionsClientTests.swift in Sources */,
 				9DD95003F54A6FF116ACACA4 /* SupabaseAuthClientTests.swift in Sources */,
-				0B13F2E963FF7D25BF9341CA /* TimerCenterTests.swift in Sources */,
 				E135331E3B1A00CC42328EA7 /* UserPreferencesClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -945,11 +962,13 @@
 		003C60998A35EB970217882B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef.tests;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CulinaChef.app/CulinaChef";
+				PRODUCT_NAME = CulinaChefTests;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CulinaAi.app/CulinaAi";
 			};
 			name = Debug;
 		};
@@ -966,6 +985,7 @@
 				INFOPLIST_FILE = Sources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef;
+				PRODUCT_MODULE_NAME = CulinaChef;
 				PRODUCT_NAME = CulinaAi;
 			};
 			name = Release;
@@ -1008,9 +1028,11 @@
 				CODE_SIGN_ENTITLEMENTS = Configs/CulinaChef.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_TESTABILITY = YES;
 				INFOPLIST_FILE = Sources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef;
+				PRODUCT_MODULE_NAME = CulinaChef;
 				PRODUCT_NAME = CulinaAi;
 			};
 			name = Debug;
@@ -1018,11 +1040,13 @@
 		995671E83993798E2682E4B0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moritzserrin.culinachef.tests;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CulinaChef.app/CulinaChef";
+				PRODUCT_NAME = CulinaChefTests;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CulinaAi.app/CulinaAi";
 			};
 			name = Release;
 		};

@@ -5,10 +5,22 @@ final class SecureURLSession {
     static let shared = SecureURLSession()
 
     /// Für Tests: Erlaubt das Injizieren einer benutzerdefinierten `URLSessionConfiguration`.
-    static var testConfiguration: URLSessionConfiguration?
+    static var testConfiguration: URLSessionConfiguration? {
+        didSet { shared.rebuildSession() }
+    }
 
-    private lazy var session: URLSession = {
-        if let testConfig = SecureURLSession.testConfiguration {
+    private var session: URLSession
+
+    private init() {
+        session = Self.makeSession()
+    }
+
+    private func rebuildSession() {
+        session = Self.makeSession()
+    }
+
+    private static func makeSession() -> URLSession {
+        if let testConfig = testConfiguration {
             return URLSession(configuration: testConfig)
         }
         let config = URLSessionConfiguration.default
@@ -19,9 +31,7 @@ final class SecureURLSession {
         config.allowsConstrainedNetworkAccess = true
         config.allowsExpensiveNetworkAccess = true
         return URLSession(configuration: config)
-    }()
-
-    private init() {}
+    }
 
     /// Convenience wrapper so call sites don't need to access the underlying URLSession.
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {

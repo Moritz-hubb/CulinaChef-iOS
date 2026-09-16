@@ -7,7 +7,7 @@ enum PasswordResetLink {
 
     enum Parsed: Equatable {
         case pkce(code: String)
-        case implicit(accessToken: String, refreshToken: String)
+        case rejectedImplicit
         case rejectedCustomScheme
         case missingCredentials
         case notAResetLink
@@ -39,11 +39,10 @@ enum PasswordResetLink {
         if let code = firstValue("code", in: items), !code.isEmpty {
             return .pkce(code: code)
         }
-        if let access = firstValue("access_token", in: items),
-           let refresh = firstValue("refresh_token", in: items),
-           !access.isEmpty,
-           !refresh.isEmpty {
-            return .implicit(accessToken: access, refreshToken: refresh)
+        let hasAccess = firstValue("access_token", in: items).map { !$0.isEmpty } ?? false
+        let hasRefresh = firstValue("refresh_token", in: items).map { !$0.isEmpty } ?? false
+        if hasAccess || hasRefresh {
+            return .rejectedImplicit
         }
         return .missingCredentials
     }

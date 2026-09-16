@@ -163,11 +163,18 @@ struct RootView: View {
             .sheet(isPresented: $showLegalPrivacyFromPaywall) {
                 PrivacyPolicyView()
             }
+            .alert(L.accountDeleted.localized, isPresented: $app.showAccountDeletedAlert) {
+                Button(L.ok.localized, role: .cancel) { }
+            } message: {
+                Text(L.accountDeletedMessage.localized)
+            }
     }
     
     @ViewBuilder
     private var contentView: some View {
-        if app.isAuthenticated {
+        if app.isRestoringSession && !app.isAuthenticated {
+            LoadingView()
+        } else if app.isAuthenticated {
             if app.isInitialDataLoaded {
                 // Check onboarding status before showing main view
                 if shouldShowOnboarding() {

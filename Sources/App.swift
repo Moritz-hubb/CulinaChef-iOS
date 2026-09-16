@@ -174,6 +174,8 @@ struct CulinaChefApp: App {
             Logger.warning("Ignored password reset on custom URL scheme", category: .auth)
         case .missingCredentials:
             Logger.error("Password reset Universal Link missing auth code", category: .auth)
+        case .rejectedImplicit:
+            Logger.warning("Ignored password reset link that contained session tokens instead of a PKCE code", category: .auth)
         case .pkce(let code):
             Task { @MainActor in
                 do {
@@ -182,10 +184,6 @@ struct CulinaChefApp: App {
                 } catch {
                     Logger.error("Password reset PKCE exchange failed", error: error, category: .auth)
                 }
-            }
-        case .implicit(let accessToken, let refreshToken):
-            Task { @MainActor in
-                presentPasswordReset(accessToken: accessToken, refreshToken: refreshToken)
             }
         }
     }
@@ -199,7 +197,10 @@ struct CulinaChefApp: App {
     }
     
     private func openRecipe(recipeId: String) {
-        // Fetch recipe from backend and navigate to detail view
+        guard PostgRESTUUID.isValid(recipeId) else {
+            Logger.warning("Ignored recipe deep link with invalid id", category: .ui)
+            return
+        }
         Task {
             do {
                 guard let token = appState.accessToken else {
@@ -209,16 +210,18 @@ struct CulinaChefApp: App {
                 let recipe = try await fetchRecipe(id: recipeId, token: token)
                 
                 await MainActor.run {
-                    // Navigate to recipe detail
                     appState.deepLinkRecipe = recipe
                 }
             } catch {
-                // Error logged to Sentry automatically
+                Logger.error("Failed to open recipe from deep link", error: error, category: .ui)
             }
         }
     }
     
     private func fetchRecipe(id: String, token: String) async throws -> Recipe {
+        guard PostgRESTUUID.isValid(id) else {
+            throw URLError(.badURL)
+        }
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/recipes")
         url.append(queryItems: [
@@ -256,7 +259,7 @@ struct CulinaChefApp: App {
         guard let comps = URLComponents(string: trimmed), let host = comps.host, !host.isEmpty else {
             return false
         }
-        guard let scheme = comps.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+        guard let scheme = comps.scheme?.lowercased(), scheme == "https" else {
             return false
         }
         return true

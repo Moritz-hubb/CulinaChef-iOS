@@ -95,6 +95,15 @@ final class KeychainManagerTests: XCTestCase {
         XCTAssertNil(KeychainManager.get(key: "user_id"))
         XCTAssertNil(KeychainManager.get(key: "user_email"))
     }
+
+    func testDeleteAllRemovesPasswordResetPKCEVerifier() throws {
+        try KeychainManager.save(key: PasswordResetLink.codeVerifierKeychainKey, value: "pkce-verifier")
+        XCTAssertEqual(KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey), "pkce-verifier")
+
+        KeychainManager.deleteAll()
+
+        XCTAssertNil(KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey))
+    }
     
     // MARK: - Edge Cases
     

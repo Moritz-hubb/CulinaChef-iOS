@@ -265,6 +265,72 @@ final class SupabaseAuthClientTests: XCTestCase {
             XCTAssertEqual(error.code, 400)
         }
     }
+
+    func testSignInWithApple422PreservesErrorCode() async {
+        let errorData = MockSupabaseResponses.errorResponse(
+            message: "Invalid JWT",
+            errorCode: "bad_jwt"
+        )
+        MockURLProtocol.mockResponse(statusCode: 422, data: errorData)
+        do {
+            _ = try await client.signInWithApple(idToken: "token", nonce: "raw-nonce-value")
+            XCTFail("Should throw")
+        } catch let error as NSError {
+            XCTAssertEqual(error.code, 422)
+            XCTAssertEqual(error.userInfo["error_code"] as? String, "bad_jwt")
+            XCTAssertFalse(AuthenticationManager.isEmailAlreadyRegistered(error))
+        }
+    }
+
+    func testSignInWithAppleLinkingRequiresNonce() async {
+        do {
+            _ = try await client.signInWithAppleLinkingExistingEmail(idToken: "token", nonce: nil)
+            XCTFail("Should require nonce")
+        } catch let error as NSError {
+            XCTAssertEqual(error.code, 401)
+        }
+    }
+
+    func testSignInWithAppleLinkingPostsToAuthApple() async throws {
+        var captured: URLRequest?
+        MockURLProtocol.requestHandler = { request in
+            captured = request
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, try MockSupabaseResponses.successAuthResponseData())
+        }
+
+        let response = try await client.signInWithAppleLinkingExistingEmail(
+            idToken: "apple-id-token",
+            nonce: "raw-nonce-value"
+        )
+        XCTAssertFalse(response.access_token.isEmpty)
+        let request = try XCTUnwrap(captured)
+        XCTAssertTrue(request.url?.path.hasSuffix("/auth/apple") == true)
+        let bodyData = request.httpBody ?? {
+            guard let stream = request.httpBodyStream else { return Data() }
+            stream.open()
+            defer { stream.close() }
+            var data = Data()
+            let bufferSize = 1024
+            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+            defer { buffer.deallocate() }
+            while stream.hasBytesAvailable {
+                let read = stream.read(buffer, maxLength: bufferSize)
+                if read <= 0 { break }
+                data.append(buffer, count: read)
+            }
+            return data
+        }()
+        XCTAssertFalse(bodyData.isEmpty)
+        let body = try JSONSerialization.jsonObject(with: bodyData) as? [String: String]
+        XCTAssertEqual(body?["id_token"], "apple-id-token")
+        XCTAssertEqual(body?["nonce"], "raw-nonce-value")
+    }
     
     // MARK: - Network Error Tests
     

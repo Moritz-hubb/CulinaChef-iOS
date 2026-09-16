@@ -14,14 +14,18 @@ import UIKit
 ///   Clients gekapselt, um Netzwerklogik vom View-Layer fernzuhalten.
 @MainActor
 final class AppState: ObservableObject {
-    /// Gibt an, ob aktuell ein Nutzer angemeldet ist (basierend auf Tokens im Keychain).
+    /// Gibt an, ob aktuell ein Nutzer angemeldet ist (gültiges Access-Token oder erfolgreicher Refresh).
     @Published var isAuthenticated: Bool = false
+    /// True while Keychain tokens are being validated at launch (avoids a login-screen flash).
+    @Published var isRestoringSession: Bool = false
     /// Globaler Loading-Flag für Auth-/Subscription-Aktionen.
     @Published var loading: Bool = false
     /// Heuristischer Jailbreak-Status des aktuellen Geräts.
     @Published var isJailbroken: Bool = JailbreakDetector.isJailbroken
     /// Letzte global angezeigte Fehlermeldung (z.B. aus StoreKit oder Backend).
     @Published var error: String?
+    /// Nach erfolgreicher Kontolöschung: Alert auf Root, nachdem Tokens bereits gelöscht sind.
+    @Published var showAccountDeletedAlert: Bool = false
     /// Aktuelles Supabase-Access-Token (gespiegelt aus dem Keychain).
     @Published var accessToken: String?
     /// E-Mail-Adresse des angemeldeten Nutzers.
@@ -174,8 +178,8 @@ final class AppState: ObservableObject {
         // DEV MODE: Subscription migration disabled
         // subscriptionManager.migrateSubscriptionDataToKeychain()
         
-        // Check for existing session
-        checkSession()
+        // Check for existing session (must validate tokens; presence alone is not auth)
+        Task { await checkSession() }
         
         Task {
             if let userId = KeychainManager.get(key: "user_id") {
@@ -272,23 +276,37 @@ final class AppState: ObservableObject {
         #endif
     }
     
-    private func checkSession() {
-        if let token = KeychainManager.get(key: "access_token"),
-           let email = KeychainManager.get(key: "user_email") {
-            self.accessToken = token
-            self.userEmail = email
-            
+    /// Restores a session only when tokens can be validated.
+    /// Access token + email in Keychain is not sufficient (SEC-004).
+    func checkSession() async {
+        guard let token = KeychainManager.get(key: "access_token"),
+              let email = KeychainManager.get(key: "user_email") else {
+            return
+        }
+
+        isRestoringSession = true
+        defer { isRestoringSession = false }
+
+        accessToken = token
+        userEmail = email
+
+        let hasRefresh = !(KeychainManager.get(key: "refresh_token") ?? "").isEmpty
+        if SessionAccessToken.isUnexpired(token), hasRefresh {
+            isAuthenticated = true
             if let userId = KeychainManager.get(key: "user_id") {
                 Task { try? await Monetization.shared.identify(userId: userId) }
             }
-            self.isAuthenticated = true
-            
-            // Try to refresh token in background to ensure session is valid
-            // Don't log out immediately if refresh fails - let user continue with existing token
-            Task { [weak self] in
-                await self?.refreshSessionIfNeeded(silent: true)
-            }
         }
+
+        if !hasRefresh {
+            Logger.info("Incomplete session (no refresh token) — signing out", category: .auth)
+            await signOut()
+            return
+        }
+
+        // silent: keep only an unexpired access token on transient network errors.
+        // Auth failures (401/invalid refresh) always sign out.
+        await refreshSessionIfNeeded(silent: true)
     }
     
     // MARK: - Initial Data Loading
@@ -356,30 +374,25 @@ final class AppState: ObservableObject {
     // MARK: - Token Refresh
     /// Versucht, eine bestehende Supabase-Session mit dem gespeicherten Refresh-Token zu erneuern.
     ///
-    /// - Parameter silent: Wenn `true`, wird der User nicht ausgeloggt, wenn der Refresh fehlschlägt (z.B. beim App-Start).
-    ///                     Der User kann weiterhin mit dem vorhandenen Token arbeiten, bis dieser abläuft.
-    /// - Wenn kein Refresh-Token vorhanden ist oder die Erneuerung scheitert und `silent == false`, wird der Nutzer ausgeloggt.
+    /// - Parameter silent: Wenn `true`, bleibt eine **noch gültige** Access-Token-Session
+    ///   bei transienten Netzwerkfehlern erhalten. Auth-Fehler (401, ungültiger Refresh)
+    ///   und abgelaufene Access-Tokens führen immer zum Logout.
     func refreshSessionIfNeeded(silent: Bool = false) async {
-        guard let refreshToken = KeychainManager.get(key: "refresh_token") else {
-            if !silent {
-                Logger.info("No refresh token found, logging out", category: .auth)
-                await self.signOut()
-            } else {
-                Logger.info("No refresh token found, but silent mode - keeping existing session", category: .auth)
-            }
+        guard let refreshToken = KeychainManager.get(key: "refresh_token"), !refreshToken.isEmpty else {
+            Logger.info("No refresh token found, logging out", category: .auth)
+            await signOut()
             return
         }
-        
+
         do {
             Logger.info("Refreshing session with refresh token", category: .auth)
             let response = try await auth.refreshSession(refreshToken: refreshToken)
-            
-            // Update stored tokens
+
             try KeychainManager.save(key: "access_token", value: response.access_token)
             try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
             try KeychainManager.save(key: "user_id", value: response.user.id)
             try KeychainManager.save(key: "user_email", value: response.user.email)
-            
+
             await MainActor.run {
                 self.accessToken = response.access_token
                 self.userEmail = response.user.email
@@ -387,16 +400,19 @@ final class AppState: ObservableObject {
                 Logger.info("Session refreshed successfully", category: .auth)
             }
         } catch {
-            Logger.error("Token refresh failed", error: error, category: .auth)
-            
-            if !silent {
-                // Token refresh failed - user needs to log in again
-                await self.signOut()
-            } else {
-                // Silent mode: Keep user logged in with existing token
-                // Token will be refreshed on next API call or when it expires
-                Logger.info("Token refresh failed in silent mode - keeping existing session", category: .auth)
+            let currentAccess = accessToken ?? KeychainManager.get(key: "access_token")
+            let keepUnexpiredOnTransientError =
+                silent
+                && isTransientSessionRefreshError(error)
+                && SessionAccessToken.isUnexpired(currentAccess ?? "")
+
+            if keepUnexpiredOnTransientError {
+                Logger.info("Token refresh failed (network); keeping unexpired access token", category: .auth)
+                return
             }
+
+            Logger.error("Token refresh failed — ending session", error: error, category: .auth)
+            await signOut()
         }
     }
 
@@ -817,6 +833,20 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     ///   - email: E-Mail-Adresse.
     ///   - password: Passwort.
     /// - Throws: Fehler aus `SupabaseAuthClient` oder Keychain-Speicherung.
+    func changePassword(currentPassword: String, newPassword: String) async throws {
+        guard let email = userEmail ?? KeychainManager.get(key: "user_email"), !email.isEmpty else {
+            throw NSError(domain: "AppState", code: -1, userInfo: [NSLocalizedDescriptionKey: L.settings_emailNotFound.localized])
+        }
+        let result = try await authManager.changePassword(
+            email: email,
+            currentPassword: currentPassword,
+            newPassword: newPassword
+        )
+        accessToken = result.accessToken
+        userEmail = result.email
+        isAuthenticated = true
+    }
+
     func signIn(email: String, password: String) async throws {
         loading = true
         defer { loading = false }
@@ -978,9 +1008,11 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     /// - Hinweis: Shopping- und Subscription-Daten werden lokal zurückgesetzt;
     ///   Server-seitige Session-Invalidierung erfolgt über Supabase.
     func signOut() async {
+        let userId = KeychainManager.get(key: "user_id")
         await Monetization.shared.logOut()
         await authManager.signOut(accessToken: accessToken)
         await MainActor.run {
+            self.clearLocalUserSessionData(userId: userId)
             self.accessToken = nil
             self.userEmail = nil
             self.isAuthenticated = false
@@ -1057,9 +1089,16 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         var appleCode: String?
         let provider = KeychainManager.get(key: "auth_provider")
         let email = userEmail ?? KeychainManager.get(key: "user_email")
-        let usedApple = provider == "apple" || (email?.contains("privaterelay.appleid.com") == true) || KeychainManager.get(key: "apple_user_id") != nil
+        let usedApple = AccountDeletionAppleRequirement.isAppleAccount(
+            provider: provider,
+            email: email,
+            appleUserId: KeychainManager.get(key: "apple_user_id")
+        )
         if usedApple {
-            appleCode = await AppleAccountDeletionAuth.requestAuthorizationCode()
+            // Guideline 5.1.1(v): do not delete until we have a code to revoke SIWA tokens.
+            appleCode = try AccountDeletionAppleRequirement.requireAuthorizationCode(
+                await AppleAccountDeletionAuth.requestAuthorizationCode()
+            )
         }
         try await subscriptionManager.deleteAccountAndData(
             accessToken: self.accessToken,
@@ -1067,7 +1106,11 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             userEmail: self.userEmail,
             appleAuthorizationCode: appleCode
         )
+        // Wipe caches while user_id is still in Keychain, then drop the session
+        // immediately so a hanging success-alert cannot keep using old tokens.
         clearLocalUserDataAfterAccountDeletion()
+        await signOut()
+        showAccountDeletedAlert = true
     }
 
     /// Entfernt lokale Caches, bevor Tokens per signOut gelöscht werden.
@@ -1076,16 +1119,22 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         TastePreferencesManager.delete()
         shoppingListManager.clearShoppingList()
         IngredientCategorizer.clearOverrides()
-        if let userId = KeychainManager.get(key: "user_id") {
+        clearLocalUserSessionData(userId: KeychainManager.get(key: "user_id"))
+    }
+
+    /// Health-related prefs and recipe caches must not survive logout or account switch.
+    private func clearLocalUserSessionData(userId: String?) {
+        DietaryPreferences.removeAll(for: userId)
+        if let userId, !userId.isEmpty {
             UserDefaults.standard.removeObject(forKey: "cached_recipes_\(userId)")
             UserDefaults.standard.removeObject(forKey: "cached_menus_\(userId)")
             UserDefaults.standard.removeObject(forKey: "recipes_cache_timestamp_\(userId)")
         }
-        UserDefaults.standard.removeObject(forKey: DietaryPreferences.storageKey)
         dietary = DietaryPreferences()
         cachedRecipes = []
         cachedMenus = []
         recipesCacheTimestamp = nil
+        ratingCache = [:]
     }
     
     func getSubscriptionPeriodEnd() -> Date? {
@@ -1199,6 +1248,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     @objc private func onDidBecomeActive() {
         startSubscriptionPolling()
         restoreRecipeStateIfNeeded()
+        Task { await refreshSessionIfNeeded(silent: true) }
     }
 
     @objc private func onWillResignActive() {
@@ -1772,6 +1822,50 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         // Clear cache for this recipe so it gets refreshed
         ratingCache.removeValue(forKey: recipeId)
     }
+}
+
+/// Local JWT `exp` check. Signature is not verified here — the refresh endpoint is the source of truth.
+enum SessionAccessToken {
+    static let expiryLeeway: TimeInterval = 30
+
+    static func isUnexpired(_ jwt: String, now: Date = Date()) -> Bool {
+        guard let exp = expirationDate(of: jwt) else { return false }
+        return exp > now.addingTimeInterval(expiryLeeway)
+    }
+
+    static func expirationDate(of jwt: String) -> Date? {
+        let parts = jwt.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var base64 = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let pad = (4 - base64.count % 4) % 4
+        base64.append(String(repeating: "=", count: pad))
+        guard let data = Data(base64Encoded: base64),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let exp = json["exp"] as? NSNumber else {
+            return nil
+        }
+        return Date(timeIntervalSince1970: exp.doubleValue)
+    }
+}
+
+func isTransientSessionRefreshError(_ error: Error) -> Bool {
+    if let urlError = error as? URLError {
+        switch urlError.code {
+        case .timedOut, .notConnectedToInternet, .networkConnectionLost,
+             .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed,
+             .internationalRoamingOff, .dataNotAllowed, .secureConnectionFailed:
+            return true
+        default:
+            return false
+        }
+    }
+    let nsError = error as NSError
+    if nsError.domain == "SupabaseAuth" {
+        return (500...599).contains(nsError.code)
+    }
+    return false
 }
 
 private extension String {

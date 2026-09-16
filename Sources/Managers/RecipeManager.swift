@@ -49,6 +49,9 @@ final class RecipeManager {
     
     /// Delete a recipe, queuing for offline processing if network unavailable
     func deleteRecipe(recipeId: String, accessToken: String?, isOnline: Bool) async throws {
+        guard PostgRESTUUID.isValid(recipeId) else {
+            throw URLError(.badURL)
+        }
         guard let token = accessToken else {
             throw URLError(.userAuthenticationRequired)
         }
@@ -69,6 +72,9 @@ final class RecipeManager {
     }
     
     private func deleteRecipeFromSupabase(recipeId: String, accessToken: String) async throws {
+        guard PostgRESTUUID.isValid(recipeId) else {
+            throw URLError(.badURL)
+        }
         var url = Config.supabaseURL
         url.append(path: "/rest/v1/recipes")
         url.append(queryItems: [URLQueryItem(name: "id", value: "eq.\(recipeId)")])
@@ -128,6 +134,10 @@ final class RecipeManager {
         var successfulIndices: [Int] = []
         
         for (index, deletion) in queue.enumerated() {
+            guard PostgRESTUUID.isValid(deletion.recipeId) else {
+                successfulIndices.append(index)
+                continue
+            }
             do {
                 try await deleteRecipeFromSupabase(recipeId: deletion.recipeId, accessToken: accessToken)
                 successfulIndices.append(index)

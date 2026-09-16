@@ -32,8 +32,34 @@ struct AuthResponse: Codable {
 }
 
 /// Fehlerobjekt, das Supabase bei fehlgeschlagenen Auth-Operationen zurückliefert.
-struct AuthError: Codable {
+struct AuthError: Decodable {
     let message: String
+    let errorCode: String?
+
+    enum CodingKeys: String, CodingKey {
+        case message, msg, error, error_code, code
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        var messageValue = try container.decodeIfPresent(String.self, forKey: .message)
+        if messageValue == nil {
+            messageValue = try container.decodeIfPresent(String.self, forKey: .msg)
+        }
+        if messageValue == nil {
+            messageValue = try container.decodeIfPresent(String.self, forKey: .error)
+        }
+        message = messageValue ?? ""
+        if let explicit = try container.decodeIfPresent(String.self, forKey: .error_code), !explicit.isEmpty {
+            errorCode = explicit
+        } else if let code = try container.decodeIfPresent(String.self, forKey: .code),
+                  !code.isEmpty,
+                  Int(code) == nil {
+            errorCode = code
+        } else {
+            errorCode = nil
+        }
+    }
 }
 
 private struct RecoverRequestBody: Encodable {
@@ -107,10 +133,7 @@ final class SupabaseAuthClient {
                              userInfo: [NSLocalizedDescriptionKey: "Response konnte nicht verarbeitet werden: \(error.localizedDescription)"])
             }
         } else {
-            // When email already registered or policy error
-            let error = try? JSONDecoder().decode(AuthError.self, from: data)
-            throw NSError(domain: "SupabaseAuth", code: http.statusCode, 
-                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_registrationFailed.localized(replacing: ["code": String(http.statusCode)])])
+            throw Self.authError(statusCode: http.statusCode, data: data, fallback: L.error_registrationFailed.localized(replacing: ["code": String(http.statusCode)]))
         }
     }
     
@@ -144,9 +167,7 @@ final class SupabaseAuthClient {
         if http.statusCode == 200 {
             return try JSONDecoder().decode(AuthResponse.self, from: data)
         } else {
-            let error = try? JSONDecoder().decode(AuthError.self, from: data)
-            throw NSError(domain: "SupabaseAuth", code: http.statusCode,
-                         userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_signInFailed.localized])
+            throw Self.authError(statusCode: http.statusCode, data: data, fallback: L.error_signInFailed.localized)
         }
     }
     
@@ -180,24 +201,25 @@ final class SupabaseAuthClient {
         if http.statusCode == 200 {
             return try JSONDecoder().decode(AuthResponse.self, from: data)
         } else {
-            let error = try? JSONDecoder().decode(AuthError.self, from: data)
-            throw NSError(
-                domain: "SupabaseAuth",
-                code: http.statusCode,
-                userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.errorAppleSignInFailed.localized]
-            )
+            throw Self.authError(statusCode: http.statusCode, data: data, fallback: L.errorAppleSignInFailed.localized)
         }
     }
 
-    /// After a 422 (email already used), the backend links the Apple identity to that user and signs in.
+    /// After a verified "email already registered" error, the backend links the Apple identity and signs in.
     func signInWithAppleLinkingExistingEmail(idToken: String, nonce: String?) async throws -> AuthResponse {
+        guard let nonce, nonce.count >= 8 else {
+            throw NSError(
+                domain: "SupabaseAuth",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: L.errorAppleSignInFailed.localized]
+            )
+        }
         var url = Config.backendBaseURL
         url.append(path: "/auth/apple")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        var body: [String: Any] = ["id_token": idToken]
-        if let nonce { body["nonce"] = nonce }
+        let body: [String: Any] = ["id_token": idToken, "nonce": nonce]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await SecureURLSession.shared.data(for: req)
@@ -209,7 +231,7 @@ final class SupabaseAuthClient {
         throw NSError(
             domain: "SupabaseAuth",
             code: http.statusCode,
-            userInfo: [NSLocalizedDescriptionKey: detail ?? L.errorAppleSignInFailed.localized]
+            userInfo: [NSLocalizedDescriptionKey: detail ?? L.error_appleSignInUseEmail.localized]
         )
     }
     
@@ -469,6 +491,16 @@ final class SupabaseAuthClient {
                          userInfo: [NSLocalizedDescriptionKey: error?.message ?? L.error_passwordChangeFailed.localized])
         }
     }
+
+    static func authError(statusCode: Int, data: Data, fallback: String) -> NSError {
+        let decoded = try? JSONDecoder().decode(AuthError.self, from: data)
+        let message = (decoded?.message.isEmpty == false) ? decoded!.message : fallback
+        var userInfo: [String: Any] = [NSLocalizedDescriptionKey: message]
+        if let errorCode = decoded?.errorCode, !errorCode.isEmpty {
+            userInfo["error_code"] = errorCode
+        }
+        return NSError(domain: "SupabaseAuth", code: statusCode, userInfo: userInfo)
+    }
 }
 
 // MARK: - Keychain Storage
@@ -570,6 +602,7 @@ enum KeychainManager {
     
     /// Löscht alle von der App gespeicherten Auth-bezogenen Keychain-Einträge.
     static func deleteAll() {
+        let userId = get(key: "user_id")
         delete(key: "access_token")
         delete(key: "refresh_token")
         delete(key: "user_id")
@@ -581,6 +614,10 @@ enum KeychainManager {
         delete(key: "taste_preferences_secure")
         delete(key: "auth_provider")
         delete(key: "apple_user_id")
+        delete(key: PasswordResetLink.codeVerifierKeychainKey)
+        if let userId, !userId.isEmpty {
+            delete(key: DietaryPreferences.storageKey(for: userId))
+        }
     }
     
     // MARK: - Date Storage

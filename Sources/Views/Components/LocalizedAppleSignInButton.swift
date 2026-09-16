@@ -171,8 +171,17 @@ struct LocalizedAppleSignInButton: View {
 @MainActor
 enum AppleAccountDeletionAuth {
     private static var session: AppleSignInController?
+    /// Test seam so unit tests can fail-closed without presenting Sign in with Apple.
+    static var requestAuthorizationCodeOverride: (() async -> String?)?
 
     static func requestAuthorizationCode() async -> String? {
+        if let requestAuthorizationCodeOverride {
+            return await requestAuthorizationCodeOverride()
+        }
+        return await performLiveRequest()
+    }
+
+    private static func performLiveRequest() async -> String? {
         await withCheckedContinuation { continuation in
             let controller = AppleSignInController()
             session = controller
@@ -194,5 +203,26 @@ enum AppleAccountDeletionAuth {
             }
             controller.performRequest()
         }
+    }
+}
+
+enum AccountDeletionAppleRequirement {
+    static func isAppleAccount(provider: String?, email: String?, appleUserId: String?) -> Bool {
+        if provider == "apple" { return true }
+        if let appleUserId, !appleUserId.isEmpty { return true }
+        if let email, email.lowercased().contains("privaterelay.appleid.com") { return true }
+        return false
+    }
+
+    static func requireAuthorizationCode(_ code: String?) throws -> String {
+        let trimmed = code?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty else {
+            throw NSError(
+                domain: "Account",
+                code: -2,
+                userInfo: [NSLocalizedDescriptionKey: L.accountDeletionFailed.localized]
+            )
+        }
+        return trimmed
     }
 }

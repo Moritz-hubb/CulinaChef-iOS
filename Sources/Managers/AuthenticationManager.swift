@@ -174,6 +174,24 @@ final class AuthenticationManager {
     ///
     /// - Parameter email: E-Mail-Adresse des Nutzers.
     /// - Throws: Fehler aus `SupabaseAuthClient`.
+    /// Verifies the current password (new session), persists those tokens, then updates the password.
+    func changePassword(email: String, currentPassword: String, newPassword: String) async throws -> SignInResult {
+        let response = try await auth.signIn(email: email, password: currentPassword)
+        try KeychainManager.save(key: "access_token", value: response.access_token)
+        try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
+        try KeychainManager.save(key: "user_id", value: response.user.id)
+        try KeychainManager.save(key: "user_email", value: response.user.email)
+
+        try await auth.changePassword(accessToken: response.access_token, newPassword: newPassword)
+
+        return SignInResult(
+            accessToken: response.access_token,
+            refreshToken: response.refresh_token,
+            userId: response.user.id,
+            email: response.user.email
+        )
+    }
+
     func resetPassword(email: String) async throws {
         try await auth.resetPasswordForEmail(email: email)
     }
@@ -434,15 +452,25 @@ final class AuthenticationManager {
         }
     }
 
-    private static func isEmailAlreadyRegistered(_ error: Error) -> Bool {
+    nonisolated static func isEmailAlreadyRegistered(_ error: Error) -> Bool {
         let nsError = error as NSError
+        if let errorCode = nsError.userInfo["error_code"] as? String {
+            switch errorCode.lowercased() {
+            case "identity_already_exists", "user_already_exists", "email_exists":
+                return true
+            default:
+                break
+            }
+        }
         let description = nsError.localizedDescription.lowercased()
-        if nsError.code == 422 { return true }
-        return description.contains("already")
-            || description.contains("registered")
-            || description.contains("exists")
-            || description.contains("bereits")
-            || description.contains("existiert")
+        let phrases = [
+            "already been registered",
+            "already registered",
+            "email address has already",
+            "bereits registriert",
+            "email existiert bereits"
+        ]
+        return phrases.contains { description.contains($0) }
     }
 
     private func registerAppleAuthorizationCode(_ authorizationCode: String, accessToken: String) async {

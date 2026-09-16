@@ -26,8 +26,11 @@ enum MockSupabaseResponses {
     
     // MARK: - Error Responses
     
-    static func errorResponse(message: String = "Invalid credentials") -> Data {
-        let json = ["message": message]
+    static func errorResponse(message: String = "Invalid credentials", errorCode: String? = nil) -> Data {
+        var json: [String: Any] = ["message": message]
+        if let errorCode {
+            json["error_code"] = errorCode
+        }
         return try! JSONSerialization.data(withJSONObject: json)
     }
     
@@ -53,6 +56,13 @@ enum MockSupabaseResponses {
     
     static func emailAlreadyRegisteredError() -> Data {
         errorResponse(message: "Email already registered")
+    }
+
+    static func appleEmailAlreadyRegisteredError() -> Data {
+        errorResponse(
+            message: "A user with this email address has already been registered",
+            errorCode: "identity_already_exists"
+        )
     }
     
     static func weakPasswordError() -> Data {

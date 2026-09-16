@@ -150,6 +150,18 @@ final class StringValidationTests: XCTestCase {
         XCTAssertTrue(" \n \t ".isBlank)
     }
     
+    func testPostgRESTUUIDAcceptsCanonicalUUIDs() {
+        XCTAssertTrue(PostgRESTUUID.isValid("550e8400-e29b-41d4-a716-446655440000"))
+        XCTAssertTrue(PostgRESTUUID.isValid("AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"))
+    }
+
+    func testPostgRESTUUIDRejectsFilterInjection() {
+        XCTAssertFalse(PostgRESTUUID.isValid("recipe-1"))
+        XCTAssertFalse(PostgRESTUUID.isValid("550e8400-e29b-41d4-a716-446655440000,or(id.neq.null)"))
+        XCTAssertFalse(PostgRESTUUID.isValid(""))
+        XCTAssertFalse(PostgRESTUUID.isValid("not-a-uuid"))
+    }
+
     func testIsNotBlank() {
         XCTAssertFalse("test".isBlank)
         XCTAssertFalse("  test  ".isBlank)

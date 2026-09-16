@@ -101,6 +101,13 @@ extension String {
     }
 }
 
+/// Canonical UUID for PostgREST `eq.<id>` filters. Rejects operators, commas, and empty strings.
+enum PostgRESTUUID {
+    static func isValid(_ raw: String) -> Bool {
+        UUID(uuidString: raw) != nil
+    }
+}
+
 // MARK: - Localized Error Messages
 extension String {
     static func validationError(for field: ValidationField) -> String {

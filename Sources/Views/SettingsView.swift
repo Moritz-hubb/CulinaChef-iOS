@@ -1019,7 +1019,7 @@ private struct ProfileSettingsSheet: View {
             ratingsCount = 0
             
         } catch {
-            self.error = error.localizedDescription
+            self.error = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorGenericUserFriendly.localized)
         }
     }
 
@@ -1030,7 +1030,7 @@ private struct ProfileSettingsSheet: View {
             try await app.saveProfile(fullName: fullName, email: email)
             saved = true
         } catch {
-            self.error = error.localizedDescription
+            self.error = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorGenericUserFriendly.localized)
         }
     }
     
@@ -1153,7 +1153,7 @@ private struct ProfileSettingsSheet: View {
             
         } catch {
             Logger.error("[Export] Export failed", error: error, category: .data)
-            self.error = error.localizedDescription
+            self.error = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorGenericUserFriendly.localized)
         }
     }
 }

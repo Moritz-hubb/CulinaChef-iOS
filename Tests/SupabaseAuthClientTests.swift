@@ -424,4 +424,38 @@ final class SupabaseAuthClientTests: XCTestCase {
             XCTAssertTrue(true)
         }
     }
+
+    func testExchangePKCESuccessDeletesVerifier() async throws {
+        try KeychainManager.save(key: PasswordResetLink.codeVerifierKeychainKey, value: "verifier")
+        let mockData = try MockSupabaseResponses.successAuthResponseData()
+        MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
+
+        _ = try await client.exchangePKCECode("auth-code")
+        XCTAssertNil(KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey))
+    }
+
+    func testExchangePKCEKeepsVerifierOnServerError() async {
+        try? KeychainManager.save(key: PasswordResetLink.codeVerifierKeychainKey, value: "verifier")
+        MockURLProtocol.mockResponse(statusCode: 503, data: Data("{\"message\":\"busy\"}".utf8))
+
+        do {
+            _ = try await client.exchangePKCECode("auth-code")
+            XCTFail("Should fail on 503")
+        } catch {
+            XCTAssertEqual(KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey), "verifier")
+        }
+        KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
+    }
+
+    func testExchangePKCEDeletesVerifierOnClientError() async {
+        try? KeychainManager.save(key: PasswordResetLink.codeVerifierKeychainKey, value: "verifier")
+        MockURLProtocol.mockResponse(statusCode: 400, data: Data("{\"message\":\"invalid\"}".utf8))
+
+        do {
+            _ = try await client.exchangePKCECode("auth-code")
+            XCTFail("Should fail on 400")
+        } catch {
+            XCTAssertNil(KeychainManager.get(key: PasswordResetLink.codeVerifierKeychainKey))
+        }
+    }
 }

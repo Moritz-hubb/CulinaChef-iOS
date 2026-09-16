@@ -75,7 +75,11 @@ final class MenuManager {
             throw URLError(.badServerResponse)
         }
         
-        return try JSONDecoder().decode([Menu].self, from: data).first!
+        let decoded = try JSONDecoder().decode([Menu].self, from: data)
+        guard let first = decoded.first else {
+            throw URLError(.cannotParseResponse)
+        }
+        return first
     }
     
     /// Menü umbenennen (PATCH auf `menus`)

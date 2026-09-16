@@ -224,12 +224,26 @@ final class AuthenticationManager {
     
     func signOut(accessToken: String?) async {
         if let token = accessToken {
-            try? await auth.signOut(accessToken: token)
+            await invalidateServerSession(accessToken: token)
         }
-        
+
         // Reset per-user OpenAI consent before wiping Keychain so the manager still sees user_id.
         OpenAIConsentManager.resetConsent(for: KeychainManager.get(key: "user_id"))
         KeychainManager.deleteAll()
+    }
+
+    /// Best-effort server logout. Local wipe must still happen if the network fails.
+    private func invalidateServerSession(accessToken: String) async {
+        for attempt in 1...2 {
+            do {
+                try await auth.signOut(accessToken: accessToken)
+                return
+            } catch {
+                if attempt == 2 {
+                    Logger.error("Server logout failed after retry", error: error, category: .auth)
+                }
+            }
+        }
     }
     
     // MARK: - Profile Management

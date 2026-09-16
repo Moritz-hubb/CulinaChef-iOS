@@ -172,7 +172,10 @@ final class UserPreferencesClientTests: XCTestCase {
     }
     
     func testUpsertPreferencesServerError() async {
-        MockURLProtocol.mockResponse(statusCode: 500)
+        MockURLProtocol.mockResponse(
+            statusCode: 500,
+            data: Data("<html>TRACE secret</html>".utf8)
+        )
         
         do {
             try await client.upsertPreferences(
@@ -188,6 +191,8 @@ final class UserPreferencesClientTests: XCTestCase {
             XCTFail("Should throw error")
         } catch let error as NSError {
             XCTAssertEqual(error.code, 500)
+            XCTAssertFalse(error.localizedDescription.contains("<html"))
+            XCTAssertFalse(error.localizedDescription.contains("TRACE"))
         }
     }
     

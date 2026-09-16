@@ -189,4 +189,36 @@ final class AuthenticationManagerTests: XCTestCase {
         XCTAssertEqual(putAuthorization, "Bearer fresh_access_token")
         XCTAssertNotEqual(putAuthorization, "Bearer stale_access_token")
     }
+
+    func testSignOutRetriesServerLogoutThenAlwaysClearsKeychain() async throws {
+        try KeychainManager.save(key: "access_token", value: "tok")
+        try KeychainManager.save(key: "user_id", value: "user_1")
+        var logoutAttempts = 0
+        MockURLProtocol.requestHandler = { request in
+            if request.url?.path.contains("/logout") == true {
+                logoutAttempts += 1
+                if logoutAttempts == 1 {
+                    throw URLError(.timedOut)
+                }
+                let response = HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!
+                return (response, nil)
+            }
+            throw URLError(.badURL)
+        }
+
+        await manager.signOut(accessToken: "tok")
+
+        XCTAssertEqual(logoutAttempts, 2)
+        XCTAssertNil(KeychainManager.get(key: "access_token"))
+        XCTAssertNil(KeychainManager.get(key: "user_id"))
+    }
+
+    func testSignOutClearsKeychainWhenServerLogoutKeepsFailing() async throws {
+        try KeychainManager.save(key: "access_token", value: "tok")
+        MockURLProtocol.mockError(URLError(.notConnectedToInternet))
+
+        await manager.signOut(accessToken: "tok")
+
+        XCTAssertNil(KeychainManager.get(key: "access_token"))
+    }
 }

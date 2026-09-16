@@ -14,6 +14,8 @@ final class ShoppingListManagerTests: XCTestCase {
         // Clean state
         KeychainManager.deleteAll()
         UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
+        UserDefaults(suiteName: "group.com.moritzserrin.culinachef")?.removeObject(forKey: ShoppingListManager.appGroupListKey)
+
         
         // Set up test user
         try? KeychainManager.save(key: "user_id", value: "test_user_123")
@@ -24,6 +26,8 @@ final class ShoppingListManagerTests: XCTestCase {
     override func tearDown() {
         KeychainManager.deleteAll()
         UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
+        UserDefaults(suiteName: "group.com.moritzserrin.culinachef")?.removeObject(forKey: ShoppingListManager.appGroupListKey)
+
         manager = nil
         super.tearDown()
     }
@@ -209,6 +213,20 @@ final class ShoppingListManagerTests: XCTestCase {
         let key = "shopping_list_\(userId)"
         XCTAssertNil(UserDefaults.standard.data(forKey: key))
     }
+
+    func testClearShoppingListUsesExplicitUserIdAfterKeychainWipe() {
+        manager.addItem(name: "Milk", quantity: "1L", category: .dairy)
+        manager.saveShoppingList()
+        let userId = "test_user_123"
+        let key = "shopping_list_\(userId)"
+        XCTAssertNotNil(UserDefaults.standard.data(forKey: key))
+
+        KeychainManager.deleteAll()
+        manager.clearShoppingList(for: userId)
+
+        XCTAssertNil(UserDefaults.standard.data(forKey: key))
+        XCTAssertEqual(manager.shoppingList.items.count, 0)
+    }
     
     // MARK: - Persistence Tests
     
@@ -282,6 +300,32 @@ final class ShoppingListManagerTests: XCTestCase {
         // Assert - User 1 should still see their own items
         XCTAssertEqual(manager1Again.shoppingList.items.count, 1)
         XCTAssertEqual(manager1Again.shoppingList.items[0].name, "User 1 Item")
+    }
+
+    func testAppGroupListFromOtherUserIsIgnored() {
+        let suite = "test.culina.shopping.\(UUID().uuidString)"
+        let group = UserDefaults(suiteName: suite)!
+        let local = UserDefaults(suiteName: "test.culina.shopping.local.\(UUID().uuidString)")!
+
+        try? KeychainManager.save(key: "user_id", value: "user_1")
+        let manager1 = ShoppingListManager(userDefaults: local, appGroupDefaults: group)
+        manager1.addItem(name: "User 1 Item", quantity: "1", category: .other)
+        manager1.saveShoppingList()
+
+        try? KeychainManager.save(key: "user_id", value: "user_2")
+        let manager2 = ShoppingListManager(userDefaults: local, appGroupDefaults: group)
+        XCTAssertEqual(manager2.shoppingList.items.count, 0)
+
+        guard let data = group.data(forKey: ShoppingListManager.appGroupListKey),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            XCTFail("App Group snapshot missing")
+            return
+        }
+        XCTAssertEqual(json[ShoppingListManager.appGroupOwnerKey] as? String, "user_2")
+        let items = json["items"] as? [[String: Any]]
+        XCTAssertEqual(items?.count, 0)
+
+        group.removePersistentDomain(forName: suite)
     }
     
     // MARK: - Grouping & Sorting Tests

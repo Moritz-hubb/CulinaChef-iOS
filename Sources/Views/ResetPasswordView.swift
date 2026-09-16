@@ -44,6 +44,16 @@ struct ResetPasswordView: View {
                     Text(L.resetPasswordNewPasswordTitle.localized)
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white)
+
+                    Button {
+                        app.discardPasswordResetSession()
+                    } label: {
+                        Text(L.cancel.localized)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+                    .accessibilityLabel(L.cancel.localized)
+                    .padding(.top, 4)
                     
                     Spacer().frame(height: 16)
                 }

@@ -123,7 +123,7 @@ final class AppStateTests: XCTestCase {
         appState.dietary.allergies = ["peanuts"]
         appState.dietary.diets = ["vegan"]
         appState.saveCachedRecipesToDisk(recipes: [], menus: [])
-        XCTAssertNotNil(UserDefaults.standard.data(forKey: DietaryPreferences.storageKey(for: userId)))
+        XCTAssertNotNil(KeychainManager.get(key: DietaryPreferences.storageKey(for: userId)))
         XCTAssertNotNil(UserDefaults.standard.object(forKey: "recipes_cache_timestamp_\(userId)"))
 
         MockURLProtocol.mockResponse(statusCode: 204)
@@ -134,6 +134,7 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(appState.cachedRecipes.isEmpty)
         XCTAssertTrue(appState.cachedMenus.isEmpty)
         XCTAssertNil(appState.recipesCacheTimestamp)
+        XCTAssertNil(KeychainManager.get(key: DietaryPreferences.storageKey(for: userId)))
         XCTAssertNil(UserDefaults.standard.data(forKey: DietaryPreferences.storageKey))
         XCTAssertNil(UserDefaults.standard.data(forKey: DietaryPreferences.storageKey(for: userId)))
         XCTAssertNil(UserDefaults.standard.object(forKey: "cached_recipes_\(userId)"))
@@ -567,6 +568,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testDietarySystemPromptSurvivesOutOfRangeSpicyLevel() throws {
+        try KeychainManager.save(key: "user_id", value: "user_test_123")
         var prefs = TastePreferencesManager.TastePreferences()
         prefs.spicyLevel = 99
         try TastePreferencesManager.save(prefs)
@@ -582,6 +584,140 @@ final class AppStateTests: XCTestCase {
         try TastePreferencesManager.save(prefs)
         let fallback = appState.dietarySystemPrompt()
         XCTAssertTrue(fallback.contains("Scharf"))
+    }
+
+    func testUpdatePasswordFromResetClearsPreviousUserCaches() async throws {
+        let mockData = try MockSupabaseResponses.successAuthResponseData()
+        MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
+        try await appState.signIn(email: "test@example.com", password: "password123")
+        let previousUserId = try XCTUnwrap(KeychainManager.get(key: "user_id"))
+        var spicy = TastePreferencesManager.TastePreferences()
+        spicy.sweet = true
+        try TastePreferencesManager.save(spicy)
+        XCTAssertTrue(TastePreferencesManager.load().sweet)
+
+        appState.dietary.allergies = ["peanuts"]
+        appState.cachedRecipes = []
+        appState.saveCachedRecipesToDisk(recipes: [], menus: [])
+        XCTAssertNotNil(UserDefaults.standard.object(forKey: "recipes_cache_timestamp_\(previousUserId)"))
+
+        let otherUser = MockSupabaseResponses.successAuthResponse(
+            accessToken: "b_access",
+            refreshToken: "b_refresh",
+            userId: "user_other_999",
+            email: "other@example.com"
+        )
+        let otherData = try JSONEncoder().encode(otherUser)
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            let method = request.httpMethod ?? ""
+            if path.contains("/auth/v1/user"), method == "PUT" {
+                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+                return (response, Data("{}".utf8))
+            }
+            if path.contains("/auth/v1/token") {
+                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+                return (response, otherData)
+            }
+            if path.contains("/logout") {
+                let response = HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!
+                return (response, nil)
+            }
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data("[]".utf8))
+        }
+
+        try await appState.updatePassword(
+            accessToken: "reset_access",
+            refreshToken: "reset_refresh",
+            newPassword: "NewPass123"
+        )
+
+        XCTAssertEqual(appState.userEmail, "other@example.com")
+        XCTAssertTrue(appState.dietary.allergies.isEmpty)
+        XCTAssertFalse(TastePreferencesManager.load().sweet)
+        XCTAssertNil(KeychainManager.get(key: TastePreferencesManager.storageKey(for: previousUserId)))
+        XCTAssertNil(UserDefaults.standard.object(forKey: "recipes_cache_timestamp_\(previousUserId)"))
+        XCTAssertNil(appState.passwordResetToken)
+        XCTAssertNil(appState.passwordResetRefreshToken)
+        XCTAssertTrue(appState.isAuthenticated)
+    }
+
+    func testUpdatePasswordSameUserKeepsDietaryPreferences() async throws {
+        let mockData = try MockSupabaseResponses.successAuthResponseData()
+        MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
+        try await appState.signIn(email: "test@example.com", password: "password123")
+        appState.dietary.allergies = ["peanuts"]
+        var prefs = TastePreferencesManager.TastePreferences()
+        prefs.umami = true
+        try TastePreferencesManager.save(prefs)
+
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            let method = request.httpMethod ?? ""
+            if path.contains("/auth/v1/user"), method == "PUT" {
+                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+                return (response, Data("{}".utf8))
+            }
+            if path.contains("/auth/v1/token") {
+                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+                return (response, mockData)
+            }
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data("[]".utf8))
+        }
+
+        try await appState.updatePassword(
+            accessToken: "reset_access",
+            refreshToken: "reset_refresh",
+            newPassword: "NewPass123"
+        )
+
+        XCTAssertEqual(appState.dietary.allergies, ["peanuts"])
+        XCTAssertTrue(TastePreferencesManager.load().umami)
+        XCTAssertEqual(appState.userEmail, "test@example.com")
+    }
+
+    func testDiscardPasswordResetSessionClearsTokensWithoutSigningOut() async throws {
+        let mockData = try MockSupabaseResponses.successAuthResponseData()
+        MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
+        try await appState.signIn(email: "test@example.com", password: "password123")
+
+        appState.passwordResetToken = "recovery_access"
+        appState.passwordResetRefreshToken = "recovery_refresh"
+        appState.showPasswordReset = true
+
+        appState.discardPasswordResetSession()
+
+        XCTAssertNil(appState.passwordResetToken)
+        XCTAssertNil(appState.passwordResetRefreshToken)
+        XCTAssertFalse(appState.showPasswordReset)
+        XCTAssertTrue(appState.isAuthenticated)
+        XCTAssertNotNil(appState.accessToken)
+    }
+
+    func testRefreshSessionSkippedWhilePasswordResetPresented() async throws {
+        let mockData = try MockSupabaseResponses.successAuthResponseData()
+        MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
+        try await appState.signIn(email: "test@example.com", password: "password123")
+        let tokenBefore = appState.accessToken
+
+        var refreshCalled = false
+        MockURLProtocol.requestHandler = { request in
+            if request.url?.path.contains("/auth/v1/token") == true {
+                refreshCalled = true
+            }
+            throw URLError(.notConnectedToInternet)
+        }
+
+        appState.passwordResetToken = "recovery_access"
+        appState.passwordResetRefreshToken = "recovery_refresh"
+        appState.showPasswordReset = true
+        await appState.refreshSessionIfNeeded(silent: true)
+
+        XCTAssertFalse(refreshCalled)
+        XCTAssertEqual(appState.accessToken, tokenBefore)
+        XCTAssertTrue(appState.isAuthenticated)
     }
 
     private static func makeJWT(expFromNow: TimeInterval) -> String {

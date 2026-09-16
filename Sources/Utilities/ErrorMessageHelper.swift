@@ -94,5 +94,27 @@ enum ErrorMessageHelper {
         // Generic fallback
         return L.errorGenericUserFriendly.localized
     }
+
+    /// Auth/UI copy: keep short human messages, drop JSON/HTML/stack dumps.
+    static func sanitizedDisplayMessage(from error: Error, fallback: String) -> String {
+        let mapped = userFriendlyMessage(from: error)
+        if mapped != L.errorGenericUserFriendly.localized {
+            return mapped
+        }
+        let text = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isSafeUserFacingMessage(text) else { return fallback }
+        return text
+    }
+
+    static func isSafeUserFacingMessage(_ message: String) -> Bool {
+        let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (1...180).contains(text.count) else { return false }
+        let lower = text.lowercased()
+        if text.hasPrefix("{") || text.hasPrefix("[") { return false }
+        if lower.contains("<html") || lower.contains("<!doctype") { return false }
+        if lower.contains("traceback") || lower.contains("stack trace") { return false }
+        if text.contains("\n") { return false }
+        return true
+    }
 }
 

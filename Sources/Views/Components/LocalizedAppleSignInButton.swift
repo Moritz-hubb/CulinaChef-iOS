@@ -48,10 +48,14 @@ enum AppleSignInNonce {
             if nsError.code == -7022 || nsError.code == -7071 {
                 return L.error_appleSignInUseEmail.localized
             }
-            return error.localizedDescription.isEmpty ? L.errorAppleSignInFailed.localized : error.localizedDescription
+            return error.localizedDescription.isEmpty
+                ? L.errorAppleSignInFailed.localized
+                : ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorAppleSignInFailed.localized)
             #endif
         }
-        return error.localizedDescription.isEmpty ? L.error_signInFailed.localized : error.localizedDescription
+        return error.localizedDescription.isEmpty
+            ? L.error_signInFailed.localized
+            : ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.error_signInFailed.localized)
     }
 
     static func fullName(from credential: ASAuthorizationAppleIDCredential) -> String? {

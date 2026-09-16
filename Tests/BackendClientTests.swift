@@ -46,8 +46,12 @@ final class BackendClientTests: XCTestCase {
         do {
             try await client.health()
             XCTFail("Should throw error for 500 status code")
+        } catch let error as NSError {
+            XCTAssertEqual(error.domain, "Backend")
+            XCTAssertEqual(error.code, 500)
+            XCTAssertFalse(error.localizedDescription.contains("{"))
         } catch {
-            XCTAssertTrue(error is URLError)
+            XCTFail("Unexpected error type: \(error)")
         }
     }
     
@@ -75,8 +79,11 @@ final class BackendClientTests: XCTestCase {
         do {
             _ = try await client.subscriptionStatus(accessToken: "invalid_token")
             XCTFail("Should throw error for 401")
+        } catch let error as NSError {
+            XCTAssertEqual(error.domain, "Backend")
+            XCTAssertEqual(error.code, 401)
         } catch {
-            XCTAssertTrue(error is URLError)
+            XCTFail("Unexpected error type: \(error)")
         }
     }
     
@@ -162,5 +169,48 @@ final class BackendClientTests: XCTestCase {
         } catch {
             XCTFail("Wrong error type: \(error)")
         }
+    }
+
+    func testHTTPErrorDoesNotExposeRawHTMLOrJSONBodies() {
+        let html = Data("<html><body>Internal Server Error</body></html>".utf8)
+        let htmlError = BackendHTTPError.make(statusCode: 500, data: html) as NSError
+        XCTAssertFalse(htmlError.localizedDescription.lowercased().contains("<html"))
+        XCTAssertFalse(htmlError.localizedDescription.contains("Internal Server Error"))
+
+        let json = Data(#"{"trace":"secret","stack":"boom"}"#.utf8)
+        let jsonError = BackendHTTPError.make(statusCode: 502, data: json) as NSError
+        XCTAssertFalse(jsonError.localizedDescription.contains("secret"))
+        XCTAssertFalse(jsonError.localizedDescription.contains("trace"))
+
+        let detail = Data(#"{"detail":"Recipe import failed"}"#.utf8)
+        let detailError = BackendHTTPError.make(statusCode: 400, data: detail) as NSError
+        XCTAssertEqual(detailError.localizedDescription, "Recipe import failed")
+    }
+
+    func testSafeUserFacingMessageRejectsDumps() {
+        XCTAssertTrue(ErrorMessageHelper.isSafeUserFacingMessage("Invalid password"))
+        XCTAssertFalse(ErrorMessageHelper.isSafeUserFacingMessage(#"{"error":"nope"}"#))
+        XCTAssertFalse(ErrorMessageHelper.isSafeUserFacingMessage("<html>fail</html>"))
+        XCTAssertFalse(ErrorMessageHelper.isSafeUserFacingMessage(String(repeating: "x", count: 400)))
+    }
+
+    func testSanitizedDisplayMessageHidesHtmlAndKeepsShortCopy() {
+        let html = NSError(
+            domain: "Backend",
+            code: 500,
+            userInfo: [NSLocalizedDescriptionKey: "<html>nope</html>"]
+        )
+        XCTAssertEqual(
+            ErrorMessageHelper.sanitizedDisplayMessage(from: html, fallback: "safe"),
+            "safe"
+        )
+        let short = NSError(
+            domain: "Backend",
+            code: 400,
+            userInfo: [NSLocalizedDescriptionKey: "Invalid password"]
+        )
+        let displayed = ErrorMessageHelper.sanitizedDisplayMessage(from: short, fallback: "safe")
+        XCTAssertFalse(displayed.contains("<html"))
+        XCTAssertFalse(displayed.isEmpty)
     }
 }

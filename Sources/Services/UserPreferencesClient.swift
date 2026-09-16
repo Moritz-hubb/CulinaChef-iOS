@@ -95,9 +95,7 @@ final class UserPreferencesClient {
             return nil
         } else {
             // Log the error for debugging
-            if let errorString = String(data: data, encoding: .utf8) {
-                Logger.error("[UserPreferencesClient] Fetch error (\(http.statusCode)): \(errorString)", category: .data)
-            }
+            Logger.error("[UserPreferencesClient] Fetch error (status \(http.statusCode))", category: .data)
             throw NSError(domain: "UserPreferencesClient", code: http.statusCode,
                          userInfo: [NSLocalizedDescriptionKey: L.error_preferencesLoadFailed.localized])
         }
@@ -166,9 +164,9 @@ final class UserPreferencesClient {
         }
         
         if http.statusCode != 200 && http.statusCode != 201 {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unbekannter Fehler"
+            Logger.error("[UserPreferencesClient] Upsert error (status \(http.statusCode))", category: .data)
             throw NSError(domain: "UserPreferencesClient", code: http.statusCode,
-                         userInfo: [NSLocalizedDescriptionKey: "Preferences konnten nicht gespeichert werden: \(errorMessage)"])
+                         userInfo: [NSLocalizedDescriptionKey: L.errorSaveFailed.localized])
         }
     }
     
@@ -217,16 +215,16 @@ final class UserPreferencesClient {
         
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (data, response) = try await SecureURLSession.shared.data(for: req)
+        let (_, response) = try await SecureURLSession.shared.data(for: req)
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
         
         if http.statusCode != 200 && http.statusCode != 204 {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unbekannter Fehler"
+            Logger.error("[UserPreferencesClient] Update error (status \(http.statusCode))", category: .data)
             throw NSError(domain: "UserPreferencesClient", code: http.statusCode,
-                         userInfo: [NSLocalizedDescriptionKey: "Preferences konnten nicht aktualisiert werden: \(errorMessage)"])
+                         userInfo: [NSLocalizedDescriptionKey: L.errorSaveFailed.localized])
         }
     }
 }

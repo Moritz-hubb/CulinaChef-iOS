@@ -52,10 +52,9 @@ struct ToggleShoppingListItemIntent: AppIntent {
             itemsArray[index] = item
             
             // Save back to App Group
-            let updatedData: [String: Any] = [
-                "items": itemsArray,
-                "lastUpdated": Date().timeIntervalSince1970
-            ]
+            var updatedData = json
+            updatedData["items"] = itemsArray
+            updatedData["lastUpdated"] = Date().timeIntervalSince1970
             
             if let jsonData = try? JSONSerialization.data(withJSONObject: updatedData) {
                 defaults.set(jsonData, forKey: "shopping_list")

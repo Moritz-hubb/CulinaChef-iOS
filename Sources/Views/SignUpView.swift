@@ -555,7 +555,7 @@ struct SignUpView: View {
                 errorMessage = nil
             } else {
                 showAccountExistsError = false
-                errorMessage = error.localizedDescription
+                errorMessage = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.error_registrationFailed.localized)
             }
         }
     }
@@ -596,7 +596,7 @@ struct SignUpView: View {
             } else {
                 await MainActor.run {
                     self.showAccountExistsError = false
-                    self.errorMessage = error.localizedDescription
+                    self.errorMessage = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorAppleSignInFailed.localized)
                 }
             }
         }

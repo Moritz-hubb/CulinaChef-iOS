@@ -101,6 +101,9 @@ private struct RootViewModifiers: ViewModifier {
     private func handlePasswordResetChange(_ shouldShow: Bool) {
         if shouldShow {
             Logger.debug("Password reset view should be shown", category: .auth)
+        } else {
+            app.passwordResetToken = nil
+            app.passwordResetRefreshToken = nil
         }
     }
     

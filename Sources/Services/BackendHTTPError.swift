@@ -32,13 +32,14 @@ enum BackendHTTPError {
                 ]
             )
         }
-        if let message = extractMessage(from: data), !message.isEmpty {
+        if let message = extractMessage(from: data), ErrorMessageHelper.isSafeUserFacingMessage(message) {
             return NSError(domain: "Backend", code: statusCode, userInfo: [NSLocalizedDescriptionKey: message])
         }
-        if let raw = String(data: data, encoding: .utf8), !raw.isEmpty {
-            return NSError(domain: "Backend", code: statusCode, userInfo: [NSLocalizedDescriptionKey: raw])
-        }
-        return URLError(.badServerResponse)
+        return NSError(
+            domain: "Backend",
+            code: statusCode,
+            userInfo: [NSLocalizedDescriptionKey: L.errorGenericUserFriendly.localized]
+        )
     }
 
     private static func extractErrorCode(from data: Data) -> String? {

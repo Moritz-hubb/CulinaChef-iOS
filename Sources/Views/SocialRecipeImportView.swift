@@ -307,7 +307,10 @@ struct SocialRecipeImportView: View {
             Logger.error("[SocialImport] incrementAIUsage failed", error: error, category: .network)
             if app.handleAISubscriptionDenied(error) { return }
             await MainActor.run {
-                self.error = error.localizedDescription
+                self.error = ErrorMessageHelper.sanitizedDisplayMessage(
+                    from: error,
+                    fallback: L.errorGenericUserFriendly.localized
+                )
             }
             return
         }
@@ -353,7 +356,10 @@ struct SocialRecipeImportView: View {
            detail == "INSUFFICIENT_FOOD_METADATA" {
             return L.import_social_insufficient_info.localized
         }
-        return error.localizedDescription
+        return ErrorMessageHelper.sanitizedDisplayMessage(
+            from: error,
+            fallback: L.errorGenericUserFriendly.localized
+        )
     }
 }
 

@@ -230,7 +230,7 @@ final class AppState: ObservableObject {
                     let loaded = DietaryPreferences.load()
                     if !loaded.diets.isEmpty || !loaded.allergies.isEmpty || !loaded.dislikes.isEmpty {
                         self.dietary = loaded
-                        Logger.info("[AppState] Loaded preferences from UserDefaults - diets: \(loaded.diets), allergies: \(loaded.allergies.count)", category: .data)
+                        Logger.info("[AppState] Loaded local preference cache", category: .data)
                     }
                     // Ensure taste preferences are loaded from Keychain
                     _ = TastePreferencesManager.load()
@@ -379,6 +379,10 @@ final class AppState: ObservableObject {
     ///   bei transienten Netzwerkfehlern erhalten. Auth-Fehler (401, ungültiger Refresh)
     ///   und abgelaufene Access-Tokens führen immer zum Logout.
     func refreshSessionIfNeeded(silent: Bool = false) async {
+        if showPasswordReset {
+            Logger.info("Skipping token refresh while password reset is in progress", category: .auth)
+            return
+        }
         guard let refreshToken = KeychainManager.get(key: "refresh_token"), !refreshToken.isEmpty else {
             Logger.info("No refresh token found, logging out", category: .auth)
             await signOut()
@@ -859,6 +863,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             self.userEmail = result.email
             self.isAuthenticated = true
             self.isInitialDataLoaded = false // Reset to show loading screen
+            self.shoppingListManager.loadShoppingList()
         }
         try? await Monetization.shared.identify(userId: result.userId)
         
@@ -887,6 +892,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             self.userEmail = result.email
             self.isAuthenticated = true
             self.isInitialDataLoaded = false // Reset to show loading screen
+            self.shoppingListManager.loadShoppingList()
         }
         try? await Monetization.shared.identify(userId: result.userId)
         
@@ -947,25 +953,40 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     func updatePassword(accessToken: String, refreshToken: String, newPassword: String) async throws {
         loading = true
         defer { loading = false }
-        
+
+        let previousUserId = KeychainManager.get(key: "user_id")
+        let previousAccessToken = self.accessToken
+
         let result = try await authManager.updatePassword(accessToken: accessToken, refreshToken: refreshToken, newPassword: newPassword)
-        
+        let didSwitchAccount = previousUserId.map { $0 != result.userId } ?? false
+
+        if didSwitchAccount, let previousAccessToken, !previousAccessToken.isEmpty {
+            try? await auth.signOut(accessToken: previousAccessToken)
+        }
+
         await MainActor.run {
+            if didSwitchAccount {
+                self.clearLocalUserSessionData(userId: previousUserId)
+                self.shoppingListManager.clearShoppingList(for: previousUserId)
+            }
             self.accessToken = result.accessToken
             self.userEmail = result.email
             self.isAuthenticated = true
-            self.isInitialDataLoaded = false // Reset to show loading screen
-            self.showPasswordReset = false
+            self.isInitialDataLoaded = false
             self.passwordResetToken = nil
             self.passwordResetRefreshToken = nil
+            self.shoppingListManager.loadShoppingList()
         }
         try? await Monetization.shared.identify(userId: result.userId)
-        
-        // Load subscription status directly from StoreKit (Apple) first
         await refreshSubscriptionStatusFromStoreKit()
-        
-        // Load initial data after password update
         await loadInitialData()
+        try? await loadPreferencesFromSupabase()
+    }
+
+    func discardPasswordResetSession() {
+        showPasswordReset = false
+        passwordResetToken = nil
+        passwordResetRefreshToken = nil
     }
     
     /// Führt den Login via „Sign in with Apple" durch und aktualisiert Tokens & State.
@@ -1020,7 +1041,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             applyRevenueCatSubscriptionStatus()
             
             // CRITICAL: Clear shopping list to prevent cache bleeding
-            self.shoppingListManager.clearShoppingList()
+            self.shoppingListManager.clearShoppingList(for: userId)
         }
         // DEV MODE: Subscription polling disabled
         // stopSubscriptionPolling()
@@ -1118,7 +1139,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     private func clearLocalUserDataAfterAccountDeletion() {
         OpenAIConsentManager.resetConsent()
         TastePreferencesManager.delete()
-        shoppingListManager.clearShoppingList()
+        shoppingListManager.clearShoppingList(for: KeychainManager.get(key: "user_id"))
         IngredientCategorizer.clearOverrides()
         if let userId = KeychainManager.get(key: "user_id") {
             recipeManager.clearOfflineQueue(for: userId)
@@ -1129,6 +1150,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     /// Health-related prefs and recipe caches must not survive logout or account switch.
     private func clearLocalUserSessionData(userId: String?) {
         DietaryPreferences.removeAll(for: userId)
+        TastePreferencesManager.delete(for: userId)
         if let userId, !userId.isEmpty {
             UserDefaults.standard.removeObject(forKey: "cached_recipes_\(userId)")
             UserDefaults.standard.removeObject(forKey: "cached_menus_\(userId)")
@@ -1251,7 +1273,9 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     #if canImport(UIKit)
     @objc private func onDidBecomeActive() {
         startSubscriptionPolling()
-        restoreRecipeStateIfNeeded()
+        if !showPasswordReset {
+            restoreRecipeStateIfNeeded()
+        }
         Task { await refreshSessionIfNeeded(silent: true) }
     }
 
@@ -1373,14 +1397,12 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
             await MainActor.run {
                 let loaded = DietaryPreferences.load()
                 if !loaded.diets.isEmpty || !loaded.allergies.isEmpty || !loaded.dislikes.isEmpty {
-                    Logger.info("[AppState] Loaded preferences from UserDefaults - diets: \(loaded.diets), allergies: \(loaded.allergies.count), dislikes: \(loaded.dislikes.count)", category: .data)
+                    Logger.info("[AppState] Loaded local preference cache", category: .data)
                 self.dietary = loaded
                 } else {
                     Logger.info("[AppState] No preferences found in UserDefaults either - using defaults", category: .data)
                 }
-                // Ensure taste preferences are loaded from Keychain (or migrated from UserDefaults)
-                let tastePrefs = TastePreferencesManager.load()
-                Logger.info("[AppState] Loaded taste preferences from Keychain - spicyLevel: \(tastePrefs.spicyLevel), sweet: \(tastePrefs.sweet), sour: \(tastePrefs.sour), bitter: \(tastePrefs.bitter), umami: \(tastePrefs.umami)", category: .data)
+                _ = TastePreferencesManager.load()
             }
         }
     }

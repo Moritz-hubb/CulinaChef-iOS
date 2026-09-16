@@ -316,7 +316,7 @@ struct SignInView: View {
         do {
             try await app.signIn(email: trimmedEmail, password: password)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.error_signInFailed.localized)
         }
     }
     
@@ -341,7 +341,7 @@ struct SignInView: View {
         do {
             try await app.signInWithApple(idToken: idToken, nonce: appleNonce, fullName: fullName, appleUserId: appleUserId, authorizationCode: authorizationCode)
         } catch {
-            await MainActor.run { self.errorMessage = error.localizedDescription }
+            await MainActor.run { self.errorMessage = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.error_signInFailed.localized) }
         }
     }
 }

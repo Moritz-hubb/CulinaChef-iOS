@@ -148,4 +148,39 @@ final class MenuManagerFilterTests: XCTestCase {
         let manager = MenuManager()
         try? await manager.deleteMenu(menuId: "menu_123", accessToken: "token")
     }
+
+    func testCreateMenuEmptyRepresentationThrowsInsteadOfCrashing() async {
+        MockURLProtocol.reset()
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [MockURLProtocol.self]
+        SecureURLSession.testConfiguration = config
+        defer { SecureURLSession.testConfiguration = nil }
+
+        MockURLProtocol.mockResponse(statusCode: 201, data: Data("[]".utf8))
+        let manager = MenuManager()
+        do {
+            _ = try await manager.createMenu(title: "Dinner", accessToken: "token", userId: "user_1")
+            XCTFail("Empty representation must throw")
+        } catch let error as URLError {
+            XCTAssertEqual(error.code, .cannotParseResponse)
+        } catch {
+            XCTFail("Wrong error type: \(error)")
+        }
+    }
+
+    func testCreateMenuReturnsFirstRow() async throws {
+        MockURLProtocol.reset()
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [MockURLProtocol.self]
+        SecureURLSession.testConfiguration = config
+        defer { SecureURLSession.testConfiguration = nil }
+
+        let menu = Menu(id: "menu_1", user_id: "user_1", title: "Dinner", created_at: nil)
+        let data = try JSONEncoder().encode([menu])
+        MockURLProtocol.mockResponse(statusCode: 201, data: data)
+        let manager = MenuManager()
+        let created = try await manager.createMenu(title: "Dinner", accessToken: "token", userId: "user_1")
+        XCTAssertEqual(created.id, "menu_1")
+        XCTAssertEqual(created.title, "Dinner")
+    }
 }

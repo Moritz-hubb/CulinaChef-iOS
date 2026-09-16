@@ -364,14 +364,26 @@ final class SupabaseAuthClient {
         req.httpBody = try JSONEncoder().encode(PKCETokenRequest(auth_code: code, code_verifier: verifier))
 
         let (data, response) = try await SecureURLSession.shared.data(for: req)
-        KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
 
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
 
         if http.statusCode == 200 {
-            return try JSONDecoder().decode(AuthResponse.self, from: data)
+            do {
+                let decoded = try JSONDecoder().decode(AuthResponse.self, from: data)
+                KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
+                return decoded
+            } catch {
+                throw NSError(
+                    domain: "SupabaseAuth",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: L.resetPasswordError.localized]
+                )
+            }
+        }
+        if (400...499).contains(http.statusCode) {
+            KeychainManager.delete(key: PasswordResetLink.codeVerifierKeychainKey)
         }
         let error = try? JSONDecoder().decode(AuthError.self, from: data)
         throw NSError(domain: "SupabaseAuth", code: http.statusCode,
@@ -617,6 +629,7 @@ enum KeychainManager {
         delete(key: PasswordResetLink.codeVerifierKeychainKey)
         if let userId, !userId.isEmpty {
             delete(key: DietaryPreferences.storageKey(for: userId))
+            delete(key: TastePreferencesManager.storageKey(for: userId))
         }
     }
     

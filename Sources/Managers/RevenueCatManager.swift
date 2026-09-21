@@ -62,13 +62,13 @@ final class RevenueCatManager: NSObject, ObservableObject {
         guard isConfigured, Purchases.isConfigured else { return }
         Logger.info("[RevenueCat] Identifying user", category: .data)
         let result = try await Purchases.shared.logIn(userId)
-        customerInfo = result.customerInfo
+        setCustomerInfo(result.customerInfo)
     }
     
     func logOut() async throws {
         guard isConfigured, Purchases.isConfigured else { return }
         Logger.info("[RevenueCat] Logging out user", category: .data)
-        customerInfo = try await Purchases.shared.logOut()
+        setCustomerInfo(try await Purchases.shared.logOut())
     }
     
     func loadCustomerInfo() async {
@@ -77,7 +77,7 @@ final class RevenueCatManager: NSObject, ObservableObject {
         error = nil
         do {
             let info = try await Purchases.shared.customerInfo()
-            customerInfo = info
+            setCustomerInfo(info)
             isLoading = false
             Logger.info(
                 "[RevenueCat] Customer info loaded — subscribed: \(Self.hasActiveSubscription(info))",
@@ -215,14 +215,14 @@ final class RevenueCatManager: NSObject, ObservableObject {
         if result.userCancelled {
             throw RevenueCatError.userCancelled
         }
-        customerInfo = result.customerInfo
+        setCustomerInfo(result.customerInfo)
         Logger.info("[RevenueCat] Purchase successful", category: .data)
         return (result.transaction, result.customerInfo)
     }
     
     func restorePurchases() async throws {
         Logger.info("[RevenueCat] Restoring purchases", category: .data)
-        customerInfo = try await Purchases.shared.restorePurchases()
+        setCustomerInfo(try await Purchases.shared.restorePurchases())
         Logger.info("[RevenueCat] Restore finished — subscribed: \(isSubscribed)", category: .data)
     }
     
@@ -235,12 +235,17 @@ final class RevenueCatManager: NSObject, ObservableObject {
             UIApplication.shared.open(url)
         }
     }
+
+    private func setCustomerInfo(_ info: CustomerInfo?) {
+        customerInfo = info
+        TrialEndingReminderScheduler.shared.sync(from: info)
+    }
 }
 
 extension RevenueCatManager: PurchasesDelegate {
     nonisolated func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
         Task { @MainActor in
-            self.customerInfo = customerInfo
+            self.setCustomerInfo(customerInfo)
             Logger.info(
                 "[RevenueCat] Customer info updated — subscribed: \(Self.hasActiveSubscription(customerInfo))",
                 category: .data

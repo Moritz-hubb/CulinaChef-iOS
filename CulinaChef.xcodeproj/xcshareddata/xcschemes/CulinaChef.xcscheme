@@ -44,7 +44,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "04E5CB28410783D7A485F9BF"
-               BuildableName = "CulinaChefTests.xctest"
+               BuildableName = ".xctest"
                BlueprintName = "CulinaChefTests"
                ReferencedContainer = "container:CulinaChef.xcodeproj">
             </BuildableReference>

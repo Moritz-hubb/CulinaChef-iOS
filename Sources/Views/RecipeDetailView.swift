@@ -1781,12 +1781,11 @@ private struct RecipeAISheetForSavedRecipe: View {
 
             let sysGeneral = app.systemContext()
             let recipeJSON = try encodeRecipe(recipe)
-            var sysRecipe = "Du bist ein Kochassistent. Verwende ausschließlich die bereitgestellten Rezeptdaten.\n\nWICHTIG: Halte deine Antworten SEHR KURZ. Maximal 2 Sätze. Keine ausführlichen Erklärungen. Nur die direkte Antwort auf die Frage.\n\nRezeptdaten (JSON):\n\(recipeJSON)\n"
-            if currentStepIndex >= 0 {
-                sysRecipe += "Aktueller Schritt Index (1-basiert): \(currentStepIndex + 1). Beziehe dich darauf in deiner Antwort.\n"
-            } else {
-                sysRecipe += "Der Nutzer ist auf der Übersicht.\n"
-            }
+            let sysRecipe = app.recipeQuestionSystemPrompt(
+                recipeJSON: recipeJSON,
+                currentStepIndex: currentStepIndex,
+                keepShort: true
+            )
 
             var prefixed: [ChatMessage] = []
             if !sysGeneral.isEmpty { prefixed.append(.init(role: .system, text: sysGeneral)) }

@@ -142,6 +142,8 @@ final class Monetization {
             Logger.warning("[Superwall] Missing API key — paywalls disabled until SUPERWALL_API_KEY is set", category: .data)
         }
         
+        TrialEndingReminderScheduler.shared.start()
+
         let userId = KeychainManager.get(key: "user_id")
         RevenueCatManager.shared.configure(userId: userId)
         
@@ -185,6 +187,7 @@ final class Monetization {
     
     func logOut() async {
         try? await RevenueCatManager.shared.logOut()
+        TrialEndingReminderScheduler.shared.sync(from: nil)
         if Config.isSuperwallConfigured {
             Superwall.shared.reset()
         }

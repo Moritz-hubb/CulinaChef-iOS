@@ -57,9 +57,9 @@ final class BackendClient {
             req.httpBody = body
             req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        // Add Accept-Language header for backend language detection
-        let preferredLanguages = Locale.preferredLanguages.prefix(3).joined(separator: ", ")
-        req.addValue(preferredLanguages, forHTTPHeaderField: "Accept-Language")
+        // Prefer in-app language so AI replies match the selected UI language
+        let appLanguage = UserDefaults.standard.string(forKey: "app_language") ?? "de"
+        req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
         do {
         let (data, resp) = try await SecureURLSession.shared.data(for: req)
             #if DEBUG

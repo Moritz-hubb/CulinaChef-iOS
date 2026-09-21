@@ -86,7 +86,7 @@ targets:
         NSCameraUsageDescription: "Zum Aufnehmen von Fotos für Rezepte, Titelbilder und Zutaten."
         NSPhotoLibraryAddUsageDescription: "Zum Speichern/Verarbeiten von Fotos deiner Zutaten."
         NSPhotoLibraryUsageDescription: "Zum Auswählen von Bildern aus deiner Galerie für Rezeptvorschläge."
-        NSUserNotificationsUsageDescription: "Damit wir dich an Koch-Timer und Rezept-Updates erinnern können."
+        NSUserNotificationsUsageDescription: "Damit wir dich an Koch-Timer, Rezept-Updates und das Ende deines Testzeitraums erinnern können."
         SupabaseURL: $(SUPABASE_URL)
         SupabaseAnonKey: $(SUPABASE_ANON_KEY)
         SentryDSN: $(SENTRY_DSN)

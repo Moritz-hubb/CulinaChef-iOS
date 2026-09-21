@@ -54,6 +54,7 @@ final class BackendOpenAIClient {
             let max_tokens: Int
             let temperature: Double
             let model: String
+            let language: String
         }
         
         let requestMessages = trimmed.map { msg in
@@ -68,11 +69,13 @@ final class BackendOpenAIClient {
         // Use 0.8-0.9 for creative recipe suggestions, 0.7 for general chat
         let temperature: Double = 0.85
         
+        let appLanguage = UserDefaults.standard.string(forKey: "app_language") ?? "de"
         let request = Request(
             messages: requestMessages,
             max_tokens: 500,
             temperature: temperature,
-            model: model
+            model: model,
+            language: appLanguage
         )
         
         let jsonBody = try JSONEncoder().encode(request)
@@ -83,6 +86,7 @@ final class BackendOpenAIClient {
         req.httpMethod = "POST"
         req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
         req.httpBody = jsonBody
         
         let (data, resp) = try await SecureURLSession.shared.data(for: req)
@@ -140,6 +144,8 @@ final class BackendOpenAIClient {
         req.httpMethod = "POST"
         req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        let appLanguage = UserDefaults.standard.string(forKey: "app_language") ?? "de"
+        req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
         req.httpBody = jsonBody
         
         let (data, resp) = try await SecureURLSession.shared.data(for: req)
@@ -244,6 +250,8 @@ final class BackendOpenAIClient {
         req.httpMethod = "POST"
         req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        let appLanguage = UserDefaults.standard.string(forKey: "app_language") ?? "de"
+        req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
         req.httpBody = jsonBody
         
         let (data, resp) = try await SecureURLSession.shared.data(for: req)

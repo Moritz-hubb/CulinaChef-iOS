@@ -216,6 +216,12 @@ final class StringValidationTests: XCTestCase {
         XCTAssertTrue(RecipeImageURL.isAllowed("https://abc.storage.googleapis.com/photo.jpg"))
     }
 
+    func testRecipeImageURLStorageObjectName() {
+        let publicURL = "https://ywduddopwudltshxiqyp.supabase.co/storage/v1/object/public/recipe-photo/user-id_abc.jpg"
+        XCTAssertEqual(RecipeImageURL.storageObjectName(from: publicURL), "user-id_abc.jpg")
+        XCTAssertNil(RecipeImageURL.storageObjectName(from: "https://evil.example/recipe-photo/x.jpg"))
+    }
+
     func testRecipeImageURLRejectsArbitraryAndCleartext() {
         XCTAssertFalse(RecipeImageURL.isAllowed("http://ywduddopwudltshxiqyp.supabase.co/storage/v1/object/public/recipe-photo/a.jpg"))
         XCTAssertFalse(RecipeImageURL.isAllowed("https://evil.example/photo.jpg"))

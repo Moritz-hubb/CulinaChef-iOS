@@ -36,7 +36,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Zum Auswählen von Bildern aus deiner Galerie für Rezeptvorschläge.</string>
 	<key>NSUserNotificationsUsageDescription</key>
-	<string>Damit wir dich an Koch-Timer und Rezept-Updates erinnern können.</string>
+	<string>Damit wir dich an Koch-Timer, Rezept-Updates und das Ende deines Testzeitraums erinnern können.</string>
 	<key>CFBundleDisplayName</key>
 	<string>CulinaAi</string>
 	<key>RevenueCatAPIKey</key>

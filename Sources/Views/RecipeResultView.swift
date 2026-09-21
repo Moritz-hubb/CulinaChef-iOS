@@ -738,12 +738,11 @@ private struct RecipeAISheet: View {
 
             let sysGeneral = app.systemContext()
             let recipeJSON = try encodePlan(plan)
-            var sysRecipe = "Du bist ein Kochassistent. Verwende ausschließlich die bereitgestellten Rezeptdaten.\nRezeptdaten (JSON):\n\(recipeJSON)\n"
-            if currentStepIndex >= 0 {
-                sysRecipe += "Aktueller Schritt Index (1-basiert): \(currentStepIndex + 1). Beziehe dich darauf in deiner Antwort.\n"
-            } else {
-                sysRecipe += "Der Nutzer ist auf der Übersicht.\n"
-            }
+            let sysRecipe = app.recipeQuestionSystemPrompt(
+                recipeJSON: recipeJSON,
+                currentStepIndex: currentStepIndex,
+                keepShort: false
+            )
             var prefixed: [ChatMessage] = []
             if !sysGeneral.isEmpty { prefixed.append(.init(role: .system, text: sysGeneral)) }
             prefixed.append(.init(role: .system, text: sysRecipe))

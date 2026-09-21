@@ -2,4 +2,4 @@
 "NSCameraUsageDescription" = "Pour photographier vos ingrédients et proposer des recettes.";
 "NSPhotoLibraryAddUsageDescription" = "Pour enregistrer et traiter les photos de vos ingrédients.";
 "NSPhotoLibraryUsageDescription" = "Pour choisir des images de votre galerie pour des suggestions de recettes.";
-"NSUserNotificationsUsageDescription" = "Pour vous rappeler les minuteurs de cuisson et les mises à jour de recettes.";
+"NSUserNotificationsUsageDescription" = "Pour vous rappeler les minuteurs de cuisson, les mises à jour de recettes et la fin de votre période d'essai.";

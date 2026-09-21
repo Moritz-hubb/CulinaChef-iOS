@@ -227,6 +227,17 @@ enum RecipeImageURL {
         guard let url = URL(string: trimmed) else { return false }
         return isAllowed(url)
     }
+
+    /// Object key inside the `recipe-photo` bucket (`{userId}_{uuid}.jpg`).
+    static func storageObjectName(from raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isAllowed(trimmed), let url = URL(string: trimmed) else { return nil }
+        let parts = url.path.split(separator: "/").map(String.init)
+        guard let idx = parts.firstIndex(of: "recipe-photo"), idx + 1 < parts.count else { return nil }
+        let name = parts[idx + 1]
+        guard !name.isEmpty, !name.contains(".."), !name.contains("/") else { return nil }
+        return name
+    }
 }
 
 enum SocialImportPendingStore {

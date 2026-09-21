@@ -593,7 +593,7 @@ final class AppState: ObservableObject {
                 let prompt = """
 DOMAIN: Kitchen/Cooking. Treat all cooking-related requests as relevant.
 
-Off-Topic: ONLY for completely unrelated requests with NO connection to food/cooking (e.g., pure mathematics, programming, politics without context) respond briefly: "I'm sorry, I can't help you with that. But I'd be happy to answer your cooking questions."
+Off-Topic: ONLY for completely unrelated requests with NO connection to food/cooking (e.g., pure mathematics, programming, politics without context) respond briefly: "\(L.chat_offTopicReply.localized)"
 IMPORTANT: If a question can be connected to food, cooking, ingredients, nutrition, kitchen, groceries, drinks, restaurants, etc. in ANY way - ALWAYS ANSWER IT, even if the connection is only remote.
 
 ANSWER TYPES - You can answer different types of questions:
@@ -638,7 +638,7 @@ Your goal is to ALWAYS help the user, never reject.
                 let prompt = """
 DOMINIO: Cocina/Cocinar. Trata todas las solicitudes relacionadas con la cocina como relevantes.
 
-Fuera de tema: SOLO para solicitudes completamente no relacionadas SIN conexión con comida/cocina (ej., matemáticas puras, programación, política sin contexto) responde brevemente: "Lo siento, no puedo ayudarte con eso. Pero estaré encantado de responder tus preguntas de cocina."
+Fuera de tema: SOLO para solicitudes completamente no relacionadas SIN conexión con comida/cocina (ej., matemáticas puras, programación, política sin contexto) responde brevemente: "\(L.chat_offTopicReply.localized)"
 IMPORTANTE: Si una pregunta puede conectarse con comida, cocina, ingredientes, nutrición, cocina, comestibles, bebidas, restaurantes, etc. de CUALQUIER manera - SIEMPRE RESPÓNDELA, incluso si la conexión es solo remota.
 
 TIPOS DE RESPUESTA - Puedes responder diferentes tipos de preguntas:
@@ -683,7 +683,7 @@ Tu objetivo es SIEMPRE ayudar al usuario, nunca rechazar.
                 let prompt = """
 DOMAINE: Cuisine/Cuisiner. Traitez toutes les demandes liées à la cuisine comme pertinentes.
 
-Hors sujet: SEULEMENT pour les demandes complètement non liées SANS connexion avec nourriture/cuisine (ex., mathématiques pures, programmation, politique sans contexte) répondez brièvement: "Je suis désolé, je ne peux pas vous aider avec cela. Mais je serais ravi de répondre à vos questions sur la cuisine."
+Hors sujet: SEULEMENT pour les demandes complètement non liées SANS connexion avec nourriture/cuisine (ex., mathématiques pures, programmation, politique sans contexte) répondez brièvement: "\(L.chat_offTopicReply.localized)"
 IMPORTANT: Si une question peut être connectée à la nourriture, la cuisine, les ingrédients, la nutrition, la cuisine, les produits alimentaires, les boissons, les restaurants, etc. de N'IMPORTE QUELLE manière - RÉPONDEZ-Y TOUJOURS, même si la connexion est seulement distante.
 
 TYPES DE RÉPONSES - Vous pouvez répondre à différents types de questions:
@@ -728,7 +728,7 @@ Votre objectif est de TOUJOURS aider l'utilisateur, jamais rejeter.
                 let prompt = """
 DOMINIO: Cucina/Cucinare. Tratta tutte le richieste relative alla cucina come rilevanti.
 
-Fuori tema: SOLO per richieste completamente non correlate SENZA connessione con cibo/cucina (es., matematica pura, programmazione, politica senza contesto) rispondi brevemente: "Mi dispiace, non posso aiutarti con questo. Ma sarò felice di rispondere alle tue domande di cucina."
+Fuori tema: SOLO per richieste completamente non correlate SENZA connessione con cibo/cucina (es., matematica pura, programmazione, politica senza contesto) rispondi brevemente: "\(L.chat_offTopicReply.localized)"
 IMPORTANTE: Se una domanda può essere collegata a cibo, cucina, ingredienti, nutrizione, cucina, generi alimentari, bevande, ristoranti, ecc. in QUALSIASI modo - RISpondi SEMPRE, anche se la connessione è solo remota.
 
 TIPI DI RISPOSTA - Puoi rispondere a diversi tipi di domande:
@@ -773,7 +773,7 @@ Il tuo obiettivo è AIUTARE SEMPRE l'utente, mai rifiutare.
                 let prompt = """
 DOMAIN: Küche/Kochen. Behandle alle kochbezogenen Anfragen als relevant.
 
-Off-Topic: NUR bei komplett unverwandten Anfragen ohne JEDEN Bezug zu Essen/Kochen (z.B. reine Mathematik, Programmierung, Politik ohne Kontext) antworte kurz: "Ich kann dir damit leider nicht helfen. Ich kann dir aber gerne deine Fragen übers Kochen beantworten."
+Off-Topic: NUR bei komplett unverwandten Anfragen ohne JEDEN Bezug zu Essen/Kochen (z.B. reine Mathematik, Programmierung, Politik ohne Kontext) antworte kurz: "\(L.chat_offTopicReply.localized)"
 WICHTIG: Wenn eine Frage IRGENDWIE mit Essen, Kochen, Zutaten, Ernährung, Küche, Lebensmitteln, Getränken, Restaurants, etc. in Verbindung gebracht werden kann - BEANTWORTE SIE IMMER, auch wenn der Bezug nur entfernt ist.
 
 ANTWORT-TYPEN - Du kannst verschiedene Arten von Fragen beantworten:
@@ -830,6 +830,22 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         }
         
         return full
+    }
+
+    /// Localized system prompt for recipe Q&A (detail/result chat).
+    func recipeQuestionSystemPrompt(recipeJSON: String, currentStepIndex: Int?, keepShort: Bool) -> String {
+        var prompt = L.recipe_qaSystemIntro.localized + "\n\n"
+        if keepShort {
+            prompt += L.recipe_qaKeepShort.localized + "\n\n"
+        }
+        prompt += L.recipe_qaOffTopic.localized(replacing: ["reply": L.chat_offTopicReply.localized]) + "\n\n"
+        prompt += L.recipe_qaDataLabel.localized + "\n" + recipeJSON + "\n"
+        if let idx = currentStepIndex, idx >= 0 {
+            prompt += L.recipe_qaCurrentStep.localized(replacing: ["step": String(idx + 1)]) + "\n"
+        } else {
+            prompt += L.recipe_qaOverview.localized + "\n"
+        }
+        return prompt
     }
 
     /// Führt den E-Mail/Passwort-Login über Supabase aus und aktualisiert Tokens & State.

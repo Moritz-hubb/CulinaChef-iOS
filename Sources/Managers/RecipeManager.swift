@@ -78,6 +78,7 @@ final class RecipeManager {
     
     private struct DeletedRecipeRow: Decodable {
         let id: String
+        let image_url: String?
     }
     
     private func deleteRecipeFromSupabase(recipeId: String, accessToken: String) async throws {
@@ -99,10 +100,35 @@ final class RecipeManager {
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw URLError(.badServerResponse)
         }
-        if data.isEmpty {
-            return
+        var imageURL: String?
+        if !data.isEmpty,
+           let rows = try? JSONDecoder().decode([DeletedRecipeRow].self, from: data) {
+            imageURL = rows.first?.image_url
         }
-        _ = try JSONDecoder().decode([DeletedRecipeRow].self, from: data)
+        if let imageURL {
+            await deleteRecipePhotoFromStorage(imageURL: imageURL, accessToken: accessToken)
+        }
+    }
+
+    private func deleteRecipePhotoFromStorage(imageURL: String, accessToken: String) async {
+        guard let filename = RecipeImageURL.storageObjectName(from: imageURL) else { return }
+        var deleteURL = Config.supabaseURL
+        deleteURL.append(path: "/storage/v1/object/recipe-photo/\(filename)")
+        var request = URLRequest(url: deleteURL)
+        request.httpMethod = "DELETE"
+        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        do {
+            let (_, response) = try await SecureURLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                Logger.error(
+                    "Recipe photo storage delete failed (status: \(http.statusCode))",
+                    category: .network
+                )
+            }
+        } catch {
+            Logger.error("Recipe photo storage delete failed", error: error, category: .network)
+        }
     }
     
     // MARK: - Offline Queue Management

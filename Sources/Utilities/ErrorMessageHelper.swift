@@ -106,6 +106,26 @@ enum ErrorMessageHelper {
         return text
     }
 
+    /// Login/signup must not map "token"/"failed" onto unrelated screens (upload, not logged in).
+    static func sanitizedAuthDisplayMessage(from error: Error, fallback: String) -> String {
+        let text = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = text.lowercased()
+        if lower.contains("cannotfindhost")
+            || lower.contains("cannotconnecttohost")
+            || lower.contains("not connected to internet")
+            || lower.contains("network connection lost") {
+            return L.errorNetworkConnection.localized
+        }
+        if lower.contains("timed out") || lower.contains("timeout") {
+            return L.errorServerUnavailable.localized
+        }
+        if lower.contains("rate limit") || lower.contains("too many requests") {
+            return L.errorRateLimitExceeded.localized
+        }
+        guard isSafeUserFacingMessage(text) else { return fallback }
+        return text
+    }
+
     static func isSafeUserFacingMessage(_ message: String) -> Bool {
         let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (1...180).contains(text.count) else { return false }

@@ -85,6 +85,10 @@ final class AuthenticationManager {
     }
 
     private func deriveUsername(fromEmail email: String) -> String {
+        uniqueUsername(fromEmail: email, userId: nil)
+    }
+
+    private func uniqueUsername(fromEmail email: String, userId: String?) -> String {
         let localPart = email.split(separator: "@").first.map(String.init) ?? "user"
         let cleaned = localPart
             .lowercased()
@@ -94,7 +98,13 @@ final class AuthenticationManager {
             }
         var base = String(cleaned).trimmingCharacters(in: CharacterSet(charactersIn: "_"))
         if base.count < 3 { base = "user" }
-        return String(base.prefix(20))
+        if let userId, !userId.isEmpty {
+            let suffix = String(userId.replacingOccurrences(of: "-", with: "").prefix(6))
+            base = String((base + "_" + suffix).prefix(20))
+        } else {
+            base = String(base.prefix(20))
+        }
+        return base
     }
     
     // MARK: - Apple Sign-In
@@ -134,8 +144,7 @@ final class AuthenticationManager {
         let isNewUser = existingProfile == nil
         
         if isNewUser {
-            // New user - create profile with username from email
-            let username = response.user.email.split(separator: "@").first.map(String.init) ?? "user"
+            let username = uniqueUsername(fromEmail: response.user.email, userId: response.user.id)
             do {
                 try await upsertProfile(userId: response.user.id, username: username, accessToken: response.access_token, fullName: fullName, email: response.user.email)
             } catch {

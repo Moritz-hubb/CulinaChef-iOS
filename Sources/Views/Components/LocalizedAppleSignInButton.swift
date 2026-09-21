@@ -50,12 +50,12 @@ enum AppleSignInNonce {
             }
             return error.localizedDescription.isEmpty
                 ? L.errorAppleSignInFailed.localized
-                : ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorAppleSignInFailed.localized)
+                : ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.errorAppleSignInFailed.localized)
             #endif
         }
         return error.localizedDescription.isEmpty
             ? L.error_signInFailed.localized
-            : ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.error_signInFailed.localized)
+            : ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.error_signInFailed.localized)
     }
 
     static func fullName(from credential: ASAuthorizationAppleIDCredential) -> String? {
@@ -70,12 +70,18 @@ enum AppleSignInNonce {
 /// Owns the authorization controller so delegates are not deallocated mid-flow.
 final class AppleSignInController: NSObject, ObservableObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     var onRequest: (ASAuthorizationAppleIDRequest) -> Void = { _ in }
-    var onCompletion: (Result<ASAuthorization, Error>) -> Void = { _ in }
+    var onCompletion: (Result<ASAuthorization, Error>, String?) -> Void = { _, _ in }
+    var presentationWindow: UIWindow?
     private var authorizationController: ASAuthorizationController?
+    private var rawNonce: String?
 
     func performRequest() {
+        let nonce = AppleSignInNonce.random()
+        rawNonce = nonce
         let request = ASAuthorizationAppleIDProvider().createRequest()
         onRequest(request)
+        // Always hash the nonce this controller will send to Supabase.
+        request.nonce = AppleSignInNonce.sha256(nonce)
         let controller = ASAuthorizationController(authorizationRequests: [request])
         controller.delegate = self
         controller.presentationContextProvider = self
@@ -84,18 +90,22 @@ final class AppleSignInController: NSObject, ObservableObject, ASAuthorizationCo
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        let nonce = rawNonce
         DispatchQueue.main.async {
-            self.onCompletion(.success(authorization))
+            self.onCompletion(.success(authorization), nonce)
         }
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
         DispatchQueue.main.async {
-            self.onCompletion(.failure(error))
+            self.onCompletion(.failure(error), self.rawNonce)
         }
     }
 
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        if let presentationWindow, !presentationWindow.isHidden {
+            return presentationWindow
+        }
         let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
         let windows = scenes.flatMap(\.windows)
         if let key = windows.first(where: { $0.isKeyWindow && !$0.isHidden }) {
@@ -108,6 +118,23 @@ final class AppleSignInController: NSObject, ObservableObject, ASAuthorizationCo
     }
 }
 
+private struct WindowProbe: UIViewRepresentable {
+    var onResolve: (UIWindow?) -> Void
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        DispatchQueue.main.async {
+            onResolve(uiView.window)
+        }
+    }
+}
+
 /// Custom Apple Sign In button. The system `SignInWithAppleButton` often swallows taps inside a `ScrollView` / `fullScreenCover`.
 struct LocalizedAppleSignInButton: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -117,7 +144,7 @@ struct LocalizedAppleSignInButton: View {
     let buttonStyle: ASAuthorizationAppleIDButton.Style
     let localizedText: String
     let onRequest: (ASAuthorizationAppleIDRequest) -> Void
-    let onCompletion: (Result<ASAuthorization, Error>) -> Void
+    let onCompletion: (Result<ASAuthorization, Error>, String?) -> Void
     let shouldPerformRequest: (() -> Bool)?
 
     init(
@@ -125,7 +152,7 @@ struct LocalizedAppleSignInButton: View {
         buttonStyle: ASAuthorizationAppleIDButton.Style = .black,
         localizedText: String,
         onRequest: @escaping (ASAuthorizationAppleIDRequest) -> Void,
-        onCompletion: @escaping (Result<ASAuthorization, Error>) -> Void,
+        onCompletion: @escaping (Result<ASAuthorization, Error>, String?) -> Void,
         shouldPerformRequest: (() -> Bool)? = nil
     ) {
         self.buttonType = buttonType
@@ -158,6 +185,7 @@ struct LocalizedAppleSignInButton: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: 375)
+        .background(WindowProbe { session.presentationWindow = $0 })
         .accessibilityLabel(localizedText)
         .id("\(localizationManager.currentLanguage)-\(buttonType.rawValue)")
     }
@@ -194,7 +222,7 @@ enum AppleAccountDeletionAuth {
                 request.requestedScopes = []
                 request.nonce = AppleSignInNonce.sha256(nonce)
             }
-            controller.onCompletion = { result in
+            controller.onCompletion = { result, _ in
                 session = nil
                 switch result {
                 case .success(let authorization):

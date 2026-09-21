@@ -507,4 +507,21 @@ final class SupabaseAuthClientTests: XCTestCase {
         }
         PasswordResetPKCEStore.clear()
     }
+
+    func testAuthErrorDecodesErrorDescription() throws {
+        let data = Data("{\"error\":\"invalid_grant\",\"error_description\":\"Nonces mismatch\",\"error_code\":\"validation_failed\"}".utf8)
+        let decoded = try JSONDecoder().decode(AuthError.self, from: data)
+        XCTAssertEqual(decoded.message, "Nonces mismatch")
+        XCTAssertEqual(decoded.errorCode, "validation_failed")
+    }
+
+    func testAuthResponseAllowsMissingRefreshToken() throws {
+        let json = """
+        {"access_token":"tok","user":{"id":"user-1","email":"a@b.com"}}
+        """.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(AuthResponse.self, from: json)
+        XCTAssertEqual(decoded.access_token, "tok")
+        XCTAssertEqual(decoded.refresh_token, "")
+        XCTAssertEqual(decoded.user.email, "a@b.com")
+    }
 }

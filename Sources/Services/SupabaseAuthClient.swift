@@ -9,6 +9,23 @@ struct AuthResponse: Codable {
     let access_token: String
     let refresh_token: String
     let user: User
+
+    enum CodingKeys: String, CodingKey {
+        case access_token, refresh_token, user
+    }
+
+    init(access_token: String, refresh_token: String, user: User) {
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+        self.user = user
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        access_token = try container.decode(String.self, forKey: .access_token)
+        refresh_token = try container.decodeIfPresent(String.self, forKey: .refresh_token) ?? ""
+        user = try container.decode(User.self, forKey: .user)
+    }
     
     struct User: Codable {
         let id: String
@@ -37,7 +54,7 @@ struct AuthError: Decodable {
     let errorCode: String?
 
     enum CodingKeys: String, CodingKey {
-        case message, msg, error, error_code, code
+        case message, msg, error, error_code, code, error_description
     }
 
     init(from decoder: Decoder) throws {
@@ -45,6 +62,9 @@ struct AuthError: Decodable {
         var messageValue = try container.decodeIfPresent(String.self, forKey: .message)
         if messageValue == nil {
             messageValue = try container.decodeIfPresent(String.self, forKey: .msg)
+        }
+        if messageValue == nil {
+            messageValue = try container.decodeIfPresent(String.self, forKey: .error_description)
         }
         if messageValue == nil {
             messageValue = try container.decodeIfPresent(String.self, forKey: .error)
@@ -199,7 +219,15 @@ final class SupabaseAuthClient {
         let (data, response) = try await SecureURLSession.shared.data(for: req)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         if http.statusCode == 200 {
-            return try JSONDecoder().decode(AuthResponse.self, from: data)
+            let decoded = try JSONDecoder().decode(AuthResponse.self, from: data)
+            guard !decoded.access_token.isEmpty else {
+                throw NSError(
+                    domain: "SupabaseAuth",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: L.errorAppleSignInFailed.localized]
+                )
+            }
+            return decoded
         } else {
             throw Self.authError(statusCode: http.statusCode, data: data, fallback: L.errorAppleSignInFailed.localized)
         }

@@ -37,7 +37,6 @@ struct SignUpView: View {
     
     @Environment(\.dismiss) var dismiss
     
-    @State private var appleNonce: String? = nil
     
     var body: some View {
         GeometryReader { geometry in
@@ -164,11 +163,11 @@ struct SignUpView: View {
         VStack(spacing: 16) {
             emailField
             termsSection
-            errorBanner
             primaryButton(title: L.next.localized, disabled: email.trimmed.isEmpty, loading: false) {
                 goToPasswordSlide()
             }
             orDivider
+            errorBanner
             appleSignInButton
         }
         .padding(.horizontal, 20)
@@ -184,7 +183,6 @@ struct SignUpView: View {
             passwordField
             confirmPasswordField
             termsSection
-            errorBanner
             primaryButton(
                 title: L.signUpButton.localized,
                 disabled: app.loading || !isFormValid,
@@ -193,6 +191,7 @@ struct SignUpView: View {
                 Task { await signUp() }
             }
             orDivider
+            errorBanner
             appleSignInButton
         }
         .padding(.horizontal, 20)
@@ -442,13 +441,10 @@ struct SignUpView: View {
             onRequest: { request in
                 errorMessage = nil
                 showAccountExistsError = false
-                let nonce = AppleSignInNonce.random()
-                appleNonce = nonce
                 request.requestedScopes = [.fullName, .email]
-                request.nonce = AppleSignInNonce.sha256(nonce)
             },
-            onCompletion: { result in
-                handleAppleAuthorization(result)
+            onCompletion: { result, nonce in
+                handleAppleAuthorization(result, nonce: nonce)
             },
             shouldPerformRequest: {
                 guard acceptedTerms && confirmedAge else {
@@ -555,12 +551,12 @@ struct SignUpView: View {
                 errorMessage = nil
             } else {
                 showAccountExistsError = false
-                errorMessage = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.error_registrationFailed.localized)
+                errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.error_registrationFailed.localized)
             }
         }
     }
     
-    private func handleAppleAuthorization(_ result: Result<ASAuthorization, Error>) {
+    private func handleAppleAuthorization(_ result: Result<ASAuthorization, Error>, nonce: String?) {
         switch result {
         case .success(let authResult):
             if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
@@ -568,7 +564,7 @@ struct SignUpView: View {
                let idToken = String(data: tokenData, encoding: .utf8) {
                 let fullName = AppleSignInNonce.fullName(from: credential)
                 let authorizationCode = credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
-                Task { await handleAppleSignIn(idToken: idToken, fullName: fullName, appleUserId: credential.user, authorizationCode: authorizationCode) }
+                Task { await handleAppleSignIn(idToken: idToken, nonce: nonce, fullName: fullName, appleUserId: credential.user, authorizationCode: authorizationCode) }
             } else {
                 errorMessage = L.errorAppleTokenInvalid.localized
             }
@@ -577,18 +573,11 @@ struct SignUpView: View {
         }
     }
 
-    private func handleAppleSignIn(idToken: String, fullName: String? = nil, appleUserId: String? = nil, authorizationCode: String? = nil) async {
+    private func handleAppleSignIn(idToken: String, nonce: String?, fullName: String? = nil, appleUserId: String? = nil, authorizationCode: String? = nil) async {
         do {
-            try await app.signInWithApple(idToken: idToken, nonce: appleNonce, fullName: fullName, isSignUp: true, appleUserId: appleUserId, authorizationCode: authorizationCode)
+            try await app.signInWithApple(idToken: idToken, nonce: nonce, fullName: fullName, isSignUp: true, appleUserId: appleUserId, authorizationCode: authorizationCode)
         } catch {
-            let errorDescription = error.localizedDescription.lowercased()
-            let errorCode = (error as NSError).code
-            let looksLikeExistingAccount = errorCode == 422
-                || errorDescription.contains("already")
-                || errorDescription.contains("registered")
-                || errorDescription.contains("bereits")
-                || errorDescription.contains("existiert")
-            if looksLikeExistingAccount {
+            if AuthenticationManager.isEmailAlreadyRegistered(error) {
                 await MainActor.run {
                     self.showAccountExistsError = true
                     self.errorMessage = nil
@@ -596,7 +585,7 @@ struct SignUpView: View {
             } else {
                 await MainActor.run {
                     self.showAccountExistsError = false
-                    self.errorMessage = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorAppleSignInFailed.localized)
+                    self.errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.errorAppleSignInFailed.localized)
                 }
             }
         }

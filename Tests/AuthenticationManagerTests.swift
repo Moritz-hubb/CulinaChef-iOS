@@ -221,4 +221,28 @@ final class AuthenticationManagerTests: XCTestCase {
 
         XCTAssertNil(KeychainManager.get(key: "access_token"))
     }
+
+    func testGeneric422IsNotTreatedAsExistingAccountOnSignup() {
+        let error = NSError(
+            domain: "SupabaseAuth",
+            code: 422,
+            userInfo: [NSLocalizedDescriptionKey: "Nonces mismatch"]
+        )
+        XCTAssertFalse(AuthenticationManager.isEmailAlreadyRegistered(error))
+        let authCopy = ErrorMessageHelper.sanitizedAuthDisplayMessage(
+            from: error,
+            fallback: "fallback"
+        )
+        XCTAssertEqual(authCopy, "Nonces mismatch")
+        let genericCopy = ErrorMessageHelper.sanitizedDisplayMessage(
+            from: NSError(domain: "SupabaseAuth", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid Apple ID token"]),
+            fallback: "fallback"
+        )
+        XCTAssertEqual(genericCopy, L.errorNotLoggedIn.localized)
+        let authTokenCopy = ErrorMessageHelper.sanitizedAuthDisplayMessage(
+            from: NSError(domain: "SupabaseAuth", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid Apple ID token"]),
+            fallback: "fallback"
+        )
+        XCTAssertEqual(authTokenCopy, "Invalid Apple ID token")
+    }
 }

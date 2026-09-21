@@ -9,7 +9,6 @@ struct SignInView: View {
     @State private var password = ""
     @State private var showPassword = false
     @State private var errorMessage: String?
-    @State private var appleNonce: String?
     @State private var showForgotPassword = false
     @FocusState private var focusedField: Field?
     
@@ -235,13 +234,10 @@ struct SignInView: View {
                             buttonType: .signIn,
                             localizedText: L.loginWithApple.localized,
                             onRequest: { request in
-                                let nonce = AppleSignInNonce.random()
-                                self.appleNonce = nonce
                                 request.requestedScopes = [.fullName, .email]
-                                request.nonce = AppleSignInNonce.sha256(nonce)
                             },
-                            onCompletion: { result in
-                                handleAppleAuthorization(result)
+                            onCompletion: { result, nonce in
+                                handleAppleAuthorization(result, nonce: nonce)
                             }
                         )
                         .disabled(app.loading)
@@ -316,11 +312,11 @@ struct SignInView: View {
         do {
             try await app.signIn(email: trimmedEmail, password: password)
         } catch {
-            errorMessage = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.error_signInFailed.localized)
+            errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.error_signInFailed.localized)
         }
     }
     
-    private func handleAppleAuthorization(_ result: Result<ASAuthorization, Error>) {
+    private func handleAppleAuthorization(_ result: Result<ASAuthorization, Error>, nonce: String?) {
         switch result {
         case .success(let authResult):
             if let credential = authResult.credential as? ASAuthorizationAppleIDCredential,
@@ -328,7 +324,7 @@ struct SignInView: View {
                let idToken = String(data: tokenData, encoding: .utf8) {
                 let fullName = AppleSignInNonce.fullName(from: credential)
                 let authorizationCode = credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
-                Task { await handleAppleSignIn(idToken: idToken, fullName: fullName, appleUserId: credential.user, authorizationCode: authorizationCode) }
+                Task { await handleAppleSignIn(idToken: idToken, nonce: nonce, fullName: fullName, appleUserId: credential.user, authorizationCode: authorizationCode) }
             } else {
                 errorMessage = L.errorAppleTokenInvalid.localized
             }
@@ -337,11 +333,11 @@ struct SignInView: View {
         }
     }
 
-    private func handleAppleSignIn(idToken: String, fullName: String? = nil, appleUserId: String? = nil, authorizationCode: String? = nil) async {
+    private func handleAppleSignIn(idToken: String, nonce: String?, fullName: String? = nil, appleUserId: String? = nil, authorizationCode: String? = nil) async {
         do {
-            try await app.signInWithApple(idToken: idToken, nonce: appleNonce, fullName: fullName, appleUserId: appleUserId, authorizationCode: authorizationCode)
+            try await app.signInWithApple(idToken: idToken, nonce: nonce, fullName: fullName, appleUserId: appleUserId, authorizationCode: authorizationCode)
         } catch {
-            await MainActor.run { self.errorMessage = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.error_signInFailed.localized) }
+            await MainActor.run { self.errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.error_signInFailed.localized) }
         }
     }
 }

@@ -9,10 +9,27 @@ struct MealPlanResultView: View {
     let nutritionTargets: MealPlanNutritionTargets
     let dietaryContext: String
 
+    @State private var meals: [GeneratedMealPlanMeal]
+    @State private var failedIndices: Set<Int> = []
     @State private var selectedRecipe: RecipePlan?
     @State private var saving = false
     @State private var error: String?
     @State private var saved = false
+
+    private let maxConcurrentRecipeFills = 2
+
+    init(
+        plan: GeneratedMealPlan,
+        nutritionMode: String,
+        nutritionTargets: MealPlanNutritionTargets,
+        dietaryContext: String
+    ) {
+        self.plan = plan
+        self.nutritionMode = nutritionMode
+        self.nutritionTargets = nutritionTargets
+        self.dietaryContext = dietaryContext
+        _meals = State(initialValue: plan.meals)
+    }
 
     var body: some View {
         NavigationView {
@@ -31,21 +48,8 @@ struct MealPlanResultView: View {
                             onLight: false
                         )
 
-                        ForEach(Array(plan.meals.enumerated()), id: \.element.id) { index, meal in
-                            Button {
-                                selectedRecipe = meal.recipe
-                            } label: {
-                                MealPlanMealCard(
-                                    index: index,
-                                    slot: meal.slot,
-                                    title: meal.recipe.title,
-                                    calories: meal.recipe.nutrition?.calories,
-                                    proteinG: meal.recipe.nutrition?.protein_g.map { Int($0.rounded()) },
-                                    minutes: meal.recipe.total_time_minutes,
-                                    onLight: false
-                                )
-                            }
-                            .buttonStyle(.plain)
+                        ForEach(Array(meals.enumerated()), id: \.element.id) { index, meal in
+                            mealRow(index: index, meal: meal)
                         }
                     }
                     .padding(16)
@@ -74,7 +78,7 @@ struct MealPlanResultView: View {
                         } else {
                             Image(systemName: saved ? "checkmark.circle.fill" : "square.and.arrow.down")
                         }
-                        Text(L.mealplan_save.localized)
+                        Text(allRecipesReady ? L.mealplan_save.localized : L.mealplan_saveNeedsRecipes.localized)
                     }
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -93,8 +97,8 @@ struct MealPlanResultView: View {
                     )
                     .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
                 }
-                .disabled(saving || saved)
-                .opacity(saving || saved ? 0.7 : 1)
+                .disabled(saving || saved || !allRecipesReady)
+                .opacity(saving || saved || !allRecipesReady ? 0.7 : 1)
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .padding(.bottom, 10)
@@ -122,13 +126,49 @@ struct MealPlanResultView: View {
                     dismiss()
                 }
             }
+            .task {
+                await fillMissingRecipes()
+            }
         }
         .navigationViewStyle(.stack)
     }
 
+    @ViewBuilder
+    private func mealRow(index: Int, meal: GeneratedMealPlanMeal) -> some View {
+        let failed = failedIndices.contains(index)
+        let loading = meal.recipe == nil && !failed
+        let card = MealPlanMealCard(
+            index: index,
+            slot: meal.slot,
+            title: meal.recipe?.title ?? (failed ? L.mealplan_recipeFailed.localized : L.mealplan_creatingRecipe.localized),
+            calories: meal.recipe?.nutrition?.calories,
+            proteinG: meal.recipe?.nutrition?.protein_g.map { Int($0.rounded()) },
+            minutes: meal.recipe?.total_time_minutes,
+            onLight: false,
+            isLoading: loading,
+            failed: failed,
+            onRetry: failed ? { Task { await retryMeal(at: index) } } : nil
+        )
+
+        if let recipe = meal.recipe {
+            Button {
+                selectedRecipe = recipe
+            } label: {
+                card
+            }
+            .buttonStyle(.plain)
+        } else {
+            card
+        }
+    }
+
+    private var allRecipesReady: Bool {
+        !meals.isEmpty && meals.allSatisfy { $0.recipe != nil }
+    }
+
     private var dailyCalories: Int? {
         if let c = nutritionTargets.calories, c > 0 { return c }
-        let sum = plan.meals.compactMap { $0.recipe.nutrition?.calories }.reduce(0, +)
+        let sum = meals.compactMap { $0.recipe?.nutrition?.calories }.reduce(0, +)
         return sum > 0 ? sum : nil
     }
 
@@ -148,15 +188,101 @@ struct MealPlanResultView: View {
     }
 
     private func summedMacro(_ key: (NutritionInfo) -> Double?) -> Int? {
-        let values = plan.meals.compactMap { meal -> Double? in
-            guard let n = meal.recipe.nutrition else { return nil }
+        let values = meals.compactMap { meal -> Double? in
+            guard let n = meal.recipe?.nutrition else { return nil }
             return key(n)
         }
         guard !values.isEmpty else { return nil }
         return Int(values.reduce(0, +).rounded())
     }
 
+    private func fillMissingRecipes() async {
+        let pending = meals.indices.filter { meals[$0].recipe == nil }
+        guard !pending.isEmpty else { return }
+        guard app.openAI != nil else {
+            failedIndices.formUnion(pending)
+            error = L.errorApiClientNotConfigured.localized
+            return
+        }
+
+        await withTaskGroup(of: (Int, Result<RecipePlan, Error>).self) { group in
+            var iterator = pending.makeIterator()
+            var inFlight = 0
+
+            func enqueueAvailable() {
+                while inFlight < maxConcurrentRecipeFills, let index = iterator.next() {
+                    inFlight += 1
+                    let meal = meals[index]
+                    group.addTask { @MainActor in
+                        let result = await generateMealResult(meal)
+                        return (index, result)
+                    }
+                }
+            }
+
+            enqueueAvailable()
+            for await (index, result) in group {
+                inFlight -= 1
+                apply(result, at: index)
+                if Task.isCancelled {
+                    group.cancelAll()
+                    return
+                }
+                enqueueAvailable()
+            }
+        }
+    }
+
+    private func retryMeal(at index: Int) async {
+        guard meals.indices.contains(index), meals[index].recipe == nil else { return }
+        failedIndices.remove(index)
+        let meal = meals[index]
+        let result = await generateMealResult(meal)
+        apply(result, at: index)
+    }
+
+    private func generateMealResult(_ meal: GeneratedMealPlanMeal) async -> Result<RecipePlan, Error> {
+        guard let openai = app.openAI else {
+            return .failure(NSError(domain: "BackendOpenAI", code: 503, userInfo: [NSLocalizedDescriptionKey: L.errorApiClientNotConfigured.localized]))
+        }
+        do {
+            let recipe = try await openai.generateMealPlanMeal(
+                slot: meal.slot,
+                goal: meal.goal,
+                nutritionTarget: meal.nutrition_target,
+                categories: meal.categories ?? [],
+                dietaryContext: meal.dietary_context,
+                servings: meal.servings ?? 1
+            )
+            return .success(recipe)
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    private func apply(_ result: Result<RecipePlan, Error>, at index: Int) {
+        guard meals.indices.contains(index) else { return }
+        switch result {
+        case .success(let recipe):
+            guard !recipe.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                failedIndices.insert(index)
+                return
+            }
+            meals[index].recipe = recipe
+            failedIndices.remove(index)
+        case .failure(let err):
+            failedIndices.insert(index)
+            if app.handleAISubscriptionDenied(err) {
+                failedIndices.formUnion(meals.indices.filter { meals[$0].recipe == nil })
+                if error == nil {
+                    error = ErrorMessageHelper.userFriendlyMessage(from: err)
+                }
+            }
+        }
+    }
+
     private func save() async {
+        guard allRecipesReady else { return }
         guard let token = app.accessToken,
               let userId = KeychainManager.get(key: "user_id"), !userId.isEmpty else {
             error = L.errorNotLoggedIn.localized
@@ -165,16 +291,23 @@ struct MealPlanResultView: View {
         saving = true
         defer { saving = false }
         let lang = app.currentLanguageCode()
-        let recipes = plan.meals.map { meal in
-            meal.recipe.asPersistedRecipe(
+        let recipes = meals.compactMap { meal -> Recipe? in
+            guard let recipe = meal.recipe else { return nil }
+            return recipe.asPersistedRecipe(
                 userId: userId,
                 languageCode: lang,
                 extraTags: ["_slot:\(meal.slot)"]
             )
         }
+        guard recipes.count == meals.count else {
+            error = L.errorInvalidRecipeRequest.localized
+            return
+        }
+        var savePlan = plan
+        savePlan.meals = meals
         do {
             _ = try await MealPlanStore().saveGeneratedPlan(
-                plan,
+                savePlan,
                 recipes: recipes,
                 nutritionMode: nutritionMode,
                 nutritionTargets: nutritionTargets,
@@ -276,6 +409,9 @@ struct MealPlanMealCard: View {
     var proteinG: Int? = nil
     var minutes: Int? = nil
     var onLight: Bool
+    var isLoading: Bool = false
+    var failed: Bool = false
+    var onRetry: (() -> Void)? = nil
 
     private var titleColor: Color { onLight ? Color.black.opacity(0.86) : .white }
     private var mutedColor: Color { onLight ? Color.black.opacity(0.42) : .white.opacity(0.68) }
@@ -314,10 +450,28 @@ struct MealPlanMealCard: View {
             }
 
             Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(mutedColor.opacity(0.8))
-                .padding(.top, 6)
+            if isLoading {
+                ProgressView()
+                    .tint(titleColor)
+                    .padding(.top, 4)
+                    .accessibilityLabel(L.mealplan_creatingRecipe.localized)
+            } else if failed, let onRetry {
+                Button(action: onRetry) {
+                    Text(L.mealplan_retry.localized)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(titleColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+            } else {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(mutedColor.opacity(0.8))
+                    .padding(.top, 6)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

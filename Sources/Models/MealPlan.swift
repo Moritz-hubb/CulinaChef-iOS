@@ -20,7 +20,10 @@ struct GeneratedMealPlanMeal: Codable, Identifiable {
     var slot: String
     var goal: String
     var nutrition_target: MealPlanNutritionTargets?
-    var recipe: RecipePlan
+    var recipe: RecipePlan?
+    var categories: [String]?
+    var dietary_context: String?
+    var servings: Int?
 }
 
 struct GeneratedMealPlan: Codable {

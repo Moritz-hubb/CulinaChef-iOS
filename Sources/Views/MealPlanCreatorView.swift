@@ -497,7 +497,7 @@ struct MealPlanCreatorView: View {
                 dietaryContext: fullContext.isEmpty ? nil : AIInputLimit.clamp(fullContext, to: AIInputLimit.dietaryContext),
                 notes: trimmedNotes.isEmpty ? nil : trimmedNotes
             )
-            guard plan.meals.count == plannedSlots.count, plan.meals.allSatisfy({ !$0.recipe.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+            guard plan.meals.count == plannedSlots.count else {
                 self.error = L.errorInvalidRecipeRequest.localized
                 return
             }

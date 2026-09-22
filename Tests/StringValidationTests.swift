@@ -283,6 +283,7 @@ final class StringValidationTests: XCTestCase {
         XCTAssertEqual(AIInputLimit.socialExtra, 4000)
         XCTAssertEqual(AIInputLimit.ingredient, 100)
         XCTAssertEqual(AIInputLimit.mealSlotNotes, 400)
+        XCTAssertEqual(AIInputLimit.mealPlanMealGoal, 1200)
     }
 }
 

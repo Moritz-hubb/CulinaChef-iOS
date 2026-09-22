@@ -289,6 +289,7 @@ final class BackendOpenAIClient {
             let dietary_context: String?
             let notes: String?
             let servings: Int
+            let include_recipes: Bool
         }
 
         let cleanedSlots = Array(slots.prefix(6))
@@ -305,14 +306,15 @@ final class BackendOpenAIClient {
             },
             dietary_context: dietaryContext.map { AIInputLimit.clamp($0, to: AIInputLimit.dietaryContext) },
             notes: notes.map { AIInputLimit.clamp($0, to: AIInputLimit.mealPlanNotes) },
-            servings: 1
+            servings: 1,
+            include_recipes: false
         )
 
         var url = backend.baseURL
         url.append(path: "/ai/generate-meal-plan")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.timeoutInterval = 180
+        req.timeoutInterval = 60
         req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONEncoder().encode(body)
@@ -324,5 +326,55 @@ final class BackendOpenAIClient {
             throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
         }
         return try JSONDecoder().decode(GeneratedMealPlan.self, from: data)
+    }
+
+    func generateMealPlanMeal(
+        slot: String,
+        goal: String,
+        nutritionTarget: MealPlanNutritionTargets?,
+        categories: [String],
+        dietaryContext: String?,
+        servings: Int
+    ) async throws -> RecipePlan {
+        guard let token = accessTokenProvider() else {
+            throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
+        }
+
+        struct Request: Encodable {
+            let slot: String
+            let goal: String
+            let nutrition_target: MealPlanNutritionTargets
+            let categories: [String]
+            let dietary_context: String?
+            let servings: Int
+        }
+
+        let body = Request(
+            slot: slot,
+            goal: AIInputLimit.clamp(goal, to: AIInputLimit.mealPlanMealGoal),
+            nutrition_target: nutritionTarget ?? MealPlanNutritionTargets(),
+            categories: Array(categories.prefix(3)),
+            dietary_context: dietaryContext.map { AIInputLimit.clamp($0, to: AIInputLimit.dietaryContext) },
+            servings: min(max(servings, 1), 12)
+        )
+
+        var url = backend.baseURL
+        url.append(path: "/ai/generate-meal-plan-meal")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 90
+        req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        let appLanguage = UserDefaults.standard.string(forKey: "app_language") ?? "de"
+        req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
+        req.httpBody = try JSONEncoder().encode(body)
+
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        if !(200...299).contains(http.statusCode) {
+            Logger.error("[BackendOpenAI] Meal plan meal HTTP \(http.statusCode)", category: .network)
+            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
+        }
+        return try JSONDecoder().decode(RecipePlan.self, from: data)
     }
 }

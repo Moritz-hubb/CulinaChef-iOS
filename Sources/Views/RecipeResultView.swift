@@ -752,7 +752,7 @@ private struct RecipeAISheet: View {
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
         } catch {
             if app.handleAISubscriptionDenied(error) { return }
-            await MainActor.run { messages.append(.init(role: .assistant, text: "Fehler: \(error.localizedDescription)")) }
+            await MainActor.run { messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error))) }
         }
     }
 

@@ -57,11 +57,12 @@ final class BackendOpenAIClient {
             let language: String
         }
         
-        let requestMessages = trimmed.map { msg in
+        let lastIndex = trimmed.count - 1
+        let requestMessages = trimmed.enumerated().map { index, msg in
             RequestMessage(
                 role: msg.role.rawValue,
                 content: AIInputLimit.clamp(msg.text, to: AIInputLimit.chatMessage),
-                image_data_base64: msg.imageDataBase64
+                image_data_base64: index == lastIndex ? msg.imageDataBase64 : nil
             )
         }
         

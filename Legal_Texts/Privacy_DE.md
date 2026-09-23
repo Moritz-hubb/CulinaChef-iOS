@@ -169,9 +169,9 @@ Zum Schutz Ihrer Daten setzen wir folgende Sicherheitsmaßnahmen ein:
 - **Passwort-Schutz:** bcrypt-Hashing mit Salt
 - **Zugriffsschutz:** Row Level Security (RLS) in Datenbank
 - **Token-Sicherheit:** Sichere Speicherung in iOS Keychain
-- **Audit-Logs:** Protokollierung sicherheitsrelevanter Vorgänge
+- **Löschnachweis:** Beim Löschen wird nur ein Hash der Nutzer-ID gespeichert, drei Jahre lang
 - **Datensparsamkeit:** Kein Tracking, keine Werbung, kein Profiling
-- **Backup-Strategie:** Regelmäßige Sicherungen (30-Tage-Aufbewahrung)
+- **Backup-Strategie:** Tägliche Datenbank-Sicherungen, Aufbewahrung 7 Tage. Sicherungen dienen der Wiederherstellung nach einem Ausfall und werden nicht genutzt, um ein gelöschtes Konto zurückzuholen.
 
 ---
 
@@ -182,7 +182,7 @@ Sie haben folgende Rechte bezüglich Ihrer personenbezogenen Daten:
 - **Auskunft (Art. 15):** Übersicht über alle gespeicherten Daten
 - **Berichtigung (Art. 16):** Korrektur falscher oder unvollständiger Daten
 - **Löschung (Art. 17):** Vollständige Löschung Ihres Kontos in der App
-- **Datenportabilität (Art. 20):** Export Ihrer Daten im JSON-Format
+- **Datenportabilität (Art. 20):** In der App unter Einstellungen können Sie eine JSON-Datei laden. Sie enthält E-Mail, Name, Benutzername, Allergien, Ernährungsweisen, Geschmackspräferenzen, Abneigungen, Notizen und Ihre Rezepte.
 - **Widerspruch (Art. 21):** Widerspruch gegen Datenverarbeitung
 - **Beschwerde (Art. 77):** Beschwerde bei Aufsichtsbehörde
 
@@ -198,12 +198,13 @@ Wir werden Ihre Anfrage unverzüglich bearbeiten.
 
 | Datentyp | Speicherdauer | Löschmethode |
 |----------|---------------|--------------|
-| Benutzerkonto | Bis zur Löschung | Manuell durch Nutzer |
-| Rezepte & Favoriten | Bis zur Löschung | Mit Konto |
-| Ernährungspräferenzen | Bis zur Löschung | Mit Konto |
-| Chat-Nachrichten | Sitzungsdauer | Nach App-Schließen |
-| API-Protokolle | 30 Tage | Technische Logs |
-| Audit-Protokolle | 3 Jahre | Gesetzliche Pflicht |
+| Benutzerkonto, Profil und E-Mail | Bis Sie das Konto in der App löschen | Sofort mit dem Konto |
+| Rezepte, Menüs, Favoriten, Bewertungen, Fotos | Bis Sie das Konto in der App löschen | Sofort mit dem Konto |
+| Allergien, Ernährungsweise, Geschmack, Abneigungen, Notizen | Bis Sie das Konto in der App löschen | Sofort mit dem Konto |
+| Chat-Nachrichten | Nur im Arbeitsspeicher der laufenden Sitzung | Beim Schließen der App. Keine Chat-Kopie auf dem Server. |
+| Absturzberichte (Sentry) | 30 Tage | Automatisch bei Sentry, ohne E-Mail und ohne Nutzer-ID |
+| Datenbank-Sicherungen | 7 Tage | Sicherung läuft ab. Ein gelöschtes Konto wird daraus nicht wiederhergestellt. |
+| Löschnachweis | 3 Jahre | Nur ein Hash der Nutzer-ID, der Zeitpunkt und dass die Löschung von Ihnen ausging. Kein Name, keine E-Mail, keine Rezepte. Danach automatische Löschung. |
 
 ---
 
@@ -247,7 +248,8 @@ Sie können Ihr Konto jederzeit in den Einstellungen vollständig löschen.
 **Wichtiger Hinweis:**
 
 - Apple-Abonnements müssen separat in der Apple-ID-Verwaltung gekündigt werden.
-- Audit-Protokolle der Löschung werden aus rechtlichen Gründen 3 Jahre aufbewahrt (Art. 6 Abs. 1 lit. c DSGVO).
+- Es bleibt ein Löschnachweis: nur ein Hash der Nutzer-ID, der Zeitpunkt und dass die Löschung von Ihnen ausging. Kein Name, keine E-Mail und keine Rezepte. Dieser Nachweis wird 3 Jahre aufbewahrt und danach gelöscht.
+- In einer Datenbank-Sicherung kann das Konto noch bis zu 7 Tage liegen. Sicherungen werden nicht verwendet, um ein gelöschtes Konto zurückzuholen.
 - Die Löschung ist endgültig und kann nicht rückgängig gemacht werden.
 
 ---

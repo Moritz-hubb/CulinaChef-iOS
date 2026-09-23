@@ -80,23 +80,7 @@ final class BackendOpenAIClient {
         )
         
         let jsonBody = try JSONEncoder().encode(request)
-        
-        var url = backend.baseURL
-        url.append(path: "/ai/chat")
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
-        req.httpBody = jsonBody
-        
-        let (data, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        
-        if !(200...299).contains(http.statusCode) {
-            Logger.error("[BackendOpenAI] Chat HTTP \(http.statusCode)", category: .network)
-            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
-        }
+        let (data, _) = try await backend.send(path: "/ai/chat", method: "POST", token: token, jsonBody: jsonBody)
         
         struct Response: Decodable {
             let reply: String
@@ -138,23 +122,7 @@ final class BackendOpenAIClient {
         )
         
         let jsonBody = try JSONEncoder().encode(request)
-        
-        var url = backend.baseURL
-        url.append(path: "/ai/analyze-image")
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        let appLanguage = UserDefaults.standard.string(forKey: "app_language") ?? "de"
-        req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
-        req.httpBody = jsonBody
-        
-        let (data, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        
-        if !(200...299).contains(http.statusCode) {
-            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
-        }
+        let (data, _) = try await backend.send(path: "/ai/analyze-image", method: "POST", token: token, jsonBody: jsonBody)
         
         struct Response: Decodable {
             let analysis: String
@@ -244,25 +212,7 @@ final class BackendOpenAIClient {
         ]
         
         let jsonBody = try JSONSerialization.data(withJSONObject: requestDict)
-        
-        var url = backend.baseURL
-        url.append(path: "/ai/generate-recipe-plan")
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        let appLanguage = UserDefaults.standard.string(forKey: "app_language") ?? "de"
-        req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
-        req.httpBody = jsonBody
-        
-        let (data, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        
-        if !(200...299).contains(http.statusCode) {
-            Logger.error("[BackendOpenAI] Recipe generation HTTP \(http.statusCode)", category: .network)
-            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
-        }
-        
+        let (data, _) = try await backend.send(path: "/ai/generate-recipe-plan", method: "POST", token: token, jsonBody: jsonBody)
         return try JSONDecoder().decode(RecipePlan.self, from: data)
     }
 
@@ -311,21 +261,13 @@ final class BackendOpenAIClient {
             include_recipes: false
         )
 
-        var url = backend.baseURL
-        url.append(path: "/ai/generate-meal-plan")
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.timeoutInterval = 60
-        req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONEncoder().encode(body)
-
-        let (data, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        if !(200...299).contains(http.statusCode) {
-            Logger.error("[BackendOpenAI] Meal plan HTTP \(http.statusCode)", category: .network)
-            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
-        }
+        let (data, _) = try await backend.send(
+            path: "/ai/generate-meal-plan",
+            method: "POST",
+            token: token,
+            jsonBody: try JSONEncoder().encode(body),
+            timeoutInterval: 60
+        )
         return try JSONDecoder().decode(GeneratedMealPlan.self, from: data)
     }
 
@@ -359,23 +301,13 @@ final class BackendOpenAIClient {
             servings: min(max(servings, 1), 12)
         )
 
-        var url = backend.baseURL
-        url.append(path: "/ai/generate-meal-plan-meal")
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.timeoutInterval = 90
-        req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        let appLanguage = UserDefaults.standard.string(forKey: "app_language") ?? "de"
-        req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
-        req.httpBody = try JSONEncoder().encode(body)
-
-        let (data, resp) = try await SecureURLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        if !(200...299).contains(http.statusCode) {
-            Logger.error("[BackendOpenAI] Meal plan meal HTTP \(http.statusCode)", category: .network)
-            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
-        }
+        let (data, _) = try await backend.send(
+            path: "/ai/generate-meal-plan-meal",
+            method: "POST",
+            token: token,
+            jsonBody: try JSONEncoder().encode(body),
+            timeoutInterval: 90
+        )
         return try JSONDecoder().decode(RecipePlan.self, from: data)
     }
 }

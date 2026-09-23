@@ -927,16 +927,14 @@ private struct ProfileSettingsSheet: View {
                                 Image(systemName: "arrow.down.doc.fill")
                                     .font(.title3)
                                     .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                Text(isGerman ? "Datenexport" : "Data Export")
+                                Text(L.settings_dataExport.localized)
                                     .font(.title3.weight(.semibold))
                                     .foregroundStyle(.white)
                             }
                             .padding(.bottom, 4)
                             
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(isGerman ? 
-                                    "Du kannst deine Rezepte jederzeit als JSON-Datei exportieren." :
-                                    "You can export your recipes as a JSON file at any time.")
+                                Text(L.settings_exportBody.localized)
                                     .font(.caption)
                                     .foregroundStyle(.white.opacity(0.8))
                                 
@@ -945,7 +943,7 @@ private struct ProfileSettingsSheet: View {
                                 } label: {
                                     HStack {
                                         Image(systemName: "arrow.down.circle.fill")
-                                        Text(isGerman ? "Rezepte exportieren" : "Export Recipes")
+                                        Text(L.settings_exportButton.localized)
                                             .font(.subheadline.weight(.semibold))
                                         Spacer()
                                     }
@@ -953,12 +951,11 @@ private struct ProfileSettingsSheet: View {
                                     .padding()
                                     .background(Color.blue, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                                 }
+                                .accessibilityLabel(L.settings_exportButton.localized)
                                 
                                 Divider().background(.white.opacity(0.2)).padding(.vertical, 4)
                                 
-                                Text(isGerman ?
-                                    "Für vollständigen Datenexport (inkl. personenbezogener Daten) kontaktiere:" :
-                                    "For complete data export (incl. personal data) contact:")
+                                Text(L.settings_exportQuestions.localized)
                                     .font(.caption)
                                     .foregroundStyle(.white.opacity(0.7))
                                 
@@ -1110,11 +1107,32 @@ private struct ProfileSettingsSheet: View {
             
             let recipes = try JSONDecoder().decode([Recipe].self, from: data)
             Logger.info("[Export] Loaded \(recipes.count) recipes from backend", category: .data)
-            
-            // Create strongly-typed export payload so JSON encoding is always valid
-            let payload = RecipesExportPayload(
+
+            let profile = try await app.fetchProfile()
+            let userId = KeychainManager.get(key: "user_id") ?? ""
+            let preferences = userId.isEmpty ? nil : try await app.preferencesClient.fetchPreferences(userId: userId, accessToken: token)
+            let taste = preferences?.tastePreferences
+
+            let payload = AccountExportPayload(
                 export_date: ISO8601DateFormatter().string(from: Date()),
-                user_email: app.userEmail ?? "unknown",
+                account: AccountExportIdentity(
+                    email: profile?.email ?? app.userEmail ?? "",
+                    username: profile?.username,
+                    full_name: profile?.full_name
+                ),
+                preferences: AccountExportPreferences(
+                    allergies: preferences?.allergies ?? [],
+                    dietary_types: preferences?.dietaryTypes ?? [],
+                    dislikes: preferences?.dislikes ?? [],
+                    notes: preferences?.notes,
+                    taste_preferences: AccountExportTaste(
+                        spicy_level: taste?.spicyLevel ?? 0,
+                        sweet: taste?.sweet ?? false,
+                        sour: taste?.sour ?? false,
+                        bitter: taste?.bitter ?? false,
+                        umami: taste?.umami ?? false
+                    )
+                ),
                 recipe_count: recipes.count,
                 recipes: recipes
             )
@@ -1160,19 +1178,35 @@ private struct ProfileSettingsSheet: View {
 
 // MARK: - Export Models
 
-/// Strongly-typed export payload to ensure JSONEncoder can always serialize it safely.
-private struct RecipesExportPayload: Codable {
+/// JSON file for GDPR Art. 20: account, preferences, and recipes.
+private struct AccountExportPayload: Codable {
     let export_date: String
-    let user_email: String
+    let account: AccountExportIdentity
+    let preferences: AccountExportPreferences
     let recipe_count: Int
     let recipes: [Recipe]
-    
-    enum CodingKeys: String, CodingKey {
-        case export_date
-        case user_email
-        case recipe_count
-        case recipes
-    }
+}
+
+private struct AccountExportIdentity: Codable {
+    let email: String
+    let username: String?
+    let full_name: String?
+}
+
+private struct AccountExportPreferences: Codable {
+    let allergies: [String]
+    let dietary_types: [String]
+    let dislikes: [String]
+    let notes: String?
+    let taste_preferences: AccountExportTaste
+}
+
+private struct AccountExportTaste: Codable {
+    let spicy_level: Double
+    let sweet: Bool
+    let sour: Bool
+    let bitter: Bool
+    let umami: Bool
 }
 
 private struct SubscriptionSettingsSheet: View {

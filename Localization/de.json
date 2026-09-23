@@ -980,5 +980,11 @@
   "mealplan.prefInherit": "Wie der Tag",
   "mealplan.prefCustom": "Eigene",
   "mealplan.slotNotes": "Hinweise für diese Mahlzeit",
-  "mealplan.slotNotesPlaceholder": "z. B. extra Protein, ohne Knoblauch, schnell zubereitet"
+  "mealplan.slotNotesPlaceholder": "z. B. extra Protein, ohne Knoblauch, schnell zubereitet",
+  "settings.exportBody": "Du kannst eine JSON-Datei deines Kontos laden: E-Mail, Name, Benutzername, Allergien, Ernährungsweise, Geschmack, Abneigungen, Notizen und Rezepte.",
+  "settings.exportButton": "Meine Daten exportieren",
+  "settings.exportQuestions": "Fragen zu deinen Daten:",
+  "a11y.decreaseCount": "Verringern",
+  "a11y.increaseCount": "Erhöhen",
+  "a11y.openMealPlan": "Öffnet diesen Ernährungsplan"
 }

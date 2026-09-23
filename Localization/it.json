@@ -980,5 +980,11 @@
   "mealplan.prefInherit": "Come il giorno",
   "mealplan.prefCustom": "Proprio",
   "mealplan.slotNotes": "Indicazioni per questo pasto",
-  "mealplan.slotNotesPlaceholder": "es. più proteine, senza aglio, rapido da cucinare"
+  "mealplan.slotNotesPlaceholder": "es. più proteine, senza aglio, rapido da cucinare",
+  "settings.exportBody": "Puoi scaricare un file JSON del tuo account: email, nome, nome utente, allergie, dieta, gusti, avversioni, note e ricette.",
+  "settings.exportButton": "Esporta i miei dati",
+  "settings.exportQuestions": "Domande sui tuoi dati:",
+  "a11y.decreaseCount": "Diminuisci",
+  "a11y.increaseCount": "Aumenta",
+  "a11y.openMealPlan": "Apre questo piano alimentare"
 }

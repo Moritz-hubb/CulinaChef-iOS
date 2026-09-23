@@ -54,6 +54,8 @@ struct MealPlansListView: View {
                                 MealPlanBookCard(plan: plan)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(plan.title)
+                            .accessibilityHint(L.a11y_openMealPlan.localized)
                             .contextMenu {
                                 Button(role: .destructive) { toDelete = plan } label: {
                                     Label(L.delete.localized, systemImage: "trash")

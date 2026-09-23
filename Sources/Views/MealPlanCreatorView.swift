@@ -120,6 +120,8 @@ struct MealPlanCreatorView: View {
                                     .foregroundStyle(.white)
                                     .font(.title3)
                             }
+                            .accessibilityLabel(L.a11y_decreaseCount.localized)
+                            .accessibilityValue(L.mealplan_snacksCount.localized)
                             .disabled(snackCount == 0)
                             Text("\(snackCount)")
                                 .font(.headline)
@@ -132,6 +134,8 @@ struct MealPlanCreatorView: View {
                                     .foregroundStyle(.white)
                                     .font(.title3)
                             }
+                            .accessibilityLabel(L.a11y_increaseCount.localized)
+                            .accessibilityValue(L.mealplan_snacksCount.localized)
                             .disabled(snackCount >= maxSnackCount)
                         }
                     }
@@ -292,6 +296,7 @@ struct MealPlanCreatorView: View {
                         .opacity(canGeneratePlan ? 1 : 0.45)
                 }
                 .disabled(!canGeneratePlan)
+                .accessibilityLabel(L.mealplan_generate.localized)
             }
             .foregroundStyle(.white)
             .padding(16)
@@ -648,6 +653,7 @@ private struct MealSlotPreferenceCard: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 
@@ -677,6 +683,7 @@ private struct MealSlotChips: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityAddTraits(isOn ? .isSelected : [])
             }
         }
     }

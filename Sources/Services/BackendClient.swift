@@ -1,4 +1,75 @@
+import CryptoKit
 import Foundation
+
+/// Shares one in-flight AI POST per request body, and reuses its idempotency key
+/// if that call timed out, so a retry does not start a second billed generation.
+private final class AIIdempotencyGate: @unchecked Sendable {
+    static let shared = AIIdempotencyGate()
+
+    private let lock = NSLock()
+    private var tasks: [String: (key: String, task: Task<(Data, HTTPURLResponse), Error>)] = [:]
+    private var retryAfterTimeout: [String: (key: String, until: Date)] = [:]
+
+    func fingerprint(path: String, body: Data?) -> String {
+        var hasher = SHA256()
+        hasher.update(data: Data(path.utf8))
+        hasher.update(data: [0])
+        hasher.update(data: body ?? Data())
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    func run(
+        fingerprint: String,
+        work: @escaping (String) async throws -> (Data, HTTPURLResponse)
+    ) async throws -> (Data, HTTPURLResponse) {
+        let task: Task<(Data, HTTPURLResponse), Error>
+        let key: String
+        let created: Bool
+        lock.lock()
+        if let existing = tasks[fingerprint] {
+            task = existing.task
+            key = existing.key
+            created = false
+        } else {
+            if let saved = retryAfterTimeout[fingerprint], saved.until > Date() {
+                key = saved.key
+            } else {
+                key = UUID().uuidString.lowercased()
+            }
+            task = Task {
+                try await work(key)
+            }
+            tasks[fingerprint] = (key, task)
+            created = true
+        }
+        lock.unlock()
+
+        do {
+            let value = try await task.value
+            if created { finish(fingerprint: fingerprint, reuseKey: nil) }
+            return value
+        } catch {
+            if created {
+                let reuse = (error as? URLError)?.code == .timedOut || error is AIRequestStillRunning
+                finish(fingerprint: fingerprint, reuseKey: reuse ? key : nil)
+            }
+            throw error
+        }
+    }
+
+    private func finish(fingerprint: String, reuseKey: String?) {
+        lock.lock()
+        tasks.removeValue(forKey: fingerprint)
+        if let reuseKey {
+            retryAfterTimeout[fingerprint] = (reuseKey, Date().addingTimeInterval(10 * 60))
+        } else {
+            retryAfterTimeout.removeValue(forKey: fingerprint)
+        }
+        lock.unlock()
+    }
+}
+
+private struct AIRequestStillRunning: Error {}
 
 /// Antwort von `POST /ai/preview-social-metadata` (nur Metadaten, keine KI).
 /// Wird optional als `metadata_snapshot` beim Import mitgeschickt (gleiche Daten, kein zweiter Fetch).
@@ -35,12 +106,60 @@ final class BackendClient {
     /// - Returns: Antwortdaten und zugehörige `HTTPURLResponse`.
     /// - Throws: `URLError` bei Transport-/Statusfehlern oder `NSError` mit
     ///   Backend-Fehlermeldung im `NSLocalizedDescriptionKey`.
+    /// Same-module entry so the OpenAI client uses the same idempotency gate.
+    func send(
+        path: String,
+        method: String = "GET",
+        token: String?,
+        jsonBody: Data? = nil,
+        timeoutInterval: TimeInterval? = nil
+    ) async throws -> (Data, HTTPURLResponse) {
+        try await request(
+            path: path,
+            method: method,
+            token: token,
+            jsonBody: jsonBody,
+            timeoutInterval: timeoutInterval
+        )
+    }
+
     private func request(
         path: String,
         method: String = "GET",
         token: String?,
         jsonBody: Data? = nil,
         timeoutInterval: TimeInterval? = nil
+    ) async throws -> (Data, HTTPURLResponse) {
+        if method == "POST", path.hasPrefix("/ai/") {
+            let fingerprint = AIIdempotencyGate.shared.fingerprint(path: path, body: jsonBody)
+            return try await AIIdempotencyGate.shared.run(fingerprint: fingerprint) { key in
+                try await self.perform(
+                    path: path,
+                    method: method,
+                    token: token,
+                    jsonBody: jsonBody,
+                    timeoutInterval: timeoutInterval,
+                    idempotencyKey: key
+                )
+            }
+        }
+        return try await perform(
+            path: path,
+            method: method,
+            token: token,
+            jsonBody: jsonBody,
+            timeoutInterval: timeoutInterval,
+            idempotencyKey: nil
+        )
+    }
+
+    private func perform(
+        path: String,
+        method: String,
+        token: String?,
+        jsonBody: Data?,
+        timeoutInterval: TimeInterval?,
+        idempotencyKey: String?
     ) async throws -> (Data, HTTPURLResponse) {
         var url = baseURL
         url.append(path: path)
@@ -53,6 +172,9 @@ final class BackendClient {
         }
         req.httpMethod = method
         if let token = token { req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        if let idempotencyKey {
+            req.addValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
+        }
         if let body = jsonBody {
             req.httpBody = body
             req.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -60,25 +182,36 @@ final class BackendClient {
         // Prefer in-app language so AI replies match the selected UI language
         let appLanguage = UserDefaults.standard.string(forKey: "app_language") ?? "de"
         req.addValue(appLanguage, forHTTPHeaderField: "Accept-Language")
+        var waits = 0
         do {
-        let (data, resp) = try await SecureURLSession.shared.data(for: req)
-            #if DEBUG
-            if let http = resp as? HTTPURLResponse {
-                Logger.debug("[BackendClient] Response: \(http.statusCode) for \(url.absoluteString)", category: .network)
+            while true {
+                let (data, resp) = try await SecureURLSession.shared.data(for: req)
+                #if DEBUG
+                if let http = resp as? HTTPURLResponse {
+                    Logger.debug("[BackendClient] Response: \(http.statusCode) for \(url.absoluteString)", category: .network)
+                }
+                #endif
+                guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+                if http.statusCode == 409, idempotencyKey != nil, waits < 8 {
+                    waits += 1
+                    try await Task.sleep(nanoseconds: 2_000_000_000)
+                    continue
+                }
+                if http.statusCode == 409, idempotencyKey != nil {
+                    throw AIRequestStillRunning()
+                }
+                if !(200...299).contains(http.statusCode) {
+                    #if DEBUG
+                    let preview = String(data: data.prefix(900), encoding: .utf8) ?? ""
+                    Logger.error(
+                        "[BackendClient] HTTP \(http.statusCode) \(method) \(url.path) body preview: \(preview)",
+                        category: .network
+                    )
+                    #endif
+                    throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
+                }
+                return (data, http)
             }
-            #endif
-        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        if !(200...299).contains(http.statusCode) {
-            #if DEBUG
-            let preview = String(data: data.prefix(900), encoding: .utf8) ?? ""
-            Logger.error(
-                "[BackendClient] HTTP \(http.statusCode) \(method) \(url.path) body preview: \(preview)",
-                category: .network
-            )
-            #endif
-            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
-        }
-        return (data, http)
         } catch {
             Logger.error("[BackendClient] Request failed: \(method) \(url.path)", error: error, category: .network)
             if let urlError = error as? URLError {

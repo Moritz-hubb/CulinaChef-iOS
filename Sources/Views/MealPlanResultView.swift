@@ -465,6 +465,7 @@ struct MealPlanMealCard: View {
                         .background(.ultraThinMaterial, in: Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("\(L.mealplan_retry.localized), \(title)")
                 .padding(.top, 2)
             } else {
                 Image(systemName: "chevron.right")

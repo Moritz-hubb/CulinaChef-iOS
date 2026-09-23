@@ -208,6 +208,7 @@ struct ManualRecipeBuilderView: View {
                                                 .foregroundStyle(.white)
                                                 .background(Circle().fill(.black.opacity(0.5)))
                                         }
+                                        .accessibilityLabel(L.a11y_removeImage.localized)
                                         .padding(8),
                                         alignment: .topTrailing
                                     )
@@ -244,6 +245,7 @@ struct ManualRecipeBuilderView: View {
                                         .font(.title2)
                                         .foregroundStyle(.white)
                                 }
+                                .accessibilityLabel(L.a11y_addIngredient.localized)
                             }
                             
                             ForEach(ingredients.indices, id: \.self) { index in
@@ -265,6 +267,7 @@ struct ManualRecipeBuilderView: View {
                                                 .foregroundStyle(.white.opacity(0.7))
                                                 .padding(12)
                                         }
+                                        .accessibilityLabel(L.a11y_removeIngredient.localized)
                                     }
                                 }
                             }
@@ -301,6 +304,7 @@ struct ManualRecipeBuilderView: View {
                                         .font(.title2)
                                         .foregroundStyle(.white)
                                 }
+                                .accessibilityLabel(L.label_preparationSteps.localized)
                             }
                             
                             ForEach(steps.indices, id: \.self) { index in
@@ -359,6 +363,7 @@ struct ManualRecipeBuilderView: View {
                             .background(.ultraThinMaterial, in: Circle())
                             .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
                     }
+                    .accessibilityLabel(L.close.localized)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -696,6 +701,7 @@ private struct StepEditorView: View {
                         Image(systemName: "trash")
                             .foregroundStyle(.white.opacity(0.7))
                     }
+                    .accessibilityLabel(L.a11y_removeItem.localized)
                 }
             }
             

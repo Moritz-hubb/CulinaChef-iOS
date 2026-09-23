@@ -219,6 +219,7 @@ struct RecipeCompletionView: View {
                             .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(L.a11y_removeImage.localized)
                     .padding(12)
                 }
             } else {

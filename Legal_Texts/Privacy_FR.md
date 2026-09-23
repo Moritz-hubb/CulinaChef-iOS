@@ -170,9 +170,9 @@ Pour protéger vos données, nous mettons en œuvre les mesures de sécurité su
 - **Protection des mots de passe:** Hachage bcrypt avec sel
 - **Contrôle d'accès:** Row Level Security (RLS) dans la base de données
 - **Sécurité des tokens:** Stockage sécurisé dans iOS Keychain
-- **Journaux d'audit:** Enregistrement des activités pertinentes pour la sécurité
+- **Preuve de suppression:** Lors de la suppression d'un compte, seul un hash de l'identifiant est conservé, pendant trois ans
 - **Minimisation des données:** Pas de suivi, de publicité ou de profilage
-- **Stratégie de sauvegarde:** Sauvegardes régulières chiffrées (rétention de 30 jours)
+- **Stratégie de sauvegarde:** Sauvegardes quotidiennes de la base, conservées 7 jours. Elles servent à rétablir le service après une panne, pas à restaurer un compte supprimé.
 
 ---
 
@@ -183,7 +183,7 @@ Vous disposez des droits suivants concernant vos données personnelles:
 - **Accès (Art. 15):** Recevoir des informations sur vos données stockées
 - **Rectification (Art. 16):** Corriger des données inexactes ou incomplètes
 - **Effacement (Art. 17):** Supprimer votre compte et les données associées
-- **Portabilité (Art. 20):** Recevoir vos données dans un format lisible par machine (JSON)
+- **Portabilité (Art. 20):** Dans l'app, sous Réglages, vous pouvez télécharger un fichier JSON. Il contient l'e-mail, le nom, le nom d'utilisateur, les allergies, le régime, les goûts, les aversions, les notes et les recettes.
 - **Opposition (Art. 21):** Vous opposer à un traitement spécifique de données
 - **Plainte (Art. 77):** Déposer une plainte auprès d'une autorité de contrôle
 
@@ -198,12 +198,13 @@ Nous traiterons votre demande sans retard injustifié.
 
 | Type de Données | Période de Conservation | Méthode de Suppression |
 |-----------------|-------------------------|------------------------|
-| Compte utilisateur | Jusqu'à suppression | Manuel par l'utilisateur |
-| Recettes et favoris | Jusqu'à suppression | Avec le compte |
-| Préférences alimentaires | Jusqu'à suppression | Avec le compte |
-| Messages de chat | Durée de session | Supprimés à la fermeture de l'app |
-| Journaux API | 30 jours | Suppression des journaux techniques |
-| Journaux d'audit | 3 ans | Obligation légale |
+| Compte, profil et e-mail | Jusqu'à suppression du compte dans l'app | Immédiatement, avec le compte |
+| Recettes, menus, favoris, évaluations, photos | Jusqu'à suppression du compte dans l'app | Immédiatement, avec le compte |
+| Allergies, régime, goûts, aversions, notes | Jusqu'à suppression du compte dans l'app | Immédiatement, avec le compte |
+| Messages de chat | Uniquement en mémoire pendant la session | À la fermeture de l'app. Aucune copie du chat sur le serveur. |
+| Rapports de plantage (Sentry) | 30 jours | Supprimés par Sentry. Sans e-mail ni identifiant utilisateur. |
+| Sauvegardes de la base | 7 jours | La sauvegarde expire. Un compte supprimé n'est pas restauré depuis celle-ci. |
+| Preuve de suppression | 3 ans | Seulement un hash de l'identifiant, l'heure, et le fait que vous avez demandé la suppression. Pas de nom, d'e-mail ni de recettes. Puis suppression automatique. |
 
 ---
 
@@ -246,7 +247,8 @@ Vous pouvez supprimer votre compte à tout moment en suivant ces étapes:
 **Important:**
 
 - Les abonnements Apple doivent être annulés séparément dans les paramètres de votre compte Apple ID
-- Les journaux d'audit liés au processus de suppression sont conservés pendant trois ans (Art. 6 Abs. 1 lit. c RGPD – obligation légale)
+- Il reste une preuve de suppression : seulement un hash de l'identifiant, l'heure, et le fait que vous avez demandé la suppression. Pas de nom, d'e-mail ni de recettes. Elle est conservée 3 ans, puis supprimée.
+- Une sauvegarde de la base peut encore contenir le compte pendant 7 jours. Les sauvegardes ne servent pas à rétablir un compte supprimé.
 - La suppression est permanente et irréversible
 
 ---

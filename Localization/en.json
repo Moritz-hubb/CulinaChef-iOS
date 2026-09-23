@@ -980,5 +980,11 @@
   "mealplan.prefInherit": "Same as day",
   "mealplan.prefCustom": "Custom",
   "mealplan.slotNotes": "Hints for this meal",
-  "mealplan.slotNotesPlaceholder": "e.g. extra protein, no garlic, quick to cook"
+  "mealplan.slotNotesPlaceholder": "e.g. extra protein, no garlic, quick to cook",
+  "settings.exportBody": "You can download a JSON file of your account: email, name, username, allergies, diet, taste preferences, dislikes, notes, and recipes.",
+  "settings.exportButton": "Export my data",
+  "settings.exportQuestions": "Questions about your data:",
+  "a11y.decreaseCount": "Decrease",
+  "a11y.increaseCount": "Increase",
+  "a11y.openMealPlan": "Opens this meal plan"
 }

@@ -214,6 +214,16 @@ struct PrivacyPolicyView: View {
                                     description: localized("Sie können die Löschung Ihrer Daten verlangen.", "Vous pouvez demander la suppression de vos données.", "You can request deletion of your data.")
                                 )
                                 RightRow(
+                                    title: localized("Datenportabilität (Art. 20 DSGVO)", "Droit à la portabilité (art. 20 RGPD)", "Data portability (Art. 20 GDPR)", spanish: "Portabilidad (art. 20 RGPD)", italian: "Portabilità (art. 20 GDPR)"),
+                                    description: localized(
+                                        "Unter Einstellungen können Sie eine JSON-Datei laden. Sie enthält E-Mail, Name, Benutzername, Allergien, Ernährungsweise, Geschmack, Abneigungen, Notizen und Rezepte.",
+                                        "Dans Réglages, vous pouvez télécharger un fichier JSON : e-mail, nom, nom d'utilisateur, allergies, régime, goûts, aversions, notes et recettes.",
+                                        "In Settings you can download a JSON file with your email, name, username, allergies, diet, taste, dislikes, notes, and recipes.",
+                                        spanish: "En Ajustes puede descargar un JSON con correo, nombre, usuario, alergias, dieta, sabor, aversiones, notas y recetas.",
+                                        italian: "In Impostazioni potete scaricare un JSON con email, nome, nome utente, allergie, dieta, gusti, avversioni, note e ricette."
+                                    )
+                                )
+                                RightRow(
                                     title: localized("Widerspruchsrecht (Art. 21 DSGVO)", "Droit d'opposition (art. 21 RGPD)", "Right to Object (Art. 21 GDPR)"),
                                     description: localized("Sie können der Verarbeitung Ihrer Daten widersprechen.", "Vous pouvez vous opposer au traitement de vos données.", "You can object to the processing of your data.")
                                 )
@@ -228,9 +238,11 @@ struct PrivacyPolicyView: View {
                         
                         PrivacySection(localized("7. Speicherdauer", "7. Durée de conservation", "7. Storage Duration"), icon: "clock") {
                             Text(localized(
-                                "Wir speichern Ihre Daten nur so lange, wie es für die Erfüllung der Vertragszwecke erforderlich ist oder gesetzliche Aufbewahrungspflichten bestehen. Nach Löschung Ihres Kontos werden alle Daten innerhalb von 30 Tagen gelöscht, sofern keine gesetzlichen Aufbewahrungspflichten entgegenstehen.",
-                                "Nous conservons vos données uniquement aussi longtemps que nécessaire pour les fins contractuelles ou les obligations légales. Après suppression de votre compte, toutes les données sont supprimées dans les 30 jours, sauf obligations légales de conservation.",
-                                "We store your data only as long as necessary for contract fulfillment or legal retention obligations. After account deletion, all data will be deleted within 30 days, unless legal retention obligations apply."
+                                "Konto, Profil, E-Mail, Rezepte, Fotos und Ernährungsdaten werden gelöscht, sobald Sie das Konto in der App löschen. Der Chat bleibt nur im Arbeitsspeicher und wird nicht auf dem Server gespeichert. Absturzberichte bei Sentry enthalten keine E-Mail und keine Nutzer-ID und werden nach 30 Tagen gelöscht. Datenbank-Sicherungen liegen 7 Tage und werden nicht genutzt, um ein gelöschtes Konto zurückzuholen. Vom Löschvorgang bleibt 3 Jahre nur ein Hash der Nutzer-ID, der Zeitpunkt und dass Sie die Löschung ausgelöst haben.",
+                                "Le compte, le profil, l'e-mail, les recettes, les photos et les données alimentaires sont supprimés dès que vous supprimez le compte dans l'app. Le chat reste uniquement en mémoire et n'est pas enregistré sur le serveur. Les rapports Sentry ne contiennent ni e-mail ni identifiant et sont supprimés après 30 jours. Les sauvegardes de la base durent 7 jours et ne servent pas à rétablir un compte supprimé. De la suppression, il ne reste pendant 3 ans qu'un hash de l'identifiant, l'heure, et le fait que vous l'avez demandée.",
+                                "Your account, profile, email, recipes, photos, and dietary data are deleted as soon as you delete the account in the app. Chat stays in memory only and is not stored on the server. Sentry crash reports contain no email and no user id and are deleted after 30 days. Database backups are kept for 7 days and are not used to bring a deleted account back. For 3 years, the only deletion record is a hash of the user id, the time, and that you requested deletion.",
+                                spanish: "La cuenta, el perfil, el correo, las recetas, las fotos y los datos alimentarios se eliminan en cuanto elimina la cuenta en la app. El chat solo está en memoria y no se guarda en el servidor. Los informes de Sentry no incluyen correo ni id de usuario y se borran a los 30 días. Las copias de la base duran 7 días y no se usan para recuperar una cuenta eliminada. De la eliminación solo queda, durante 3 años, un hash del id, la hora y que usted la pidió.",
+                                italian: "Account, profilo, email, ricette, foto e dati alimentari vengono eliminati appena eliminate l'account nell'app. La chat resta solo in memoria e non è salvata sul server. I report Sentry non contengono email né id utente e vengono eliminati dopo 30 giorni. I backup del database durano 7 giorni e non servono a ripristinare un account eliminato. Della cancellazione resta, per 3 anni, solo un hash dell'id, l'ora e il fatto che l'avete richiesta."
                             ))
                             .font(.subheadline)
                             .foregroundStyle(.white)
@@ -423,11 +435,11 @@ struct PrivacyPolicyView: View {
                             .padding(.bottom, 12)
                             
                             ImportantNote(text: localized(
-                                "Wichtig: Apple-Abonnements müssen separat in der Apple-ID-Verwaltung gekündigt werden. Audit-Protokolle der Löschung werden aus rechtlichen Gründen 3 Jahre aufbewahrt. Die Löschung ist endgültig und kann nicht rückgängig gemacht werden.",
-                                "Important: Les abonnements Apple doivent être annulés séparément dans les paramètres de votre compte Apple ID. Les journaux d'audit liés à la suppression sont conservés pendant trois ans. La suppression est permanente et irréversible.",
-                                "Important: Apple subscriptions must be cancelled separately in your Apple ID account settings. Audit logs related to the deletion process are retained for three years. Deletion is permanent and irreversible.",
-                                spanish: "Importante: Las suscripciones de Apple deben cancelarse por separado en la configuración de su cuenta de Apple ID. Los registros de auditoría relacionados con el proceso de eliminación se conservan durante tres años. La eliminación es permanente e irreversible.",
-                                italian: "Importante: Gli abbonamenti Apple devono essere annullati separatamente nelle impostazioni del vostro account Apple ID. I log di audit relativi al processo di cancellazione sono conservati per tre anni. La cancellazione è permanente e irreversibile."
+                                "Wichtig: Apple-Abonnements müssen separat in der Apple-ID-Verwaltung gekündigt werden. Es bleibt 3 Jahre nur ein Hash der Nutzer-ID. Eine Sicherung kann das Konto noch bis zu 7 Tage enthalten und wird nicht zur Wiederherstellung eines gelöschten Kontos verwendet. Die Löschung ist endgültig.",
+                                "Important : les abonnements Apple doivent être annulés séparément dans les réglages de l'identifiant Apple. Pendant 3 ans, il ne reste qu'un hash de l'identifiant. Une sauvegarde peut encore contenir le compte jusqu'à 7 jours et n'est pas utilisée pour le rétablir. La suppression est définitive.",
+                                "Important: Cancel Apple subscriptions separately in your Apple ID settings. For 3 years only a hash of the user id remains. A backup may still contain the account for up to 7 days and is not used to restore it. Deletion is permanent.",
+                                spanish: "Importante: cancele las suscripciones de Apple por separado en los ajustes del Apple ID. Durante 3 años solo queda un hash del id. Una copia puede contener la cuenta hasta 7 días y no se usa para restaurarla. La eliminación es definitiva.",
+                                italian: "Importante: annullate gli abbonamenti Apple separatamente nelle impostazioni dell'ID Apple. Per 3 anni resta solo un hash dell'id. Un backup può contenere l'account fino a 7 giorni e non viene usato per ripristinarlo. La cancellazione è definitiva."
                             ))
                         }
                         

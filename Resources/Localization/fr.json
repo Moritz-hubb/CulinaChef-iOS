@@ -976,5 +976,11 @@
   "mealplan.prefInherit": "Comme le jour",
   "mealplan.prefCustom": "Perso",
   "mealplan.slotNotes": "Consignes pour ce repas",
-  "mealplan.slotNotesPlaceholder": "ex. plus de protéines, sans ail, rapide à préparer"
+  "mealplan.slotNotesPlaceholder": "ex. plus de protéines, sans ail, rapide à préparer",
+  "settings.exportBody": "Tu peux télécharger un fichier JSON de ton compte : e-mail, nom, nom d'utilisateur, allergies, régime, goûts, aversions, notes et recettes.",
+  "settings.exportButton": "Exporter mes données",
+  "settings.exportQuestions": "Questions sur tes données :",
+  "a11y.decreaseCount": "Diminuer",
+  "a11y.increaseCount": "Augmenter",
+  "a11y.openMealPlan": "Ouvre ce plan de repas"
 }

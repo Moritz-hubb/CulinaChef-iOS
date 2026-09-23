@@ -170,9 +170,9 @@ Per proteggere i vostri dati, implementiamo le seguenti misure di sicurezza:
 - **Protezione password:** Hash bcrypt con salt
 - **Controllo accessi:** Row Level Security (RLS) nel database
 - **Sicurezza token:** Archiviazione sicura in iOS Keychain
-- **Log di audit:** Registrazione di attività rilevanti per la sicurezza
+- **Prova di cancellazione:** Quando un account viene eliminato, viene conservato solo un hash dell'id utente, per tre anni
 - **Minimizzazione dati:** Nessun tracciamento, pubblicità o profilazione
-- **Strategia backup:** Backup regolari crittografati (conservazione 30 giorni)
+- **Strategia backup:** Backup giornalieri del database, conservati 7 giorni. Servono a ripristinare il servizio dopo un guasto, non a recuperare un account eliminato.
 
 ---
 
@@ -183,7 +183,7 @@ Avete i seguenti diritti riguardo ai vostri dati personali:
 - **Accesso (Art. 15):** Ricevere informazioni sui vostri dati memorizzati
 - **Rettifica (Art. 16):** Correggere dati inesatti o incompleti
 - **Cancellazione (Art. 17):** Eliminare il vostro account e i dati associati
-- **Portabilità (Art. 20):** Ricevere i vostri dati in formato leggibile da macchina (JSON)
+- **Portabilità (Art. 20):** Nell'app, in Impostazioni, potete scaricare un file JSON. Contiene email, nome, nome utente, allergie, dieta, gusti, avversioni, note e ricette.
 - **Opposizione (Art. 21):** Opporsi a un trattamento specifico di dati
 - **Reclamo (Art. 77):** Presentare un reclamo a un'autorità di controllo
 
@@ -198,12 +198,13 @@ Elaboreremo la vostra richiesta senza ritardo ingiustificato.
 
 | Tipo di Dati | Periodo di Conservazione | Metodo di Eliminazione |
 |--------------|---------------------------|------------------------|
-| Account utente | Fino a cancellazione | Manuale da parte dell'utente |
-| Ricette e preferiti | Fino a cancellazione | Con l'account |
-| Preferenze alimentari | Fino a cancellazione | Con l'account |
-| Messaggi chat | Durata sessione | Eliminati alla chiusura dell'app |
-| Log API | 30 giorni | Eliminazione log tecnici |
-| Log di audit | 3 anni | Requisito legale |
+| Account, profilo ed email | Fino all'eliminazione dell'account nell'app | Subito, insieme all'account |
+| Ricette, menu, preferiti, valutazioni, foto | Fino all'eliminazione dell'account nell'app | Subito, insieme all'account |
+| Allergie, dieta, gusti, avversioni, note | Fino all'eliminazione dell'account nell'app | Subito, insieme all'account |
+| Messaggi chat | Solo in memoria durante la sessione | Alla chiusura dell'app. Nessuna copia della chat sul server. |
+| Report di arresto (Sentry) | 30 giorni | Eliminati da Sentry. Senza email e senza id utente. |
+| Backup del database | 7 giorni | Il backup scade. Un account eliminato non viene ripristinato da lì. |
+| Prova di cancellazione | 3 anni | Solo un hash dell'id utente, l'ora e il fatto che avete chiesto la cancellazione. Nessun nome, email o ricetta. Poi cancellazione automatica. |
 
 ---
 
@@ -246,7 +247,8 @@ Potete eliminare il vostro account in qualsiasi momento seguendo questi passaggi
 **Importante:**
 
 - Gli abbonamenti Apple devono essere annullati separatamente nelle impostazioni del vostro account Apple ID
-- I log di audit relativi al processo di cancellazione sono conservati per tre anni (Art. 6 Abs. 1 lit. c GDPR – obbligo legale)
+- Resta una prova di cancellazione: solo un hash dell'id utente, l'ora e il fatto che avete chiesto la cancellazione. Nessun nome, email o ricetta. Viene conservata 3 anni e poi eliminata.
+- Un backup del database può contenere l'account ancora per 7 giorni. I backup non servono a ripristinare un account eliminato.
 - La cancellazione è permanente e irreversibile
 
 ---

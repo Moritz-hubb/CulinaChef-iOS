@@ -170,9 +170,9 @@ Para proteger sus datos, implementamos las siguientes medidas de seguridad:
 - **Protección de contraseñas:** Hash bcrypt con salt
 - **Control de acceso:** Row Level Security (RLS) en la base de datos
 - **Seguridad de tokens:** Almacenamiento seguro en iOS Keychain
-- **Registros de auditoría:** Registro de actividades relevantes para la seguridad
+- **Registro de eliminación:** Al eliminar una cuenta solo se guarda un hash del id de usuario, durante tres años
 - **Minimización de datos:** Sin seguimiento, publicidad o perfilado
-- **Estrategia de respaldo:** Copias de seguridad regulares cifradas (retención de 30 días)
+- **Estrategia de respaldo:** Copias diarias de la base de datos, conservadas 7 días. Sirven para restaurar el servicio tras una caída y no para recuperar una cuenta eliminada.
 
 ---
 
@@ -183,7 +183,7 @@ Tiene los siguientes derechos respecto a sus datos personales:
 - **Acceso (Art. 15):** Recibir información sobre sus datos almacenados
 - **Rectificación (Art. 16):** Corregir datos inexactos o incompletos
 - **Supresión (Art. 17):** Eliminar su cuenta y datos asociados
-- **Portabilidad (Art. 20):** Recibir sus datos en formato legible por máquina (JSON)
+- **Portabilidad (Art. 20):** En la app, en Ajustes, puede descargar un archivo JSON. Contiene correo, nombre, usuario, alergias, dieta, preferencias de sabor, aversiones, notas y recetas.
 - **Oposición (Art. 21):** Oponerse a un procesamiento específico de datos
 - **Reclamación (Art. 77):** Presentar una reclamación ante una autoridad supervisora
 
@@ -198,12 +198,13 @@ Procesaremos su solicitud sin demora indebida.
 
 | Tipo de Datos | Período de Retención | Método de Eliminación |
 |---------------|----------------------|----------------------|
-| Cuenta de usuario | Hasta eliminación | Manual por el usuario |
-| Recetas y favoritos | Hasta eliminación | Con la cuenta |
-| Preferencias alimentarias | Hasta eliminación | Con la cuenta |
-| Mensajes de chat | Duración de sesión | Eliminados al cerrar la app |
-| Registros de API | 30 días | Eliminación de registros técnicos |
-| Registros de auditoría | 3 años | Requisito legal |
+| Cuenta, perfil y correo | Hasta que elimine la cuenta en la app | Inmediatamente, con la cuenta |
+| Recetas, menús, favoritos, valoraciones, fotos | Hasta que elimine la cuenta en la app | Inmediatamente, con la cuenta |
+| Alergias, dieta, sabor, aversiones, notas | Hasta que elimine la cuenta en la app | Inmediatamente, con la cuenta |
+| Mensajes de chat | Solo en memoria durante la sesión | Al cerrar la app. No hay copia del chat en el servidor. |
+| Informes de fallos (Sentry) | 30 días | Eliminados por Sentry. Sin correo ni id de usuario. |
+| Copias de la base de datos | 7 días | La copia caduca. Una cuenta eliminada no se restaura desde ella. |
+| Registro de eliminación | 3 años | Solo un hash del id de usuario, la hora y que usted pidió la eliminación. Sin nombre, correo ni recetas. Después se borra solo. |
 
 ---
 
@@ -246,7 +247,8 @@ Puede eliminar su cuenta en cualquier momento siguiendo estos pasos:
 **Importante:**
 
 - Las suscripciones de Apple deben cancelarse por separado en la configuración de su cuenta de Apple ID
-- Los registros de auditoría relacionados con el proceso de eliminación se conservan durante tres años (Art. 6 Abs. 1 lit. c RGPD – obligación legal)
+- Queda un registro de eliminación: solo un hash del id de usuario, la hora y que usted pidió la eliminación. Sin nombre, correo ni recetas. Se conserva 3 años y luego se borra.
+- Una copia de la base de datos puede contener la cuenta hasta 7 días. Las copias no se usan para recuperar una cuenta eliminada.
 - La eliminación es permanente e irreversible
 
 ---

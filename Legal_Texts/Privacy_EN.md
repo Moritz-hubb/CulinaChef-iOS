@@ -170,9 +170,9 @@ We implement the following security measures to protect your data:
 - **Password protection:** bcrypt hashing with salt
 - **Access control:** Row Level Security (RLS) within the database
 - **Token safety:** Secure storage in iOS Keychain
-- **Audit logs:** Recording of security-relevant activities
+- **Deletion record:** When an account is deleted, only a hash of the user id is stored, for three years
 - **Data minimization:** No tracking, advertising, or profiling
-- **Backup strategy:** Regular encrypted backups (30-day retention)
+- **Backup strategy:** Daily database backups, kept for 7 days. Backups are for restoring the service after an outage. They are not used to bring back a deleted account.
 
 ---
 
@@ -183,7 +183,7 @@ You have the following rights regarding your personal data:
 - **Access (Art. 15):** Receive information about your stored data.
 - **Rectification (Art. 16):** Correct inaccurate or incomplete data.
 - **Erasure (Art. 17):** Delete your account and associated data.
-- **Data portability (Art. 20):** Receive your data in a machine-readable format (JSON).
+- **Data portability (Art. 20):** In the app, under Settings, you can download a JSON file. It contains your email, name, username, allergies, diet, taste preferences, dislikes, notes, and recipes.
 - **Objection (Art. 21):** Object to specific data processing.
 - **Complaint (Art. 77):** Lodge a complaint with a supervisory authority.
 
@@ -198,12 +198,13 @@ We will process your request without undue delay.
 
 | Data Type | Retention Period | Deletion Method |
 |-----------|------------------|-----------------|
-| User account | Until deleted | Manual by user |
-| Recipes & favorites | Until deleted | With account |
-| Dietary preferences | Until deleted | With account |
-| Chat messages | Session duration | Deleted when app closes |
-| API logs | 30 days | Technical log deletion |
-| Audit logs | 3 years | Legal requirement |
+| Account, profile, and email | Until you delete the account in the app | Immediately, with the account |
+| Recipes, menus, favorites, ratings, photos | Until you delete the account in the app | Immediately, with the account |
+| Allergies, diet, taste, dislikes, notes | Until you delete the account in the app | Immediately, with the account |
+| Chat messages | Only in memory for the current session | When you close the app. There is no chat copy on the server. |
+| Crash reports (Sentry) | 30 days | Deleted by Sentry. No email and no user id. |
+| Database backups | 7 days | The backup expires. A deleted account is not restored from it. |
+| Deletion record | 3 years | Only a hash of the user id, the time, and that you requested deletion. No name, email, or recipes. Then deleted automatically. |
 
 ---
 
@@ -247,7 +248,8 @@ You can delete your account at any time by following these steps:
 **Important:**
 
 - Apple subscriptions must be cancelled separately in your Apple ID account settings.
-- Audit logs related to the deletion process are retained for three years (Art. 6 (1)(c) GDPR – legal obligation).
+- A deletion record remains: only a hash of the user id, the time, and that you requested deletion. No name, email, or recipes. It is kept for 3 years and then deleted.
+- A database backup may still contain the account for up to 7 days. Backups are not used to bring a deleted account back.
 - Deletion is permanent and irreversible.
 
 ---

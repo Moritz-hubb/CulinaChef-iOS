@@ -62,12 +62,14 @@ struct SocialRecipeImportView: View {
                                     .foregroundStyle(.white)
                                     .tint(.white)
                                     .focused($isFocused)
+                                    .accessibilityLabel(L.import_social_url_label.localized)
 
                                 if !urlText.isEmpty {
                                     Button { urlText = "" } label: {
                                         Image(systemName: "xmark.circle.fill")
                                             .foregroundStyle(.white.opacity(0.5))
                                     }
+                                    .accessibilityLabel(L.a11y_removeItem.localized)
                                 }
                             }
                             .textFieldStyle(.plain)
@@ -81,6 +83,7 @@ struct SocialRecipeImportView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
                             TextField(L.import_social_extra_placeholder.localized, text: $extraText.limited(to: AIInputLimit.socialExtra), axis: .vertical)
+                                .accessibilityLabel(L.import_social_extra_label.localized)
                                 .lineLimit(3...8)
                                 .textFieldStyle(.plain)
                                 .foregroundStyle(.white)
@@ -129,6 +132,7 @@ struct SocialRecipeImportView: View {
                                 .shadow(color: .blue.opacity(0.4), radius: 10, x: 0, y: 6)
                             }
                             .disabled(urlText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .accessibilityLabel(L.import_social_submit.localized)
                             .opacity(urlText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
                             .padding(.top, 4)
                         }
@@ -154,6 +158,7 @@ struct SocialRecipeImportView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L.cancel.localized) { dismiss() }
                         .foregroundStyle(.white)
+                        .accessibilityLabel(L.cancel.localized)
                 }
             }
             .interactiveDismissDisabled(loading)
@@ -212,7 +217,9 @@ struct SocialRecipeImportView: View {
             )
             Spacer()
         }
-        .padding(24)
+            .padding(24)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(L.import_social_processing.localized)
     }
 
     // MARK: - Tweak section
@@ -238,6 +245,8 @@ struct SocialRecipeImportView: View {
                 .foregroundStyle(.white)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(L.import_social_tweak_title.localized)
+            .accessibilityAddTraits(showTweaks ? .isSelected : [])
 
             if !showTweaks && (!selectedTweaks.isEmpty || !tweakText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
                 let summary = [
@@ -394,33 +403,37 @@ private struct ImportTweakChips: View {
 
     private func chip(slug: String, label: String) -> some View {
         let isOn = selection.contains(slug)
-        return Text(label)
-            .font(.callout.weight(.medium))
-            .padding(.horizontal, 12).padding(.vertical, 8)
-            .background(
-                Group {
-                    if isOn {
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.95, green: 0.5, blue: 0.3),
-                                Color(red: 0.85, green: 0.4, blue: 0.2),
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    } else {
-                        Color.white.opacity(0.08)
-                    }
-                }
-            )
-            .foregroundStyle(.white)
-            .clipShape(Capsule())
-            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-            .onTapGesture {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    if isOn { selection.remove(slug) } else { selection.insert(slug) }
-                }
+        return Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                if isOn { selection.remove(slug) } else { selection.insert(slug) }
             }
+        } label: {
+            Text(label)
+                .font(.callout.weight(.medium))
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(
+                    Group {
+                        if isOn {
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.95, green: 0.5, blue: 0.3),
+                                    Color(red: 0.85, green: 0.4, blue: 0.2),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        } else {
+                            Color.white.opacity(0.08)
+                        }
+                    }
+                )
+                .foregroundStyle(.white)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     private func generateContent(in g: GeometryProxy) -> some View {

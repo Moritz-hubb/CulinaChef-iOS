@@ -22,6 +22,7 @@ struct RecipePhotoSourceButton<Label: View>: View {
             label()
         }
         .buttonStyle(.plain)
+        .accessibilityHint(L.a11y_addPhotoToUpload.localized)
         .confirmationDialog(L.common_chooseImage.localized, isPresented: $showSourcePicker, titleVisibility: .visible) {
             if cameraAvailable {
                 Button(L.common_takePhoto.localized) {

@@ -485,7 +485,7 @@ struct RecipeCompletionView: View {
         do {
             var imageUrl: String? = nil
             if let data = photoData {
-                imageUrl = try? await uploadPhoto(data: data, userId: userId, token: token)
+                imageUrl = try? await uploadPhoto(data: data, token: token)
             }
 
             let nutritionDict: [String: Any] = [
@@ -596,47 +596,12 @@ struct RecipeCompletionView: View {
         }
     }
 
-    private func uploadPhoto(data: Data, userId: String, token: String) async throws -> String {
-        let filename = "\(userId)_\(UUID().uuidString).jpg"
-
+    private func uploadPhoto(data: Data, token: String) async throws -> String {
         guard let image = UIImage(data: data) else {
             throw URLError(.cannotDecodeContentData)
         }
         let optimizedData = try ImageOptimizer.optimizeImage(image)
-
-        let uploadUrlString = "\(Config.supabaseURL.absoluteString)/storage/v1/object/recipe-photo/\(filename)"
-        guard let uploadUrl = URL(string: uploadUrlString) else {
-            throw URLError(.badURL)
-        }
-
-        Logger.debug("Uploading photo to storage", category: .network)
-
-        var uploadRequest = URLRequest(url: uploadUrl)
-        uploadRequest.httpMethod = "POST"
-        uploadRequest.addValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-        uploadRequest.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        uploadRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        uploadRequest.httpBody = optimizedData
-
-        let (responseData, uploadResponse) = try await SecureURLSession.shared.data(for: uploadRequest)
-
-        guard let httpResponse = uploadResponse as? HTTPURLResponse else {
-            Logger.error("Photo upload failed - no HTTP response", category: .network)
-            throw URLError(.badServerResponse)
-        }
-
-        Logger.debug("Photo upload response status: \(httpResponse.statusCode)", category: .network)
-
-        guard (200...299).contains(httpResponse.statusCode) else {
-            if let responseString = String(data: responseData, encoding: .utf8) {
-                Logger.error("Photo upload failed with status \(httpResponse.statusCode): \(responseString)", category: .network)
-            }
-            throw URLError(.badServerResponse)
-        }
-
-        let publicUrl = "\(Config.supabaseURL.absoluteString)/storage/v1/object/public/recipe-photo/\(filename)"
-        Logger.info("Photo uploaded successfully", category: .network)
-        return publicUrl
+        return try await app.backend.uploadRecipePhoto(jpegData: optimizedData, accessToken: token)
     }
 }
 

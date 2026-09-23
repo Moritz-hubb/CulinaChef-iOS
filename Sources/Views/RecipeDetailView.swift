@@ -778,14 +778,13 @@ struct RecipeDetailView: View {
 
     private func uploadNewPhoto() async {
         guard let data = photoData,
-              let userId = KeychainManager.get(key: "user_id"),
               let token = app.accessToken else { return }
         
         isUploadingPhoto = true
         defer { isUploadingPhoto = false }
         
         do {
-            let uploadedUrl = try await uploadPhoto(data: data, userId: userId, token: token)
+            let uploadedUrl = try await uploadPhoto(data: data, token: token)
             try await updateRecipePhoto(recipeId: recipe.id, imageUrl: uploadedUrl, token: token)
             
             // Update local state to show the uploaded image immediately
@@ -802,36 +801,12 @@ struct RecipeDetailView: View {
         }
     }
     
-    private func uploadPhoto(data: Data, userId: String, token: String) async throws -> String {
-        let filename = "\(userId)_\(UUID().uuidString).jpg"
-        
-        // Optimize image (resize + compress to max 2MB)
+    private func uploadPhoto(data: Data, token: String) async throws -> String {
         guard let image = UIImage(data: data) else {
             throw URLError(.cannotDecodeContentData)
         }
         let optimizedData = try ImageOptimizer.optimizeImage(image)
-        
-        let uploadUrlString = "\(Config.supabaseURL.absoluteString)/storage/v1/object/recipe-photo/\(filename)"
-        guard let uploadUrl = URL(string: uploadUrlString) else {
-            throw URLError(.badURL)
-        }
-        
-        var uploadRequest = URLRequest(url: uploadUrl)
-        uploadRequest.httpMethod = "POST"
-        uploadRequest.addValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-        uploadRequest.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        uploadRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        uploadRequest.httpBody = optimizedData
-        
-        let (_, uploadResponse) = try await SecureURLSession.shared.data(for: uploadRequest)
-        
-        guard let httpResponse = uploadResponse as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
-        
-        let publicUrl = "\(Config.supabaseURL.absoluteString)/storage/v1/object/public/recipe-photo/\(filename)"
-        return publicUrl
+        return try await app.backend.uploadRecipePhoto(jpegData: optimizedData, accessToken: token)
     }
     
     private func updateRecipePhoto(recipeId: String, imageUrl: String, token: String) async throws {

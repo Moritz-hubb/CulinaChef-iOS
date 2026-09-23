@@ -97,6 +97,29 @@ final class BackendClient {
         _ = try await request(path: "/health", token: nil)
     }
 
+    /// Lädt ein Rezeptfoto hoch. Das Backend prüft den Inhalt und speichert ein neues JPEG.
+    func uploadRecipePhoto(jpegData: Data, accessToken: String) async throws -> String {
+        var url = baseURL
+        url.append(path: "/recipe-photos")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 60
+        req.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        req.addValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        req.httpBody = jpegData
+        let (data, resp) = try await SecureURLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        guard (200...299).contains(http.statusCode) else {
+            throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
+        }
+        struct Response: Decodable { let image_url: String }
+        let decoded = try JSONDecoder().decode(Response.self, from: data)
+        guard RecipeImageURL.isAllowed(decoded.image_url) else {
+            throw URLError(.badServerResponse)
+        }
+        return decoded.image_url
+    }
+
     /// Liefert alle Rezepte des aktuellen Nutzers.
     ///
     /// - Parameter accessToken: Supabase-Access-Token.

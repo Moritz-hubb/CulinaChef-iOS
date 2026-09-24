@@ -421,7 +421,8 @@ struct RecipeDetailView: View {
                 }
                 
                 if let sourceUrl = displayRecipe.source_url,
-                   let url = URL(string: sourceUrl) {
+                   let url = URL(string: sourceUrl),
+                   SocialImportURL.isAllowed(sourceUrl) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(L.import_social_source_link.localized)
                             .font(.headline)

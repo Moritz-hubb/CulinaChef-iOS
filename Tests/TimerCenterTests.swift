@@ -104,12 +104,27 @@ final class TimerCenterTests: XCTestCase {
 
 @MainActor
 final class RunningTimerTests: XCTestCase {
-    
+    var center: TimerCenter!
+
+    override func setUp() async throws {
+        try await super.setUp()
+        center = TimerCenter()
+    }
+
+    override func tearDown() async throws {
+        center = nil
+        try await super.tearDown()
+    }
+
+    private func makeTimer(minutes: Int, label: String) -> RunningTimer {
+        RunningTimer(minutes: minutes, label: label, timerCenter: center)
+    }
+
     // MARK: - Initialization Tests
     
     func testRunningTimerInitialization() {
         // When
-        let timer = RunningTimer(minutes: 5, label: "Test Timer")
+        let timer = makeTimer(minutes: 5, label: "Test Timer")
         
         // Then
         XCTAssertNotNil(timer.id)
@@ -121,9 +136,9 @@ final class RunningTimerTests: XCTestCase {
     
     func testRunningTimerInitialization_DifferentDurations() {
         // When
-        let timer1 = RunningTimer(minutes: 1, label: "1 min")
-        let timer10 = RunningTimer(minutes: 10, label: "10 min")
-        let timer30 = RunningTimer(minutes: 30, label: "30 min")
+        let timer1 = makeTimer(minutes: 1, label: "1 min")
+        let timer10 = makeTimer(minutes: 10, label: "10 min")
+        let timer30 = makeTimer(minutes: 30, label: "30 min")
         
         // Then
         XCTAssertEqual(timer1.remaining, 60)
@@ -133,8 +148,8 @@ final class RunningTimerTests: XCTestCase {
     
     func testRunningTimer_HasUniqueIDs() {
         // When
-        let timer1 = RunningTimer(minutes: 5, label: "Timer 1")
-        let timer2 = RunningTimer(minutes: 5, label: "Timer 2")
+        let timer1 = makeTimer(minutes: 5, label: "Timer 1")
+        let timer2 = makeTimer(minutes: 5, label: "Timer 2")
         
         // Then
         XCTAssertNotEqual(timer1.id, timer2.id)
@@ -144,7 +159,7 @@ final class RunningTimerTests: XCTestCase {
     
     func testReset_ResetsToOriginalDuration() async {
         // Given
-        let timer = RunningTimer(minutes: 5, label: "Test")
+        let timer = makeTimer(minutes: 5, label: "Test")
         
         // Simulate some time passing
         await Task.yield()
@@ -160,7 +175,7 @@ final class RunningTimerTests: XCTestCase {
     
     func testReset_RestoresRunningState() {
         // Given
-        let timer = RunningTimer(minutes: 5, label: "Test")
+        let timer = makeTimer(minutes: 5, label: "Test")
         timer.running = false
         
         // When
@@ -173,13 +188,13 @@ final class RunningTimerTests: XCTestCase {
     // MARK: - Running State Tests
     
     func testTimer_StartsInRunningState() {
-        let timer = RunningTimer(minutes: 5, label: "Test")
+        let timer = makeTimer(minutes: 5, label: "Test")
         XCTAssertTrue(timer.running)
     }
     
     func testTimer_CanBePaused() {
         // Given
-        let timer = RunningTimer(minutes: 5, label: "Test")
+        let timer = makeTimer(minutes: 5, label: "Test")
         
         // When
         timer.running = false
@@ -190,7 +205,7 @@ final class RunningTimerTests: XCTestCase {
     
     func testTimer_CanBeResumed() {
         // Given
-        let timer = RunningTimer(minutes: 5, label: "Test")
+        let timer = makeTimer(minutes: 5, label: "Test")
         timer.running = false
         
         // When
@@ -204,7 +219,7 @@ final class RunningTimerTests: XCTestCase {
     
     func testTimer_CountsDown() async {
         // Given
-        let timer = RunningTimer(minutes: 1, label: "Test")
+        let timer = makeTimer(minutes: 1, label: "Test")
         let initialRemaining = timer.remaining
         
         // When: Wait for timer to tick (slightly more than 1 second)
@@ -216,7 +231,7 @@ final class RunningTimerTests: XCTestCase {
     
     func testTimer_DoesNotCountDownWhenPaused() async {
         // Given
-        let timer = RunningTimer(minutes: 1, label: "Test")
+        let timer = makeTimer(minutes: 1, label: "Test")
         timer.running = false
         let remainingWhenPaused = timer.remaining
         

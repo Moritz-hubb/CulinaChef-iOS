@@ -44,7 +44,7 @@ final class AuthenticationManagerTests: XCTestCase {
         XCTAssertFalse(AuthenticationManager.isEmailAlreadyRegistered(error))
     }
 
-    func testIdentityAlreadyExistsErrorCodeTriggersLinking() {
+    func testIdentityAlreadyExistsErrorCodeIsTreatedAsRegistered() {
         let error = NSError(
             domain: "SupabaseAuth",
             code: 400,
@@ -56,7 +56,7 @@ final class AuthenticationManagerTests: XCTestCase {
         XCTAssertTrue(AuthenticationManager.isEmailAlreadyRegistered(error))
     }
 
-    func testAlreadyBeenRegisteredMessageTriggersLinking() {
+    func testAlreadyBeenRegisteredMessageIsTreatedAsRegistered() {
         let error = NSError(
             domain: "SupabaseAuth",
             code: 422,
@@ -100,7 +100,7 @@ final class AuthenticationManagerTests: XCTestCase {
         XCTAssertTrue(paths.contains { $0.contains("/auth/v1/token") })
     }
 
-    func testEmailAlreadyRegisteredCallsAuthAppleAndSignsIn() async throws {
+    func testEmailAlreadyRegisteredDoesNotCallAuthAppleOrSignIn() async {
         var paths: [String] = []
         MockURLProtocol.requestHandler = { request in
             let path = request.url?.path ?? ""
@@ -134,10 +134,18 @@ final class AuthenticationManagerTests: XCTestCase {
             return (response, Data("[]".utf8))
         }
 
-        let result = try await manager.signInWithApple(idToken: "apple-id-token", nonce: "raw-nonce-value")
-        XCTAssertEqual(result.email, "test@example.com")
-        XCTAssertTrue(paths.contains { $0.contains("/auth/apple") })
-        XCTAssertEqual(KeychainManager.get(key: "auth_provider"), "apple")
+        do {
+            _ = try await manager.signInWithApple(idToken: "apple-id-token", nonce: "raw-nonce-value")
+            XCTFail("Should not sign in by silently linking Apple to an existing email account")
+        } catch {
+            XCTAssertTrue(AuthenticationManager.isEmailAlreadyRegistered(error))
+        }
+
+        XCTAssertFalse(paths.contains { $0.contains("/auth/apple") })
+        XCTAssertTrue(paths.contains { $0.contains("/auth/v1/token") })
+        XCTAssertNil(KeychainManager.get(key: "access_token"))
+        XCTAssertNil(KeychainManager.get(key: "user_id"))
+        XCTAssertNil(KeychainManager.get(key: "auth_provider"))
     }
 
     func testChangePasswordPersistsSignInSessionAndUsesNewAccessToken() async throws {

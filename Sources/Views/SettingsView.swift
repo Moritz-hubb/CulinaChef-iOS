@@ -742,12 +742,8 @@ private struct ProfileSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
-    @State private var fullName: String = ""
-    @State private var email: String = ""
-    @State private var username: String = ""
     @State private var loading = false
     @State private var error: String?
-    @State private var saved = false
     @State private var recipesCount = 0
     @State private var ratingsCount = 0
     @State private var allergies: String = ""
@@ -794,7 +790,6 @@ private struct ProfileSettingsSheet: View {
                             }
                             .padding(.bottom, 4)
                             
-                            DataRow(label: L.settings_username.localized, value: username.isEmpty ? "–" : username)
                             DataRow(label: L.email.localized, value: app.userEmail ?? "–")
                             
                             Divider().background(.white.opacity(0.2))
@@ -987,48 +982,22 @@ private struct ProfileSettingsSheet: View {
     }
 
     private func load() async {
-        loading = true; error = nil; saved = false
+        loading = true
+        error = nil
         defer { loading = false }
-        do {
-            if let p = try await app.fetchProfile() {
-                fullName = p.full_name ?? ""
-                email = p.email ?? app.userEmail ?? ""
-                username = p.username
-            } else {
-                fullName = ""
-                email = app.userEmail ?? ""
-                username = ""
-            }
-            
-            // Load dietary preferences
-            let prefs = UserDefaults.standard
-            if let allergyData = prefs.string(forKey: "allergies") {
-                allergies = allergyData
-            }
-            if let dietsData = prefs.data(forKey: "dietary_types"),
-               let dietsSet = try? JSONDecoder().decode(Set<String>.self, from: dietsData) {
-                dietTypes = Array(dietsSet).sorted().joined(separator: ", ")
-            }
-            
-            // Load counts (backend endpoints pending)
-            // Placeholder values until backend provides endpoints
-            recipesCount = 0
-            ratingsCount = 0
-            
-        } catch {
-            self.error = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorGenericUserFriendly.localized)
-        }
-    }
 
-    private func save() async {
-        loading = true; error = nil; saved = false
-        defer { loading = false }
-        do {
-            try await app.saveProfile(fullName: fullName, email: email)
-            saved = true
-        } catch {
-            self.error = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorGenericUserFriendly.localized)
+        let prefs = UserDefaults.standard
+        if let allergyData = prefs.string(forKey: "allergies") {
+            allergies = allergyData
         }
+        if let dietsData = prefs.data(forKey: "dietary_types"),
+           let dietsSet = try? JSONDecoder().decode(Set<String>.self, from: dietsData) {
+            dietTypes = Array(dietsSet).sorted().joined(separator: ", ")
+        }
+
+        // Load counts (backend endpoints pending)
+        recipesCount = 0
+        ratingsCount = 0
     }
     
     private func changePassword() async {

@@ -19,6 +19,9 @@ struct OnboardingView: View {
         Logger.debug("[OnboardingView] 🆕 VIEW CREATED with ID: \(id)", category: .ui)
     }
     
+    // Index of the final step; steps run from -1 (welcome) to lastStep (notifications)
+    private static let lastStep = 6
+
     @State private var currentStep: Int = {
         // Try to restore from UserDefaults, otherwise start with welcome screen
         // Use object(forKey:) to check if key exists (integer(forKey:) returns 0 if not set, which is ambiguous)
@@ -28,14 +31,14 @@ struct OnboardingView: View {
         } else {
             saved = -999 // Special value meaning "not set"
         }
-        let initialValue = (saved != -999) ? saved : -1
+        // Clamp in case a step index saved by an older build is out of range
+        let initialValue = (saved != -999) ? min(max(saved, -1), OnboardingView.lastStep) : -1
         Logger.debug("[OnboardingView] INIT: currentStep @State initialized to \(initialValue) (saved from UserDefaults: \(saved == -999 ? "not set" : String(saved)))", category: .ui)
         return initialValue
     }()
     @State private var buttonScale: CGFloat = 1.0
     @State private var isLanguageChanging = false // Flag to prevent step from resetting during language change
     @State private var stepDirection: Int = 1 // 1 = forward (swipe from right), -1 = back
-    @State private var username: String = "" // Username entered during onboarding
     
     // Helper function to update currentStep and persist it
     private func updateCurrentStep(_ newStep: Int) {
@@ -53,7 +56,7 @@ struct OnboardingView: View {
     }
 
     private func goToStep(_ newStep: Int) {
-        let clamped = min(max(newStep, -1), 7)
+        let clamped = min(max(newStep, -1), Self.lastStep)
         guard clamped != currentStep else { return }
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         stepDirection = clamped > currentStep ? 1 : -1
@@ -73,19 +76,18 @@ struct OnboardingView: View {
     private var currentStepContent: some View {
         switch currentStep {
         case 0: step0LanguageSelection
-        case 1: step1Username
-        case 2: step2Greeting
-        case 3: step3Allergies
-        case 4: step4DietaryTypes
-        case 5: step5Preferences
-        case 6: step6Dislikes
-        case 7: step7Notifications
+        case 1: step1Greeting
+        case 2: step2Allergies
+        case 3: step3DietaryTypes
+        case 4: step4Preferences
+        case 5: step5Dislikes
+        case 6: step6Notifications
         default: stepWelcome
         }
     }
 
     private var showsProgressHeader: Bool { currentStep >= 0 }
-    private var showsHeaderPenguin: Bool { currentStep >= 0 && currentStep != 2 && currentStep != 7 }
+    private var showsHeaderPenguin: Bool { currentStep >= 0 && currentStep != 1 && currentStep != Self.lastStep }
     @State private var showSuccessAnimation = false
     @State private var selectedLanguage: String = ""
     @State private var allergies: [String] = []
@@ -124,30 +126,6 @@ struct OnboardingView: View {
     @State private var dislikes: [String] = []
     @State private var newDislikeText = ""
     @State private var isSaving = false
-    @State private var isSavingName = false
-    
-    // MARK: - Save Name to Profile (and update username)
-    private func saveNameToProfile(_ name: String) async {
-        guard !isSavingName else { return }
-        guard app.accessToken != nil else {
-            Logger.debug("[OnboardingView] Cannot save name: No access token available", category: .data)
-            return
-        }
-        
-        isSavingName = true
-        
-        do {
-            try await app.updateUsernameFromOnboardingName(name)
-            Logger.debug("[OnboardingView] ✅ Name + username updated successfully from onboarding", category: .data)
-        } catch {
-            Logger.error("[OnboardingView] ❌ Failed to update name/username from onboarding: \(error.localizedDescription)", category: .data)
-            #if DEBUG
-            Logger.debug("[OnboardingView] Error updating name/username: \(error)")
-            #endif
-        }
-        
-        isSavingName = false
-    }
     
     private var dietOptions: [String] {
         let _ = localizationManager.currentLanguage // Force recomputation when language changes
@@ -227,11 +205,12 @@ struct OnboardingView: View {
             Logger.debug("[OnboardingView] onAppear - savedStep from UserDefaults: \(savedStep == -999 ? "not set" : String(savedStep))", category: .ui)
             
             if savedStep != -999 {
-                // We have a saved step, restore it
+                // We have a saved step, restore it (clamped in case it came from an older build)
+                let restoredStep = min(max(savedStep, -1), Self.lastStep)
                 Logger.debug("[OnboardingView] onAppear - Found saved step: \(savedStep), currentStep: \(currentStep)", category: .ui)
-                if currentStep != savedStep {
-                    Logger.debug("[OnboardingView] onAppear - RESTORING currentStep from \(currentStep) to \(savedStep)", category: .ui)
-                    currentStep = savedStep
+                if currentStep != restoredStep {
+                    Logger.debug("[OnboardingView] onAppear - RESTORING currentStep from \(currentStep) to \(restoredStep)", category: .ui)
+                    currentStep = restoredStep
                 }
             } else if currentStep == -1 {
                 // First appearance, save initial state
@@ -266,8 +245,8 @@ struct OnboardingView: View {
             let savedStep: Int
             if savedInDefaults != -999 {
                 // UserDefaults has a value (including 0), use it as source of truth
-                savedStep = savedInDefaults
-            } else if currentStepValue >= -1 && currentStepValue <= 7 {
+                savedStep = min(max(savedInDefaults, -1), Self.lastStep)
+            } else if currentStepValue >= -1 && currentStepValue <= Self.lastStep {
                 // UserDefaults doesn't have a value, but currentStep is valid, use it
                 savedStep = currentStepValue
                 // Also save it
@@ -432,7 +411,7 @@ struct OnboardingView: View {
     // MARK: - Progress Bar
     private var progressBar: some View {
         HStack(spacing: 8) {
-            ForEach(0..<8) { index in
+            ForEach(0...Self.lastStep, id: \.self) { index in
                 Capsule()
                     .fill(index <= currentStep ? 
                           LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
@@ -575,50 +554,8 @@ struct OnboardingView: View {
         return L.onboarding_selectLanguageSubtitle.localized
     }
     
-    // MARK: - Step 1: Username Input
-    private var step1Username: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L.onboarding_username_title.localized)
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Text(L.onboarding_username_subtitle.localized)
-                        .font(.system(size: 15))
-                        .foregroundColor(.white.opacity(0.9))
-                }
-                .padding(.top, 20)
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(L.onboarding_username_label.localized)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
-                    
-                    TextField(L.onboarding_username_placeholder.localized, text: $username)
-                        .font(.system(size: 17))
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .textInputAutocapitalization(.words)
-                        .autocorrectionDisabled()
-                        .submitLabel(.done)
-                }
-                .padding(.top, 24)
-                
-                Spacer()
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .scrollBounceBehavior(.basedOnSize)
-    }
-    
-    // MARK: - Step 2: Greeting with Username
-    private var step2Greeting: some View {
+    // MARK: - Step 1: Greeting
+    private var step1Greeting: some View {
         VStack(spacing: 0) {
             Spacer()
             
@@ -628,7 +565,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, 40)
             
             VStack(spacing: 12) {
-                Text(L.onboarding_greeting_title.localized.replacingOccurrences(of: "{username}", with: username.isEmpty ? L.onboarding_greeting_fallback.localized : username))
+                Text(L.onboarding_greeting_title.localized.replacingOccurrences(of: "{username}", with: L.onboarding_greeting_fallback.localized))
                     .font(.system(size: 30, weight: .bold))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
@@ -648,8 +585,8 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    // MARK: - Step 3: Allergies
-    private var step3Allergies: some View {
+    // MARK: - Step 2: Allergies
+    private var step2Allergies: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 20) {
@@ -732,8 +669,8 @@ struct OnboardingView: View {
         )
     }
     
-    // MARK: - Step 4: Dietary Types
-    private var step4DietaryTypes: some View {
+    // MARK: - Step 3: Dietary Types
+    private var step3DietaryTypes: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 20) {
@@ -778,8 +715,8 @@ struct OnboardingView: View {
         )
     }
     
-    // MARK: - Step 5: Taste Preferences
-    private var step5Preferences: some View {
+    // MARK: - Step 4: Taste Preferences
+    private var step4Preferences: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 24) {
@@ -890,8 +827,8 @@ struct OnboardingView: View {
         )
     }
     
-    // MARK: - Step 6: Dislikes
-    private var step6Dislikes: some View {
+    // MARK: - Step 5: Dislikes
+    private var step5Dislikes: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
             VStack(alignment: .leading, spacing: 20) {
@@ -969,8 +906,8 @@ struct OnboardingView: View {
         )
     }
     
-    // MARK: - Step 7: Notification permission
-    private var step7Notifications: some View {
+    // MARK: - Step 6: Notification permission
+    private var step6Notifications: some View {
         VStack(spacing: 24) {
             Spacer()
             if let uiImage = UIImage(named: "penguin-notifications") {
@@ -1034,10 +971,10 @@ struct OnboardingView: View {
                 .scaleEffect(buttonScale)
                 .accessibilityLabel(L.getStarted.localized)
                 .accessibilityHint(L.a11y_startOnboarding.localized)
-            } else if currentStep < 7 {
+            } else if currentStep < Self.lastStep {
                 Button {
                     // For language selection step, ensure language is selected
-                    if (currentStep == 0 && selectedLanguage.isEmpty) || (currentStep == 1 && username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                    if currentStep == 0 && selectedLanguage.isEmpty {
                         // Can't proceed without selecting a language
                         return
                     }
@@ -1056,16 +993,6 @@ struct OnboardingView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                         let nextStep = currentStep + 1
                         Logger.debug("[OnboardingView] Next button - Moving from step \(currentStep) to \(nextStep)", category: .ui)
-                        
-                        // Save name to profile (and update username) when moving from step 1 to step 2
-                        if currentStep == 1 && nextStep == 2 {
-                            let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-                            if !trimmedUsername.isEmpty {
-                                Task {
-                                    await saveNameToProfile(trimmedUsername)
-                                }
-                            }
-                        }
                         
                         withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
                             buttonScale = 1.0
@@ -1107,7 +1034,7 @@ struct OnboardingView: View {
                 .scaleEffect(buttonScale)
                 .accessibilityLabel(L.next.localized)
                 .accessibilityHint(L.a11y_goToNextStep.localized)
-                .disabled((currentStep == 0 && selectedLanguage.isEmpty) || (currentStep == 1 && username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+                .disabled(currentStep == 0 && selectedLanguage.isEmpty)
             } else {
                 Button {
                     OnboardingFeedback.playFinalCompleteSound()

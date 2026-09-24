@@ -209,6 +209,7 @@ final class SupabaseAuthClient {
         req.httpMethod = "POST"
         req.addValue("application/json", forHTTPHeaderField: "Content-Type")
         req.addValue(apiKey, forHTTPHeaderField: "apikey")
+        req.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         let body = ["type": "signup", "email": email]
         req.httpBody = try JSONEncoder().encode(body)
 

@@ -209,11 +209,12 @@ struct SignUpView: View {
             isLoading: app.loading,
             errorMessage: errorMessage,
             statusMessage: verificationStatus,
+            onBack: nil,
             onConfirm: { code in
                 Task { await confirmEmail(code: code) }
             },
             onResend: {
-                Task { await resendCode() }
+                await resendCode()
             }
         )
         .padding(.horizontal, 20)
@@ -600,14 +601,17 @@ struct SignUpView: View {
         }
     }
 
-    private func resendCode() async {
+    @discardableResult
+    private func resendCode() async -> Bool {
         errorMessage = nil
         do {
             try await app.resendSignupConfirmation(email: email.trimmed)
             verificationStatus = L.verifyEmailResent.localized
+            return true
         } catch {
             verificationStatus = nil
-            errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.verifyEmailInvalidCode.localized)
+            errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.error_registrationFailed.localized(replacing: ["code": "resend"]))
+            return false
         }
     }
 

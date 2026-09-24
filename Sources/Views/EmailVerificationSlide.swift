@@ -6,12 +6,13 @@ struct EmailVerificationSlide: View {
     let isLoading: Bool
     let errorMessage: String?
     let statusMessage: String?
-    var onBack: (() -> Void)? = nil
+    var onBack: (() -> Void)?
     let onConfirm: (String) -> Void
-    let onResend: () -> Void
+    let onResend: () async -> Bool
 
     @State private var code = ""
-    @State private var resendAvailableAt = Date().addingTimeInterval(30)
+    @State private var isResending = false
+    @State private var cooldownEndsAt: Date?
     @FocusState private var codeFocused: Bool
 
     private var digits: String { code.filter(\.isNumber) }
@@ -105,21 +106,35 @@ struct EmailVerificationSlide: View {
             .disabled(!canConfirm)
             .opacity(canConfirm ? 1 : 0.6)
 
-            Button(action: resend) {
-                Text(L.verifyEmailResend.localized)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(canResend ? Color(red: 0.95, green: 0.5, blue: 0.3) : .gray)
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let remaining = secondsRemaining(at: context.date)
+                Button {
+                    resend()
+                } label: {
+                    Text(remaining > 0 ? "\(L.verifyEmailResend.localized) (\(remaining))" : L.verifyEmailResend.localized)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(remaining == 0 && !isResending ? Color(red: 0.95, green: 0.5, blue: 0.3) : .gray)
+                }
+                .disabled(remaining > 0 || isResending || isLoading)
             }
-            .disabled(!canResend || isLoading)
         }
         .onAppear { codeFocused = true }
     }
 
-    private var canResend: Bool { Date() >= resendAvailableAt }
+    private func secondsRemaining(at date: Date) -> Int {
+        guard let cooldownEndsAt else { return 0 }
+        return max(0, Int(ceil(cooldownEndsAt.timeIntervalSince(date))))
+    }
 
     private func resend() {
-        guard canResend, !isLoading else { return }
-        resendAvailableAt = Date().addingTimeInterval(30)
-        onResend()
+        guard !isResending, !isLoading else { return }
+        isResending = true
+        Task {
+            let sent = await onResend()
+            isResending = false
+            if sent {
+                cooldownEndsAt = Date().addingTimeInterval(60)
+            }
+        }
     }
 }

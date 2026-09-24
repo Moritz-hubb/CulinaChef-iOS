@@ -252,5 +252,15 @@ final class AuthenticationManagerTests: XCTestCase {
             fallback: "fallback"
         )
         XCTAssertEqual(authTokenCopy, "Invalid Apple ID token")
+        let rateLimited = ErrorMessageHelper.sanitizedAuthDisplayMessage(
+            from: NSError(
+                domain: "SupabaseAuth",
+                code: 429,
+                userInfo: [NSLocalizedDescriptionKey: "email rate limit exceeded"]
+            ),
+            fallback: "fallback"
+        )
+        XCTAssertEqual(rateLimited, L.errorAuthRateLimited.localized)
+        XCTAssertNotEqual(rateLimited, L.errorRateLimitExceeded.localized)
     }
 }

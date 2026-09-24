@@ -7,7 +7,6 @@ struct SettingsView: View {
     @State private var showDietary = false
     @State private var showProfile = false
     @State private var showSubscription = false
-    @State private var showNotifications = false
     @State private var showDeleteConfirm = false
     @State private var showTerms = false
     @State private var showPrivacy = false
@@ -33,11 +32,6 @@ struct SettingsView: View {
     private var generalSettingsSection: some View {
         SectionCard(title: L.settings.localized) {
             VStack(spacing: 12) {
-                Button(action: { showNotifications = true }) {
-                    settingsRow(icon: "bell", text: L.notifications.localized)
-                }
-                .accessibilityLabel(L.notifications.localized)
-                .accessibilityHint(L.a11y_openNotifications.localized)
                 Button(action: { app.showLanguageSettings = true }) {
                     settingsRow(icon: "globe", text: L.language.localized)
                 }
@@ -242,10 +236,6 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showSubscription) {
             SubscriptionSettingsSheet()
-                .presentationDetents([PresentationDetent.large])
-        }
-        .sheet(isPresented: $showNotifications) {
-            NotificationsSettingsSheet()
                 .presentationDetents([PresentationDetent.large])
         }
         .sheet(isPresented: $app.showLanguageSettings) {
@@ -1500,41 +1490,6 @@ private struct PlanPill: View {
     }
 }
 
-
-struct NotificationsSettingsSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @AppStorage("notif_general") private var notifGeneral: Bool = true
-    @AppStorage("notif_recipe") private var notifRecipe: Bool = true
-    @AppStorage("notif_offers") private var notifOffers: Bool = false
-    var body: some View {
-        ZStack {
-            LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.75), Color(red: 1.0, green: 0.8, blue: 0.7), Color(red: 0.99, green: 0.7, blue: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
-            .ignoresSafeArea()
-            VStack(spacing: 16) {
-                HStack {
-                    Text(L.notifications.localized).font(.title2.bold()).foregroundStyle(.white)
-                    Spacer()
-                    Button(L.done.localized) { dismiss() }
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-.background(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
-                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                }
-                VStack(alignment: .leading, spacing: 12) {
-Toggle(L.notificationsGeneral.localized, isOn: $notifGeneral).tint(Color(red: 0.95, green: 0.5, blue: 0.3)).foregroundStyle(.white)
-Toggle(L.notificationsRecipe.localized, isOn: $notifRecipe).tint(Color(red: 0.95, green: 0.5, blue: 0.3)).foregroundStyle(.white)
-Toggle(L.notificationsOffers.localized, isOn: $notifOffers).tint(Color(red: 0.95, green: 0.5, blue: 0.3)).foregroundStyle(.white)
-                    Text(L.notificationsManage.localized).font(.footnote).foregroundStyle(.white.opacity(0.7))
-                }
-                .padding(16)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
-            }
-            .padding(16)
-        }
-    }
-}
 
 private struct LanguageSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss

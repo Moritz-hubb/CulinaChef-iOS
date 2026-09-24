@@ -283,7 +283,6 @@ struct RootView: View {
 struct MainTabView: View {
     @EnvironmentObject var app: AppState
     @ObservedObject private var localizationManager = LocalizationManager.shared
-    @State private var showNotifications = false
     @State private var showDeepLinkRecipe = false
     @State private var deepLinkRecipeToShow: Recipe? = nil
     @State private var animationTrigger: UUID = UUID()
@@ -328,24 +327,13 @@ struct MainTabView: View {
                     )
                 Spacer()
                 
-                HStack(spacing: 12) {
-                    Button(action: { showNotifications = true }) {
-                        Image(systemName: "bell")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
-                            .padding(6)
-                            .background(.white, in: Circle())
-                            .overlay(Circle().stroke(Color.gray.opacity(0.1), lineWidth: 1))
-                    }
-                    
-                    Button(action: { app.showSettings = true }) {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
-                            .padding(6)
-                            .background(.white, in: Circle())
-                            .overlay(Circle().stroke(Color.gray.opacity(0.1), lineWidth: 1))
-                    }
+                Button(action: { app.showSettings = true }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
+                        .padding(6)
+                        .background(.white, in: Circle())
+                        .overlay(Circle().stroke(Color.gray.opacity(0.1), lineWidth: 1))
                 }
             }
             .padding(.horizontal, 16)
@@ -364,15 +352,7 @@ struct MainTabView: View {
             .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 1)
         }
         .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 0) {
-                TabBarButton(icon: "sparkles", title: L.tabKulina.localized, tag: 0, selectedTab: $app.selectedTab)
-                TabBarButton(icon: "frying.pan", title: L.tabRecipes.localized, tag: 1, selectedTab: $app.selectedTab)
-                TabBarButton(icon: "book", title: L.tabRecipeBook.localized, tag: 2, selectedTab: $app.selectedTab)
-                TabBarButton(icon: "cart", title: L.tabShopping.localized, tag: 3, selectedTab: $app.selectedTab)
-            }
-            .id(localizationManager.currentLanguage)
-            .padding(.horizontal)
-            .padding(.bottom, -8)
+            KeyboardTabBar()
         }
         .background(
 LinearGradient(
@@ -386,10 +366,6 @@ LinearGradient(
             )
             .ignoresSafeArea()
         )
-        .sheet(isPresented: $showNotifications) {
-            NotificationsSettingsSheet()
-                .presentationDetents([PresentationDetent.large])
-        }
         .sheet(isPresented: $app.showSettings) {
             SettingsView()
         }
@@ -489,6 +465,51 @@ struct PageTransitionModifier: ViewModifier {
     }
 }
 
+// MARK: - Keyboard-aware tab bar
+/// Hides the tab bar while the keyboard is open without changing its height.
+/// A collapsing inset rebuilds the pager and drops the in-flight chat reply.
+private struct KeyboardTabBar: View {
+    @ObservedObject private var keyboard = KeyboardVisibility.shared
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @EnvironmentObject private var app: AppState
+
+    var body: some View {
+        HStack(spacing: 0) {
+            TabBarButton(icon: "sparkles", title: L.tabKulina.localized, tag: 0, selectedTab: $app.selectedTab)
+            TabBarButton(icon: "frying.pan", title: L.tabRecipes.localized, tag: 1, selectedTab: $app.selectedTab)
+            TabBarButton(icon: "book", title: L.tabRecipeBook.localized, tag: 2, selectedTab: $app.selectedTab)
+            TabBarButton(icon: "cart", title: L.tabShopping.localized, tag: 3, selectedTab: $app.selectedTab)
+        }
+        .id(localizationManager.currentLanguage)
+        .padding(.horizontal)
+        .padding(.bottom, -8)
+        .opacity(keyboard.isVisible ? 0 : 1)
+        .allowsHitTesting(!keyboard.isVisible)
+        .accessibilityHidden(keyboard.isVisible)
+    }
+}
+
+private final class KeyboardVisibility: ObservableObject {
+    static let shared = KeyboardVisibility()
+    @Published private(set) var isVisible = false
+
+    private init() {
+        let center = NotificationCenter.default
+        center.addObserver(self, selector: #selector(show), name: UIResponder.keyboardWillShowNotification, object: nil)
+        center.addObserver(self, selector: #selector(hide), name: UIResponder.keyboardWillHideNotification, object: nil)
+    }
+
+    @objc private func show() {
+        guard !isVisible else { return }
+        isVisible = true
+    }
+
+    @objc private func hide() {
+        guard isVisible else { return }
+        isVisible = false
+    }
+}
+
 struct TabBarButton: View {
     let icon: String
     let title: String
@@ -501,16 +522,11 @@ struct TabBarButton: View {
         Button {
             selectedTab = tag
         } label: {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3) : .white)
-                Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.white)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3) : .white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
         }
         .accessibilityLabel(title)
         .accessibilityHint(isSelected ? L.a11y_currentlySelected.localized : L.a11y_switchToTab.localized(replacing: ["title": title]))

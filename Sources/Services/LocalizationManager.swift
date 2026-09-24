@@ -628,7 +628,6 @@ enum L {
     
     // MARK: - Settings
     static let settings = "settings.title"
-    static let notifications = "settings.notifications"
     static let language = "settings.language"
     static let appearance = "settings.appearance"
     static let dietary = "settings.dietary"
@@ -760,12 +759,6 @@ enum L {
     static let chat_consent_active = "chat.consent_active"
     static let chat_revoke_consent_hint = "chat.revoke_consent_hint"
     
-    // MARK: - Notifications
-    static let notificationsGeneral = "notifications.general"
-    static let notificationsRecipe = "notifications.recipe"
-    static let notificationsOffers = "notifications.offers"
-    static let notificationsManage = "notifications.manage"
-    
     // MARK: - Recipe Creator
     static let whatToCook = "creator.whatToCook"
     static let describeDish = "creator.describeDish"
@@ -855,6 +848,7 @@ enum L {
     static let errorImageAnalysisError = "error.imageAnalysisError"
     static let errorExportFailed = "error.exportFailed"
     static let errorRateLimitExceeded = "error.rateLimitExceeded"
+    static let errorAuthRateLimited = "error.authRateLimited"
     static let errorGenericUserFriendly = "error.genericUserFriendly"
     static let errorAccountExists = "error.accountExists"
     static let errorAccountExistsLoginLink = "error.accountExistsLoginLink"
@@ -1054,6 +1048,7 @@ enum L {
     static let recipe_nährwerte_pro_portion = "recipe.nährwerte_pro_portion"
     static let recipe_nährwerte_insgesamt = "recipe.nährwerte_insgesamt"
     static let recipe_nährwerte_hinweis = "recipe.nährwerte_hinweis"
+    static let recipe_schritte_geschätzt = "recipe.schritte_geschätzt"
     /// Standard-KI-Rezept: 4 Portionen; Nährwerte = Gesamtsumme aus Zutaten ÷ 4
     static let recipe_nährwerte_vier_portionen_hinweis = "recipe.nährwerte_vier_portionen_hinweis"
     /// Einleitung unter Überschrift im Markdown-Export (Nährwerte)
@@ -1468,7 +1463,6 @@ enum L {
     static let a11y_openPrivacy = "a11y.openPrivacy"
     static let a11y_openImprint = "a11y.openImprint"
     static let a11y_openFairUse = "a11y.openFairUse"
-    static let a11y_openNotifications = "a11y.openNotifications"
     static let a11y_openLanguage = "a11y.openLanguage"
     static let a11y_openDietary = "a11y.openDietary"
     static let a11y_openProfile = "a11y.openProfile"

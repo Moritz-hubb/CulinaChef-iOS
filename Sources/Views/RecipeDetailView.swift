@@ -684,6 +684,12 @@ struct RecipeDetailView: View {
                 baseServings: 4
             )
             VStack(alignment: .leading, spacing: 16) {
+                if index == 1, displayRecipe.stepsAreEstimated {
+                    Text(L.recipe_schritte_geschätzt.localized)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Text(bodyText)
                     .font(.title3)
                     .foregroundStyle(.white)

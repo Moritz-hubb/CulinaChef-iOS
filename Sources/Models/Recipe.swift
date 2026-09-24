@@ -31,6 +31,11 @@ struct Recipe: Identifiable, Codable, Equatable {
     var isSocialImport: Bool {
         tags?.contains("_import:social") == true
     }
+
+    /// Social-Import ohne Zubereitung in der Beschreibung: Schritte hat die KI ergänzt.
+    var stepsAreEstimated: Bool {
+        tags?.contains("_import:steps_estimated") == true
+    }
     
     /// Sichtbare Tags (ohne Backend-Meta: `_filter:…`, `_revision:…`, `_import:…` etc.)
     var tagsForDisplay: [String] {

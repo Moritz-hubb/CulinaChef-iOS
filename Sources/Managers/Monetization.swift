@@ -4,6 +4,7 @@ import StoreKit
 import SuperwallKit
 #if canImport(UIKit)
 import UIKit
+import WebKit
 #endif
 
 /// Placement names must match campaigns in the Superwall dashboard.
@@ -433,8 +434,9 @@ final class Monetization {
                 delegate: paywallDelegate
             )
             viewController.modalPresentationStyle = .overFullScreen
-            guard let presenter = Self.topViewController() else {
-                Logger.error("[PaywallDebug] no presenter for RevenueCat paywall", category: .data)
+            guard let presenter = Self.topViewController(),
+                  Self.canPresent(viewController, from: presenter) else {
+                Logger.info("[PaywallDebug] paywall already visible — not presenting again", category: .data)
                 return
             }
             let prices = productsByName
@@ -443,12 +445,127 @@ final class Monetization {
                 .joined(separator: ", ")
             Logger.info("[PaywallDebug] presenting RevenueCat prices \(prices)", category: .data)
             presenter.present(viewController, animated: true)
+            pushRevenueCatQuoteTemplate(
+                into: viewController,
+                productsByName: productsByName,
+                params: params
+            )
         } catch let reason as PaywallSkippedReason {
             Logger.info("[PaywallDebug] skipped: \(reason)", category: .data)
             feature?()
         } catch {
             Logger.error("[PaywallDebug] presentation error", error: error, category: .data)
         }
+    }
+    
+    /// Superwall fills `{{ products.*.price }}` from the substituted StoreKit product.
+    /// The savings rate and the monthly plan's weekly equivalent are not product
+    /// fields. They are calculated here from the RevenueCat prices and written
+    /// into the same template variables the paywall already reads.
+    private func pushRevenueCatQuoteTemplate(
+        into viewController: UIViewController,
+        productsByName: [String: SuperwallKit.StoreProduct],
+        params: [String: Any]
+    ) {
+        guard let payload = Self.revenueCatTemplatePayload(productsByName: productsByName, params: params) else {
+            return
+        }
+        let script = """
+        if (window.paywall && window.paywall.accept64) { window.paywall.accept64('\(payload)'); true } else { false }
+        """
+        Task { @MainActor in
+            for _ in 0..<16 {
+                if await Self.evaluatePaywallScript(script, in: viewController) {
+                    Logger.info(
+                        "[PaywallDebug] applied RevenueCat quote template savings=\(params[Self.monthlySavingsPercentageKey].map { String(describing: $0) } ?? "nil") weekly=\(params[Self.monthlyWeeklyPriceKey].map { String(describing: $0) } ?? "nil")",
+                        category: .data
+                    )
+                    return
+                }
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
+            Logger.warning("[PaywallDebug] RevenueCat quote template was not applied", category: .data)
+        }
+    }
+    
+    private static func revenueCatTemplatePayload(
+        productsByName: [String: SuperwallKit.StoreProduct],
+        params: [String: Any]
+    ) -> String? {
+        let strings = stringParams(params)
+        var products: [[String: Any]] = []
+        for (name, product) in productsByName.sorted(by: { $0.key < $1.key }) {
+            var attributes = product.attributes
+            if name == SuperwallProductNames.monthlyPlanTrial {
+                if let weeklyEquivalent = strings[monthlyWeeklyPriceKey] {
+                    attributes["weeklyPrice"] = weeklyEquivalent
+                    attributes[monthlyWeeklyPriceKey] = weeklyEquivalent
+                }
+                if let savings = strings[monthlySavingsPercentageKey] {
+                    attributes[monthlySavingsPercentageKey] = savings
+                }
+            }
+            products.append([name: attributes])
+        }
+        
+        var variables: [String: Any] = [
+            "user": strings,
+            "params": strings,
+            "products": products
+        ]
+        if let savings = strings[monthlySavingsPercentageKey] {
+            variables[monthlySavingsPercentageKey] = savings
+        }
+        if let weeklyEquivalent = strings[monthlyWeeklyPriceKey] {
+            variables[monthlyWeeklyPriceKey] = weeklyEquivalent
+        }
+        
+        let event: [String: Any] = [
+            "event_name": "template_variables",
+            "variables": variables
+        ]
+        guard JSONSerialization.isValidJSONObject([event]),
+              let data = try? JSONSerialization.data(withJSONObject: [event]) else {
+            return nil
+        }
+        return data.base64EncodedString()
+    }
+    
+    private static func stringParams(_ params: [String: Any]) -> [String: String] {
+        var strings: [String: String] = [:]
+        for (key, value) in params {
+            switch value {
+            case let text as String:
+                strings[key] = text
+            case let number as NSNumber:
+                if number === kCFBooleanTrue as NSNumber || number === kCFBooleanFalse as NSNumber {
+                    strings[key] = number.boolValue ? "true" : "false"
+                } else {
+                    strings[key] = number.stringValue
+                }
+            case let flag as Bool:
+                strings[key] = flag ? "true" : "false"
+            default:
+                strings[key] = String(describing: value)
+            }
+        }
+        return strings
+    }
+    
+    private static func evaluatePaywallScript(_ script: String, in controller: UIViewController) async -> Bool {
+        guard let webView = findWebView(in: controller.view) else { return false }
+        let result = try? await webView.evaluateJavaScript(script)
+        if let applied = result as? Bool { return applied }
+        if let applied = result as? NSNumber { return applied.boolValue }
+        return false
+    }
+    
+    private static func findWebView(in view: UIView) -> WKWebView? {
+        if let webView = view as? WKWebView { return webView }
+        for subview in view.subviews {
+            if let webView = findWebView(in: subview) { return webView }
+        }
+        return nil
     }
     
     private func superwallProducts(from loaded: LoadedStoreProducts) -> [String: SuperwallKit.StoreProduct] {
@@ -462,6 +579,19 @@ final class Monetization {
         return products
     }
     
+    /// Superwall's paywall is already the top controller when a second AI denial
+    /// asks for it again. Presenting that controller on itself throws and kills the app.
+    private static func canPresent(_ viewController: UIViewController, from presenter: UIViewController) -> Bool {
+        if presenter === viewController { return false }
+        if viewController.presentingViewController != nil { return false }
+        if isPaywall(presenter) { return false }
+        return true
+    }
+
+    private static func isPaywall(_ controller: UIViewController) -> Bool {
+        String(describing: type(of: controller)).contains("Paywall")
+    }
+
     private static func topViewController(from base: UIViewController? = nil) -> UIViewController? {
         let root = base ?? UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }

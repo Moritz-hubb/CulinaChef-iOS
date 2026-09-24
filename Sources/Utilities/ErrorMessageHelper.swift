@@ -119,8 +119,14 @@ enum ErrorMessageHelper {
         if lower.contains("timed out") || lower.contains("timeout") {
             return L.errorServerUnavailable.localized
         }
-        if lower.contains("rate limit") || lower.contains("too many requests") {
-            return L.errorRateLimitExceeded.localized
+        let ns = error as NSError
+        let code = (ns.userInfo["error_code"] as? String)?.lowercased() ?? ""
+        if ns.code == 429
+            || code == "over_email_send_rate_limit"
+            || code == "over_request_rate_limit"
+            || lower.contains("rate limit")
+            || lower.contains("too many requests") {
+            return L.errorAuthRateLimited.localized
         }
         guard isSafeUserFacingMessage(text) else { return fallback }
         return text

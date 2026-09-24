@@ -1317,35 +1317,33 @@ private struct DietaryPreferencesList: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Binding var selection: Set<String>
     
-    private var dietOptions: [(key: String, icon: String)] {
+    private var dietOptions: [String] {
         let _ = localizationManager.currentLanguage // Force recomputation when language changes
         return [
-            (L.vegetarian.localized, "leaf.fill"),
-            (L.vegan.localized, "carrot.fill"),
-            (L.pescetarian.localized, "fish.fill"),
-            (L.lowCarb.localized, "arrow.down.circle.fill"),
-            (L.highProtein.localized, "dumbbell.fill"),
-            (L.glutenFree.localized, "checkmark.shield.fill"),
-            (L.lactoseFree.localized, "xmark.circle.fill"),
-            (L.halal.localized, "moon.stars.fill"),
-            (L.kosher.localized, "star.fill")
+            L.vegetarian.localized,
+            L.vegan.localized,
+            L.pescetarian.localized,
+            L.lowCarb.localized,
+            L.highProtein.localized,
+            L.glutenFree.localized,
+            L.lactoseFree.localized,
+            L.halal.localized,
+            L.kosher.localized
         ]
     }
     
     var body: some View {
         VStack(spacing: 12) {
-            ForEach(dietOptions, id: \.key) { option in
+            ForEach(dietOptions, id: \.self) { option in
                 DietaryPreferenceRow(
-                    title: option.key,
-                    icon: option.icon,
-                    isSelected: selection.contains(option.key),
+                    title: option,
+                    isSelected: selection.contains(option),
                     onToggle: {
-                        // Simple toggle - if currently selected, remove it; if not, add it
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
-                            if selection.contains(option.key) {
-                                selection.remove(option.key)
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) {
+                            if selection.contains(option) {
+                                selection.remove(option)
                             } else {
-                                selection.insert(option.key)
+                                selection.insert(option)
                             }
                         }
                     }
@@ -1358,67 +1356,80 @@ private struct DietaryPreferencesList: View {
 // MARK: - Dietary Preference Row
 private struct DietaryPreferenceRow: View {
     let title: String
-    let icon: String
     let isSelected: Bool
     let onToggle: () -> Void
     
     var body: some View {
         Button(action: {
-            // Light haptic only (no sound for selections)
             OnboardingFeedback.playHaptic(style: .light)
             onToggle()
         }) {
             HStack(spacing: 16) {
-                // Icon - weiß wenn ausgewählt, orange wenn nicht
-                Image(systemName: icon)
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(isSelected ? .white : Color(red: 0.95, green: 0.5, blue: 0.3))
-                    .frame(width: 32, height: 32)
-                
-                // Title - weiß wenn ausgewählt, schwarz wenn nicht
                 Text(title)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(isSelected ? .white : .black)
+                    .foregroundColor(.black)
                     .multilineTextAlignment(.leading)
                 
-                Spacer()
+                Spacer(minLength: 12)
                 
-                // Checkmark when selected
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.white)
-                }
+                AnimatedCheckbox(isSelected: isSelected)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
-            .background(
-                Group {
-                    if isSelected {
-                        // Orange Gradient Hintergrund wenn ausgewählt
-                        LinearGradient(
-                            colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    } else {
-                        // Grauer Hintergrund wenn nicht ausgewählt
-                        Color(UIColor.systemGray6)
-                    }
-                }
-            )
+            .background(Color(UIColor.systemGray6))
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.clear : Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.2), lineWidth: 1)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
             )
-            .shadow(
-                color: isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.4) : .black.opacity(0.08),
-                radius: isSelected ? 8 : 4,
-                y: 2
-            )
+            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+private struct AnimatedCheckbox: View {
+    let isSelected: Bool
+    
+    private let accent = Color(red: 0.95, green: 0.5, blue: 0.3)
+    private let accentDeep = Color(red: 0.85, green: 0.4, blue: 0.2)
+    
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .stroke(isSelected ? Color.clear : Color.black.opacity(0.22), lineWidth: 1.75)
+            
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [accent, accentDeep],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .scaleEffect(isSelected ? 1 : 0.4)
+                .opacity(isSelected ? 1 : 0)
+            
+            CheckboxCheckmark()
+                .trim(from: 0, to: isSelected ? 1 : 0)
+                .stroke(Color.white, style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
+                .padding(6.5)
+        }
+        .frame(width: 26, height: 26)
+        .scaleEffect(isSelected ? 1 : 0.96)
+        .animation(.spring(response: 0.34, dampingFraction: 0.62), value: isSelected)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct CheckboxCheckmark: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.12, y: rect.minY + rect.height * 0.52))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.40, y: rect.minY + rect.height * 0.80))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.92, y: rect.minY + rect.height * 0.18))
+        return path
     }
 }
 

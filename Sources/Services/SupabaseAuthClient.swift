@@ -122,7 +122,15 @@ final class SupabaseAuthClient {
     ///   - username: Anzeigename, der zusätzlich in den User-Metadaten gespeichert wird.
     /// - Returns: `AuthResponse` mit Access- und Refresh-Token sowie User-Daten.
     /// - Throws: `NSError` mit Supabase-Fehlermessage oder `URLError` bei Transportfehlern.
-    func signUp(email: String, password: String, username: String) async throws -> AuthResponse {
+    /// Outcome of `POST /auth/v1/signup`.
+    /// A session is returned only when Supabase has already confirmed the email.
+    /// With "Confirm email" enabled, signup creates an unconfirmed auth user and sends a code; the app must not sign in until `verifySignupEmail` succeeds.
+    enum SignUpResult {
+        case session(AuthResponse)
+        case confirmationRequired
+    }
+
+    func signUp(email: String, password: String, username: String) async throws -> SignUpResult {
         var url = baseURL
         url.append(path: "/auth/v1/signup")
         
@@ -146,15 +154,113 @@ final class SupabaseAuthClient {
         }
         
         if http.statusCode == 200 {
-            do {
-                return try JSONDecoder().decode(AuthResponse.self, from: data)
-            } catch {
-                throw NSError(domain: "SupabaseAuth", code: -1,
-                             userInfo: [NSLocalizedDescriptionKey: "Response konnte nicht verarbeitet werden: \(error.localizedDescription)"])
-            }
+            return try Self.parseSignUpResponse(data)
         } else {
             throw Self.authError(statusCode: http.statusCode, data: data, fallback: L.error_registrationFailed.localized(replacing: ["code": String(http.statusCode)]))
         }
+    }
+
+    /// Confirms a signup OTP from Supabase (`{{ .Token }}` in the Confirm signup template).
+    /// Returns a session only after the code matches. Wrong or expired codes throw.
+    func verifySignupEmail(email: String, token: String) async throws -> AuthResponse {
+        let digits = token.filter(\.isNumber)
+        guard (6...10).contains(digits.count) else {
+            throw NSError(
+                domain: "SupabaseAuth",
+                code: 400,
+                userInfo: [NSLocalizedDescriptionKey: L.verifyEmailInvalidCode.localized]
+            )
+        }
+
+        var url = baseURL
+        url.append(path: "/auth/v1/verify")
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.addValue(apiKey, forHTTPHeaderField: "apikey")
+        let body = ["type": "signup", "email": email, "token": digits]
+        req.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        if http.statusCode == 200 {
+            let decoded = try JSONDecoder().decode(AuthResponse.self, from: data)
+            guard !decoded.access_token.isEmpty, !decoded.refresh_token.isEmpty else {
+                throw NSError(
+                    domain: "SupabaseAuth",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: L.verifyEmailInvalidCode.localized]
+                )
+            }
+            return decoded
+        }
+        throw Self.authError(statusCode: http.statusCode, data: data, fallback: L.verifyEmailInvalidCode.localized)
+    }
+
+    /// Asks Supabase to send another signup confirmation code. Does not create a session.
+    func resendSignupConfirmation(email: String) async throws {
+        var url = baseURL
+        url.append(path: "/auth/v1/resend")
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.addValue(apiKey, forHTTPHeaderField: "apikey")
+        let body = ["type": "signup", "email": email]
+        req.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await SecureURLSession.shared.data(for: req)
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        if (200...299).contains(http.statusCode) {
+            return
+        }
+        throw Self.authError(statusCode: http.statusCode, data: data, fallback: L.error_registrationFailed.localized(replacing: ["code": String(http.statusCode)]))
+    }
+
+    static func parseSignUpResponse(_ data: Data) throws -> SignUpResult {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NSError(
+                domain: "SupabaseAuth",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: L.error_registrationFailed.localized(replacing: ["code": "decode"])]
+            )
+        }
+
+        if let token = json["access_token"] as? String, !token.isEmpty {
+            let response = try JSONDecoder().decode(AuthResponse.self, from: data)
+            guard !response.access_token.isEmpty, !response.refresh_token.isEmpty else {
+                return .confirmationRequired
+            }
+            return .session(response)
+        }
+
+        let user = json["user"] as? [String: Any]
+        let identities = (json["identities"] as? [Any]) ?? (user?["identities"] as? [Any])
+        if let identities, identities.isEmpty {
+            throw NSError(
+                domain: "SupabaseAuth",
+                code: 422,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Email already registered",
+                    "error_code": "email_exists"
+                ]
+            )
+        }
+
+        let hasUser = json["id"] != nil || json["email"] != nil || user?["id"] != nil
+        guard hasUser else {
+            throw NSError(
+                domain: "SupabaseAuth",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: L.error_registrationFailed.localized(replacing: ["code": "decode"])]
+            )
+        }
+        return .confirmationRequired
     }
     
     // MARK: - Sign In
@@ -233,7 +339,8 @@ final class SupabaseAuthClient {
         }
     }
 
-    /// After a verified "email already registered" error, the backend links the Apple identity and signs in.
+    /// Backend helper that links Apple onto an existing email account.
+    /// Unused by the sign-in flow (auto-link would skip password verification).
     func signInWithAppleLinkingExistingEmail(idToken: String, nonce: String?) async throws -> AuthResponse {
         guard let nonce, nonce.count >= 8 else {
             throw NSError(

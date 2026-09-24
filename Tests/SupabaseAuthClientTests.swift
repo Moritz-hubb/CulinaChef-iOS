@@ -34,16 +34,78 @@ final class SupabaseAuthClientTests: XCTestCase {
         MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
         
         // Act
-        let response = try await client.signUp(
+        let result = try await client.signUp(
             email: "test@example.com",
             password: "password123",
             username: "testuser"
         )
         
         // Assert
+        guard case .session(let response) = result else {
+            XCTFail("Expected a confirmed session")
+            return
+        }
         XCTAssertEqual(response.user.email, "test@example.com")
         XCTAssertFalse(response.access_token.isEmpty)
         XCTAssertFalse(response.refresh_token.isEmpty)
+    }
+
+    func testSignUpWithoutSessionRequiresConfirmation() async throws {
+        let body: [String: Any] = [
+            "id": "user_test_123",
+            "email": "new@example.com",
+            "identities": [["provider": "email"]]
+        ]
+        MockURLProtocol.mockResponse(statusCode: 200, data: try JSONSerialization.data(withJSONObject: body))
+
+        let result = try await client.signUp(
+            email: "new@example.com",
+            password: "password123",
+            username: "new"
+        )
+
+        guard case .confirmationRequired = result else {
+            XCTFail("Expected confirmation to be required")
+            return
+        }
+    }
+
+    func testSignUpEmptyIdentitiesIsAlreadyRegistered() async {
+        let body: [String: Any] = [
+            "id": "user_test_123",
+            "email": "existing@example.com",
+            "identities": []
+        ]
+        MockURLProtocol.mockResponse(statusCode: 200, data: try! JSONSerialization.data(withJSONObject: body))
+
+        do {
+            _ = try await client.signUp(
+                email: "existing@example.com",
+                password: "password123",
+                username: "existing"
+            )
+            XCTFail("Expected existing email to be rejected")
+        } catch let error as NSError {
+            XCTAssertEqual(error.code, 422)
+            XCTAssertTrue(AuthenticationManager.isEmailAlreadyRegistered(error))
+        }
+    }
+
+    func testVerifySignupEmailReturnsSession() async throws {
+        let mockData = try MockSupabaseResponses.successAuthResponseData()
+        MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
+
+        let response = try await client.verifySignupEmail(email: "test@example.com", token: "123456")
+        XCTAssertFalse(response.access_token.isEmpty)
+    }
+
+    func testVerifySignupEmailRejectsShortCodeWithoutRequest() async {
+        do {
+            _ = try await client.verifySignupEmail(email: "test@example.com", token: "12")
+            XCTFail("Expected short code to fail")
+        } catch let error as NSError {
+            XCTAssertEqual(error.code, 400)
+        }
     }
     
     func testSignUpWithEmailAlreadyRegistered() async {

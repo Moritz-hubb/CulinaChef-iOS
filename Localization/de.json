@@ -986,5 +986,12 @@
   "settings.exportQuestions": "Fragen zu deinen Daten:",
   "a11y.decreaseCount": "Verringern",
   "a11y.increaseCount": "Erhöhen",
-  "a11y.openMealPlan": "Öffnet diesen Ernährungsplan"
+  "a11y.openMealPlan": "Öffnet diesen Ernährungsplan",
+  "auth.verifyEmailTitle": "E-Mail bestätigen",
+  "auth.verifyEmailBody": "Wir haben einen Code an {email} geschickt. Gib ihn ein, damit dein Konto erstellt wird.",
+  "auth.verifyEmailCodePlaceholder": "6-stelliger Code",
+  "auth.verifyEmailButton": "E-Mail bestätigen",
+  "auth.verifyEmailResend": "Code erneut senden",
+  "auth.verifyEmailResent": "Wir haben einen neuen Code gesendet.",
+  "auth.verifyEmailInvalidCode": "Der Code ist ungültig oder abgelaufen."
 }

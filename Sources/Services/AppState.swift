@@ -122,6 +122,11 @@ final class AppState: ObservableObject {
     private var pathMonitor: NWPathMonitor?
     private var revenueCatCancellable: AnyCancellable?
 
+    /// Bumped on logout and on every newly established session so in-flight
+    /// recipe preloads cannot write another user's (or a logged-out) cache.
+    private(set) var sessionGeneration = UUID()
+    private var recipePreloadTask: Task<Void, Never>?
+
     // Subscription polling (managed by SubscriptionManager)
 
     /// Initialisiert den globalen App-Status und startet notwendige Hintergrund-Tasks.
@@ -255,15 +260,8 @@ final class AppState: ObservableObject {
             // Small delay to ensure all initialization is complete
             try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
             await self.loadInitialData()
-            
-            // OPTIMIZATION: Preload personal recipes in background after initial load
-            // This ensures tabs show data instantly without API calls
-            if let userId = KeychainManager.get(key: "user_id"),
-               let token = self.accessToken {
-                Task.detached(priority: .utility) {
-                    await self.preloadAllRecipesInBackground(userId: userId, token: token)
-                }
-            }
+            // checkSession may finish after loadInitialData; pick up a restored session.
+            self.startRecipePreloadIfAuthenticated()
         }
     }
 
@@ -304,6 +302,9 @@ final class AppState: ObservableObject {
         // silent: keep only an unexpired access token on transient network errors.
         // Auth failures (401/invalid refresh) always sign out.
         await refreshSessionIfNeeded(silent: true)
+        if isAuthenticated {
+            startRecipePreloadIfAuthenticated()
+        }
     }
     
     // MARK: - Initial Data Loading
@@ -351,13 +352,7 @@ final class AppState: ObservableObject {
         
         // OPTIMIZATION: Load recipes and menus in background for instant display
         // This allows the recipe book tab to show cached data immediately
-        Task.detached(priority: .utility) { [weak self] in
-            guard let self = self,
-                  let userId = KeychainManager.get(key: "user_id"),
-                  let token = await self.accessToken else { return }
-            
-            await self.preloadRecipesAndMenus(userId: userId, token: token)
-        }
+        startRecipePreloadIfAuthenticated()
         
         // Mark as loaded after a minimum time to ensure smooth transition
         // This prevents the loading screen from flashing too quickly
@@ -871,6 +866,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         let result = try await authManager.signIn(email: email, password: password)
         
         await MainActor.run {
+            self.rotateSessionGeneration()
             self.accessToken = result.accessToken
             self.userEmail = result.email
             self.isAuthenticated = true
@@ -893,25 +889,48 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     ///   - password: Passwort.
     ///   - username: Gewünschter Benutzername (muss nicht leer sein).
     /// - Throws: Validierungsfehler oder Fehler aus `SupabaseAuthClient`/Profil-Upsert.
-    func signUp(email: String, password: String, username: String) async throws {
+    enum EmailSignUpGate {
+        case signedIn
+        case needsEmailVerification
+    }
+
+    func signUp(email: String, password: String, username: String) async throws -> EmailSignUpGate {
         loading = true
         defer { loading = false }
         
-        let result = try await authManager.signUp(email: email, password: password, username: username)
-        
+        switch try await authManager.signUp(email: email, password: password, username: username) {
+        case .needsEmailVerification:
+            return .needsEmailVerification
+        case .signedIn(let result):
+            await adoptEmailSession(result)
+            return .signedIn
+        }
+    }
+
+    /// Completes email signup after Supabase accepts the confirmation code.
+    /// Does not authenticate when the code is missing or rejected.
+    func verifySignupEmail(email: String, code: String, username: String) async throws {
+        loading = true
+        defer { loading = false }
+        let result = try await authManager.verifyEmailSignup(email: email, code: code, username: username)
+        await adoptEmailSession(result)
+    }
+
+    func resendSignupConfirmation(email: String) async throws {
+        try await authManager.resendSignupConfirmation(email: email)
+    }
+
+    private func adoptEmailSession(_ result: AuthenticationManager.SignInResult) async {
         await MainActor.run {
+            self.rotateSessionGeneration()
             self.accessToken = result.accessToken
             self.userEmail = result.email
             self.isAuthenticated = true
-            self.isInitialDataLoaded = false // Reset to show loading screen
+            self.isInitialDataLoaded = false
             self.shoppingListManager.loadShoppingList()
         }
         try? await Monetization.shared.identify(userId: result.userId)
-        
-        // Load subscription status directly from StoreKit (Apple) first
         await refreshSubscriptionStatusFromStoreKit()
-        
-        // Load initial data after sign up
         await loadInitialData()
     }
 
@@ -981,6 +1000,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
                 self.clearLocalUserSessionData(userId: previousUserId)
                 self.shoppingListManager.clearShoppingList(for: previousUserId)
             }
+            self.rotateSessionGeneration()
             self.accessToken = result.accessToken
             self.userEmail = result.email
             self.isAuthenticated = true
@@ -1007,7 +1027,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     ///   - idToken: Vom Apple-SDK geliefertes Token.
     ///   - nonce: Optionaler Nonce zur Absicherung gegen Replay-Angriffe.
     ///   - fullName: Optionaler vollständiger Name vom Apple Credential (nur beim ersten Sign In verfügbar).
-    ///   - isSignUp: Unbenutzt für die Zugriffskontrolle; Apple-Nutzer mit bestehendem Konto werden angemeldet.
+    ///   - isSignUp: Unbenutzt für die Zugriffskontrolle. Bestehende E-Mail-Konten werden nicht automatisch mit Apple verknüpft.
     /// - Throws: Fehler aus `SupabaseAuthClient` oder Keychain-Speicherung.
     func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp: Bool = false, appleUserId: String? = nil, authorizationCode: String? = nil) async throws {
         loading = true
@@ -1016,6 +1036,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         let result = try await authManager.signInWithApple(idToken: idToken, nonce: nonce, fullName: fullName, isSignUp: isSignUp, appleUserId: appleUserId, authorizationCode: authorizationCode)
         
         await MainActor.run {
+            self.rotateSessionGeneration()
             self.accessToken = result.accessToken
             self.userEmail = result.email
             self.isAuthenticated = true
@@ -1042,6 +1063,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     /// - Hinweis: Shopping- und Subscription-Daten werden lokal zurückgesetzt;
     ///   Server-seitige Session-Invalidierung erfolgt über Supabase.
     func signOut() async {
+        rotateSessionGeneration()
         let userId = KeychainManager.get(key: "user_id")
         await Monetization.shared.logOut()
         await authManager.signOut(accessToken: accessToken)
@@ -1161,6 +1183,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
 
     /// Health-related prefs and recipe caches must not survive logout or account switch.
     private func clearLocalUserSessionData(userId: String?) {
+        rotateSessionGeneration()
         DietaryPreferences.removeAll(for: userId)
         TastePreferencesManager.delete(for: userId)
         if let userId, !userId.isEmpty {
@@ -1172,6 +1195,10 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         cachedRecipes = []
         cachedMenus = []
         recipesCacheTimestamp = nil
+        lastCreatedRecipe = nil
+        lastCreatedMenu = nil
+        lastCreatedRecipeMenuId = nil
+        ImageCache.shared.clearAll()
     }
     
     func getSubscriptionPeriodEnd() -> Date? {
@@ -1447,6 +1474,39 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         }
     }
     
+    /// Cancels in-flight recipe preloads and invalidates their write token.
+    @discardableResult
+    func rotateSessionGeneration() -> UUID {
+        recipePreloadTask?.cancel()
+        recipePreloadTask = nil
+        let next = UUID()
+        sessionGeneration = next
+        return next
+    }
+
+    /// Applies a background recipe preload only if it still belongs to the live session.
+    @discardableResult
+    func applyPreloadedRecipeCache(
+        recipes: [Recipe],
+        menus: [Menu],
+        forUserId userId: String,
+        session: UUID
+    ) -> Bool {
+        guard session == sessionGeneration,
+              isAuthenticated,
+              KeychainManager.get(key: "user_id") == userId,
+              accessToken != nil else {
+            Logger.info("[AppState] Dropped stale recipe preload", category: .data)
+            return false
+        }
+        cachedRecipes = recipes
+        cachedMenus = menus
+        recipesCacheTimestamp = Date()
+        saveCachedRecipesToDisk(recipes: recipes, menus: menus)
+        Logger.info("[AppState] Preloaded \(recipes.count) recipes and \(menus.count) menus to cache", category: .data)
+        return true
+    }
+
     /// Speichert Rezepte und Menüs in UserDefaults für Persistenz
     func saveCachedRecipesToDisk(recipes: [Recipe], menus: [Menu]) {
         guard let userId = KeychainManager.get(key: "user_id") else { return }
@@ -1472,21 +1532,20 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     }
     
     /// Lädt Rezepte und Menüs im Hintergrund und speichert sie im Cache für sofortige Anzeige
-    private func preloadRecipesAndMenus(userId: String, token: String) async {
+    private func preloadRecipesAndMenus(userId: String, token: String, session: UUID) async {
         do {
             async let recipesTask = loadRecipesForCache(userId: userId, token: token)
             async let menusTask = menuManager.fetchMenus(accessToken: token, userId: userId)
             
             let (recipes, menus) = try await (recipesTask, menusTask)
             
-            await MainActor.run {
-                self.cachedRecipes = recipes
-                self.cachedMenus = menus
-                self.recipesCacheTimestamp = Date()
-                Logger.info("[AppState] Preloaded \(recipes.count) recipes and \(menus.count) menus to cache", category: .data)
-            }
-            
-            saveCachedRecipesToDisk(recipes: recipes, menus: menus)
+            guard !Task.isCancelled else { return }
+            _ = applyPreloadedRecipeCache(
+                recipes: recipes,
+                menus: menus,
+                forUserId: userId,
+                session: session
+            )
         } catch {
             Logger.error("[AppState] Failed to preload recipes and menus", error: error, category: .data)
         }
@@ -1522,10 +1581,22 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     
     // MARK: - Background Preloading
     
+    private func startRecipePreloadIfAuthenticated() {
+        recipePreloadTask?.cancel()
+        recipePreloadTask = nil
+        guard isAuthenticated,
+              let userId = KeychainManager.get(key: "user_id"),
+              let token = accessToken else { return }
+        let session = sessionGeneration
+        recipePreloadTask = Task { [weak self] in
+            await self?.preloadAllRecipesInBackground(userId: userId, token: token, session: session)
+        }
+    }
+
     /// Preloads personal recipes and menus in the background for instant tab display
-    private func preloadAllRecipesInBackground(userId: String, token: String) async {
+    private func preloadAllRecipesInBackground(userId: String, token: String, session: UUID) async {
         Logger.info("[AppState] Background preload started", category: .data)
-        await preloadRecipesAndMenus(userId: userId, token: token)
+        await preloadRecipesAndMenus(userId: userId, token: token, session: session)
         Logger.info("[AppState] Background preload completed", category: .data)
     }
     

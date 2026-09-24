@@ -982,5 +982,12 @@
   "settings.exportQuestions": "Questions about your data:",
   "a11y.decreaseCount": "Decrease",
   "a11y.increaseCount": "Increase",
-  "a11y.openMealPlan": "Opens this meal plan"
+  "a11y.openMealPlan": "Opens this meal plan",
+  "auth.verifyEmailTitle": "Confirm your email",
+  "auth.verifyEmailBody": "We sent a code to {email}. Enter it to create your account.",
+  "auth.verifyEmailCodePlaceholder": "6-digit code",
+  "auth.verifyEmailButton": "Confirm email",
+  "auth.verifyEmailResend": "Resend code",
+  "auth.verifyEmailResent": "We sent a new code.",
+  "auth.verifyEmailInvalidCode": "That code is invalid or expired."
 }

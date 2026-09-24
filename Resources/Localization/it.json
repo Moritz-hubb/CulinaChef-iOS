@@ -982,5 +982,12 @@
   "settings.exportQuestions": "Domande sui tuoi dati:",
   "a11y.decreaseCount": "Diminuisci",
   "a11y.increaseCount": "Aumenta",
-  "a11y.openMealPlan": "Apre questo piano alimentare"
+  "a11y.openMealPlan": "Apre questo piano alimentare",
+  "auth.verifyEmailTitle": "Conferma la tua email",
+  "auth.verifyEmailBody": "Abbiamo inviato un codice a {email}. Inseriscilo per creare il tuo account.",
+  "auth.verifyEmailCodePlaceholder": "Codice a 6 cifre",
+  "auth.verifyEmailButton": "Conferma email",
+  "auth.verifyEmailResend": "Invia di nuovo il codice",
+  "auth.verifyEmailResent": "Abbiamo inviato un nuovo codice.",
+  "auth.verifyEmailInvalidCode": "Il codice non è valido o è scaduto."
 }

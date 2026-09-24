@@ -18,6 +18,7 @@ struct SignUpView: View {
     @FocusState private var focusedField: Field?
     @State private var showAccountExistsError = false
     @State private var step = 0
+    @State private var verificationStatus: String?
     var onNavigateToSignIn: (() -> Void)?
     
     enum Field: Hashable {
@@ -89,16 +90,20 @@ struct SignUpView: View {
                             VStack(spacing: 16) {
                                 signupHeaderBar
                                 
-                                Text(L.ui_registrieren.localized)
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 20)
+                                if step < 2 {
+                                    Text(L.ui_registrieren.localized)
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.black)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 20)
+                                }
                                 
                                 if step == 0 {
                                     emailSlide
-                                } else {
+                                } else if step == 1 {
                                     passwordSlide
+                                } else {
+                                    verificationSlide
                                 }
                             }
                             .padding(.top, 8)
@@ -129,14 +134,15 @@ struct SignUpView: View {
     
     private var signupHeaderBar: some View {
         HStack {
-            if step == 1 {
+            if step > 0 {
                 Button {
                     errorMessage = nil
+                    verificationStatus = nil
                     showAccountExistsError = false
                     withAnimation(.easeInOut(duration: 0.25)) {
-                        step = 0
+                        step = max(step - 1, 0)
                     }
-                    focusedField = .email
+                    focusedField = step == 0 ? .email : .password
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 18, weight: .semibold))
@@ -194,6 +200,22 @@ struct SignUpView: View {
             errorBanner
             appleSignInButton
         }
+        .padding(.horizontal, 20)
+    }
+
+    private var verificationSlide: some View {
+        EmailVerificationSlide(
+            email: email.trimmed,
+            isLoading: app.loading,
+            errorMessage: errorMessage,
+            statusMessage: verificationStatus,
+            onConfirm: { code in
+                Task { await confirmEmail(code: code) }
+            },
+            onResend: {
+                Task { await resendCode() }
+            }
+        )
         .padding(.horizontal, 20)
     }
     
@@ -529,11 +551,18 @@ struct SignUpView: View {
         }
         
         do {
-            try await app.signUp(
+            let gate = try await app.signUp(
                 email: trimmedEmail,
                 password: password,
                 username: derivedUsername
             )
+            if case .needsEmailVerification = gate {
+                errorMessage = nil
+                verificationStatus = nil
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    step = 2
+                }
+            }
         } catch {
             // Check if it's a 422 error (account already exists) or if error message indicates email exists
             let errorDescription = error.localizedDescription.lowercased()
@@ -556,6 +585,45 @@ struct SignUpView: View {
         }
     }
     
+    private func confirmEmail(code: String) async {
+        errorMessage = nil
+        verificationStatus = nil
+        let trimmedEmail = email.trimmed
+        do {
+            try await app.verifySignupEmail(
+                email: trimmedEmail,
+                code: code,
+                username: generateUsername(fromEmail: trimmedEmail)
+            )
+        } catch {
+            errorMessage = Self.verificationErrorMessage(from: error)
+        }
+    }
+
+    private func resendCode() async {
+        errorMessage = nil
+        do {
+            try await app.resendSignupConfirmation(email: email.trimmed)
+            verificationStatus = L.verifyEmailResent.localized
+        } catch {
+            verificationStatus = nil
+            errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.verifyEmailInvalidCode.localized)
+        }
+    }
+
+    static func verificationErrorMessage(from error: Error) -> String {
+        let nsError = error as NSError
+        let description = nsError.localizedDescription.lowercased()
+        if nsError.code == 400 || nsError.code == 403
+            || description.contains("otp")
+            || description.contains("token")
+            || description.contains("expired")
+            || description.contains("invalid") {
+            return L.verifyEmailInvalidCode.localized
+        }
+        return ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.verifyEmailInvalidCode.localized)
+    }
+
     private func handleAppleAuthorization(_ result: Result<ASAuthorization, Error>, nonce: String?) {
         switch result {
         case .success(let authResult):

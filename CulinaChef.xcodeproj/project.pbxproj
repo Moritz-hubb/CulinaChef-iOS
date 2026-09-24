@@ -13,6 +13,7 @@
 		0AB207A3FD11684A6ED1AA0C /* CulinaChefTimerWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F6DB3309F82637183AA90A4 /* CulinaChefTimerWidgetBundle.swift */; };
 		0B13F2E963FF7D25BF9341CA /* TimerCenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7EDB047334A2D67F7492CC /* TimerCenterTests.swift */; };
 		0B84752B5F9DCFBA11FF2F26 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C4F2055099FDED27B71EBC /* SignUpView.swift */; };
+		E7A1C9B04D2F8A6135C0E19B /* EmailVerificationSlide.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8B2D0C15E3A9B7246D1F20C /* EmailVerificationSlide.swift */; };
 		0F6BD3675993127A716D2DD8 /* DietarySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92DE198B243F082E04F8061A /* DietarySettingsView.swift */; };
 		0FFA0DBDAC7C11B2AB5465FC /* AuthenticationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10CA1A1C4ABFBBF7C915C8A5 /* AuthenticationManagerTests.swift */; };
 		133CCE62CD08F1C79C0E47D6 /* PasswordResetLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB99D55D7F8F7EC4FBBC19E5 /* PasswordResetLink.swift */; };
@@ -297,6 +298,7 @@
 		F244DF3B0811115ED9671F5D /* LoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerTests.swift; sourceTree = "<group>"; };
 		F3363C4462A409F33CD67CAD /* SocialRecipeImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRecipeImportView.swift; sourceTree = "<group>"; };
 		F5C4F2055099FDED27B71EBC /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		F8B2D0C15E3A9B7246D1F20C /* EmailVerificationSlide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailVerificationSlide.swift; sourceTree = "<group>"; };
 		F6CAA48C22C3061FC1155621 /* MealPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlan.swift; sourceTree = "<group>"; };
 		FB2BE8A30CED23C70AE85F45 /* CulinaChefTimerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CulinaChefTimerWidget.swift; sourceTree = "<group>"; };
 		FBF2A2B8A4D6957FEC543B3C /* AppleSearchAdsAttribution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSearchAdsAttribution.swift; sourceTree = "<group>"; };
@@ -560,6 +562,7 @@
 				26317223248F15F1944A9F46 /* SettingsView.swift */,
 				AE9CBB4591C8A19859D11DBE /* ShoppingListView.swift */,
 				A21805E7372B2AE70242BE0B /* SignInView.swift */,
+				F8B2D0C15E3A9B7246D1F20C /* EmailVerificationSlide.swift */,
 				F5C4F2055099FDED27B71EBC /* SignUpView.swift */,
 				F3363C4462A409F33CD67CAD /* SocialRecipeImportView.swift */,
 				FCF1AFB82F4D6DC0FBEADEC2 /* TermsOfServiceView.swift */,
@@ -824,6 +827,7 @@
 				99F511B71E6D52861B66D82B /* ShoppingListManager.swift in Sources */,
 				E9024322447EF2B8086445F5 /* ShoppingListView.swift in Sources */,
 				6B7DA5BACF64F64655483583 /* SignInView.swift in Sources */,
+				E7A1C9B04D2F8A6135C0E19B /* EmailVerificationSlide.swift in Sources */,
 				0B84752B5F9DCFBA11FF2F26 /* SignUpView.swift in Sources */,
 				954CA59870FBDA637ED060D1 /* SocialRecipeImportView.swift in Sources */,
 				C2F3C579AEC6C9396D5433F4 /* StepIngredientExtractor.swift in Sources */,

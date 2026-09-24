@@ -47,35 +47,65 @@ final class AuthenticationManager {
     
     // MARK: - Sign Up
     
-    func signUp(email: String, password: String, username: String) async throws -> SignInResult {
+    enum EmailSignUpResult {
+        /// Supabase returned a session because the email is already confirmed.
+        case signedIn(SignInResult)
+        /// Signup email was sent. No session and no profile until the code is verified.
+        case needsEmailVerification
+    }
+
+    func signUp(email: String, password: String, username: String) async throws -> EmailSignUpResult {
         // Username is required for the `profiles` table, but we keep the signup UI minimal.
         // If caller passes an empty username, derive a safe fallback from email.
         let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
         let uname = trimmed.isEmpty ? deriveUsername(fromEmail: email) : trimmed
         
-        let response = try await auth.signUp(email: email, password: password, username: uname)
-        
+        switch try await auth.signUp(email: email, password: password, username: uname) {
+        case .confirmationRequired:
+            return .needsEmailVerification
+        case .session(let response):
+            let result = try await persistEmailSession(response, username: uname)
+            return .signedIn(result)
+        }
+    }
+
+    /// Verifies the Supabase signup code, then stores the session and creates the profile.
+    func verifyEmailSignup(email: String, code: String, username: String) async throws -> SignInResult {
+        let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        let uname = trimmed.isEmpty ? deriveUsername(fromEmail: email) : trimmed
+        let response = try await auth.verifySignupEmail(email: email, token: code)
+        return try await persistEmailSession(response, username: uname)
+    }
+
+    func resendSignupConfirmation(email: String) async throws {
+        try await auth.resendSignupConfirmation(email: email)
+    }
+
+    private func persistEmailSession(_ response: AuthResponse, username: String) async throws -> SignInResult {
+        guard !response.access_token.isEmpty, !response.refresh_token.isEmpty else {
+            throw NSError(
+                domain: "SupabaseAuth",
+                code: 400,
+                userInfo: [NSLocalizedDescriptionKey: L.verifyEmailInvalidCode.localized]
+            )
+        }
+
         try KeychainManager.save(key: "access_token", value: response.access_token)
         try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
         try KeychainManager.save(key: "user_id", value: response.user.id)
         try KeychainManager.save(key: "user_email", value: response.user.email)
         try KeychainManager.save(key: "auth_provider", value: "email")
         KeychainManager.delete(key: "apple_user_id")
-        
-        // Create/Upsert profile with unique username
-        // If profile saving fails, log it but don't fail the entire signup
-        // The account is already created, so we can retry profile creation later
+
         do {
-            try await upsertProfile(userId: response.user.id, username: uname, accessToken: response.access_token)
+            try await upsertProfile(userId: response.user.id, username: username, accessToken: response.access_token)
         } catch {
             #if DEBUG
             Logger.debug("[AuthenticationManager] Warning: Profile could not be saved during signup: \(error.localizedDescription)")
             Logger.debug("[AuthenticationManager] User account was created successfully. Profile can be created/updated later.")
             #endif
-            // Don't throw - account is created, profile can be fixed later
-            // The user can still use the app, and profile will be created on next login or profile update
         }
-        
+
         return SignInResult(
             accessToken: response.access_token,
             refreshToken: response.refresh_token,
@@ -110,16 +140,11 @@ final class AuthenticationManager {
     // MARK: - Apple Sign-In
     
     func signInWithApple(idToken: String, nonce: String?, fullName: String? = nil, isSignUp _: Bool = false, appleUserId: String? = nil, authorizationCode: String? = nil) async throws -> SignInResult {
-        let response: AuthResponse
-        do {
-            response = try await auth.signInWithApple(idToken: idToken, nonce: nonce)
-        } catch {
-            if Self.isEmailAlreadyRegistered(error) {
-                response = try await auth.signInWithAppleLinkingExistingEmail(idToken: idToken, nonce: nonce)
-            } else {
-                throw error
-            }
-        }
+        // Existing email/password accounts are not auto-linked. The caller must
+        // show an error so the user signs in with their password first.
+        // Apple verifies the address (including Hide My Email) before issuing the identity token.
+        // Supabase marks that email confirmed, so a second confirmation step would block signup.
+        let response = try await auth.signInWithApple(idToken: idToken, nonce: nonce)
         
         try KeychainManager.save(key: "access_token", value: response.access_token)
         try KeychainManager.save(key: "refresh_token", value: response.refresh_token)
@@ -495,6 +520,19 @@ final class AuthenticationManager {
             "email existiert bereits"
         ]
         return phrases.contains { description.contains($0) }
+    }
+
+    nonisolated static func isEmailNotConfirmed(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if let errorCode = nsError.userInfo["error_code"] as? String,
+           errorCode.lowercased() == "email_not_confirmed" {
+            return true
+        }
+        let description = nsError.localizedDescription.lowercased()
+        return description.contains("email not confirmed")
+            || description.contains("e-mail not confirmed")
+            || description.contains("email nicht bestätigt")
+            || description.contains("e-mail nicht bestätigt")
     }
 
     private func registerAppleAuthorizationCode(_ authorizationCode: String, accessToken: String) async {

@@ -617,6 +617,13 @@ enum L {
     static let or = "auth.or"
     static let passwordPlaceholderDots = "auth.passwordPlaceholderDots"
     static let signUpButton = "auth.signUpButton"
+    static let verifyEmailTitle = "auth.verifyEmailTitle"
+    static let verifyEmailBody = "auth.verifyEmailBody"
+    static let verifyEmailCodePlaceholder = "auth.verifyEmailCodePlaceholder"
+    static let verifyEmailButton = "auth.verifyEmailButton"
+    static let verifyEmailResend = "auth.verifyEmailResend"
+    static let verifyEmailResent = "auth.verifyEmailResent"
+    static let verifyEmailInvalidCode = "auth.verifyEmailInvalidCode"
     static let termsOfServiceShort = "auth.termsOfServiceShort"
     
     // MARK: - Settings

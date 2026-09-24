@@ -20,6 +20,7 @@ final class AppStateTests: XCTestCase {
     }
     
     override func tearDown() async throws {
+        appState?.rotateSessionGeneration()
         AppleAccountDeletionAuth.requestAuthorizationCodeOverride = nil
         KeychainManager.deleteAll()
         UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
@@ -88,6 +89,30 @@ final class AppStateTests: XCTestCase {
         XCTAssertNotNil(appState.accessToken)
         XCTAssertEqual(appState.userEmail, "test@example.com")
     }
+
+    func testSignUpWithoutConfirmationDoesNotAuthenticate() async throws {
+        let body: [String: Any] = [
+            "id": "user_test_123",
+            "email": "newuser@example.com",
+            "identities": [["provider": "email"]]
+        ]
+        MockURLProtocol.mockResponse(statusCode: 200, data: try JSONSerialization.data(withJSONObject: body))
+
+        let gate = try await appState.signUp(
+            email: "newuser@example.com",
+            password: "password123",
+            username: "newuser"
+        )
+
+        guard case .needsEmailVerification = gate else {
+            XCTFail("Expected email verification")
+            return
+        }
+        XCTAssertFalse(appState.isAuthenticated)
+        XCTAssertNil(appState.accessToken)
+        XCTAssertNil(KeychainManager.get(key: "access_token"))
+        XCTAssertNil(KeychainManager.get(key: "user_id"))
+    }
     
     func testSignOutClearsAuthenticationState() async throws {
         // Arrange - First sign in
@@ -140,6 +165,115 @@ final class AppStateTests: XCTestCase {
         XCTAssertNil(UserDefaults.standard.object(forKey: "cached_recipes_\(userId)"))
         XCTAssertNil(UserDefaults.standard.object(forKey: "cached_menus_\(userId)"))
         XCTAssertNil(UserDefaults.standard.object(forKey: "recipes_cache_timestamp_\(userId)"))
+    }
+
+    func testCurrentSessionRecipePreloadWritesCache() throws {
+        let userId = "user_test_123"
+        try KeychainManager.save(key: "user_id", value: userId)
+        try KeychainManager.save(key: "access_token", value: "tok")
+        appState.accessToken = "tok"
+        appState.isAuthenticated = true
+        let recipes = [Self.sampleRecipe(userId: userId, title: "Live session pasta")]
+        let menus = [Self.sampleMenu(userId: userId)]
+
+        let applied = appState.applyPreloadedRecipeCache(
+            recipes: recipes,
+            menus: menus,
+            forUserId: userId,
+            session: appState.sessionGeneration
+        )
+
+        XCTAssertTrue(applied)
+        XCTAssertEqual(appState.cachedRecipes.map(\.title), ["Live session pasta"])
+        XCTAssertEqual(appState.cachedMenus.map(\.title), ["Dinners"])
+        XCTAssertNotNil(appState.recipesCacheTimestamp)
+        XCTAssertNotNil(UserDefaults.standard.object(forKey: "cached_recipes_\(userId)"))
+        XCTAssertNotNil(UserDefaults.standard.object(forKey: "cached_menus_\(userId)"))
+    }
+
+    func testRecipePreloadForDifferentUserIdIsDropped() throws {
+        try KeychainManager.save(key: "user_id", value: "user_b_456")
+        try KeychainManager.save(key: "access_token", value: "tok")
+        appState.accessToken = "tok"
+        appState.isAuthenticated = true
+
+        let applied = appState.applyPreloadedRecipeCache(
+            recipes: [Self.sampleRecipe(userId: "user_a_123", title: "User A private tart")],
+            menus: [Self.sampleMenu(userId: "user_a_123")],
+            forUserId: "user_a_123",
+            session: appState.sessionGeneration
+        )
+
+        XCTAssertFalse(applied)
+        XCTAssertTrue(appState.cachedRecipes.isEmpty)
+        XCTAssertNil(UserDefaults.standard.object(forKey: "cached_recipes_user_b_456"))
+        XCTAssertNil(UserDefaults.standard.object(forKey: "cached_recipes_user_a_123"))
+    }
+
+    func testStaleRecipePreloadIsDroppedAfterSignOut() async throws {
+        let mockData = try MockSupabaseResponses.successAuthResponseData()
+        MockURLProtocol.mockResponse(statusCode: 200, data: mockData)
+        try await appState.signIn(email: "test@example.com", password: "password123")
+        let userId = try XCTUnwrap(KeychainManager.get(key: "user_id"))
+        let staleSession = appState.sessionGeneration
+        let recipes = [Self.sampleRecipe(userId: userId, title: "User A secret stew")]
+
+        MockURLProtocol.mockResponse(statusCode: 204)
+        await appState.signOut()
+        XCTAssertNotEqual(appState.sessionGeneration, staleSession)
+
+        let applied = appState.applyPreloadedRecipeCache(
+            recipes: recipes,
+            menus: [Self.sampleMenu(userId: userId)],
+            forUserId: userId,
+            session: staleSession
+        )
+
+        XCTAssertFalse(applied)
+        XCTAssertTrue(appState.cachedRecipes.isEmpty)
+        XCTAssertTrue(appState.cachedMenus.isEmpty)
+        XCTAssertNil(appState.recipesCacheTimestamp)
+        XCTAssertNil(UserDefaults.standard.object(forKey: "cached_recipes_\(userId)"))
+        XCTAssertNil(UserDefaults.standard.object(forKey: "cached_menus_\(userId)"))
+    }
+
+    func testStaleRecipePreloadDoesNotBleedIntoNewUserCache() async throws {
+        let userAData = try MockSupabaseResponses.successAuthResponseData()
+        MockURLProtocol.mockResponse(statusCode: 200, data: userAData)
+        try await appState.signIn(email: "test@example.com", password: "password123")
+        let userAId = try XCTUnwrap(KeychainManager.get(key: "user_id"))
+        let staleSession = appState.sessionGeneration
+        let userARecipes = [Self.sampleRecipe(userId: userAId, title: "User A private tart")]
+
+        MockURLProtocol.mockResponse(statusCode: 204)
+        await appState.signOut()
+
+        let userB = MockSupabaseResponses.successAuthResponse(
+            accessToken: "b_access",
+            refreshToken: "b_refresh",
+            userId: "user_b_456",
+            email: "b@example.com"
+        )
+        MockURLProtocol.mockResponse(statusCode: 200, data: try JSONEncoder().encode(userB))
+        try await appState.signIn(email: "b@example.com", password: "password123")
+        let userBId = try XCTUnwrap(KeychainManager.get(key: "user_id"))
+        XCTAssertEqual(userBId, "user_b_456")
+        XCTAssertNotEqual(appState.sessionGeneration, staleSession)
+
+        let applied = appState.applyPreloadedRecipeCache(
+            recipes: userARecipes,
+            menus: [Self.sampleMenu(userId: userAId)],
+            forUserId: userAId,
+            session: staleSession
+        )
+
+        XCTAssertFalse(applied)
+        XCTAssertFalse(appState.cachedRecipes.contains { $0.title == "User A private tart" })
+        XCTAssertNil(UserDefaults.standard.object(forKey: "cached_recipes_\(userAId)"))
+        if let data = UserDefaults.standard.data(forKey: "cached_recipes_\(userBId)"),
+           let stored = try? JSONDecoder().decode([Recipe].self, from: data) {
+            XCTAssertFalse(stored.contains { $0.title == "User A private tart" })
+        }
     }
     
     // MARK: - Subscription State Tests
@@ -718,6 +852,14 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(refreshCalled)
         XCTAssertEqual(appState.accessToken, tokenBefore)
         XCTAssertTrue(appState.isAuthenticated)
+    }
+
+    private static func sampleRecipe(userId: String, title: String) -> Recipe {
+        Recipe(id: "recipe_\(userId)", user_id: userId, title: title)
+    }
+
+    private static func sampleMenu(userId: String) -> Menu {
+        Menu(id: "menu_\(userId)", user_id: userId, title: "Dinners", created_at: nil)
     }
 
     private static func makeJWT(expFromNow: TimeInterval) -> String {

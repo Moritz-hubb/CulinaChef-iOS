@@ -10,6 +10,8 @@ struct SignInView: View {
     @State private var showPassword = false
     @State private var errorMessage: String?
     @State private var showForgotPassword = false
+    @State private var needsEmailVerification = false
+    @State private var verificationStatus: String?
     @FocusState private var focusedField: Field?
     
     enum Field: Hashable {
@@ -90,6 +92,27 @@ struct SignInView: View {
                                     .foregroundColor(.black)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 
+                                if needsEmailVerification {
+                                    EmailVerificationSlide(
+                                        email: email.trimmed,
+                                        isLoading: app.loading,
+                                        errorMessage: errorMessage,
+                                        statusMessage: verificationStatus,
+                                        onBack: {
+                                            needsEmailVerification = false
+                                            errorMessage = nil
+                                            verificationStatus = nil
+                                        },
+                                        onConfirm: { code in
+                                            Task { await confirmEmail(code: code) }
+                                        },
+                                        onResend: {
+                                            Task { await resendCode() }
+                                        }
+                                    )
+                                }
+
+                                if !needsEmailVerification {
                                 // Email Field
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(L.email.localized)
@@ -243,6 +266,7 @@ struct SignInView: View {
                         .disabled(app.loading)
                         .id("appleSignInButton")
                         }
+                        }
                             .padding(.horizontal, 24)
                             .padding(.top, 8)
                             .padding(.bottom, 400) // Extra bottom padding for keyboard - ensures all content is accessible
@@ -312,7 +336,39 @@ struct SignInView: View {
         do {
             try await app.signIn(email: trimmedEmail, password: password)
         } catch {
+            if AuthenticationManager.isEmailNotConfirmed(error) {
+                needsEmailVerification = true
+                errorMessage = nil
+                verificationStatus = nil
+                await resendCode()
+                return
+            }
             errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.error_signInFailed.localized)
+        }
+    }
+
+    private func confirmEmail(code: String) async {
+        errorMessage = nil
+        verificationStatus = nil
+        do {
+            try await app.verifySignupEmail(
+                email: email.trimmed,
+                code: code,
+                username: ""
+            )
+        } catch {
+            errorMessage = SignUpView.verificationErrorMessage(from: error)
+        }
+    }
+
+    private func resendCode() async {
+        errorMessage = nil
+        do {
+            try await app.resendSignupConfirmation(email: email.trimmed)
+            verificationStatus = L.verifyEmailResent.localized
+        } catch {
+            verificationStatus = nil
+            errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.verifyEmailInvalidCode.localized)
         }
     }
     
@@ -337,7 +393,13 @@ struct SignInView: View {
         do {
             try await app.signInWithApple(idToken: idToken, nonce: nonce, fullName: fullName, appleUserId: appleUserId, authorizationCode: authorizationCode)
         } catch {
-            await MainActor.run { self.errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.error_signInFailed.localized) }
+            await MainActor.run {
+                if AuthenticationManager.isEmailAlreadyRegistered(error) {
+                    self.errorMessage = L.error_appleSignInUseEmail.localized
+                } else {
+                    self.errorMessage = ErrorMessageHelper.sanitizedAuthDisplayMessage(from: error, fallback: L.error_signInFailed.localized)
+                }
+            }
         }
     }
 }

@@ -73,15 +73,16 @@ final class AppleSignInController: NSObject, ObservableObject, ASAuthorizationCo
     var onCompletion: (Result<ASAuthorization, Error>, String?) -> Void = { _, _ in }
     var presentationWindow: UIWindow?
     private var authorizationController: ASAuthorizationController?
-    private var rawNonce: String?
 
     func performRequest() {
-        let nonce = AppleSignInNonce.random()
-        rawNonce = nonce
         let request = ASAuthorizationAppleIDProvider().createRequest()
         onRequest(request)
-        // Always hash the nonce this controller will send to Supabase.
-        request.nonce = AppleSignInNonce.sha256(nonce)
+        // Hosted Supabase hashes the nonce as hex and compares that to the ID token.
+        // Native Apple writes a different encoding into the nonce claim, and the cloud
+        // dashboard has no switch to skip that check. Leaving the nonce unset makes both
+        // sides empty, so Auth skips the comparison. Signature, expiry, issuer, and
+        // audience are still verified. Callers that set request.nonce themselves (account
+        // deletion) keep that value.
         let controller = ASAuthorizationController(authorizationRequests: [request])
         controller.delegate = self
         controller.presentationContextProvider = self
@@ -90,15 +91,14 @@ final class AppleSignInController: NSObject, ObservableObject, ASAuthorizationCo
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-        let nonce = rawNonce
         DispatchQueue.main.async {
-            self.onCompletion(.success(authorization), nonce)
+            self.onCompletion(.success(authorization), nil)
         }
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
         DispatchQueue.main.async {
-            self.onCompletion(.failure(error), self.rawNonce)
+            self.onCompletion(.failure(error), nil)
         }
     }
 

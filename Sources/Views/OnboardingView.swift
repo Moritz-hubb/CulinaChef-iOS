@@ -10,36 +10,46 @@ struct OnboardingView: View {
 
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
-    
+
     // Track view instance for debugging
     private let viewId = UUID()
-    
+
     init() {
         let id = UUID()
         Logger.debug("[OnboardingView] 🆕 VIEW CREATED with ID: \(id)", category: .ui)
     }
-    
+
     // Index of the final step; steps run from -1 (welcome) to lastStep (notifications)
-    private static let lastStep = 6
+    private static let lastStep = 5
+    private static let stepLayoutVersion = 2
+    private static let stepLayoutVersionKey = "onboarding_step_layout_version"
+
+    /// Greeting used to occupy step 1. Shift a saved index once so later steps stay aligned.
+    private static func migrateSavedStep(_ saved: Int?) -> Int? {
+        let defaults = UserDefaults.standard
+        guard defaults.integer(forKey: stepLayoutVersionKey) < stepLayoutVersion else {
+            return saved.map { min(max($0, -1), lastStep) }
+        }
+        let migrated = saved.map { $0 >= 1 ? $0 - 1 : $0 }
+        defaults.set(stepLayoutVersion, forKey: stepLayoutVersionKey)
+        if let migrated {
+            defaults.set(migrated, forKey: "onboarding_current_step")
+        }
+        return migrated.map { min(max($0, -1), lastStep) }
+    }
 
     @State private var currentStep: Int = {
         // Try to restore from UserDefaults, otherwise start with welcome screen
         // Use object(forKey:) to check if key exists (integer(forKey:) returns 0 if not set, which is ambiguous)
-        let saved: Int
-        if let savedValue = UserDefaults.standard.object(forKey: "onboarding_current_step") as? Int {
-            saved = savedValue
-        } else {
-            saved = -999 // Special value meaning "not set"
-        }
-        // Clamp in case a step index saved by an older build is out of range
-        let initialValue = (saved != -999) ? min(max(saved, -1), OnboardingView.lastStep) : -1
-        Logger.debug("[OnboardingView] INIT: currentStep @State initialized to \(initialValue) (saved from UserDefaults: \(saved == -999 ? "not set" : String(saved)))", category: .ui)
+        let saved = UserDefaults.standard.object(forKey: "onboarding_current_step") as? Int
+        let initialValue = OnboardingView.migrateSavedStep(saved) ?? -1
+        Logger.debug("[OnboardingView] INIT: currentStep @State initialized to \(initialValue) (saved from UserDefaults: \(saved.map(String.init) ?? "not set"))", category: .ui)
         return initialValue
     }()
     @State private var buttonScale: CGFloat = 1.0
     @State private var isLanguageChanging = false // Flag to prevent step from resetting during language change
     @State private var stepDirection: Int = 1 // 1 = forward (swipe from right), -1 = back
-    
+
     // Helper function to update currentStep and persist it
     private func updateCurrentStep(_ newStep: Int) {
         // Don't allow changes during language change unless explicitly restoring
@@ -47,7 +57,7 @@ struct OnboardingView: View {
             Logger.debug("[OnboardingView] updateCurrentStep: BLOCKED during language change (\(currentStep) -> \(newStep))", category: .ui)
             return
         }
-        
+
         let oldStep = currentStep
         Logger.debug("[OnboardingView] updateCurrentStep: \(oldStep) -> \(newStep)", category: .ui)
         currentStep = newStep
@@ -76,26 +86,25 @@ struct OnboardingView: View {
     private var currentStepContent: some View {
         switch currentStep {
         case 0: step0LanguageSelection
-        case 1: step1Greeting
-        case 2: step2Allergies
-        case 3: step3DietaryTypes
-        case 4: step4Preferences
-        case 5: step5Dislikes
-        case 6: step6Notifications
+        case 1: step2Allergies
+        case 2: step3DietaryTypes
+        case 3: step4Preferences
+        case 4: step5Dislikes
+        case 5: step6Notifications
         default: stepWelcome
         }
     }
 
     private var showsProgressHeader: Bool { currentStep >= 0 }
-    private var showsHeaderPenguin: Bool { currentStep >= 0 && currentStep != 1 && currentStep != Self.lastStep }
+    private var showsHeaderPenguin: Bool { currentStep >= 0 && currentStep != Self.lastStep }
     @State private var showSuccessAnimation = false
     @State private var selectedLanguage: String = ""
     @State private var allergies: [String] = []
     @State private var newAllergyText = ""
     @State private var selectedDiets: Set<String> = []
-    @State private var spicyLevel: Double = 2 // 0=mild, 1=normal, 2=scharf, 3=sehr scharf
+    @State private var spicyLevel: Double = 1 // 0=mild, 1=normal, 2=scharf, 3=sehr scharf
     @State private var tastePreferences: [String: Bool] = [:]
-    
+
     private func initializeTastePreferences() {
         let keys = [
             L.taste_sweet.localized,
@@ -103,11 +112,11 @@ struct OnboardingView: View {
             L.taste_bitter.localized,
             L.taste_umami.localized
         ]
-        
+
         // Check if we need to migrate (if current keys don't match new keys)
         let currentKeys = Set(tastePreferences.keys)
         let newKeys = Set(keys)
-        
+
         if currentKeys != newKeys {
             // Language changed - reset preferences with new keys
             tastePreferences = [:]
@@ -126,7 +135,7 @@ struct OnboardingView: View {
     @State private var dislikes: [String] = []
     @State private var newDislikeText = ""
     @State private var isSaving = false
-    
+
     private var dietOptions: [String] {
         let _ = localizationManager.currentLanguage // Force recomputation when language changes
         return [
@@ -141,7 +150,7 @@ struct OnboardingView: View {
             L.kosher.localized
         ]
     }
-    
+
     private var spicyLabels: [String] {
         let _ = localizationManager.currentLanguage // Force recomputation when language changes
         return [
@@ -151,7 +160,7 @@ struct OnboardingView: View {
             L.verySpicy.localized
         ]
     }
-    
+
     private var tastePreferenceKeys: [String] {
         let _ = localizationManager.currentLanguage // Force recomputation when language changes
         return [
@@ -161,7 +170,7 @@ struct OnboardingView: View {
             L.taste_umami.localized
         ]
     }
-    
+
     var body: some View {
         let _ = Logger.debug("[OnboardingView] body computed (viewId: \(viewId)) - currentStep: \(currentStep)", category: .ui)
         return ZStack {
@@ -175,7 +184,7 @@ struct OnboardingView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 onboardingHeader
                     .transaction { $0.animation = nil }
@@ -203,7 +212,7 @@ struct OnboardingView: View {
                 savedStep = -999 // Not set
             }
             Logger.debug("[OnboardingView] onAppear - savedStep from UserDefaults: \(savedStep == -999 ? "not set" : String(savedStep))", category: .ui)
-            
+
             if savedStep != -999 {
                 // We have a saved step, restore it (clamped in case it came from an older build)
                 let restoredStep = min(max(savedStep, -1), Self.lastStep)
@@ -217,7 +226,7 @@ struct OnboardingView: View {
                 Logger.debug("[OnboardingView] onAppear - First appearance, saving initial state -1", category: .ui)
                 updateCurrentStep(-1)
             }
-            
+
             // Initialize selectedLanguage with current language (system language) if not already set
             if selectedLanguage.isEmpty {
                 selectedLanguage = localizationManager.currentLanguage
@@ -228,10 +237,10 @@ struct OnboardingView: View {
         .onChange(of: localizationManager.currentLanguage) { oldLanguage, newLanguage in
             Logger.debug("[OnboardingView] onChange(language): \(oldLanguage) -> \(newLanguage)", category: .ui)
             Logger.debug("[OnboardingView] onChange(language) - currentStep BEFORE: \(currentStep)", category: .ui)
-            
+
             // CRITICAL: Set flag to prevent TabView from changing currentStep
             isLanguageChanging = true
-            
+
             // CRITICAL: Read the CORRECT step from UserDefaults (not currentStep, which might be wrong if view was recreated)
             let savedInDefaults: Int
             if let savedValue = UserDefaults.standard.object(forKey: "onboarding_current_step") as? Int {
@@ -258,20 +267,20 @@ struct OnboardingView: View {
                 UserDefaults.standard.set(0, forKey: "onboarding_current_step")
                 UserDefaults.standard.synchronize()
             }
-            
+
             Logger.debug("[OnboardingView] onChange(language) - savedStep (final): \(savedStep), savedInDefaults: \(savedInDefaults == -999 ? "not set" : String(savedInDefaults)), currentStepValue: \(currentStepValue)", category: .ui)
-            
+
             // Ensure UserDefaults is up to date IMMEDIATELY with the correct value
             UserDefaults.standard.set(savedStep, forKey: "onboarding_current_step")
             UserDefaults.standard.synchronize() // Force immediate write
-            
+
             // Re-initialize taste preferences when language changes
             initializeTastePreferences()
             // Reset selected diets when language changes (keys are localized)
             selectedDiets = []
-            
+
             Logger.debug("[OnboardingView] onChange(language) - currentStep AFTER operations: \(currentStep)", category: .ui)
-            
+
             // CRITICAL: Force restore currentStep immediately (bypassing the flag check)
             if currentStep != savedStep {
                 Logger.debug("[OnboardingView] onChange(language) - FORCE RESTORING currentStep from \(currentStep) to \(savedStep) (immediate)", category: .ui)
@@ -281,7 +290,7 @@ struct OnboardingView: View {
             } else {
                 Logger.debug("[OnboardingView] onChange(language) - currentStep already correct: \(currentStep)", category: .ui)
             }
-            
+
             // Also restore after a tiny delay as backup (in case view re-renders)
             DispatchQueue.main.async {
                 let currentStepAfterDelay = currentStep
@@ -292,7 +301,7 @@ struct OnboardingView: View {
                     UserDefaults.standard.set(savedStep, forKey: "onboarding_current_step")
                     UserDefaults.standard.synchronize()
                 }
-                
+
                 // Clear the flag after a short delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     isLanguageChanging = false
@@ -301,19 +310,19 @@ struct OnboardingView: View {
             }
         }
     }
-    
+
     // MARK: - Step -1: Welcome Screen (Duolingo Style)
     private var stepWelcome: some View {
         ScrollView {
             VStack(spacing: 0) {
                 Spacer()
                     .frame(height: 60)
-                
+
                 // Waving Penguin (from Sign-Up Screen)
                 WavingPenguinView()
                     .frame(height: 200)
                     .padding(.horizontal, 40)
-                
+
                 // Welcome Title
                 VStack(spacing: 16) {
                     Text(L.welcome.localized)
@@ -322,7 +331,7 @@ struct OnboardingView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
                         .id(localizationManager.currentLanguage)
-                    
+
                     Text(L.welcomeMessage.localized)
                         .font(.system(size: 17))
                         .foregroundStyle(.white.opacity(0.9))
@@ -332,17 +341,17 @@ struct OnboardingView: View {
                         .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 40)
-                
+
                 Spacer()
                     .frame(height: 100)
             }
         }
     }
-    
+
     // MARK: - Waving Penguin View (from Sign-Up Screen)
     private struct WavingPenguinView: View {
         @State private var isFloating = false
-        
+
         var body: some View {
             Group {
                 // Penguin illustration with subtle floating animation (only upward)
@@ -379,7 +388,7 @@ struct OnboardingView: View {
             }
         }
     }
-    
+
     // MARK: - Header (not animated — page content swipes instead)
     private var onboardingHeader: some View {
         VStack(spacing: 0) {
@@ -413,7 +422,7 @@ struct OnboardingView: View {
         HStack(spacing: 8) {
             ForEach(0...Self.lastStep, id: \.self) { index in
                 Capsule()
-                    .fill(index <= currentStep ? 
+                    .fill(index <= currentStep ?
                           LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
                           LinearGradient(colors: [Color.white.opacity(0.3)], startPoint: .leading, endPoint: .trailing))
                     .frame(height: 4)
@@ -423,12 +432,12 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, 20)
     }
-    
+
     // MARK: - Step 0: Language Selection
     private var step0LanguageSelection: some View {
         let systemLang = getSystemLanguage()
         let currentLang = localizationManager.currentLanguage // Use current app language, not system language
-        
+
         return ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -442,7 +451,7 @@ struct OnboardingView: View {
                         .id(localizationManager.currentLanguage) // Force re-render on language change
                 }
                 .padding(.top, 20)
-                
+
                 VStack(spacing: 12) {
                     ForEach(Array(LocalizationManager.shared.availableLanguages.keys.sorted()), id: \.self) { langCode in
                         LanguageOption(
@@ -453,13 +462,13 @@ struct OnboardingView: View {
                         ) {
                             // Light haptic only (no sound for selections)
                             OnboardingFeedback.playHaptic(style: .light)
-                            
+
                             Logger.debug("[OnboardingView] Language selected: \(langCode), currentStep BEFORE: \(currentStep)", category: .ui)
                             let stepBeforeLanguageChange = currentStep
-                            
+
                             selectedLanguage = langCode
                             localizationManager.setLanguage(langCode)
-                            
+
                             // Check if currentStep changed after language change
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                                 Logger.debug("[OnboardingView] Language changed to \(langCode) - currentStep AFTER: \(currentStep), was: \(stepBeforeLanguageChange)", category: .ui)
@@ -470,7 +479,7 @@ struct OnboardingView: View {
                                     savedInDefaults = -999
                                 }
                                 Logger.debug("[OnboardingView] Language changed - savedInDefaults: \(savedInDefaults == -999 ? "not set" : String(savedInDefaults))", category: .ui)
-                                
+
                                 if currentStep != stepBeforeLanguageChange {
                                     Logger.debug("[OnboardingView] ⚠️ BUG DETECTED: currentStep changed from \(stepBeforeLanguageChange) to \(currentStep) after language change! FORCE RESTORING...", category: .ui)
                                     // Force restore the step (bypassing the flag)
@@ -509,17 +518,17 @@ struct OnboardingView: View {
             }
         }
     }
-    
+
     // Helper functions to get system language
     private func getSystemLanguage() -> String {
         // Get device language using the same method as LocalizationManager
         var deviceLang: String = "en"
-        
+
         // Method 1: Try Locale.current.language.languageCode
         if let langCode = Locale.current.language.languageCode?.identifier {
             deviceLang = langCode
         }
-        
+
         // Method 2: If that didn't work or gave a region code, try preferredLanguages
         if deviceLang == "en" || deviceLang.count > 2 {
             if let preferredLang = Locale.preferredLanguages.first {
@@ -530,7 +539,7 @@ struct OnboardingView: View {
                 }
             }
         }
-        
+
         // Method 3: Try Locale.current.identifier
         if deviceLang == "en" || deviceLang.count > 2 {
             let identifier = Locale.current.identifier
@@ -539,53 +548,22 @@ struct OnboardingView: View {
                 deviceLang = langCode.lowercased()
             }
         }
-        
+
         return LocalizationManager.shared.availableLanguages.keys.contains(deviceLang) ? deviceLang : "en"
     }
-    
+
     // Helper functions to get localized strings using LocalizationManager
     private func getSystemLocalizedTitle(systemLang: String) -> String {
         // Use LocalizationManager to get the translation in the current app language
         return L.onboarding_selectLanguageTitle.localized
     }
-    
+
     private func getSystemLocalizedSubtitle(systemLang: String) -> String {
         // Use LocalizationManager to get the translation in the current app language
         return L.onboarding_selectLanguageSubtitle.localized
     }
-    
-    // MARK: - Step 1: Greeting
-    private var step1Greeting: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            
-            // Waving Penguin (smaller for better fit)
-            WavingPenguinView()
-                .frame(height: 150)
-                .padding(.horizontal, 40)
-            
-            VStack(spacing: 12) {
-                Text(L.onboarding_greeting_title.localized.replacingOccurrences(of: "{username}", with: L.onboarding_greeting_fallback.localized))
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-                
-                Text(L.onboarding_greeting_message.localized)
-                    .font(.system(size: 16))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-                    .padding(.horizontal, 40)
-            }
-            .padding(.top, 24)
-            
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    // MARK: - Step 2: Allergies
+
+    // MARK: - Step 1: Allergies
     private var step2Allergies: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
@@ -601,7 +579,7 @@ struct OnboardingView: View {
                         .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
-                
+
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
                         TextField(L.placeholder_newAllergy.localized, text: $newAllergyText.limited(to: AIInputLimit.preferenceItem))
@@ -613,13 +591,13 @@ struct OnboardingView: View {
                             .background(.white)
                             .cornerRadius(12)
                             .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
-                        
+
                         Button {
                             let trimmed = AIInputLimit.clamp(newAllergyText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.preferenceItem)
                             if !trimmed.isEmpty {
                                 // Light haptic only (no sound for adding items)
                                 OnboardingFeedback.playHaptic(style: .light)
-                                
+
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                                     allergies.append(trimmed)
                                     newAllergyText = ""
@@ -635,7 +613,7 @@ struct OnboardingView: View {
                         .accessibilityLabel(L.a11y_addAllergy.localized)
                         .accessibilityHint(L.a11y_addAllergyHint.localized)
                     }
-                    
+
                     if !allergies.isEmpty {
                         FlowLayout(items: allergies) { item in
                             allergyChip(item)
@@ -668,7 +646,7 @@ struct OnboardingView: View {
             )
         )
     }
-    
+
     // MARK: - Step 3: Dietary Types
     private var step3DietaryTypes: some View {
         ScrollView {
@@ -685,10 +663,10 @@ struct OnboardingView: View {
                         .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
-                
+
                 DietaryPreferencesList(selection: $selectedDiets)
                     .id(localizationManager.currentLanguage)
-                
+
                 if selectedDiets.isEmpty {
                     Text(L.onboarding_keine_spezielle_ernährungsweise_kei.localized)
                         .font(.system(size: 14))
@@ -714,12 +692,12 @@ struct OnboardingView: View {
             )
         )
     }
-    
+
     // MARK: - Step 4: Taste Preferences
     private var step4Preferences: some View {
         ScrollView {
             let _ = localizationManager.currentLanguage // Force recomputation
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.onboarding_geschmackspräferenzen.localized)
                         .font(.system(size: 28, weight: .bold))
@@ -731,84 +709,31 @@ struct OnboardingView: View {
                         .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
-                
-                VStack(spacing: 20) {
-                    // Current selection display
-                    VStack(spacing: 12) {
-                        HStack(spacing: 8) {
-                            ForEach(0..<4) { index in
-                                Image(systemName: index <= Int(spicyLevel) ? "flame.fill" : "flame")
-                                    .font(.system(size: 24, weight: .medium))
-                                    .foregroundStyle(
-                                        index <= Int(spicyLevel) ?
-                                        LinearGradient(
-                                            colors: [
-                                                Color(red: 0.95, green: 0.5, blue: 0.3),
-                                                Color(red: 0.85, green: 0.4, blue: 0.2)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ) :
-                                        LinearGradient(
-                                            colors: [Color.gray.opacity(0.3)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .scaleEffect(index <= Int(spicyLevel) ? 1.0 : 0.7)
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: spicyLevel)
-                            }
-                        }
-                        Text(spicyLabels[Int(spicyLevel)])
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.black)
-                            .id(localizationManager.currentLanguage)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(.white)
-                    .cornerRadius(16)
-                    .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
-                    
-                    // Slider
-                    VStack(spacing: 12) {
-                    Slider(value: $spicyLevel, in: 0...3, step: 1)
-                        .tint(LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing))
-                        .accessibilityLabel(L.label_spicyLevel.localized)
-                        .accessibilityValue(spicyLabels[Int(spicyLevel)])
-                        
-                        // Labels below slider
-                        HStack {
-                            ForEach(0..<4) { index in
-                                Text(spicyLabels[index])
-                                    .font(.system(size: 11, weight: Int(spicyLevel) == index ? .bold : .regular))
-                                    .foregroundColor(Int(spicyLevel) == index ? Color(red: 0.85, green: 0.4, blue: 0.2) : .black.opacity(0.5))
-                                    .frame(maxWidth: .infinity)
-                                    .id("\(localizationManager.currentLanguage)_\(index)")
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 4)
-                    
-                    Divider().padding(.vertical, 8)
-                    
-                    Text(L.onboarding_additionalPreferencesOptional.localized)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .id(localizationManager.currentLanguage)
-                    
-                    VStack(spacing: 10) {
-                        ForEach(Array(tastePreferences.keys.sorted()), id: \.self) { key in
-                            tastePreferenceToggle(key: key)
-                                .id("\(localizationManager.currentLanguage)_\(key)")
-                        }
-                    }
+
+                SpicyLevelPicker(level: $spicyLevel, labels: spicyLabels)
                     .id(localizationManager.currentLanguage)
+
+                Text(L.onboarding_additionalPreferencesOptional.localized)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.top, 6)
+                    .id(localizationManager.currentLanguage)
+
+                VStack(spacing: 10) {
+                    ForEach(tastePreferenceKeys, id: \.self) { key in
+                        DietaryPreferenceRow(
+                            title: key.capitalized,
+                            isSelected: tastePreferences[key] == true,
+                            onToggle: {
+                                withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) {
+                                    tastePreferences[key] = !(tastePreferences[key] ?? false)
+                                }
+                            }
+                        )
+                        .id("\(localizationManager.currentLanguage)_\(key)")
+                    }
                 }
-                .padding(20)
-                .background(.white)
-                .cornerRadius(16)
-                .shadow(color: .black.opacity(0.05), radius: 12, y: 4)
+                .id(localizationManager.currentLanguage)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
@@ -826,7 +751,7 @@ struct OnboardingView: View {
             )
         )
     }
-    
+
     // MARK: - Step 5: Dislikes
     private var step5Dislikes: some View {
         ScrollView {
@@ -843,7 +768,7 @@ struct OnboardingView: View {
                         .id(localizationManager.currentLanguage)
                 }
                 .padding(.top, 20)
-                
+
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
                         TextField(L.placeholder_newDislike.localized, text: $newDislikeText.limited(to: AIInputLimit.preferenceItem))
@@ -853,13 +778,13 @@ struct OnboardingView: View {
                             .background(.white)
                             .cornerRadius(12)
                             .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
-                        
+
                         Button {
                             let trimmed = AIInputLimit.clamp(newDislikeText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.preferenceItem)
                             if !trimmed.isEmpty {
                                 // Light haptic only (no sound for adding items)
                                 OnboardingFeedback.playHaptic(style: .light)
-                                
+
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
                                     dislikes.append(trimmed)
                                     newDislikeText = ""
@@ -873,7 +798,7 @@ struct OnboardingView: View {
                                 )
                         }
                     }
-                    
+
                     if !dislikes.isEmpty {
                         FlowLayout(items: dislikes) { item in
                             dislikeChip(item)
@@ -905,7 +830,7 @@ struct OnboardingView: View {
             )
         )
     }
-    
+
     // MARK: - Step 6: Notification permission
     private var step6Notifications: some View {
         VStack(spacing: 24) {
@@ -932,7 +857,7 @@ struct OnboardingView: View {
         }
         .frame(maxWidth: .infinity)
     }
-    
+
     // MARK: - Navigation Buttons
     private var navigationButtons: some View {
         VStack(spacing: 12) {
@@ -942,12 +867,12 @@ struct OnboardingView: View {
                     // Rewarding sound and haptic for starting
                     OnboardingFeedback.playStartSound()
                     OnboardingFeedback.playHaptic(style: .medium)
-                    
+
                     // Button animation
                     withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
                         buttonScale = 0.95
                     }
-                    
+
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         Logger.debug("[OnboardingView] Welcome button - Moving from step -1 to 0", category: .ui)
                         withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
@@ -978,39 +903,39 @@ struct OnboardingView: View {
                         // Can't proceed without selecting a language
                         return
                     }
-                    
+
                     // Light haptic feedback only (no sound on button press)
                     OnboardingFeedback.playHaptic(style: .light)
-                    
+
                     // Play sound immediately when button is pressed (before step change)
                     OnboardingFeedback.playStepCompleteSound()
-                    
+
                     // Button animation
                     withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
                         buttonScale = 0.95
                     }
-                    
+
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                         let nextStep = currentStep + 1
                         Logger.debug("[OnboardingView] Next button - Moving from step \(currentStep) to \(nextStep)", category: .ui)
-                        
+
                         withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
                             buttonScale = 1.0
                         }
                         goToStep(nextStep)
-                        
+
                         // Additional haptic feedback when step transition completes
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                             OnboardingFeedback.playHaptic(style: .medium)
                         }
-                        
+
                         // Trigger success animation with slight delay for smoother transition
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                                 showSuccessAnimation = true
                             }
                         }
-                        
+
                         // Reset success animation
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -1071,23 +996,29 @@ struct OnboardingView: View {
                 .scaleEffect(buttonScale)
                 .accessibilityLabel(L.intro_notificationsAllow.localized)
                 .disabled(isSaving)
-                
+
                 Button {
                     Task { await requestNotificationsThenComplete(askPermission: false) }
                 } label: {
                     Text(L.intro_notificationsLater.localized)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(.white)
+                        .foregroundColor(.black.opacity(0.88))
+                        .cornerRadius(14)
+                        .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
                         .id(localizationManager.currentLanguage)
                 }
+                .accessibilityLabel(L.intro_notificationsLater.localized)
                 .disabled(isSaving)
             }
-            
+
             if currentStep > -1 {
                 Button {
                     // Light haptic only for back button (no sound)
                     OnboardingFeedback.playHaptic(style: .light)
-                    
+
                     let prevStep = currentStep - 1
                     Logger.debug("[OnboardingView] Back button - Moving from step \(currentStep) to \(prevStep)", category: .ui)
                     goToStep(prevStep)
@@ -1104,7 +1035,7 @@ struct OnboardingView: View {
         .padding(.horizontal, 20)
         .padding(.bottom, 40)
     }
-    
+
     // MARK: - Helper Views
     private func allergyChip(_ item: String) -> some View {
         HStack(spacing: 6) {
@@ -1128,7 +1059,7 @@ struct OnboardingView: View {
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
     }
-    
+
     private func dislikeChip(_ item: String) -> some View {
         HStack(spacing: 6) {
             Text(item)
@@ -1151,41 +1082,7 @@ struct OnboardingView: View {
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
     }
-    
-    private func tastePreferenceToggle(key: String) -> some View {
-        Button {
-            // Light haptic only (no sound for toggles)
-            OnboardingFeedback.playHaptic(style: .light)
-            
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0.15)) {
-                tastePreferences[key]?.toggle()
-            }
-        } label: {
-            HStack {
-                Text(key.capitalized)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.black)
-                Spacer()
-                ZStack {
-                    RoundedRectangle(cornerRadius: 15)
-                        .fill(tastePreferences[key] == true ? 
-                              LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .leading, endPoint: .trailing) :
-                              LinearGradient(colors: [Color.gray.opacity(0.2)], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: 50, height: 30)
-                    
-                    Circle()
-                        .fill(.white)
-                        .frame(width: 26, height: 26)
-                        .offset(x: tastePreferences[key] == true ? 10 : -10)
-                        .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
-                }
-            }
-            .padding(12)
-            .background(Color(UIColor.systemGray6))
-            .cornerRadius(10)
-        }
-    }
-    
+
     // MARK: - Actions
     private func requestNotificationsThenComplete(askPermission: Bool) async {
         if askPermission {
@@ -1193,13 +1090,13 @@ struct OnboardingView: View {
         }
         await completeOnboarding()
     }
-    
+
     @MainActor
     private func promptForNotificationPermission() async {
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
         guard settings.authorizationStatus == .notDetermined else { return }
-        
+
         _ = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
                 if let error {
@@ -1209,17 +1106,17 @@ struct OnboardingView: View {
             }
         }
     }
-    
+
     private func completeOnboarding() async {
         isSaving = true
-        
+
         // Save to AppState and UserDefaults
         var dietary = app.dietary
         dietary.allergies = allergies
         dietary.diets = selectedDiets
         dietary.dislikes = dislikes
         app.dietary = dietary
-        
+
         // Prepare taste preferences dictionary for Supabase sync
         // Use English keys as expected by Supabase schema
         var tastePrefsDict: [String: Any] = ["spicy_level": spicyLevel]
@@ -1228,21 +1125,21 @@ struct OnboardingView: View {
         tastePrefsDict["sour"] = tastePreferences[L.taste_sour.localized] ?? false
         tastePrefsDict["bitter"] = tastePreferences[L.taste_bitter.localized] ?? false
         tastePrefsDict["umami"] = tastePreferences[L.taste_umami.localized] ?? false
-        
+
         // Save to UserDefaults
         if let data = try? JSONSerialization.data(withJSONObject: tastePrefsDict) {
             UserDefaults.standard.set(data, forKey: "taste_preferences")
         }
-        
+
         // Mark onboarding as completed FOR THIS USER
         if let userId = KeychainManager.get(key: "user_id") {
             let key = "onboarding_completed_\(userId)"
             UserDefaults.standard.set(true, forKey: key)
         }
-        
+
         // Clear saved currentStep so next onboarding starts fresh
         UserDefaults.standard.removeObject(forKey: "onboarding_current_step")
-        
+
         // Save to Supabase
         do {
             try await app.savePreferencesToSupabase(
@@ -1257,7 +1154,7 @@ struct OnboardingView: View {
             Logger.error("Failed to save onboarding preferences to Supabase", error: error, category: .data)
             // Continue anyway - data is saved locally
         }
-        
+
         isSaving = false
         dismiss()
     }
@@ -1268,7 +1165,7 @@ private struct FlowLayout<T: Hashable, V: View>: View {
     let items: [T]
     let content: (T) -> V
     @State private var totalHeight: CGFloat = .zero
-    
+
     var body: some View {
         VStack {
             GeometryReader { geo in
@@ -1277,7 +1174,7 @@ private struct FlowLayout<T: Hashable, V: View>: View {
             .frame(height: totalHeight)
         }
     }
-    
+
     private func generateContent(in g: GeometryProxy) -> some View {
         var width = CGFloat.zero
         var height = CGFloat.zero
@@ -1303,7 +1200,7 @@ private struct FlowLayout<T: Hashable, V: View>: View {
         }
         .background(viewHeightReader($totalHeight))
     }
-    
+
     private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
         GeometryReader { geometry -> Color in
             DispatchQueue.main.async { binding.wrappedValue = geometry.size.height }
@@ -1312,11 +1209,71 @@ private struct FlowLayout<T: Hashable, V: View>: View {
     }
 }
 
+// MARK: - Spicy Level Picker
+private struct SpicyLevelPicker: View {
+    @Binding var level: Double
+    let labels: [String]
+
+    private let accent = Color(red: 0.95, green: 0.5, blue: 0.3)
+    private let accentDeep = Color(red: 0.85, green: 0.4, blue: 0.2)
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
+                let selected = Int(level) == index
+                Button {
+                    OnboardingFeedback.playHaptic(style: .light)
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.74)) {
+                        level = Double(index)
+                    }
+                } label: {
+                    Text(label)
+                        .font(.system(size: 13, weight: selected ? .semibold : .medium))
+                        .foregroundColor(selected ? .white : .black.opacity(0.62))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .padding(.horizontal, 4)
+                        .background {
+                            if selected {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [accent, accentDeep],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .shadow(color: accent.opacity(0.28), radius: 6, y: 2)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(label)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.62))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.85), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 6, y: 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L.label_spicyLevel.localized)
+    }
+}
+
 // MARK: - Dietary Preferences List
 private struct DietaryPreferencesList: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Binding var selection: Set<String>
-    
+
     private var dietOptions: [String] {
         let _ = localizationManager.currentLanguage // Force recomputation when language changes
         return [
@@ -1331,9 +1288,9 @@ private struct DietaryPreferencesList: View {
             L.kosher.localized
         ]
     }
-    
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             ForEach(dietOptions, id: \.self) { option in
                 DietaryPreferenceRow(
                     title: option,
@@ -1358,31 +1315,42 @@ private struct DietaryPreferenceRow: View {
     let title: String
     let isSelected: Bool
     let onToggle: () -> Void
-    
+
+    private let accent = Color(red: 0.95, green: 0.5, blue: 0.3)
+
     var body: some View {
         Button(action: {
             OnboardingFeedback.playHaptic(style: .light)
             onToggle()
         }) {
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 Text(title)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.black)
+                    .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
+                    .foregroundColor(.black.opacity(0.88))
                     .multilineTextAlignment(.leading)
-                
+
                 Spacer(minLength: 12)
-                
+
                 AnimatedCheckbox(isSelected: isSelected)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color(UIColor.systemGray6))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 15)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isSelected ? Color.white : Color.white.opacity(0.62))
             )
-            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        isSelected ? accent.opacity(0.55) : Color.white.opacity(0.85),
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
+            )
+            .shadow(
+                color: isSelected ? accent.opacity(0.16) : .black.opacity(0.05),
+                radius: isSelected ? 10 : 6,
+                y: isSelected ? 4 : 2
+            )
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -1391,16 +1359,19 @@ private struct DietaryPreferenceRow: View {
 
 private struct AnimatedCheckbox: View {
     let isSelected: Bool
-    
+
     private let accent = Color(red: 0.95, green: 0.5, blue: 0.3)
     private let accentDeep = Color(red: 0.85, green: 0.4, blue: 0.2)
-    
+
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .stroke(isSelected ? Color.clear : Color.black.opacity(0.22), lineWidth: 1.75)
-            
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
+            Circle()
+                .fill(Color.white.opacity(isSelected ? 0 : 0.85))
+
+            Circle()
+                .stroke(isSelected ? Color.clear : Color.black.opacity(0.16), lineWidth: 1.5)
+
+            Circle()
                 .fill(
                     LinearGradient(
                         colors: [accent, accentDeep],
@@ -1408,15 +1379,21 @@ private struct AnimatedCheckbox: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .scaleEffect(isSelected ? 1 : 0.4)
+                .scaleEffect(isSelected ? 1 : 0.15)
                 .opacity(isSelected ? 1 : 0)
-            
+
+            Circle()
+                .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                .padding(1)
+                .scaleEffect(isSelected ? 1 : 0.15)
+                .opacity(isSelected ? 1 : 0)
+
             CheckboxCheckmark()
                 .trim(from: 0, to: isSelected ? 1 : 0)
-                .stroke(Color.white, style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
-                .padding(6.5)
+                .stroke(Color.white, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                .padding(7)
         }
-        .frame(width: 26, height: 26)
+        .frame(width: 24, height: 24)
         .scaleEffect(isSelected ? 1 : 0.96)
         .animation(.spring(response: 0.34, dampingFraction: 0.62), value: isSelected)
         .accessibilityHidden(true)
@@ -1438,7 +1415,7 @@ private struct WrapDietChips: View {
     let options: [String]
     @Binding var selection: Set<String>
     @State private var totalHeight: CGFloat = .zero
-    
+
     var body: some View {
         VStack {
             GeometryReader { geo in
@@ -1448,7 +1425,7 @@ private struct WrapDietChips: View {
         }
         .id(options) // Force re-render when options change (language change)
     }
-    
+
     private func chip(_ text: String) -> some View {
         let isOn = selection.contains(text)
         return Text(text)
@@ -1472,7 +1449,7 @@ private struct WrapDietChips: View {
                 }
             }
     }
-    
+
     private func generateContent(in g: GeometryProxy) -> some View {
         var width = CGFloat.zero
         var height = CGFloat.zero
@@ -1498,7 +1475,7 @@ private struct WrapDietChips: View {
         }
         .background(viewHeightReader($totalHeight))
     }
-    
+
     private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
         GeometryReader { geometry -> Color in
             DispatchQueue.main.async { binding.wrappedValue = geometry.size.height }
@@ -1514,7 +1491,7 @@ private struct LanguageOption: View {
     let isSelected: Bool
     let systemLanguage: String
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
@@ -1522,13 +1499,13 @@ private struct LanguageOption: View {
                 Text(getFlagEmoji(for: languageCode))
                     .font(.system(size: 32))
                     .accessibilityHidden(true)
-                
+
                 Text(languageName)
                     .font(.system(size: 17, weight: .medium))
                     .foregroundColor(.black)
-                
+
                 Spacer()
-                
+
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 24))
@@ -1542,13 +1519,13 @@ private struct LanguageOption: View {
                 }
             }
             .padding(16)
-            .background(isSelected ? 
+            .background(isSelected ?
                        LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.1), Color(red: 0.85, green: 0.4, blue: 0.2).opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing) :
                        LinearGradient(colors: [Color.white], startPoint: .topLeading, endPoint: .bottomTrailing))
             .cornerRadius(16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(isSelected ? 
+                    .stroke(isSelected ?
                            LinearGradient(colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing) :
                            LinearGradient(colors: [Color.black.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing),
                            lineWidth: isSelected ? 2 : 1)
@@ -1560,7 +1537,7 @@ private struct LanguageOption: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .buttonStyle(.plain)
     }
-    
+
     private func getFlagEmoji(for code: String) -> String {
         let flags: [String: String] = [
             "de": "🇩🇪",
@@ -1580,7 +1557,7 @@ private struct OnboardingFeedback {
     private static let startSoundID: SystemSoundID = 1056  // Anticipate - rewarding start sound
     private static let levelCompleteSoundID: SystemSoundID = 1056  // Anticipate - more rewarding than Peek
     private static let finalLevelCompleteSoundID: SystemSoundID = 1053  // MailSent - celebration for final step
-    
+
     /// Plays a rewarding sound when starting onboarding
     static func playStartSound() {
         // Play sound on main thread to ensure it's not blocked
@@ -1588,7 +1565,7 @@ private struct OnboardingFeedback {
             AudioServicesPlaySystemSound(startSoundID)
         }
     }
-    
+
     /// Plays a game-like success sound when completing a step (like level completion)
     static func playStepCompleteSound() {
         // Play sound on main thread immediately to ensure it's not blocked
@@ -1596,7 +1573,7 @@ private struct OnboardingFeedback {
             AudioServicesPlaySystemSound(levelCompleteSoundID)
         }
     }
-    
+
     /// Plays a celebration sound for final completion
     static func playFinalCompleteSound() {
         // Play sound on main thread to ensure it's not blocked
@@ -1604,7 +1581,7 @@ private struct OnboardingFeedback {
             AudioServicesPlaySystemSound(finalLevelCompleteSoundID)
         }
     }
-    
+
     /// Plays haptic feedback with optional notification type
     static func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle, notificationType: UINotificationFeedbackGenerator.FeedbackType? = nil) {
         if let notificationType = notificationType {

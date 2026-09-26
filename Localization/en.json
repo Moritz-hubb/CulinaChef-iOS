@@ -379,7 +379,7 @@
   "recipes.couldNotCreateMenu": "Could not create menu",
   "recipes.couldNotLoadRecipes": "Could not load recipes",
   "recipes.create": "Create",
-  "recipes.createOwn": "Create Own Recipe",
+  "recipes.createOwn": "Custom",
   "recipes.createWithAI": "Create with AI",
   "recipes.creatingRecipes": "I'm creating your recipes…",
   "recipes.deleteMenuMessage": "This menu (without recipes) will be deleted.",
@@ -995,5 +995,7 @@
   "auth.verifyEmailButton": "Confirm email",
   "auth.verifyEmailResend": "Resend code",
   "auth.verifyEmailResent": "We sent a new code.",
-  "auth.verifyEmailInvalidCode": "That code is invalid or expired."
+  "auth.verifyEmailInvalidCode": "That code is invalid or expired.",
+  "chat.recipeCreated": "I created a recipe. You can save it to your recipe book.",
+  "chat.openCreatedRecipe": "Open recipe"
 }

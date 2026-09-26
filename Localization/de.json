@@ -379,7 +379,7 @@
   "recipes.couldNotCreateMenu": "Menü konnte nicht erstellt werden",
   "recipes.couldNotLoadRecipes": "Rezepte konnten nicht geladen werden",
   "recipes.create": "Erstellen",
-  "recipes.createOwn": "Eigenes Rezept erstellen",
+  "recipes.createOwn": "Benutzerdefiniert",
   "recipes.createWithAI": "Mit KI erstellen",
   "recipes.creatingRecipes": "Ich bin dabei, deine Rezepte zu erstellen…",
   "recipes.deleteMenuMessage": "Dieses Menü (ohne Rezepte) wird gelöscht.",
@@ -995,5 +995,7 @@
   "auth.verifyEmailButton": "E-Mail bestätigen",
   "auth.verifyEmailResend": "Code erneut senden",
   "auth.verifyEmailResent": "Wir haben einen neuen Code gesendet.",
-  "auth.verifyEmailInvalidCode": "Der Code ist ungültig oder abgelaufen."
+  "auth.verifyEmailInvalidCode": "Der Code ist ungültig oder abgelaufen.",
+  "chat.recipeCreated": "Ich habe ein Rezept erstellt. Du kannst es im Rezeptbuch speichern.",
+  "chat.openCreatedRecipe": "Rezept öffnen"
 }

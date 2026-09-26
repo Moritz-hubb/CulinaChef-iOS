@@ -379,7 +379,7 @@
   "recipes.couldNotCreateMenu": "Impossibile creare il menu",
   "recipes.couldNotLoadRecipes": "Impossibile caricare le ricette",
   "recipes.create": "Crea Ricetta",
-  "recipes.createOwn": "Crea ricetta personalizzata",
+  "recipes.createOwn": "Personalizzato",
   "recipes.createWithAI": "Crea con IA",
   "recipes.creatingRecipes": "Sto creando le tue ricette…",
   "recipes.deleteMenuMessage": "Questo menu (senza ricette) sarà eliminato.",
@@ -995,5 +995,7 @@
   "auth.verifyEmailButton": "Conferma email",
   "auth.verifyEmailResend": "Invia di nuovo il codice",
   "auth.verifyEmailResent": "Abbiamo inviato un nuovo codice.",
-  "auth.verifyEmailInvalidCode": "Il codice non è valido o è scaduto."
+  "auth.verifyEmailInvalidCode": "Il codice non è valido o è scaduto.",
+  "chat.recipeCreated": "Ho creato una ricetta. Puoi salvarla nel ricettario.",
+  "chat.openCreatedRecipe": "Apri ricetta"
 }

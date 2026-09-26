@@ -58,6 +58,8 @@ final class AppState: ObservableObject {
     @Published var pendingSuggestionNameToRemove: String? = nil
     // After creating a menu, highlight/select it in Meine Rezepte
     @Published var pendingSelectMenuId: String? = nil
+    /// Menus whose recipes are still being generated. Drives the thinking penguin.
+    @Published private(set) var generatingMenuIds: Set<String> = []
 
     // User dietary preferences (persisted)
     // Start by loading from UserDefaults immediately, then sync from Supabase
@@ -1636,6 +1638,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     // MARK: - Delete a menu
     func deleteMenu(menuId: String, accessToken: String) async throws {
         try await menuManager.deleteMenu(menuId: menuId, accessToken: accessToken)
+        endMenuRecipeGeneration(menuId: menuId)
     }
 
     // MARK: - Auto-generate recipes for a menu
@@ -1644,6 +1647,8 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     /// - Hinweis: Berücksichtigt DSGVO-Consent (OpenAIConsentManager) und aktualisiert Menü-Suggestions
     ///   inkl. Fortschritt/Status in UserDefaults, ohne den UI-Flow zu verändern.
     func autoGenerateRecipesForMenu(menu: Menu, suggestions: [MenuSuggestion]) async {
+        beginMenuRecipeGeneration(menuId: menu.id)
+        defer { endMenuRecipeGeneration(menuId: menu.id) }
         guard let token = self.accessToken, let userId = KeychainManager.get(key: "user_id") else { return }
         
         // Enforce OpenAI DSGVO consent for any automatic generation
@@ -1690,8 +1695,8 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
                     let course = s.course ?? guessCourse(name: s.name, description: s.description)
                     setMenuCourse(menuId: menu.id, recipeId: created.id, course: course)
                     setMenuSuggestionProgress(menuId: menu.id, name: s.name, progress: 1.0)
-                    // Remove placeholder
-                    removeMenuSuggestion(named: s.name, from: menu.id)
+                    // Remove placeholder by id so a renamed or duplicate title cannot leave the thinking state stuck.
+                    removeMenuSuggestion(id: s.id, from: menu.id)
                     // Broadcast new recipe
                     await MainActor.run {
                         self.lastCreatedRecipe = created
@@ -1826,6 +1831,10 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
         menuManager.removeMenuSuggestion(named: name, from: menuId)
     }
 
+    func removeMenuSuggestion(id: UUID, from menuId: String) {
+        menuManager.removeMenuSuggestion(id: id, from: menuId)
+    }
+
     func removeAllMenuSuggestions(menuId: String) {
         menuManager.removeAllMenuSuggestions(menuId: menuId)
     }
@@ -1836,6 +1845,18 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
 
     func setMenuSuggestionProgress(menuId: String, name: String, progress: Double?) {
         menuManager.setMenuSuggestionProgress(menuId: menuId, name: name, progress: progress)
+    }
+
+    func beginMenuRecipeGeneration(menuId: String) {
+        var ids = generatingMenuIds
+        ids.insert(menuId)
+        generatingMenuIds = ids
+    }
+
+    func endMenuRecipeGeneration(menuId: String) {
+        var ids = generatingMenuIds
+        ids.remove(menuId)
+        generatingMenuIds = ids
     }
 
     // MARK: - Menu course mapping (recipe_id -> course)

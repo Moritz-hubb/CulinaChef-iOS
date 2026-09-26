@@ -238,11 +238,17 @@ final class MenuManager {
     }
     
     func removeMenuSuggestion(named name: String, from menuId: String) {
-        var existing = getMenuSuggestions(menuId: menuId)
-        if let idx = existing.firstIndex(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
-            existing.remove(at: idx)
-            saveMenuSuggestions(existing, to: menuId)
-        }
+        let existing = getMenuSuggestions(menuId: menuId)
+        let filtered = existing.filter { $0.name.caseInsensitiveCompare(name) != .orderedSame }
+        guard filtered.count != existing.count else { return }
+        saveMenuSuggestions(filtered, to: menuId)
+    }
+
+    func removeMenuSuggestion(id: UUID, from menuId: String) {
+        let existing = getMenuSuggestions(menuId: menuId)
+        let filtered = existing.filter { $0.id != id }
+        guard filtered.count != existing.count else { return }
+        saveMenuSuggestions(filtered, to: menuId)
     }
     
     func removeAllMenuSuggestions(menuId: String) {

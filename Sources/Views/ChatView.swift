@@ -17,6 +17,9 @@ struct ChatView: View {
     @State private var showConsentDialog = false
     @State private var showRevokeConsentAlert = false
     @State private var hasConsent: Bool = OpenAIConsentManager.hasConsent
+    @State private var suggestionIndices: [Int] = ChatStarterSuggestions.pickTwo()
+    @State private var generatedPlans: [UUID: RecipePlan] = [:]
+    @State private var presentedPlan: RecipePlan?
 
     var body: some View {
         chatContent
@@ -40,7 +43,12 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                     } else {
                         VStack(spacing: 12) {
                             ForEach(messages) { msg in
-                                ChatBubble(message: msg, onRetry: retryLastMessage)
+                                ChatBubble(
+                                    message: msg,
+                                    onRetry: retryLastMessage,
+                                    recipePlan: generatedPlans[msg.id],
+                                    onOpenRecipe: { presentedPlan = $0 }
+                                )
                                     .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             }
                             
@@ -92,6 +100,12 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             VStack {
                 Spacer()
                 
+                if messages.isEmpty {
+                    suggestionBar
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
+
                 // Dezent consent status indicator über dem Input-Bar (nur wenn Consent erteilt)
                 if hasConsent {
                     HStack {
@@ -162,6 +176,15 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
         .onAppear {
             // Initialize state
             hasConsent = OpenAIConsentManager.hasConsent
+        }
+        .sheet(isPresented: Binding(
+            get: { presentedPlan != nil },
+            set: { if !$0 { presentedPlan = nil } }
+        )) {
+            if let plan = presentedPlan {
+                RecipeResultView(plan: plan)
+                    .environmentObject(app)
+            }
         }
     }
     
@@ -335,7 +358,64 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             .shadow(color: .purple.opacity(0.25), radius: 30, x: 0, y: 12)
     }
 
-    private func sendText() async {
+    private var suggestionBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L.chat_suggestion_hint.localized)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.75))
+
+            ForEach(Array(starterSuggestions.enumerated()), id: \.offset) { _, suggestion in
+                Button {
+                    sendSuggestion(suggestion)
+                } label: {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .padding(.top, 2)
+                        Text(suggestion)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.9)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(L.chat_suggestion_send.localized)
+            }
+        }
+    }
+
+    private var starterSuggestions: [String] {
+        suggestionIndices.compactMap { index in
+            guard ChatStarterSuggestions.keys.indices.contains(index) else { return nil }
+            return ChatStarterSuggestions.keys[index].localized
+        }
+    }
+
+    private func sendSuggestion(_ text: String) {
+        guard !sending else { return }
+        isInputFocused = false
+        inputText = text
+        Task { await sendText(preset: text) }
+    }
+
+    private func sendText(preset: String? = nil) async {
+        if let preset {
+            inputText = preset
+        }
         let text = AIInputLimit.clamp(inputText.trimmingCharacters(in: .whitespacesAndNewlines), to: AIInputLimit.chatMessage)
         guard !text.isEmpty else { return }
         
@@ -384,6 +464,10 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             }
 
             guard let openai = app.openAI else { throw NSError(domain: "no_api", code: 0) }
+            if ExplicitRecipeCreationRequest.matches(text) {
+                await createSavableRecipe(goal: text)
+                return
+            }
             let sys = app.chatSystemContext()
             let prefixed = (sys.isEmpty ? [] : [ChatMessage(role: .system, text: sys)]) + messages
             let reply = try await openai.chatReply(messages: prefixed, maxHistory: prefixed.count)
@@ -396,6 +480,50 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                     : L.errorChatError.localized
                 messages.append(.init(role: .assistant, text: errorMsg, isError: true))
             }
+        }
+    }
+
+    /// Erstellt über die Rezept-KI ein vollständiges, speicherbares Rezept.
+    private func createSavableRecipe(goal: String) async {
+        guard await app.ensureAIAccess(for: .aiRecipeGenerator) else { return }
+        if app.recipeAI == nil { app.refreshRecipeAI() }
+        guard let model = app.recipeAI ?? app.openAI else {
+            messages.append(.init(role: .assistant, text: L.errorChatError.localized, isError: true))
+            return
+        }
+        let dietary = [app.systemContext(), app.hiddenIntentContext()]
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+        do {
+            let plan = try await model.generateRecipePlan(
+                goal: goal,
+                timeMinutesMin: nil,
+                timeMinutesMax: nil,
+                nutrition: NutritionConstraint(
+                    calories_min: nil, calories_max: nil,
+                    protein_min_g: nil, protein_max_g: nil,
+                    fat_min_g: nil, fat_max_g: nil,
+                    carbs_min_g: nil, carbs_max_g: nil
+                ),
+                categories: app.dietary.diets.sorted(),
+                servings: 4,
+                dietaryContext: dietary.isEmpty ? nil : dietary
+            )
+            let title = plan.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty, !plan.ingredients.isEmpty || !plan.steps.isEmpty else {
+                messages.append(.init(role: .assistant, text: L.errorChatError.localized, isError: true))
+                return
+            }
+            let message = ChatMessage(role: .assistant, text: L.chat_recipeCreated.localized)
+            messages.append(message)
+            generatedPlans[message.id] = plan
+            presentedPlan = plan
+        } catch {
+            if app.handleAISubscriptionDenied(error) { return }
+            let errorMsg = error.localizedDescription.contains("cannotFindHost") || error.localizedDescription.contains("cannotConnectToHost")
+                ? L.errorNetworkConnection.localized
+                : L.errorChatError.localized
+            messages.append(.init(role: .assistant, text: errorMsg, isError: true))
         }
     }
 
@@ -469,6 +597,12 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             
             // Add the user's actual question (without image data, just text)
             contextMsgs.append(.init(role: .user, text: text))
+
+            if ExplicitRecipeCreationRequest.matches(text) {
+                let goal = text + "\n" + analysis
+                await createSavableRecipe(goal: goal)
+                return
+            }
             
             let reply = try await openai.chatReply(messages: contextMsgs, maxHistory: contextMsgs.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
@@ -550,6 +684,10 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             }
 
             guard let openai = app.openAI else { throw NSError(domain: "no_api", code: 0) }
+            if ExplicitRecipeCreationRequest.matches(text) {
+                await createSavableRecipe(goal: text)
+                return
+            }
             let sys = app.chatSystemContext()
             let prefixed = (sys.isEmpty ? [] : [ChatMessage(role: .system, text: sys)]) + messages
             let reply = try await openai.chatReply(messages: prefixed, maxHistory: prefixed.count)
@@ -633,6 +771,11 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             
             // Add the user's actual question (without image data, just text)
             contextMsgs.append(.init(role: .user, text: text))
+
+            if ExplicitRecipeCreationRequest.matches(text) {
+                await createSavableRecipe(goal: text + "\n" + analysis)
+                return
+            }
             
             let reply = try await openai.chatReply(messages: contextMsgs, maxHistory: contextMsgs.count)
             await MainActor.run { messages.append(.init(role: .assistant, text: reply)) }
@@ -647,6 +790,8 @@ private struct ChatBubble: View {
     @EnvironmentObject var app: AppState
     let message: ChatMessage
     let onRetry: () -> Void
+    var recipePlan: RecipePlan? = nil
+    var onOpenRecipe: ((RecipePlan) -> Void)? = nil
     var isUser: Bool { message.role == .user }
 
     var body: some View {
@@ -668,6 +813,33 @@ private struct ChatBubble: View {
                 } else {
                     Text(message.text)
                         .foregroundStyle(.white)
+                }
+
+                if let plan = recipePlan, !isUser {
+                    Button {
+                        onOpenRecipe?(plan)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "book.closed")
+                            Text(L.chat_openCreatedRecipe.localized)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 14)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(red: 0.95, green: 0.5, blue: 0.3), Color(red: 0.85, green: 0.4, blue: 0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                        .shadow(color: Color.orange.opacity(0.3), radius: 6, x: 0, y: 3)
+                    }
+                    .accessibilityLabel(L.chat_openCreatedRecipe.localized)
+                    .buttonStyle(.plain)
                 }
                 
                 // Retry-Button bei Fehlermeldungen
@@ -1323,6 +1495,7 @@ private struct RecipeSuggestionsView: View {
                 return AppState.MenuSuggestion(name: s.name, description: s.description, course: validatedCourse)
             }
             app.addMenuSuggestions(placeholders, to: menu.id)
+            app.beginMenuRecipeGeneration(menuId: menu.id)
             // Navigate to Meine Rezepte and preselect the new menu
             await MainActor.run {
                 self.createdMenuId = menu.id
@@ -1693,6 +1866,14 @@ struct CulinaThinkingPenguinView: View {
     }
 }
 
+private enum ChatStarterSuggestions {
+    static let keys: [String] = (1...20).map { String(format: "chat.suggestion.%02d", $0) }
+
+    static func pickTwo() -> [Int] {
+        Array(keys.indices.shuffled().prefix(2))
+    }
+}
+
 // MARK: - Empty State View
 private struct EmptyStateView: View {
     @State private var isFloating = false
@@ -1750,5 +1931,77 @@ private struct EmptyStateView: View {
         .onAppear {
             isFloating = true
         }
+    }
+}
+
+/// Erkennt, wenn der Nutzer ausdrücklich ein einzelnes Rezept erstellen lassen will.
+enum ExplicitRecipeCreationRequest {
+    static func matches(_ raw: String) -> Bool {
+        let text = fold(raw)
+        guard text.count >= 8 else { return false }
+        if isHowTo(text) || isNegated(text) || containsPluralRecipes(text) { return false }
+        if everyRecipeIsReferenced(text) { return false }
+        if containsStrongCreation(text) { return true }
+        return containsIndefiniteRecipe(text) && containsMakeOrGive(text)
+    }
+
+    private static func fold(_ raw: String) -> String {
+        raw.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .replacingOccurrences(of: "ß", with: "ss")
+            .lowercased()
+    }
+
+    private static func contains(_ pattern: String, in text: String) -> Bool {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return false }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.firstMatch(in: text, options: [], range: range) != nil
+    }
+
+    private static let recipeNoun = #"(rezept|recipe|recette|receta|ricetta)"#
+
+    private static func containsPluralRecipes(_ text: String) -> Bool {
+        contains(#"\b(rezepte|recipes|recettes|recetas|ricette)\b"#, in: text)
+    }
+
+    private static func isHowTo(_ text: String) -> Bool {
+        contains(#"^\s*(wie|how|comment|como|come)\b"#, in: text)
+            || contains(#"\bwie (erstelle|erstell|mache|schreibe|generiere|koche) ich\b"#, in: text)
+            || contains(#"\bhow (do|can|should|to)\b"#, in: text)
+            || contains(#"\bcomment (creer|faire|ecrire|generer|je peux)\b"#, in: text)
+            || contains(#"\bcomo (crear|hacer|escribir|puedo)\b"#, in: text)
+            || contains(#"\bcome (creare|fare|scrivere|posso)\b"#, in: text)
+    }
+
+    private static func isNegated(_ text: String) -> Bool {
+        contains(#"\b(kein|keine|keinen|nicht|dont|do not|never|pas de|sans|sin|nessun|nessuna)\s+\#(recipeNoun)\b"#, in: text)
+            || contains(#"\b(kein|keine|keinen|nicht|dont|do not|never|pas de|sans|sin|nessun|nessuna)\b.{0,40}\b(ein|eine|einen|a|an|une|una|uno|un|das|the|la|le|il)\s+\#(recipeNoun)\b"#, in: text)
+    }
+
+    private static func everyRecipeIsReferenced(_ text: String) -> Bool {
+        guard let recipeRegex = try? NSRegularExpression(pattern: #"\b\#(recipeNoun)\b"#) else { return false }
+        let ns = text as NSString
+        let hits = recipeRegex.matches(in: text, range: NSRange(location: 0, length: ns.length))
+        guard !hits.isEmpty else { return false }
+        let reference = #"\b(uber|ueber|about|zum|zur|zu|mit|aus|von|vom|with|from|sur|sobre)\s+(ein|eine|einen|einem|einer|a|an|une|una|uno|un|das|dem|den|der|die|the|this|la|le|il|lo)?\s*$"#
+        return hits.allSatisfy { hit in
+            let start = hit.range.location
+            let prefixStart = max(0, start - 28)
+            let prefix = ns.substring(with: NSRange(location: prefixStart, length: start - prefixStart))
+            return contains(reference, in: prefix)
+        }
+    }
+
+    private static func containsIndefiniteRecipe(_ text: String) -> Bool {
+        contains(#"\b(ein|eine|einen|a|an|une|una|uno|un)\s+\#(recipeNoun)\b"#, in: text)
+    }
+
+    private static func containsStrongCreation(_ text: String) -> Bool {
+        let verbs = #"erstelle|erstell|erstellen|generiere|generier|generieren|schreibe|schreib|schreiben|kreiere|kreier|kreieren|create|generate|write|cree|creer|genere|generer|ecris|ecrire|crea|crear|genera|generar|escribe|escribir|scrivi|scrivere|scrivimi"#
+        let near = #"\b(\#(verbs))\b.{0,80}\b\#(recipeNoun)\b|\b\#(recipeNoun)\b.{0,80}\b(\#(verbs))\b"#
+        return contains(near, in: text)
+    }
+
+    private static func containsMakeOrGive(_ text: String) -> Bool {
+        contains(#"\b(mach|mache|machen|make|gib|gebe|geben|give|fais|faire|haz|hacer|fai|fare|donne|donner|dame|dammi)\b"#, in: text)
     }
 }

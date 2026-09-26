@@ -378,7 +378,6 @@ struct PersonalRecipesView: View {
     @State private var navigationRecipeId: String? = nil
     @State private var selectedMenuLoaded: Bool = true
     @State private var showDeleteMenuAlert: Bool = false
-    @State private var menuPlaceholders: [AppState.MenuSuggestion] = []
     @State private var menuCourseMap: [String: String] = [:]
     @State private var showManualRecipeBuilder = false
     @State private var showSocialImport = false
@@ -398,6 +397,11 @@ struct PersonalRecipesView: View {
             return filteredRecipes.filter { ids.contains($0.id) }
         }
         return filteredRecipes
+    }
+
+    private var isCreatingMenuRecipes: Bool {
+        guard let menuId = selectedMenu?.id else { return false }
+        return app.generatingMenuIds.contains(menuId)
     }
     
     private var loadingView: some View {
@@ -507,10 +511,8 @@ struct PersonalRecipesView: View {
                         )
                             .onChange(of: selectedMenu?.id) { _, _ in
                                 if let mid = selectedMenu?.id {
-                                    menuPlaceholders = app.getMenuSuggestions(menuId: mid)
                                     menuCourseMap = app.getMenuCourseMap(menuId: mid)
                                 } else {
-                                    menuPlaceholders = []
                                     menuCourseMap = [:]
                                 }
                             }
@@ -518,7 +520,6 @@ struct PersonalRecipesView: View {
                                 if let m = app.lastCreatedMenu {
                                     if !menus.contains(where: { $0.id == m.id }) { menus.insert(m, at: 0) }
                                     selectedMenu = m
-                                    menuPlaceholders = app.getMenuSuggestions(menuId: m.id)
                                     menuCourseMap = app.getMenuCourseMap(menuId: m.id)
                                     app.lastCreatedMenu = nil
                                 }
@@ -527,7 +528,6 @@ struct PersonalRecipesView: View {
                                 if let wanted = app.pendingSelectMenuId, let m = menus.first(where: { $0.id == wanted }) {
                                     selectedMenu = m
                                     app.pendingSelectMenuId = nil
-                                    menuPlaceholders = app.getMenuSuggestions(menuId: m.id)
                                 }
                             }
                             .onChange(of: app.lastCreatedRecipe?.id) { _, _ in
@@ -536,7 +536,6 @@ struct PersonalRecipesView: View {
                                     if let mid = app.lastCreatedRecipeMenuId, let sel = selectedMenu, sel.id == mid {
                                         selectedMenuRecipeIds.insert(r.id)
                                         menuCourseMap = app.getMenuCourseMap(menuId: mid)
-                                        menuPlaceholders = app.getMenuSuggestions(menuId: mid)
                                     }
                                     app.lastCreatedRecipe = nil
                                     app.lastCreatedRecipeMenuId = nil
@@ -544,7 +543,7 @@ struct PersonalRecipesView: View {
                             }
                         
                         // In-progress status when KI noch generiert
-                        if let _ = selectedMenu?.id, !menuPlaceholders.isEmpty {
+                        if isCreatingMenuRecipes {
                             VStack(alignment: .leading, spacing: 12) {
                                 CulinaThinkingPenguinView()
                                 Text(L.recipe_ich_bin_dabei_deine.localized)
@@ -610,7 +609,6 @@ struct PersonalRecipesView: View {
                                         if let mid = app.lastCreatedRecipeMenuId, let sel = selectedMenu, sel.id == mid {
                                             selectedMenuRecipeIds.insert(r.id)
                                             menuCourseMap = app.getMenuCourseMap(menuId: mid)
-                                            menuPlaceholders = app.getMenuSuggestions(menuId: mid)
                                         }
                                         app.lastCreatedRecipe = nil
                                         app.lastCreatedRecipeMenuId = nil
@@ -620,7 +618,6 @@ struct PersonalRecipesView: View {
                                     if let m = app.lastCreatedMenu {
                                         if !menus.contains(where: { $0.id == m.id }) { menus.insert(m, at: 0) }
                                         selectedMenu = m
-                                        menuPlaceholders = app.getMenuSuggestions(menuId: m.id)
                                         menuCourseMap = app.getMenuCourseMap(menuId: m.id)
                                         app.lastCreatedMenu = nil
                                     }
@@ -630,7 +627,6 @@ struct PersonalRecipesView: View {
                                     if let wanted = app.pendingSelectMenuId, let m = menus.first(where: { $0.id == wanted }) {
                                         selectedMenu = m
                                         app.pendingSelectMenuId = nil
-                                        menuPlaceholders = app.getMenuSuggestions(menuId: m.id)
                                         menuCourseMap = app.getMenuCourseMap(menuId: m.id)
                                     }
                                 }
@@ -641,12 +637,9 @@ struct PersonalRecipesView: View {
                                             Task { await loadMenuRecipeIds(menuId: menuId, token: token, updateSelected: true) }
                                         }
                                     }
-                                    // Load local placeholders for this menu
                                     if let mid = selectedMenu?.id {
-                                        menuPlaceholders = app.getMenuSuggestions(menuId: mid)
                                         menuCourseMap = app.getMenuCourseMap(menuId: mid)
                                     } else {
-                                        menuPlaceholders = []
                                         menuCourseMap = [:]
                                     }
                                 }
@@ -655,12 +648,11 @@ struct PersonalRecipesView: View {
                                     if let wanted = app.pendingSelectMenuId, let m = menus.first(where: { $0.id == wanted }) {
                                         selectedMenu = m
                                         app.pendingSelectMenuId = nil
-                                        menuPlaceholders = app.getMenuSuggestions(menuId: m.id)
                                     }
                                 }
                             
                             // In-progress status when KI noch generiert
-                            if let _ = selectedMenu?.id, !menuPlaceholders.isEmpty {
+                            if isCreatingMenuRecipes {
                                 HStack(alignment: .center, spacing: 12) {
                                     CulinaThinkingPenguinView()
                                     Text(L.recipe_ich_bin_dabei_deine_d9e2.localized)

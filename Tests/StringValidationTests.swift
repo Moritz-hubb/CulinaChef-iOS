@@ -285,6 +285,46 @@ final class StringValidationTests: XCTestCase {
         XCTAssertEqual(AIInputLimit.mealSlotNotes, 400)
         XCTAssertEqual(AIInputLimit.mealPlanMealGoal, 1200)
     }
+
+    func testExplicitRecipeCreationRequest() {
+        let create = [
+            "Erstelle mir ein Rezept für Spaghetti Carbonara",
+            "Bitte generiere ein Rezept: Linsensuppe",
+            "Schreib mir ein Rezept",
+            "Mach mir ein Rezept für Lasagne",
+            "Gib mir ein Rezept für Tomatensuppe",
+            "Kannst du ein Rezept erstellen?",
+            "Create a recipe for shakshuka",
+            "Please generate a recipe",
+            "Make me a recipe with chicken",
+            "Write a recipe for banana bread",
+            "Crée une recette de quiche",
+            "Fais-moi une recette",
+            "Crea una receta de paella",
+            "Scrivimi una ricetta per la carbonara"
+        ]
+        for text in create {
+            XCTAssertTrue(ExplicitRecipeCreationRequest.matches(text), text)
+        }
+
+        let ideas = [
+            "Was kann ich heute mit Steak kochen?",
+            "Ich habe keine Ahnung",
+            "Wie mache ich ein Gulasch zart?",
+            "Wie erstelle ich ein Rezept für Brot?",
+            "Erstelle mir ein Menü für ein Weihnachtsessen",
+            "Gib mir Rezeptideen",
+            "Erstelle 5 Rezepte",
+            "Was kann ich mit einem Rezept machen?",
+            "Ich schreibe über ein Rezept",
+            "Bitte nicht ein Rezept erstellen",
+            "How do I write a recipe?",
+            "What can I cook today?"
+        ]
+        for text in ideas {
+            XCTAssertFalse(ExplicitRecipeCreationRequest.matches(text), text)
+        }
+    }
 }
 
 // MARK: - String Helper Extension for Tests

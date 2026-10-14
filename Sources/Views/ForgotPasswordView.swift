@@ -27,32 +27,37 @@ struct ForgotPasswordView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Top illustration section
-                VStack(spacing: 8) {
-                    Spacer().frame(height: 40)
-                    
-                    // Penguin illustration
-                    if let uiImage = UIImage(named: "penguin-auth") {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 130, height: 130)
-                            .accessibilityHidden(true)
-                    } else {
-                        Image(systemName: "key.fill")
-                            .font(.system(size: 80))
+                // Top illustration section - hidden while typing so the form stays above the keyboard
+                if !isEmailFocused {
+                    VStack(spacing: 8) {
+                        Spacer().frame(height: 40)
+                        
+                        // Penguin illustration
+                        if let uiImage = UIImage(named: "penguin-auth") {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 130, height: 130)
+                                .accessibilityHidden(true)
+                        } else {
+                            Image(systemName: "key.fill")
+                                .font(.system(size: 80))
+                                .foregroundColor(.white)
+                                .accessibilityHidden(true)
+                        }
+                        
+                        Text(L.resetPasswordTitle.localized)
+                            .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.white)
-                            .accessibilityHidden(true)
+                        
+                        Spacer().frame(height: 16)
                     }
-                    
-                    Text(L.resetPasswordTitle.localized)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                    
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 20)
+                    .transition(.opacity)
+                } else {
                     Spacer().frame(height: 16)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 20)
                 
                 // White card with form
                 VStack(spacing: 0) {
@@ -217,11 +222,14 @@ struct ForgotPasswordView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 24)
                     .frame(maxHeight: .infinity)
-                    .background(Color.white)
-                    .cornerRadius(30, corners: [.topLeft, .topRight])
-                    .ignoresSafeArea(edges: .bottom)
+                    .background(
+                        Color.white
+                            .cornerRadius(30, corners: [.topLeft, .topRight])
+                            .ignoresSafeArea(edges: .bottom)
+                    )
                 }
             }
+            .animation(.easeInOut(duration: 0.2), value: isEmailFocused)
         }
         .id(localizationManager.currentLanguage)
     }

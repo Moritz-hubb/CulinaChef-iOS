@@ -31,19 +31,21 @@ struct ResetPasswordView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Top illustration section
+                // Top illustration section - icon and title hidden while typing so the form stays above the keyboard
                 VStack(spacing: 8) {
-                    Spacer().frame(height: 40)
+                    Spacer().frame(height: focusedField == nil ? 40 : 8)
                     
-                    // Icon
-                    Image(systemName: "lock.rotation")
-                        .font(.system(size: 80))
-                        .foregroundColor(.white)
-                        .accessibilityHidden(true)
-                    
-                    Text(L.resetPasswordNewPasswordTitle.localized)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
+                    if focusedField == nil {
+                        // Icon
+                        Image(systemName: "lock.rotation")
+                            .font(.system(size: 80))
+                            .foregroundColor(.white)
+                            .accessibilityHidden(true)
+                        
+                        Text(L.resetPasswordNewPasswordTitle.localized)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.white)
+                    }
 
                     Button {
                         app.discardPasswordResetSession()
@@ -55,10 +57,10 @@ struct ResetPasswordView: View {
                     .accessibilityLabel(L.cancel.localized)
                     .padding(.top, 4)
                     
-                    Spacer().frame(height: 16)
+                    Spacer().frame(height: focusedField == nil ? 16 : 4)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.bottom, 20)
+                .padding(.bottom, focusedField == nil ? 20 : 8)
                 
                 // White card with form
                 VStack(spacing: 0) {
@@ -221,11 +223,14 @@ struct ResetPasswordView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 24)
                     .frame(maxHeight: .infinity)
-                    .background(Color.white)
-                    .cornerRadius(30, corners: [.topLeft, .topRight])
-                    .ignoresSafeArea(edges: .bottom)
+                    .background(
+                        Color.white
+                            .cornerRadius(30, corners: [.topLeft, .topRight])
+                            .ignoresSafeArea(edges: .bottom)
+                    )
                 }
             }
+            .animation(.easeInOut(duration: 0.2), value: focusedField)
         }
         .id(localizationManager.currentLanguage) // Force re-render on language change
     }

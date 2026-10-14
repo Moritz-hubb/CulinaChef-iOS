@@ -217,9 +217,18 @@ final class StringValidationTests: XCTestCase {
     }
 
     func testRecipeImageURLStorageObjectName() {
-        let publicURL = "https://ywduddopwudltshxiqyp.supabase.co/storage/v1/object/public/recipe-photo/user-id_abc.jpg"
-        XCTAssertEqual(RecipeImageURL.storageObjectName(from: publicURL), "user-id_abc.jpg")
+        let name = "11111111-1111-1111-1111-111111111111_0123456789abcdef0123456789abcdef.jpg"
+        let publicURL = "https://ywduddopwudltshxiqyp.supabase.co/storage/v1/object/public/recipe-photo/\(name)"
+        XCTAssertEqual(RecipeImageURL.storageObjectName(from: publicURL), name)
         XCTAssertNil(RecipeImageURL.storageObjectName(from: "https://evil.example/recipe-photo/x.jpg"))
+        XCTAssertNil(RecipeImageURL.storageObjectName(from: publicURL.replacingOccurrences(of: name, with: "../secret.jpg")))
+        let base = URL(string: "https://ywduddopwudltshxiqyp.supabase.co")!
+        let authed = RecipeImageURL.authenticatedURL(supabaseBase: base, objectName: name)
+        XCTAssertEqual(
+            authed?.absoluteString,
+            "https://ywduddopwudltshxiqyp.supabase.co/storage/v1/object/authenticated/recipe-photo/\(name)"
+        )
+        XCTAssertNil(RecipeImageURL.authenticatedURL(supabaseBase: base, objectName: "../secret.jpg"))
     }
 
     func testRecipeImageURLRejectsArbitraryAndCleartext() {

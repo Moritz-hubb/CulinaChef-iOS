@@ -113,7 +113,6 @@ ToolbarItem(placement: .navigationBarTrailing) {
                     }
                 )
                     .environmentObject(app)
-                    .presentationDetents([.fraction(0.6), .large])
                     .presentationDragIndicator(.visible)
             }
             .safeAreaInset(edge: .bottom) {
@@ -430,6 +429,14 @@ private struct RecipeAISheet: View {
     }
 
     @State private var sheetTab: AISheetTab = .chat
+
+    private enum InputField: Hashable {
+        case chat
+        case revise
+    }
+
+    @FocusState private var focusedInput: InputField?
+    @State private var detent: PresentationDetent = .fraction(0.6)
     @State private var goalVegan = false
     @State private var goalVegetarian = false
     @State private var goalGlutenFree = false
@@ -500,14 +507,26 @@ private struct RecipeAISheet: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 12)
                         }
+                        .scrollDismissesKeyboard(.interactively)
                         .onChange(of: messages.count) { _, _ in
                             withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
+                        }
+                        .onChange(of: focusedInput) { _, field in
+                            guard field == .chat else { return }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
+                            }
                         }
                     }
                 } else {
                     unsavedReviseTabBody
                 }
             }
+        }
+        .presentationDetents([.fraction(0.6), .large], selection: $detent)
+        .onChange(of: focusedInput) { _, field in
+            // The partial detent can't rise fully above the keyboard and leaves the input covered.
+            if field != nil { detent = .large }
         }
         .sheet(isPresented: $showConsentDialog) {
             OpenAIConsentDialog(
@@ -529,6 +548,8 @@ private struct RecipeAISheet: View {
                                 .textFieldStyle(.plain)
                                 .foregroundStyle(.white)
                                 .tint(.white)
+                                .lineLimit(1...5)
+                                .focused($focusedInput, equals: .chat)
                         }
                         .padding(.vertical, 10)
                         .padding(.horizontal, 12)
@@ -601,6 +622,7 @@ private struct RecipeAISheet: View {
                         .foregroundStyle(.white)
                         .tint(.white)
                         .lineLimit(3...6)
+                        .focused($focusedInput, equals: .revise)
                 }
                 .padding(10)
                 .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.12)))
@@ -731,7 +753,9 @@ private struct RecipeAISheet: View {
             }
             do { _ = try await app.backend.incrementAIUsage(accessToken: token) } catch {
                 if app.handleAISubscriptionDenied(error) { return }
-                await MainActor.run { self.error = error.localizedDescription }
+                await MainActor.run {
+                    messages.append(.init(role: .assistant, text: ErrorMessageHelper.userFriendlyMessage(from: error)))
+                }
                 return
             }
             guard let openai = (app.recipeAI ?? app.openAI) else { throw NSError(domain: "no_api", code: 0) }

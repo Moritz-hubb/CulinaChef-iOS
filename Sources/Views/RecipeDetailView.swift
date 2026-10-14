@@ -187,7 +187,6 @@ struct RecipeDetailView: View {
                 currentStepIndex: max(currentPage - 1, -1)
             )
                 .environmentObject(app)
-                .presentationDetents([.fraction(0.6), .large])
                 .presentationDragIndicator(.visible)
         }
         .onAppear { 
@@ -847,10 +846,8 @@ struct RecipeDetailView: View {
         defer { isUploadingPhoto = false }
         
         do {
-            // Extract filename from URL
-            // URL format: https://.../storage/v1/object/public/recipe-photo/filename.jpg
-            let components = imageUrl.split(separator: "/")
-            guard let filename = components.last else {
+            let filename = RecipeImageURL.storageObjectName(from: imageUrl)
+            guard let filename else {
                 throw URLError(.badURL)
             }
             
@@ -1424,6 +1421,14 @@ private struct RecipeAISheetForSavedRecipe: View {
 
     @State private var sheetTab: AISheetTab
 
+    private enum InputField: Hashable {
+        case chat
+        case revise
+    }
+
+    @FocusState private var focusedInput: InputField?
+    @State private var detent: PresentationDetent = .fraction(0.6)
+
     init(recipe: Recipe, currentStepIndex: Int, openOnReviseTab: Bool = false) {
         self.recipe = recipe
         self.currentStepIndex = currentStepIndex
@@ -1442,6 +1447,11 @@ private struct RecipeAISheetForSavedRecipe: View {
 
     var body: some View {
         chatContent
+        .presentationDetents([.fraction(0.6), .large], selection: $detent)
+        .onChange(of: focusedInput) { _, field in
+            // The partial detent can't rise fully above the keyboard and leaves the input covered.
+            if field != nil { detent = .large }
+        }
         .sheet(isPresented: $showConsentDialog) {
             OpenAIConsentDialog(
                 onAccept: {
@@ -1512,8 +1522,15 @@ private struct RecipeAISheetForSavedRecipe: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 12)
                         }
+                        .scrollDismissesKeyboard(.interactively)
                         .onChange(of: messages.count) { _, _ in
                             withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
+                        }
+                        .onChange(of: focusedInput) { _, field in
+                            guard field == .chat else { return }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                withAnimation(.easeOut) { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
+                            }
                         }
                     }
                 } else {
@@ -1533,6 +1550,8 @@ private struct RecipeAISheetForSavedRecipe: View {
                                 .textFieldStyle(.plain)
                                 .foregroundStyle(.white)
                                 .tint(.white)
+                                .lineLimit(1...5)
+                                .focused($focusedInput, equals: .chat)
                         }
                         .padding(.vertical, 10)
                         .padding(.horizontal, 12)
@@ -1611,6 +1630,7 @@ private struct RecipeAISheetForSavedRecipe: View {
                         .foregroundStyle(.white)
                         .tint(.white)
                         .lineLimit(3...6)
+                        .focused($focusedInput, equals: .revise)
                 }
                 .padding(10)
                 .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.12)))

@@ -4,6 +4,8 @@ import SwiftUI
 /// Character caps for AI-bound text. Must stay in sync with `backend/app/ai_input_limits.py`.
 enum AIInputLimit {
     static let chatMessage = 2500
+    /// System turns may carry a full unsaved recipe so Q&A works before the recipe is stored.
+    static let chatSystemMessage = 16000
     static let recipeGoal = 500
     static let freeText = 500
     static let imagePrompt = 500
@@ -236,8 +238,26 @@ enum RecipeImageURL {
         let parts = url.path.split(separator: "/").map(String.init)
         guard let idx = parts.firstIndex(of: "recipe-photo"), idx + 1 < parts.count else { return nil }
         let name = parts[idx + 1]
-        guard !name.isEmpty, !name.contains(".."), !name.contains("/") else { return nil }
+        guard isSafeObjectName(name) else { return nil }
         return name
+    }
+
+    /// Flat object key written by POST /recipe-photos. Rejects traversal.
+    static func isSafeObjectName(_ name: String) -> Bool {
+        guard name.count <= 80, !name.contains(".."), !name.contains("/"), !name.contains("\\") else {
+            return false
+        }
+        let pattern = #"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_[0-9a-fA-F]{32}\.jpg$"#
+        return name.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    /// Authenticated Storage URL. The stored recipe value stays the stable public-style URL.
+    /// Access still requires the user JWT and a SELECT policy on the caller's own prefix.
+    static func authenticatedURL(supabaseBase: URL, objectName: String) -> URL? {
+        guard isSafeObjectName(objectName) else { return nil }
+        var url = supabaseBase
+        url.append(path: "storage/v1/object/authenticated/recipe-photo/\(objectName)")
+        return url
     }
 }
 

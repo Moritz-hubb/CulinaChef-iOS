@@ -242,7 +242,19 @@ final class ImageCache {
 
             var request = URLRequest(url: url)
             request.timeoutInterval = 10
-            request.cachePolicy = .returnCacheDataElseLoad
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            if url.path.contains("/recipe-photo/") {
+                guard let objectName = RecipeImageURL.storageObjectName(from: url.absoluteString),
+                      let authed = RecipeImageURL.authenticatedURL(supabaseBase: Config.supabaseURL, objectName: objectName),
+                      let token = KeychainManager.get(key: "access_token"),
+                      !token.isEmpty else {
+                    Logger.error("[ImageCache] Refusing unauthenticated recipe photo", category: .data)
+                    return nil
+                }
+                request.url = authed
+                request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+                request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
 
             Logger.debug("[ImageCache] Downloading host=\(url.host ?? "")", category: .data)
             let (data, response) = try await SecureURLSession.shared.data(for: request)

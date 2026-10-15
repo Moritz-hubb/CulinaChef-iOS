@@ -10,6 +10,10 @@ final class SubscriptionLegalTests: XCTestCase {
         XCTAssertTrue(joined.contains("2,99"))
         XCTAssertTrue(joined.contains("9,99"))
         XCTAssertTrue(joined.contains("3 Tagen") || joined.contains("3 Tage"))
+        XCTAssertTrue(joined.contains("CulinaAi Premium"))
+        XCTAssertTrue(joined.contains("100"))
+        XCTAssertTrue(joined.contains("1.000"))
+        XCTAssertFalse(joined.contains("Unlimited"))
         XCTAssertTrue(joined.contains("StoreKit") || joined.contains("Kaufbildschirm"))
     }
 
@@ -27,6 +31,9 @@ final class SubscriptionLegalTests: XCTestCase {
         let footer = SubscriptionLegal.paywallFooter(language: "de", prices: SubscriptionLegal.Prices())
         XCTAssertFalse(footer.contains("5,99"))
         XCTAssertTrue(footer.contains("3 Tage"))
+        XCTAssertTrue(footer.contains("100"))
+        XCTAssertTrue(footer.contains("CulinaAi Premium"))
+        XCTAssertFalse(footer.contains("Unlimited"))
     }
 
     func testTermsURLOpensInAppLegal() {

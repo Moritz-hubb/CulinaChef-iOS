@@ -269,7 +269,7 @@ final class BackendOpenAIClient {
             method: "POST",
             token: token,
             jsonBody: try JSONEncoder().encode(body),
-            timeoutInterval: 60
+            timeoutInterval: Config.mealPlanAPITimeout
         )
         return try JSONDecoder().decode(GeneratedMealPlan.self, from: data)
     }
@@ -309,7 +309,7 @@ final class BackendOpenAIClient {
             method: "POST",
             token: token,
             jsonBody: try JSONEncoder().encode(body),
-            timeoutInterval: 90
+            timeoutInterval: Config.mealPlanMealAPITimeout
         )
         return try JSONDecoder().decode(RecipePlan.self, from: data)
     }

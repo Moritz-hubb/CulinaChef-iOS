@@ -41,10 +41,14 @@ struct RecipePhotoSourceButton<Label: View>: View {
         .onChange(of: selectedPhoto) { _, newValue in
             Task {
                 guard let item = newValue,
-                      let data = try? await item.loadTransferable(type: Data.self) else { return }
+                      let data = try? await item.loadTransferable(type: Data.self),
+                      let optimized = try? ImageOptimizer.optimizeForAI(data) else {
+                    await MainActor.run { selectedPhoto = nil }
+                    return
+                }
                 await MainActor.run {
                     selectedPhoto = nil
-                    onPicked(data)
+                    onPicked(optimized)
                 }
             }
         }
@@ -81,7 +85,7 @@ struct ImagePicker: UIViewControllerRepresentable {
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             parent.isPresented = false
-            if let img = info[.originalImage] as? UIImage, let data = img.jpegData(compressionQuality: 0.85) {
+            if let img = info[.originalImage] as? UIImage, let data = try? ImageOptimizer.optimizeForAI(img) {
                 parent.onPicked(data)
             }
         }

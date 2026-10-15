@@ -45,18 +45,18 @@ struct OpenAIConsentDialog: View {
                         InfoSection(
                             title: isGerman ? "Was passiert mit Ihren Daten?" : "What happens with your data?",
                             items: [
-                                isGerman ? "Ihre Zutaten und Anfragen werden an OpenAI (USA) gesendet" : "Your ingredients and requests are sent to OpenAI (USA)",
-                                isGerman ? "OpenAI generiert personalisierte Rezepte basierend auf Ihren Eingaben" : "OpenAI generates personalized recipes based on your inputs",
-                                isGerman ? "Speicherdauer bei OpenAI: maximal 30 Tage" : "Storage duration at OpenAI: maximum 30 days"
+                                isGerman ? "Anfragen können personenbezogene Daten sein: Chattexte, Rezeptinhalte, Bilder, Ernährungs- und Allergieangaben sowie Import-Metadaten" : "Requests can be personal data: chat text, recipe content, images, diet and allergy details, and import metadata",
+                                isGerman ? "Diese Inhalte werden zur KI-Antwort an OpenAI gesendet. Das Standardziel von OpenAI liegt in den USA. Ein Vertrag über Standardvertragsklauseln oder das Data Privacy Framework wird hier nicht behauptet" : "This content is sent to OpenAI to produce the AI reply. OpenAI’s default location is the USA. This dialog does not claim that standard contractual clauses or the Data Privacy Framework are in place",
+                                isGerman ? "Zahlungsdaten der Apple-ID werden nicht an OpenAI gesendet" : "Apple ID payment details are not sent to OpenAI"
                             ]
                         )
                         
                         InfoSection(
-                            title: isGerman ? "Was wird NICHT übermittelt?" : "What is NOT transmitted?",
+                            title: isGerman ? "Widerruf und Speicherdauer" : "Withdrawal and retention",
                             items: [
-                                isGerman ? "Keine personenbezogenen Daten (Name, E-Mail, etc.)" : "No personal data (name, email, etc.)",
-                                isGerman ? "Keine Zahlungsinformationen" : "No payment information",
-                                isGerman ? "Kein Tracking oder Profiling" : "No tracking or profiling"
+                                isGerman ? "Die Einwilligung kannst du in den Einstellungen widerrufen. Danach starten keine neuen KI-Anfragen" : "You can withdraw consent in Settings. New AI requests then do not start",
+                                isGerman ? "Bereits gesendete Anfragen bleiben davon unberührt" : "Requests already sent are not undone",
+                                isGerman ? "Wie lange OpenAI Inhalte speichert, steht nur fest, wenn es im OpenAI-Konto des Anbieters nachgesehen wurde. Diese Angabe ist noch offen" : "How long OpenAI keeps content is known only after checking the provider’s OpenAI account. That figure is still open"
                             ]
                         )
                         

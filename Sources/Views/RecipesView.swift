@@ -1106,7 +1106,10 @@ struct PersonalRecipesView: View {
                     Logger.info("[PersonalRecipesView] Using cache (\(app.cachedRecipes.count) recipes) - instant display", category: .data)
                 }
                 
-                // Lade im Hintergrund aktualisiert (auch wenn Cache frisch ist, für Background-Refresh)
+                if cacheAge < 30 {
+                    Logger.debug("💾 [PERFORMANCE] Cache is fresh; skipping duplicate network load")
+                    return
+                }
                 Logger.debug("🔄 [PERFORMANCE] Starting background refresh...")
                 Task.detached(priority: .utility) {
                     await self.loadRecipesFromNetwork(userId: userId, token: token, keepVisible: true)
@@ -1233,44 +1236,10 @@ struct PersonalRecipesView: View {
     // Helper function to load the first recipe immediately
     // Helper function to load all recipes from Supabase
     private func loadRecipesFromSupabase(userId: String, token: String) async throws -> [Recipe] {
-        try PostgRESTFilter.requireEqValue(userId)
         let requestStartTime = Date()
-        var url = Config.supabaseURL
-        url.append(path: "/rest/v1/recipes")
-        url.append(queryItems: [
-            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
-            URLQueryItem(name: "select", value: "*"),
-            URLQueryItem(name: "order", value: "created_at.desc")
-        ])
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        // Aggressive timeout - Query sollte schnell sein
-        request.timeoutInterval = 5.0
-        
-        let networkStartTime = Date()
-        let (data, response) = try await SecureURLSession.shared.data(for: request)
-        let networkDuration = Date().timeIntervalSince(networkStartTime)
-        let dataSizeKB = Double(data.count) / 1024.0
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            let totalDuration = Date().timeIntervalSince(requestStartTime)
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            Logger.debug("❌ [PERFORMANCE] Recipes request FAILED after \(String(format: "%.3f", totalDuration))s (HTTP \(statusCode))")
-            throw URLError(.badServerResponse)
-        }
-        
-        let decodeStartTime = Date()
-        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
-        let decodeDuration = Date().timeIntervalSince(decodeStartTime)
+        let recipes = try await RecipeLibraryFetch.loadAll(userId: userId, token: token, timeout: 15)
         let totalDuration = Date().timeIntervalSince(requestStartTime)
-        
-        Logger.debug("📡 [PERFORMANCE] Recipes API: Network=\(String(format: "%.3f", networkDuration))s, Decode=\(String(format: "%.3f", decodeDuration))s, Total=\(String(format: "%.3f", totalDuration))s, Size=\(String(format: "%.2f", dataSizeKB))KB, Recipes=\(recipes.count)")
-        
+        Logger.debug("📡 [PERFORMANCE] Recipes API: Total=\(String(format: "%.3f", totalDuration))s, Recipes=\(recipes.count)")
         return recipes
     }
 }

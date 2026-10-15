@@ -11,8 +11,8 @@ struct SettingsView: View {
     @State private var showTerms = false
     @State private var showPrivacy = false
     @State private var showImprint = false
-    @State private var showFairUse = false
     @State private var showError = false
+    @State private var isExportingData = false
     @State private var errorMessage: String?
     @State private var hasConsent: Bool = OpenAIConsentManager.hasConsent
     @State private var isDeletingAccount = false
@@ -97,7 +97,33 @@ struct SettingsView: View {
                 .padding(12)
                 .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
+
+                Button {
+                    Task { await exportMyData() }
+                } label: {
+                    settingsRow(icon: "square.and.arrow.up", text: "settings.exportMyData".localized)
+                }
+                .disabled(isExportingData)
+                .accessibilityLabel("settings.exportMyData".localized)
+                .accessibilityHint("settings.exportMyDataBody".localized)
+
+                Text("settings.exportMyDataBody".localized)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .fixedSize(horizontal: false, vertical: true)
             }
+        }
+    }
+
+    private func exportMyData() async {
+        guard !isExportingData else { return }
+        isExportingData = true
+        defer { isExportingData = false }
+        do {
+            try await exportCurrentAccountData(app: app)
+        } catch {
+            errorMessage = L.errorExportFailed.localized
+            showError = true
         }
     }
     
@@ -119,11 +145,6 @@ struct SettingsView: View {
                 }
                 .accessibilityLabel(L.legalImprint.localized)
                 .accessibilityHint(L.a11y_openImprint.localized)
-                Button(action: { showFairUse = true }) {
-                    settingsRow(icon: "shield.checkered", text: "Fair Use Policy")
-                }
-                .accessibilityLabel(L.a11y_fairUsePolicy.localized)
-                .accessibilityHint(L.a11y_openFairUse.localized)
             }
         }
     }
@@ -250,9 +271,6 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showImprint) {
             ImprintView()
-        }
-        .sheet(isPresented: $showFairUse) {
-            FairUseView()
         }
         .onReceive(NotificationCenter.default.publisher(for: OpenAIConsentManager.consentChangedNotification)) { notification in
             // Update local state when consent changes
@@ -928,7 +946,7 @@ private struct ProfileSettingsSheet: View {
                                 } label: {
                                     HStack {
                                         Image(systemName: "arrow.down.circle.fill")
-                                        Text(L.settings_exportButton.localized)
+                                        Text("settings.exportMyData".localized)
                                             .font(.subheadline.weight(.semibold))
                                         Spacer()
                                     }
@@ -1031,141 +1049,66 @@ private struct ProfileSettingsSheet: View {
     private func exportRecipes() async {
         loading = true
         defer { loading = false }
-        
         do {
-            Logger.info("[Export] Starting recipe export", category: .data)
-            // Fetch all recipes from backend
-            guard let token = app.accessToken else {
-                error = L.errorNotLoggedIn.localized
-                Logger.error("[Export] Failed: no access token", category: .data)
-                return
-            }
-            
-            var url = Config.supabaseURL
-            url.append(path: "/rest/v1/recipes")
-            url.append(queryItems: [
-                URLQueryItem(name: "select", value: "*"),
-                URLQueryItem(name: "order", value: "created_at.desc")
-            ])
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            
-            Logger.debug("[Export] Requesting recipes", category: .network)
-            let (data, response) = try await SecureURLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                error = L.errorExportFailed.localized
-                Logger.error("[Export] Failed: HTTP status \((response as? HTTPURLResponse)?.statusCode ?? -1)", category: .network)
-                return
-            }
-            
-            let recipes = try JSONDecoder().decode([Recipe].self, from: data)
-            Logger.info("[Export] Loaded \(recipes.count) recipes from backend", category: .data)
-
-            let profile = try await app.fetchProfile()
-            let userId = KeychainManager.get(key: "user_id") ?? ""
-            let preferences = userId.isEmpty ? nil : try await app.preferencesClient.fetchPreferences(userId: userId, accessToken: token)
-            let taste = preferences?.tastePreferences
-
-            let payload = AccountExportPayload(
-                export_date: ISO8601DateFormatter().string(from: Date()),
-                account: AccountExportIdentity(
-                    email: profile?.email ?? app.userEmail ?? "",
-                    username: profile?.username,
-                    full_name: profile?.full_name
-                ),
-                preferences: AccountExportPreferences(
-                    allergies: preferences?.allergies ?? [],
-                    dietary_types: preferences?.dietaryTypes ?? [],
-                    dislikes: preferences?.dislikes ?? [],
-                    notes: preferences?.notes,
-                    taste_preferences: AccountExportTaste(
-                        spicy_level: taste?.spicyLevel ?? 0,
-                        sweet: taste?.sweet ?? false,
-                        sour: taste?.sour ?? false,
-                        bitter: taste?.bitter ?? false,
-                        umami: taste?.umami ?? false
-                    )
-                ),
-                recipe_count: recipes.count,
-                recipes: recipes
-            )
-            
-            // Convert to JSON via JSONEncoder (avoids __SwiftValue issues)
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let jsonData = try encoder.encode(payload)
-            Logger.debug("[Export] Encoded export JSON, size: \(jsonData.count) bytes", category: .data)
-            
-            // Save to temporary file
-            let tempDir = FileManager.default.temporaryDirectory
-            let fileName = "CulinaAI_Export_\(ISO8601DateFormatter().string(from: Date())).json"
-            let fileURL = tempDir.appendingPathComponent(fileName)
-            
-            try jsonData.write(to: fileURL)
-            Logger.debug("[Export] Wrote export file", category: .data)
-            
-            // Share via ShareSheet
-            await MainActor.run {
-                let activityVC = UIActivityViewController(
-                    activityItems: [fileURL],
-                    applicationActivities: nil
-                )
-                
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let window = windowScene.windows.first,
-                   let rootVC = window.rootViewController {
-                    activityVC.popoverPresentationController?.sourceView = window
-                    activityVC.popoverPresentationController?.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 0, height: 0)
-                    activityVC.popoverPresentationController?.permittedArrowDirections = []
-                    rootVC.present(activityVC, animated: true)
-                    Logger.debug("[Export] Presented share sheet for export file", category: .ui)
-                }
-            }
-            
+            try await exportCurrentAccountData(app: app)
         } catch {
-            Logger.error("[Export] Export failed", error: error, category: .data)
-            self.error = ErrorMessageHelper.sanitizedDisplayMessage(from: error, fallback: L.errorGenericUserFriendly.localized)
+            self.error = L.errorExportFailed.localized
         }
     }
 }
 
-// MARK: - Export Models
+@MainActor
+func exportCurrentAccountData(app: AppState) async throws {
+    let sessionUserId = KeychainManager.get(key: "user_id") ?? ""
+    guard let token = app.accessToken, !sessionUserId.isEmpty else {
+        throw AccountDataExportError.staleSession
+    }
+    let serverJSON = try await app.backend.exportAccountData(accessToken: token)
+    guard app.accessToken != nil else {
+        throw AccountDataExportError.staleSession
+    }
+    let shopping = AccountDataExport.shoppingItems(from: app.shoppingListManager.shoppingList)
+    let jsonData = try AccountDataExport.compose(
+        serverJSON: serverJSON,
+        shoppingItems: shopping,
+        sessionUserId: sessionUserId,
+        currentUserId: KeychainManager.get(key: "user_id")
+    )
+    let fileURL = try AccountDataExport.writeProtectedFile(
+        data: jsonData,
+        directory: FileManager.default.temporaryDirectory,
+        fileName: AccountDataExport.fileName()
+    )
+    guard KeychainManager.get(key: "user_id") == sessionUserId, app.accessToken != nil else {
+        AccountDataExport.removeFile(at: fileURL)
+        throw AccountDataExportError.staleSession
+    }
+    Logger.info("[Export] Prepared data export file", category: .data)
 
-/// JSON file for GDPR Art. 20: account, preferences, and recipes.
-private struct AccountExportPayload: Codable {
-    let export_date: String
-    let account: AccountExportIdentity
-    let preferences: AccountExportPreferences
-    let recipe_count: Int
-    let recipes: [Recipe]
-}
-
-private struct AccountExportIdentity: Codable {
-    let email: String
-    let username: String?
-    let full_name: String?
-}
-
-private struct AccountExportPreferences: Codable {
-    let allergies: [String]
-    let dietary_types: [String]
-    let dislikes: [String]
-    let notes: String?
-    let taste_preferences: AccountExportTaste
-}
-
-private struct AccountExportTaste: Codable {
-    let spicy_level: Double
-    let sweet: Bool
-    let sour: Bool
-    let bitter: Bool
-    let umami: Bool
+    let presented = await MainActor.run { () -> Bool in
+        let activityVC = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
+        activityVC.completionWithItemsHandler = { _, _, _, _ in
+            AccountDataExport.removeFile(at: fileURL)
+        }
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first,
+              let rootVC = window.rootViewController else {
+            return false
+        }
+        var presenter = rootVC
+        while let presented = presenter.presentedViewController {
+            presenter = presented
+        }
+        activityVC.popoverPresentationController?.sourceView = window
+        activityVC.popoverPresentationController?.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 0, height: 0)
+        activityVC.popoverPresentationController?.permittedArrowDirections = []
+        presenter.present(activityVC, animated: true)
+        return true
+    }
+    if !presented {
+        AccountDataExport.removeFile(at: fileURL)
+        throw AccountDataExportError.invalidPayload
+    }
 }
 
 private struct SubscriptionSettingsSheet: View {

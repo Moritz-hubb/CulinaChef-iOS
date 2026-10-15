@@ -18,7 +18,7 @@ struct TermsContent_EN { // swiftlint:disable:this type_name
         "manage dietary preferences,",
         "receive AI-powered recipe suggestions (OpenAI GPT-4o-mini),",
         "plan menus,",
-        "and use additional premium features through an optional subscription ('Unlimited')."
+        "and use AI features of the optional CulinaAi Premium subscription within the stated allowances."
     ]
     static let section2_p2 = "(2) The app is exclusively available on iOS devices (iPhone) via the Apple App Store."
     static let section2_p3 = "(3) Use requires prior registration or sign-in ('Sign in with Apple')."
@@ -27,7 +27,7 @@ struct TermsContent_EN { // swiftlint:disable:this type_name
     // MARK: - Section 3: Contract Formation
     static let section3_title = "3. Contract Formation"
     static let section3_p1 = "(1) The usage contract is concluded upon downloading the app and registering a user account."
-    static let section3_p2 = "(2) The subscription ('Unlimited') is concluded exclusively via the Apple App Store (In-App Purchase). The subscription contract is made directly between the user and Apple Inc."
+    static let section3_p2 = "(2) CulinaAi Premium is a weekly or monthly Apple in-app subscription. Billing runs through Apple. The app usage contract is with the provider. The split of legal duties still needs counsel review."
     static let section3_p3 = "(3) Billing, renewal, and cancellation of the subscription are processed exclusively through the user's Apple account."
     
     // MARK: - Section 4: Registration
@@ -40,7 +40,7 @@ struct TermsContent_EN { // swiftlint:disable:this type_name
     
     // MARK: - Section 5: Subscription
     static let section5_title = "5. Subscription, Prices, and Payment Terms"
-    static let section5_p1 = "(1) Downloading the app is free. AI features require the optional auto-renewing “CulinaAi Unlimited” weekly or monthly subscription. Prices are set by Apple per region and shown via StoreKit at purchase. Eligible Apple IDs receive a 3-day free trial."
+    static let section5_p1 = "(1) Downloading the app is free. AI features require the optional auto-renewing CulinaAi Premium weekly or monthly subscription. Prices are the localized App Store prices. A 3-day introductory offer applies only when Apple grants it."
     static let section5_p2 = "(2) The subscription is concluded, billed, and managed via Apple In-App Purchase. The provider does not receive payment data; these remain with Apple."
     static let section5_p3 = "(3) The subscription automatically renews for the same term (week or month) unless canceled at least 24 hours before the end of the current period in the user's Apple account."
     static let section5_p4 = "(4) A pro-rata refund of fees already paid is excluded unless there is a statutory right of withdrawal."
@@ -78,13 +78,13 @@ struct TermsContent_EN { // swiftlint:disable:this type_name
     static let section9_disclaimer = "Users should always critically review recipes, ingredients, and dietary recommendations, especially in case of allergies, intolerances, or dietary requirements."
     
     // MARK: - Section 9a: Fair Use Policy
-    static let section9a_title = "9a. Fair Use Policy for AI Functions"
-    static let section9a_p1 = "(1) The use of AI-based functions within the premium subscription ('Unlimited') is subject to the provider's Fair Use Policy. This is an integral part of these Terms and can be viewed in the app."
-    static let section9a_p2 = "(2) The purpose of the Fair Use Policy is to prevent misuse and ensure fair and equal access to AI services for all users in accordance with § 242 BGB (good faith)."
+    static let section9a_title = "9a. Premium allowances"
+    static let section9a_p1 = "(1) CulinaAi Premium unlocks AI features. It does not promise unlimited AI use. Daily, monthly, image, social-import, and meal-plan units are part of the service."
+    static let section9a_p2 = "(2) There is no separate Fair Use Policy. These allowances are in the Terms."
     static let section9a_p3 = "(3) The provider reserves the right to temporarily impose restrictions or block access in case of excessive, abusive, or automated use of AI functions."
     static let section9a_p4 = "(4) Users with legitimate need for extended usage limits may submit a request to support@culinaai.com. Approval is at the provider's discretion."
     static let section9a_p5 = "(5) The Fair Use Policy may be adapted by the provider to account for technical and economic developments. Users will be informed of significant changes in the app."
-    static let section9a_important = "The Fair Use Policy serves to protect service quality for all users and is not to be understood as a limitation of the advertised 'Unlimited' function, but as a protective measure against misuse."
+    static let section9a_important = "The numeric allowances are the contractual scope of Premium. They are not an extra hidden limit on an unlimited product. Automated abuse can still be restricted."
     
     // MARK: - Section 10: Liability
     static let section10_title = "10. Liability"

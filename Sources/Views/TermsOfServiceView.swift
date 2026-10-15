@@ -5,7 +5,6 @@ struct TermsOfServiceView: View {
     @ObservedObject private var storePricing = SubscriptionStorePricing.shared
 
     @Environment(\.dismiss) var dismiss
-    @State private var showFairUsePolicy = false
     @State private var showPrivacy = false
     
     // Language detection - use German content for DE, French for FR, English for all others
@@ -127,7 +126,7 @@ struct TermsOfServiceView: View {
                             TermsBullet(localized("Ernährungspräferenzen zu verwalten,", "de gérer leurs préférences alimentaires,", "manage dietary preferences,"))
                             TermsBullet(localized("KI-gestützte Rezeptvorschläge zu erhalten (OpenAI GPT-4o-mini),", "de recevoir des suggestions de recettes basées sur l'IA (OpenAI GPT-4o-mini),", "receive AI-based recipe suggestions (OpenAI GPT-4o-mini),"))
                             TermsBullet(localized("Menüs zu planen,", "de planifier des menus,", "plan menus, and"))
-                            TermsBullet(localized("und über ein optionales Abonnement ('Unlimited') zusätzliche Premium-Funktionen zu nutzen.", "et d'utiliser des fonctionnalités Premium via un abonnement optionnel (Unlimited).", "and access additional premium features through an optional subscription ('Unlimited')."))
+                            TermsBullet(localized("und über das optionale Abonnement CulinaAi Premium KI-Funktionen innerhalb der in § 5 genannten Kontingente zu nutzen.", "et d'utiliser les fonctions d'IA de l'abonnement optionnel CulinaAi Premium dans les quotas indiqués à la section 5.", "and use AI features of the optional CulinaAi Premium subscription within the allowances in section 5."))
                         }
                         
                         TermsParagraph(number: "(2)", text: localized(
@@ -157,9 +156,9 @@ struct TermsOfServiceView: View {
                         ))
                         
                         TermsParagraph(number: "(2)", text: localized(
-                            "Das Abonnement ('Unlimited') wird ausschließlich über den Apple App Store (In-App-Purchase) abgeschlossen. Der Vertrag über das Abonnement kommt direkt zwischen dem Nutzer und Apple Inc. zustande.",
-                            "L'abonnement (Unlimited) est conclu exclusivement via l'Apple App Store (In-App Purchase) et constitue un contrat direct entre l'utilisateur et Apple Inc.",
-                            "The Unlimited subscription can only be purchased via the Apple App Store (In-App Purchase). The subscription contract is concluded directly between the user and Apple Inc."
+                            "CulinaAi Premium wird als wöchentliches oder monatliches Apple-In-App-Abo abgeschlossen. Abrechnung, Verlängerung und Kündigung laufen über Apple. Der Nutzungsvertrag über die App besteht mit dem Anbieter. Welche Pflichten dabei bei Apple und welche beim Anbieter liegen, ist vor der Veröffentlichung rechtlich zu bestätigen.",
+                            "CulinaAi Premium est un abonnement Apple hebdomadaire ou mensuel. Facturation, renouvellement et résiliation passent par Apple. Le contrat d'utilisation de l'app est conclu avec le fournisseur. La répartition exacte des obligations entre Apple et le fournisseur doit être confirmée juridiquement avant publication.",
+                            "CulinaAi Premium is purchased as a weekly or monthly Apple in-app subscription. Billing, renewal, and cancellation run through Apple. The contract to use the app is with the provider. Which duties sit with Apple and which sit with the provider still needs legal confirmation before publication."
                         ))
                         
                         TermsParagraph(number: "(3)", text: localized(
@@ -222,9 +221,9 @@ struct TermsOfServiceView: View {
                         ))
                         
                         TermsParagraph(number: "(3)", text: localized(
-                            "Die Widerrufsabwicklung erfolgt ausschließlich über den Apple App Store nach den dort geltenden Richtlinien.",
-                            "La procédure de rétractation s'effectue exclusivement via l'Apple App Store.",
-                            "Withdrawal handling is carried out exclusively via the Apple App Store in accordance with Apple's applicable policies."
+                            "Erstattungen über Apple beantragst du bei Apple. Ob das gesetzliche Widerrufsrecht daneben besteht und wie es auszuüben ist, ist nicht abschließend in diesen AGB entschieden und braucht eine rechtliche Prüfung vor der Veröffentlichung.",
+                            "Les remboursements Apple se demandent auprès d'Apple. L'existence et l'exercice d'un droit légal de rétractation distinct ne sont pas tranchés ici et doivent être vérifiés juridiquement avant publication.",
+                            "Apple refunds are requested from Apple. Whether a separate statutory withdrawal right exists, and how to exercise it, is not finally decided in these terms and needs legal review before publication."
                         ))
                     }
                     
@@ -344,28 +343,11 @@ struct TermsOfServiceView: View {
                         .padding(.top, 8)
                     }
                     
-                    TermsSection(isGerman ? "9a. Fair Use Policy für KI-Funktionen" : "9a. Fair Use Policy for AI Functions", icon: "shield.checkered") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Die Nutzung der KI-basierten Funktionen im Rahmen des Premium-Abonnements ('Unlimited') unterliegt der Fair Use Policy des Anbieters. Diese ist integraler Bestandteil dieser AGB und in der App einsehbar." : "Use of AI-based functions within the premium subscription ('Unlimited') is subject to the provider's Fair Use Policy, which forms an integral part of these T&C and is available in the app.")
-                        
-                        Button(action: { showFairUsePolicy = true }) {
-                            HStack {
-                                Image(systemName: "arrow.up.right.square")
-                                Text(L.legalFairUseLink.localized)
-                                    .font(.subheadline.weight(.medium))
-                            }
-                            .foregroundStyle(.blue)
-                            .padding(.vertical, 8)
-                        }
-                        
-                        TermsParagraph(number: "(2)", text: isGerman ? "Zweck der Fair Use Policy ist die Vermeidung von Missbrauch und die Sicherstellung eines fairen und gleichmäßigen Zugangs zu den KI-Diensten für alle Nutzer gemäß § 242 BGB (Treu und Glauben)." : "The purpose of the Fair Use Policy is to prevent abuse and to ensure fair and balanced access to AI services for all users, in accordance with Section 242 BGB (principle of good faith).")
-                        
-                        TermsParagraph(number: "(3)", text: isGerman ? "Der Anbieter behält sich vor, bei übermäßiger, missbräuchlicher oder automatisierter Nutzung der KI-Funktionen zeitweise Einschränkungen vorzunehmen oder den Zugang zu sperren." : "The provider reserves the right to temporarily restrict or suspend access in cases of excessive, abusive, or automated use.")
-                        
-                        TermsParagraph(number: "(4)", text: isGerman ? "Nutzer mit berechtigtem Bedarf an erweiterten Nutzungsgrenzen können unter support@culinaai.com eine Anfrage stellen. Die Bewilligung erfolgt im Ermessen des Anbieters." : "Users with legitimate needs for extended usage limits may request an exception by contacting support@culinaai.com. Approval is at the provider's discretion.")
-                        
-                        TermsParagraph(number: "(5)", text: isGerman ? "Die Fair Use Policy kann vom Anbieter angepasst werden, um technischen und wirtschaftlichen Entwicklungen Rechnung zu tragen. Nutzer werden über wesentliche Änderungen in der App informiert." : "The Fair Use Policy may be adapted to reflect technical or economic developments. Users will be informed of significant changes via the app.")
-                        
-                        ImportantNote(text: isGerman ? "Die Fair Use Policy dient dem Schutz der Servicequalität für alle Nutzer und ist nicht als Beschränkung der beworbenen 'Unlimited'-Funktion zu verstehen, sondern als Schutzmaßnahme gegen Missbrauch." : "The Fair Use Policy is designed to protect service quality for all users and does not constitute a limitation of the advertised 'Unlimited' feature but a safeguard against misuse.")
+                    TermsSection(isGerman ? "9a. Premium-Kontingente" : "9a. Premium allowances", icon: "chart.bar") {
+                        TermsParagraph(number: "(1)", text: isGerman ? "CulinaAi Premium schaltet KI-Funktionen frei. Es verspricht keine unbegrenzte KI-Nutzung. Die Zahlen in § 5 sind der Leistungsumfang." : "CulinaAi Premium unlocks AI features. It does not promise unlimited AI use. The numbers in section 5 are the scope of the service.")
+                        TermsParagraph(number: "(2)", text: isGerman ? "Aufgebrauchte Tages-, Monats- oder Bildkontingente sperren weitere KI-Anfragen bis zum jeweiligen Reset. Eine vorübergehende Grenze für gleichzeitige Anfragen kann einzelne KI-Anfragen ablehnen, bis wieder Kapazität frei ist." : "Used daily, monthly, or image allowances block further AI requests until the relevant reset. A temporary limit on simultaneous requests can reject an AI request until capacity is free.")
+                        TermsParagraph(number: "(3)", text: isGerman ? "Automatisierte, missbräuchliche oder sicherheitsrelevante Nutzung kann zusätzlich beschränkt werden. Das ist unabhängig von den normalen Kontingenten." : "Automated, abusive, or security-relevant use can be restricted in addition to the normal allowances.")
+                        TermsParagraph(number: "(4)", text: isGerman ? "Es gibt keine separate Fair-Use-Policy mehr. Ältere Links auf /fair-use führen zu diesen Premium-Bedingungen." : "There is no separate Fair Use Policy. Older /fair-use links lead to these Premium terms.")
                     }
                     
                     TermsSection(isGerman ? "10. Haftung" : "10. Liability", icon: "exclamationmark.shield") {
@@ -487,9 +469,6 @@ struct TermsOfServiceView: View {
         }
         .sheet(isPresented: $showPrivacy) {
             PrivacyPolicyView()
-        }
-        .sheet(isPresented: $showFairUsePolicy) {
-            FairUseView()
         }
     }
 }

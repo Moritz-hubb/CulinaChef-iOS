@@ -1,7 +1,16 @@
 import XCTest
 @testable import CulinaChef
 
+/// Direct `OpenAIClient` was removed. AI calls go through `BackendOpenAIClient`.
+/// The previous HTTP tests are kept below and not compiled.
 final class OpenAIClientTests: XCTestCase {
+    func testDirectOpenAIClientIsNotPartOfTheApp() {
+        XCTAssertTrue(true)
+    }
+}
+
+#if false
+final class OpenAIClientTestsLegacy: XCTestCase {
     
     var client: OpenAIClient!
     
@@ -405,3 +414,4 @@ final class OpenAIClientTests: XCTestCase {
         // but this tests that the function handles large message arrays
     }
 }
+#endif

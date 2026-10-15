@@ -203,10 +203,14 @@ enum Config {
 
     // MARK: - API Timeouts
     
-    /// Zeit zwischen Datenpaketen für typische API-Calls.
+    /// Zeit zwischen Datenpaketen für typische API-Calls (chat, recipe, vision).
     static let apiTimeout: TimeInterval = 90.0
     /// Gesamtzeit pro URLSession-Task (muss ≥ längste Einzelanfrage sein, z. B. Social-Import).
     static let imageUploadTimeout: TimeInterval = 180.0
     /// `POST /ai/import-from-social-url` und Metadaten-Vorschau (KI + langsames Netz).
     static let socialImportAPITimeout: TimeInterval = 120.0
+    /// Meal-plan allocation can fan out several OpenAI calls; keep above the backend budget (110s).
+    static let mealPlanAPITimeout: TimeInterval = 120.0
+    /// Single meal-plan meal recipe generation.
+    static let mealPlanMealAPITimeout: TimeInterval = 90.0
 }

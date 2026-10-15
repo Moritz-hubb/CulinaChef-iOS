@@ -75,6 +75,61 @@ struct ImageOptimizer {
         
         return optimizedData
     }
+
+    /// Long-edge cap for images sent to the AI vision endpoints.
+    /// 4032×3024 (12.19 MP) exceeds the backend's 12_000_000 pixel limit; 1920 on the long edge stays well under it.
+    static let aiMaxEdge: CGFloat = 1920
+    static let aiMaxFileSize: Int = 2 * 1024 * 1024
+
+    /// Resizes (aspect-preserving) and JPEG-encodes an image for `/ai/chat` and `/ai/analyze-image`.
+    /// Does not replace `optimizeImage` (recipe Storage uploads still use 1920×1080).
+    static func optimizeForAI(_ image: UIImage) throws -> Data {
+        let resized = resizeToMaxEdge(image, maxEdge: aiMaxEdge)
+        return try jpegUnderLimit(resized, maxBytes: aiMaxFileSize)
+    }
+
+    /// Same as `optimizeForAI(_:UIImage)` for camera/gallery bytes (JPEG, PNG, HEIC, WebP).
+    static func optimizeForAI(_ data: Data) throws -> Data {
+        guard let image = UIImage(data: data) else {
+            throw URLError(.cannotDecodeContentData)
+        }
+        return try optimizeForAI(image)
+    }
+
+    static func jpegUnderLimit(_ image: UIImage, maxBytes: Int) throws -> Data {
+        var quality: CGFloat = 0.85
+        var last: Data?
+        for _ in 0..<8 {
+            guard let data = image.jpegData(compressionQuality: quality) else {
+                throw URLError(.cannotDecodeContentData)
+            }
+            last = data
+            if data.count <= maxBytes {
+                return data
+            }
+            quality -= 0.1
+        }
+        if let last, last.count <= maxBytes {
+            return last
+        }
+        let smaller = resizeToMaxEdge(image, maxEdge: 1280)
+        guard let fallback = smaller.jpegData(compressionQuality: 0.1) else {
+            throw URLError(.cannotDecodeContentData)
+        }
+        return fallback
+    }
+
+    static func resizeToMaxEdge(_ image: UIImage, maxEdge: CGFloat) -> UIImage {
+        let size = image.size
+        let longest = max(size.width, size.height)
+        guard longest > maxEdge, longest > 0 else { return image }
+        let scale = maxEdge / longest
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
     
     /// Skaliert ein Bild auf maximale Dimensionen (aspect fit).
     /// Wenn das Bild bereits kleiner ist, wird es unverändert zurückgegeben.

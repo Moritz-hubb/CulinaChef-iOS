@@ -42,11 +42,11 @@ struct ImprintView: View {
                                 .foregroundStyle(.white)
                             
                             Text(localized(
-                                "Angaben gemäß § 5 TMG",
-                                "Informations selon § 5 TMG",
-                                "Información según § 5 TMG",
-                                "Informazioni secondo § 5 TMG",
-                                "Information pursuant to § 5 German Telemedia Act (TMG)"
+                                "Angaben gemäß § 5 DDG",
+                                "Informations selon § 5 DDG",
+                                "Información según § 5 DDG",
+                                "Informazioni secondo § 5 DDG",
+                                "Information pursuant to § 5 of the German Digital Services Act (DDG)"
                             ))
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.8))
@@ -101,7 +101,7 @@ struct ImprintView: View {
                         // Vertretungsberechtigt Section
                         ImprintSection(localized("Vertretungsberechtigt", "Représentant autorisé", "Representante autorizado", "Rappresentante autorizzato", "Authorized Representative"), icon: "person.badge.shield.checkmark") {
                             VStack(alignment: .leading, spacing: 4) {
-                                ContactInfo(label: localized("Geschäftsführer:", "Directeur général:", "Director general:", "Direttore generale:", "Managing Director:"), value: "Moritz Serrin")
+                                ContactInfo(label: localized("Name:", "Nom:", "Nombre:", "Nome:", "Name:"), value: "Moritz Serrin")
                             }
                             .padding(12)
                             .background(.white.opacity(0.1))
@@ -111,11 +111,11 @@ struct ImprintView: View {
                         // Verantwortlich für den Inhalt Section
                         ImprintSection(localized("Verantwortlich für den Inhalt", "Responsable du contenu", "Responsable del contenido", "Responsabile del contenuto", "Responsible for Content"), icon: "doc.text") {
                             Text(localized(
-                                "Nach § 55 Abs. 2 RStV:",
-                                "Selon § 55 Abs. 2 RStV:",
-                                "Según § 55 Abs. 2 RStV:",
-                                "Secondo § 55 Abs. 2 RStV:",
-                                "in accordance with § 55 (2) of the German Interstate Broadcasting Treaty (RStV):"
+                                "Nach § 18 Abs. 2 MStV:",
+                                "Selon § 18 Abs. 2 MStV:",
+                                "Según § 18 Abs. 2 MStV:",
+                                "Secondo § 18 Abs. 2 MStV:",
+                                "in accordance with § 18 (2) of the German Interstate Media Treaty (MStV):"
                             ))
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.8))

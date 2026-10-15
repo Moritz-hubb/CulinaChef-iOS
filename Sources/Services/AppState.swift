@@ -1555,30 +1555,7 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     
     /// Lädt Rezepte für den Cache
     private func loadRecipesForCache(userId: String, token: String) async throws -> [Recipe] {
-        try PostgRESTFilter.requireEqValue(userId)
-        var url = Config.supabaseURL
-        url.append(path: "/rest/v1/recipes")
-        url.append(queryItems: [
-            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
-            URLQueryItem(name: "select", value: "*"),
-            URLQueryItem(name: "order", value: "created_at.desc")
-        ])
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 15.0
-        
-        let (data, response) = try await SecureURLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
-        
-        return try JSONDecoder().decode([Recipe].self, from: data)
+        try await RecipeLibraryFetch.loadAll(userId: userId, token: token, timeout: 15)
     }
     
     // MARK: - Background Preloading

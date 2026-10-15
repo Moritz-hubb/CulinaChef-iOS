@@ -213,4 +213,52 @@ final class BackendClientTests: XCTestCase {
         XCTAssertFalse(displayed.contains("<html"))
         XCTAssertFalse(displayed.isEmpty)
     }
+
+    func testAccountExportFileNameHasNoEmail() {
+        let name = AccountDataExport.fileName(on: Date(timeIntervalSince1970: 0))
+        XCTAssertTrue(name.hasSuffix(".json"))
+        XCTAssertTrue(name.hasPrefix("CulinaAi-Datenexport-"))
+        XCTAssertFalse(name.contains("@"))
+    }
+
+    func testAccountExportMergesShoppingListAndRejectsStaleSession() throws {
+        let server = Data(#"{"export_version":"1.0","recipes":[],"account":{"email":"ada@example.com"}}"#.utf8)
+        let merged = try AccountDataExport.compose(
+            serverJSON: server,
+            shoppingItems: [["name": "Salz", "quantity": "1"]],
+            sessionUserId: "user-a",
+            currentUserId: "user-a"
+        )
+        let object = try JSONSerialization.jsonObject(with: merged) as? [String: Any]
+        XCTAssertEqual(object?["includes_device_data"] as? Bool, true)
+        let list = object?["shopping_list"] as? [[String: Any]]
+        XCTAssertEqual(list?.first?["name"] as? String, "Salz")
+        let text = String(data: merged, encoding: .utf8)
+        XCTAssertTrue(text?.contains("Salz") == true)
+
+        XCTAssertThrowsError(
+            try AccountDataExport.compose(
+                serverJSON: server,
+                shoppingItems: [],
+                sessionUserId: "user-a",
+                currentUserId: "user-b"
+            )
+        )
+    }
+
+    func testAccountExportWritesAndRemovesProtectedFile() throws {
+        let data = Data(#"{"export_version":"1.0","recipes":[]}"#.utf8)
+        let directory = FileManager.default.temporaryDirectory
+        let url = try AccountDataExport.writeProtectedFile(
+            data: data,
+            directory: directory,
+            fileName: "CulinaAi-Datenexport-test.json"
+        )
+        defer { AccountDataExport.removeFile(at: url) }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        let read = try Data(contentsOf: url)
+        XCTAssertEqual(read, data)
+        AccountDataExport.removeFile(at: url)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+    }
 }

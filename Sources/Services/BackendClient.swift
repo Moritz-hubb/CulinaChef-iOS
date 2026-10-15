@@ -202,11 +202,18 @@ final class BackendClient {
                 }
                 if !(200...299).contains(http.statusCode) {
                     #if DEBUG
-                    let preview = String(data: data.prefix(900), encoding: .utf8) ?? ""
-                    Logger.error(
-                        "[BackendClient] HTTP \(http.statusCode) \(method) \(url.path) body preview: \(preview)",
-                        category: .network
-                    )
+                    if path != "/account/export" {
+                        let preview = String(data: data.prefix(900), encoding: .utf8) ?? ""
+                        Logger.error(
+                            "[BackendClient] HTTP \(http.statusCode) \(method) \(url.path) body preview: \(preview)",
+                            category: .network
+                        )
+                    } else {
+                        Logger.error(
+                            "[BackendClient] HTTP \(http.statusCode) \(method) \(url.path)",
+                            category: .network
+                        )
+                    }
                     #endif
                     throw BackendHTTPError.make(statusCode: http.statusCode, data: data)
                 }
@@ -228,6 +235,17 @@ final class BackendClient {
     /// - Throws: Fehler aus dem zugrunde liegenden `request`-Aufruf.
     func health() async throws {
         _ = try await request(path: "/health", token: nil)
+    }
+
+    /// Authenticated portability file. The backend ignores any account id other than the token subject.
+    func exportAccountData(accessToken: String) async throws -> Data {
+        let (data, _) = try await request(
+            path: "/account/export",
+            method: "GET",
+            token: accessToken,
+            timeoutInterval: 120
+        )
+        return data
     }
 
     /// Lädt ein Rezeptfoto hoch. Das Backend prüft den Inhalt und speichert ein neues JPEG.
@@ -569,6 +587,71 @@ private struct AIUsageIncrementCounts: Decodable {
             if let d = Double(s) { return Int(d.rounded()) }
         }
         return 0
+    }
+}
+
+enum AccountDataExportError: Error {
+    case staleSession
+    case invalidPayload
+}
+
+/// Builds the on-device JSON file for the signed-in user. Does not log file contents.
+enum AccountDataExport {
+    static func fileName(on date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return "CulinaAi-Datenexport-\(formatter.string(from: date)).json"
+    }
+
+    static func shoppingItems(from list: ShoppingList) -> [[String: Any]] {
+        list.items.map { item in
+            [
+                "id": item.id,
+                "name": item.name,
+                "quantity": item.quantity ?? "",
+                "category": item.category.rawValue,
+                "is_completed": item.isCompleted
+            ]
+        }
+    }
+
+    static func compose(
+        serverJSON: Data,
+        shoppingItems: [[String: Any]],
+        sessionUserId: String,
+        currentUserId: String?
+    ) throws -> Data {
+        guard !sessionUserId.isEmpty, currentUserId == sessionUserId else {
+            throw AccountDataExportError.staleSession
+        }
+        guard var object = try JSONSerialization.jsonObject(with: serverJSON) as? [String: Any] else {
+            throw AccountDataExportError.invalidPayload
+        }
+        guard object["export_version"] is String, object["recipes"] != nil else {
+            throw AccountDataExportError.invalidPayload
+        }
+        object["shopping_list"] = shoppingItems
+        object["includes_device_data"] = true
+        let data = try JSONSerialization.data(
+            withJSONObject: object,
+            options: [.prettyPrinted, .sortedKeys]
+        )
+        guard (try JSONSerialization.jsonObject(with: data)) is [String: Any] else {
+            throw AccountDataExportError.invalidPayload
+        }
+        return data
+    }
+
+    static func writeProtectedFile(data: Data, directory: URL, fileName: String) throws -> URL {
+        let url = directory.appendingPathComponent(fileName)
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        return url
+    }
+
+    static func removeFile(at url: URL) {
+        try? FileManager.default.removeItem(at: url)
     }
 }
 

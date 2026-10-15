@@ -56,7 +56,7 @@ struct OpenAIConsentDialog: View {
                             items: [
                                 isGerman ? "Die Einwilligung kannst du in den Einstellungen widerrufen. Danach starten keine neuen KI-Anfragen" : "You can withdraw consent in Settings. New AI requests then do not start",
                                 isGerman ? "Bereits gesendete Anfragen bleiben davon unberührt" : "Requests already sent are not undone",
-                                isGerman ? "Wie lange OpenAI Inhalte speichert, steht nur fest, wenn es im OpenAI-Konto des Anbieters nachgesehen wurde. Diese Angabe ist noch offen" : "How long OpenAI keeps content is known only after checking the provider’s OpenAI account. That figure is still open"
+                                isGerman ? "OpenAI speichert die gesendeten Inhalte höchstens 30 Tage" : "OpenAI keeps the content that was sent for at most 30 days"
                             ]
                         )
                         

@@ -16,7 +16,7 @@ struct TermsContent_EN { // swiftlint:disable:this type_name
     static let section2_bullets = [
         "save their own recipes,",
         "manage dietary preferences,",
-        "receive AI-powered recipe suggestions (OpenAI GPT-4o-mini),",
+        "receive AI-powered recipe suggestions (OpenAI gpt-5.4-mini for text, gpt-4o-mini for images),",
         "plan menus,",
         "and use AI features of the optional CulinaAi Premium subscription within the stated allowances."
     ]
@@ -27,7 +27,7 @@ struct TermsContent_EN { // swiftlint:disable:this type_name
     // MARK: - Section 3: Contract Formation
     static let section3_title = "3. Contract Formation"
     static let section3_p1 = "(1) The usage contract is concluded upon downloading the app and registering a user account."
-    static let section3_p2 = "(2) CulinaAi Premium is a weekly or monthly Apple in-app subscription. Billing runs through Apple. The app usage contract is with the provider. The split of legal duties still needs counsel review."
+    static let section3_p2 = "(2) CulinaAi Premium is a weekly or monthly auto-renewing Apple in-app subscription. The contract to use the app is with the provider. Payment, billing, renewal, and cancellation run through the Apple ID account. Apple stores payment details; the provider does not receive them."
     static let section3_p3 = "(3) Billing, renewal, and cancellation of the subscription are processed exclusively through the user's Apple account."
     
     // MARK: - Section 4: Registration
@@ -50,7 +50,7 @@ struct TermsContent_EN { // swiftlint:disable:this type_name
     static let section6_title = "6. Right of Withdrawal"
     static let section6_p1 = "(1) Consumers generally have a statutory right of withdrawal for digital content (§ 356 para. 5 BGB)."
     static let section6_p2 = "(2) However, the right of withdrawal expires if the user has expressly agreed that performance of the contract begins before the end of the withdrawal period and has confirmed that they thereby lose their right of withdrawal."
-    static let section6_p3 = "(3) Withdrawal processing is handled exclusively via the Apple App Store according to the guidelines applicable there."
+    static let section6_p3 = "(3) Refunds for the in-app subscription are requested from Apple. Statutory consumer rights remain unaffected where a right of withdrawal exists and has not expired."
     
     // MARK: - Section 7: Usage Rights
     static let section7_title = "7. Usage Rights"
@@ -73,7 +73,7 @@ struct TermsContent_EN { // swiftlint:disable:this type_name
     
     // MARK: - Section 9: AI Content
     static let section9_title = "9. AI Content (OpenAI)"
-    static let section9_p1 = "(1) The app uses artificial intelligence (OpenAI GPT-4o-mini) to create or adapt recipes and text suggestions."
+    static let section9_p1 = "(1) The app uses OpenAI to create or adapt recipes and text (model gpt-5.4-mini) and to analyse images (model gpt-4o-mini)."
     static let section9_p2 = "(2) This content is generated automatically and may be erroneous, incomplete, or unsuitable. The provider assumes no warranty for the accuracy, completeness, or health suitability of AI-generated content."
     static let section9_disclaimer = "Users should always critically review recipes, ingredients, and dietary recommendations, especially in case of allergies, intolerances, or dietary requirements."
     
@@ -83,7 +83,7 @@ struct TermsContent_EN { // swiftlint:disable:this type_name
     static let section9a_p2 = "(2) There is no separate Fair Use Policy. These allowances are in the Terms."
     static let section9a_p3 = "(3) The provider reserves the right to temporarily impose restrictions or block access in case of excessive, abusive, or automated use of AI functions."
     static let section9a_p4 = "(4) Users with legitimate need for extended usage limits may submit a request to support@culinaai.com. Approval is at the provider's discretion."
-    static let section9a_p5 = "(5) The Fair Use Policy may be adapted by the provider to account for technical and economic developments. Users will be informed of significant changes in the app."
+    static let section9a_p5 = "(5) The provider may adjust the allowances to account for technical and economic developments. Users will be informed of significant changes in the app."
     static let section9a_important = "The numeric allowances are the contractual scope of Premium. They are not an extra hidden limit on an unlimited product. Automated abuse can still be restricted."
     
     // MARK: - Section 10: Liability

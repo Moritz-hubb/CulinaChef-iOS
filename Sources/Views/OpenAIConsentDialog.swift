@@ -46,7 +46,7 @@ struct OpenAIConsentDialog: View {
                             title: isGerman ? "Was passiert mit Ihren Daten?" : "What happens with your data?",
                             items: [
                                 isGerman ? "Anfragen können personenbezogene Daten sein: Chattexte, Rezeptinhalte, Bilder, Ernährungs- und Allergieangaben sowie Import-Metadaten" : "Requests can be personal data: chat text, recipe content, images, diet and allergy details, and import metadata",
-                                isGerman ? "Diese Inhalte werden zur KI-Antwort an OpenAI gesendet. Das Standardziel von OpenAI liegt in den USA. Ein Vertrag über Standardvertragsklauseln oder das Data Privacy Framework wird hier nicht behauptet" : "This content is sent to OpenAI to produce the AI reply. OpenAI’s default location is the USA. This dialog does not claim that standard contractual clauses or the Data Privacy Framework are in place",
+                                isGerman ? "Diese Inhalte werden zur KI-Antwort an OpenAI L.L.C. in die USA gesendet. Text nutzt gpt-5.4-mini, Bilder nutzen gpt-4o-mini" : "This content is sent to OpenAI L.L.C. in the USA to produce the AI reply. Text uses gpt-5.4-mini, images use gpt-4o-mini",
                                 isGerman ? "Zahlungsdaten der Apple-ID werden nicht an OpenAI gesendet" : "Apple ID payment details are not sent to OpenAI"
                             ]
                         )

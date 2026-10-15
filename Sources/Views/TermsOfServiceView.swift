@@ -124,7 +124,7 @@ struct TermsOfServiceView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             TermsBullet(localized("eigene Rezepte zu speichern,", "d'enregistrer leurs propres recettes,", "store their own recipes,"))
                             TermsBullet(localized("Ernährungspräferenzen zu verwalten,", "de gérer leurs préférences alimentaires,", "manage dietary preferences,"))
-                            TermsBullet(localized("KI-gestützte Rezeptvorschläge zu erhalten (OpenAI GPT-4o-mini),", "de recevoir des suggestions de recettes basées sur l'IA (OpenAI GPT-4o-mini),", "receive AI-based recipe suggestions (OpenAI GPT-4o-mini),"))
+                            TermsBullet(localized("KI-gestützte Rezeptvorschläge zu erhalten (OpenAI gpt-5.4-mini für Text, gpt-4o-mini für Bilder),", "de recevoir des suggestions de recettes basées sur l'IA (OpenAI gpt-5.4-mini pour le texte, gpt-4o-mini pour les images),", "receive AI-based recipe suggestions (OpenAI gpt-5.4-mini for text, gpt-4o-mini for images),"))
                             TermsBullet(localized("Menüs zu planen,", "de planifier des menus,", "plan menus, and"))
                             TermsBullet(localized("und über das optionale Abonnement CulinaAi Premium KI-Funktionen innerhalb der in § 5 genannten Kontingente zu nutzen.", "et d'utiliser les fonctions d'IA de l'abonnement optionnel CulinaAi Premium dans les quotas indiqués à la section 5.", "and use AI features of the optional CulinaAi Premium subscription within the allowances in section 5."))
                         }
@@ -156,9 +156,9 @@ struct TermsOfServiceView: View {
                         ))
                         
                         TermsParagraph(number: "(2)", text: localized(
-                            "CulinaAi Premium wird als wöchentliches oder monatliches Apple-In-App-Abo abgeschlossen. Abrechnung, Verlängerung und Kündigung laufen über Apple. Der Nutzungsvertrag über die App besteht mit dem Anbieter. Welche Pflichten dabei bei Apple und welche beim Anbieter liegen, ist vor der Veröffentlichung rechtlich zu bestätigen.",
-                            "CulinaAi Premium est un abonnement Apple hebdomadaire ou mensuel. Facturation, renouvellement et résiliation passent par Apple. Le contrat d'utilisation de l'app est conclu avec le fournisseur. La répartition exacte des obligations entre Apple et le fournisseur doit être confirmée juridiquement avant publication.",
-                            "CulinaAi Premium is purchased as a weekly or monthly Apple in-app subscription. Billing, renewal, and cancellation run through Apple. The contract to use the app is with the provider. Which duties sit with Apple and which sit with the provider still needs legal confirmation before publication."
+                            "CulinaAi Premium wird als wöchentliches oder monatliches, automatisch verlängertes Apple-In-App-Abo abgeschlossen. Der Vertrag über die Nutzung der App besteht mit dem Anbieter. Zahlung, Abrechnung, Verlängerung und Kündigung laufen über das Apple-ID-Konto. Apple speichert die Zahlungsdaten; der Anbieter erhält sie nicht.",
+                            "CulinaAi Premium est un abonnement hebdomadaire ou mensuel à renouvellement automatique via un achat intégré Apple. Le contrat d'utilisation de l'app est conclu avec le fournisseur. Le paiement, la facturation, le renouvellement et la résiliation passent par le compte Apple ID. Apple conserve les données de paiement ; le fournisseur ne les reçoit pas.",
+                            "CulinaAi Premium is a weekly or monthly auto-renewing Apple in-app subscription. The contract to use the app is with the provider. Payment, billing, renewal, and cancellation run through the Apple ID account. Apple stores payment details; the provider does not receive them."
                         ))
                         
                         TermsParagraph(number: "(3)", text: localized(
@@ -221,9 +221,9 @@ struct TermsOfServiceView: View {
                         ))
                         
                         TermsParagraph(number: "(3)", text: localized(
-                            "Erstattungen über Apple beantragst du bei Apple. Ob das gesetzliche Widerrufsrecht daneben besteht und wie es auszuüben ist, ist nicht abschließend in diesen AGB entschieden und braucht eine rechtliche Prüfung vor der Veröffentlichung.",
-                            "Les remboursements Apple se demandent auprès d'Apple. L'existence et l'exercice d'un droit légal de rétractation distinct ne sont pas tranchés ici et doivent être vérifiés juridiquement avant publication.",
-                            "Apple refunds are requested from Apple. Whether a separate statutory withdrawal right exists, and how to exercise it, is not finally decided in these terms and needs legal review before publication."
+                            "Erstattungen für das In-App-Abo beantragst du bei Apple. Gesetzliche Verbraucherrechte bleiben unberührt, soweit ein Widerrufsrecht besteht und nicht erloschen ist.",
+                            "Les remboursements de l'abonnement intégré se demandent à Apple. Les droits légaux des consommateurs demeurent lorsqu'un droit de rétractation existe et n'est pas expiré.",
+                            "Refunds for the in-app subscription are requested from Apple. Statutory consumer rights remain unaffected where a right of withdrawal exists and has not expired."
                         ))
                     }
                     
@@ -299,7 +299,7 @@ struct TermsOfServiceView: View {
                     }
                     
                     TermsSection(isGerman ? "9. KI-Inhalte (OpenAI)" : "9. AI-Generated Content (OpenAI)", icon: "sparkles") {
-                        TermsParagraph(number: "(1)", text: isGerman ? "Die App nutzt künstliche Intelligenz (OpenAI GPT-4o-mini) zur Erstellung oder Anpassung von Rezepten und Textvorschlägen." : "The app uses artificial intelligence (OpenAI GPT-4o-mini) to create or adapt recipes and text suggestions.")
+                        TermsParagraph(number: "(1)", text: isGerman ? "Die App nutzt künstliche Intelligenz von OpenAI zur Erstellung oder Anpassung von Rezepten und Texten (Modell gpt-5.4-mini) und zur Bildanalyse (Modell gpt-4o-mini)." : "The app uses OpenAI to create or adapt recipes and text (model gpt-5.4-mini) and to analyse images (model gpt-4o-mini).")
                         
                         TermsParagraph(number: "(2)", text: isGerman ? "Diese Inhalte werden automatisiert generiert und können fehlerhaft, unvollständig oder ungeeignet sein. Der Anbieter übernimmt keine Gewähr für Richtigkeit, Vollständigkeit oder gesundheitliche Eignung der KI-generierten Inhalte." : "Such content is automatically generated and may be inaccurate, incomplete, or unsuitable. The provider assumes no liability for the accuracy, completeness, or health suitability of AI-generated content.")
                         

@@ -475,10 +475,10 @@ private struct KeyboardTabBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            TabBarButton(icon: "sparkles", title: L.tabKulina.localized, tag: 0, selectedTab: $app.selectedTab)
-            TabBarButton(icon: "frying.pan", title: L.tabRecipes.localized, tag: 1, selectedTab: $app.selectedTab)
-            TabBarButton(icon: "book", title: L.tabRecipeBook.localized, tag: 2, selectedTab: $app.selectedTab)
-            TabBarButton(icon: "cart", title: L.tabShopping.localized, tag: 3, selectedTab: $app.selectedTab)
+            TabBarButton(assetName: "tab-culina-chat", title: L.tabKulina.localized, tag: 0, selectedTab: $app.selectedTab)
+            TabBarButton(assetName: "tab-recipes", title: L.tabRecipes.localized, tag: 1, selectedTab: $app.selectedTab)
+            TabBarButton(assetName: "tab-recipe-book", title: L.tabRecipeBook.localized, tag: 2, selectedTab: $app.selectedTab)
+            TabBarButton(assetName: "tab-shopping", title: L.tabShopping.localized, tag: 3, selectedTab: $app.selectedTab)
         }
         .id(localizationManager.currentLanguage)
         .padding(.horizontal)
@@ -511,19 +511,34 @@ private final class KeyboardVisibility: ObservableObject {
 }
 
 struct TabBarButton: View {
-    let icon: String
+    var icon: String? = nil
+    var assetName: String? = nil
     let title: String
     let tag: Int
     @Binding var selectedTab: Int
     
     private var isSelected: Bool { selectedTab == tag }
+
+    @ViewBuilder
+    private var tabIcon: some View {
+        if let assetName {
+            Image(assetName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 34, height: 34)
+        } else {
+            Image(systemName: icon ?? "circle")
+                .font(.system(size: 26, weight: .medium))
+                .frame(width: 34, height: 34)
+        }
+    }
     
     var body: some View {
         Button {
             selectedTab = tag
         } label: {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .medium))
+            tabIcon
                 .foregroundStyle(isSelected ? Color(red: 0.95, green: 0.5, blue: 0.3) : .white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)

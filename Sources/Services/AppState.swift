@@ -42,6 +42,8 @@ final class AppState: ObservableObject {
     // Recipe goal from chat navigation
     @Published var pendingRecipeGoal: String? = nil
     @Published var pendingRecipeDescription: String? = nil
+    /// User chat prompt that produced the recipe idea being created.
+    @Published var pendingRecipeUserRequirements: String? = nil
     
     // Hidden intent summary from last user recipe query (e.g. "vegan, glutenfrei")
     @Published var intentSummary: String? = nil

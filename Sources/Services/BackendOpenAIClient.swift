@@ -171,6 +171,7 @@ final class BackendOpenAIClient {
     ///   - categories: Rezeptkategorien (z.B. Frühstück, Snack).
     ///   - servings: Anzahl Portionen.
     ///   - dietaryContext: Optionaler Freitext-Kontext zu Ernährungspräferenzen.
+    ///   - userRequirements: Ursprünglicher Nutzerprompt, der zur Rezeptidee geführt hat.
     /// - Returns: Strukturiertes `RecipePlan`-Objekt.
     /// - Throws: `NSError` bei Backend-Fehlern oder `URLError` bei Transportfehlern.
     func generateRecipePlan(
@@ -180,7 +181,8 @@ final class BackendOpenAIClient {
         nutrition: NutritionConstraint,
         categories: [String],
         servings: Int?,
-        dietaryContext: String? = nil
+        dietaryContext: String? = nil,
+        userRequirements: String? = nil
     ) async throws -> RecipePlan {
         guard let token = accessTokenProvider() else {
             throw NSError(domain: "BackendOpenAI", code: 401, userInfo: [NSLocalizedDescriptionKey: L.errorNotLoggedIn.localized])
@@ -201,6 +203,9 @@ final class BackendOpenAIClient {
             Logger.debug("[Dietary] Sending dietary_context length=\(AIInputLimit.clamp(ctx, to: AIInputLimit.dietaryContext).count)", category: .data)
         } else {
             Logger.debug("[Dietary] No dietary_context", category: .data)
+        }
+        if let requirements = userRequirements?.trimmingCharacters(in: .whitespacesAndNewlines), !requirements.isEmpty {
+            requestDict["user_requirements"] = AIInputLimit.clamp(requirements, to: AIInputLimit.chatMessage)
         }
         
         requestDict["nutrition_constraints"] = [

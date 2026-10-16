@@ -7,6 +7,10 @@ struct RecipeCreatorView: View {
     @FocusState private var isFocused: Bool
 
     @State private var goal: String = ""
+    /// Chat prompt that produced the idea currently being turned into a recipe.
+    @State private var ideaUserRequirements: String? = nil
+    /// Goal text filled from that idea. Requirements are sent only while this text is unchanged.
+    @State private var appliedIdeaGoal: String? = nil
     @State private var timeMinutesMax: String = ""
     @State private var servingsStr: String = "4"
 
@@ -121,17 +125,11 @@ TextField(L.placeholder_describeDish.localized, text: $goal.limited(to: AIInputL
                         .accessibilityLabel(L.label_whatToCook.localized)
                         .accessibilityHint(L.placeholder_describeDish.localized)
                         .onAppear {
-                            if let pending = app.pendingRecipeGoal {
-                                // Combine name and description if description exists
-                                if let desc = app.pendingRecipeDescription, !desc.isEmpty {
-                                    goal = AIInputLimit.clamp("\(pending): \(desc)", to: AIInputLimit.recipeGoal)
-                                } else {
-                                    goal = AIInputLimit.clamp(pending, to: AIInputLimit.recipeGoal)
-                                }
-                                app.pendingRecipeGoal = nil
-                                app.pendingRecipeDescription = nil
-                            }
+                            applyPendingRecipeIdea()
                             loadPreferences()
+                        }
+                        .onChange(of: app.pendingRecipeGoal) { _, _ in
+                            applyPendingRecipeIdea()
                         }
 
                     VStack(alignment: .leading) {
@@ -324,6 +322,23 @@ TextField(L.placeholder_describeDish.localized, text: $goal.limited(to: AIInputL
         if parts.isEmpty { return "" }
         return L.creator_systemPrompt.localized + " " + parts.joined(separator: " | ")
     }
+
+    private func applyPendingRecipeIdea() {
+        guard let pending = app.pendingRecipeGoal else { return }
+        let nextGoal: String
+        if let desc = app.pendingRecipeDescription, !desc.isEmpty {
+            nextGoal = AIInputLimit.clamp("\(pending): \(desc)", to: AIInputLimit.recipeGoal)
+        } else {
+            nextGoal = AIInputLimit.clamp(pending, to: AIInputLimit.recipeGoal)
+        }
+        goal = nextGoal
+        appliedIdeaGoal = nextGoal
+        let requirements = app.pendingRecipeUserRequirements?.trimmingCharacters(in: .whitespacesAndNewlines)
+        ideaUserRequirements = (requirements?.isEmpty == false) ? requirements : nil
+        app.pendingRecipeGoal = nil
+        app.pendingRecipeDescription = nil
+        app.pendingRecipeUserRequirements = nil
+    }
     
     func generate() async {
         // Block AI features on jailbroken devices
@@ -388,7 +403,8 @@ TextField(L.placeholder_describeDish.localized, text: $goal.limited(to: AIInputL
                 nutrition: nutrition,
                 categories: categoriesForGeneration,
                 servings: 4,
-                dietaryContext: AIInputLimit.clamp(fullContext, to: AIInputLimit.dietaryContext)
+                dietaryContext: AIInputLimit.clamp(fullContext, to: AIInputLimit.dietaryContext),
+                userRequirements: goal == appliedIdeaGoal ? ideaUserRequirements : nil
             )
             
             // Validate that the AI returned a usable recipe

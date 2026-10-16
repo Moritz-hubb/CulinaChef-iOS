@@ -42,12 +42,13 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
                             .frame(minHeight: 500)
                     } else {
                         VStack(spacing: 12) {
-                            ForEach(messages) { msg in
+                            ForEach(Array(messages.enumerated()), id: \.element.id) { index, msg in
                                 ChatBubble(
                                     message: msg,
                                     onRetry: retryLastMessage,
                                     recipePlan: generatedPlans[msg.id],
-                                    onOpenRecipe: { presentedPlan = $0 }
+                                    onOpenRecipe: { presentedPlan = $0 },
+                                    sourceUserPrompt: msg.role == .assistant ? userRequirements(before: index) : nil
                                 )
                                     .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             }
@@ -403,6 +404,26 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             guard ChatStarterSuggestions.keys.indices.contains(index) else { return nil }
             return ChatStarterSuggestions.keys[index].localized
         }
+    }
+
+    /// User messages that led to the assistant reply at `index`, newest request kept if the cap is hit.
+    private func userRequirements(before index: Int) -> String? {
+        guard index > 0, index <= messages.count else { return nil }
+        let prompts = messages[..<index].compactMap { message -> String? in
+            guard message.role == .user else { return nil }
+            let text = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return text.isEmpty ? nil : text
+        }
+        guard let latest = prompts.last else { return nil }
+        if prompts.count == 1 { return latest }
+        let earlier = prompts.dropLast().joined(separator: "\n")
+        let combined = "Earlier messages:\n\(earlier)\n\nRequest that led to this recipe idea:\n\(latest)"
+        if combined.count <= AIInputLimit.chatMessage { return combined }
+        let header = "Request that led to this recipe idea:\n"
+        if header.count + latest.count <= AIInputLimit.chatMessage {
+            return header + latest
+        }
+        return String(latest.prefix(AIInputLimit.chatMessage))
     }
 
     private func sendSuggestion(_ text: String) {
@@ -792,6 +813,7 @@ private struct ChatBubble: View {
     let onRetry: () -> Void
     var recipePlan: RecipePlan? = nil
     var onOpenRecipe: ((RecipePlan) -> Void)? = nil
+    var sourceUserPrompt: String? = nil
     var isUser: Bool { message.role == .user }
 
     var body: some View {
@@ -809,7 +831,7 @@ private struct ChatBubble: View {
                 
                 // Parse und zeige Rezeptvorschläge
                 if !isUser {
-                    RecipeSuggestionsView(text: message.text)
+                    RecipeSuggestionsView(text: message.text, sourceUserPrompt: sourceUserPrompt)
                 } else {
                     Text(message.text)
                         .foregroundStyle(.white)
@@ -894,6 +916,7 @@ private struct ChatBubble: View {
 private struct RecipeSuggestionsView: View {
     @EnvironmentObject var app: AppState
     let text: String
+    var sourceUserPrompt: String? = nil
     @State private var creatingMenu = false
     @State private var createdMenuId: String? = nil
     @State private var createError: String? = nil
@@ -1080,6 +1103,7 @@ private struct RecipeSuggestionsView: View {
                 if let recipe = selectedRecipe {
                     app.pendingRecipeGoal = recipe.name
                     app.pendingRecipeDescription = recipe.description
+                    app.pendingRecipeUserRequirements = sourceUserPrompt
                     if let mid = createdMenuId {
                         app.pendingTargetMenuId = mid
                         app.pendingSuggestionNameToRemove = recipe.name
@@ -1089,7 +1113,13 @@ private struct RecipeSuggestionsView: View {
             }
             Button(L.generateRecipe.localized) {
                 if let recipe = selectedRecipe {
-                    Task { await generateAutomatic(recipeName: recipe.name, recipeDescription: recipe.description) }
+                    Task {
+                        await generateAutomatic(
+                            recipeName: recipe.name,
+                            recipeDescription: recipe.description,
+                            userRequirements: sourceUserPrompt
+                        )
+                    }
                 }
             }
             Button(L.cancel.localized, role: .cancel) {}
@@ -1599,7 +1629,7 @@ private struct RecipeSuggestionsView: View {
     }
     
     // Generate recipe automatically with essential preferences only
-    private func generateAutomatic(recipeName: String, recipeDescription: String) async {
+    private func generateAutomatic(recipeName: String, recipeDescription: String, userRequirements: String?) async {
         // Block AI features on jailbroken devices
         if app.isJailbroken {
             await MainActor.run {
@@ -1686,7 +1716,8 @@ private struct RecipeSuggestionsView: View {
                 ),
                 categories: Array(userImportantDiets),
                 servings: 4,
-                dietaryContext: fullContext
+                dietaryContext: fullContext,
+                userRequirements: userRequirements
             )
             await MainActor.run {
                 // Store menu info if this came from a menu suggestion

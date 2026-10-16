@@ -161,22 +161,51 @@ class ShoppingListManager: ObservableObject {
     // MARK: - Item Management
     
     func addItem(name: String, quantity: String?, category: ItemCategory) {
-        let item = ShoppingListItem(name: name, quantity: quantity, category: category)
+        addItems([ShoppingListItem(name: name, quantity: quantity, category: category)])
+    }
+    
+    func addItems(_ items: [ShoppingListItem]) {
         var updatedList = shoppingList
-        updatedList.items.append(item)
+        for item in items {
+            stack(item, into: &updatedList)
+        }
         shoppingList = updatedList
         saveShoppingList()
         // Notify views that the shopping list changed
         NotificationCenter.default.post(name: NSNotification.Name("ShoppingListDidChange"), object: nil)
     }
-    
-    func addItems(_ items: [ShoppingListItem]) {
-        var updatedList = shoppingList
-        updatedList.items.append(contentsOf: items)
-        shoppingList = updatedList
-        saveShoppingList()
-        // Notify views that the shopping list changed
-        NotificationCenter.default.post(name: NSNotification.Name("ShoppingListDidChange"), object: nil)
+
+    /// Adds `item` onto the first unchecked row with the same name and a compatible quantity.
+    /// Other unchecked rows of that same item are folded in as well.
+    private func stack(_ item: ShoppingListItem, into list: inout ShoppingList) {
+        let nameKey = ShoppingListQuantity.normalizedName(item.name)
+        var runningQuantity = item.quantity
+        var targetIndex: Int?
+        var indicesToRemove: [Int] = []
+
+        for index in list.items.indices {
+            let existing = list.items[index]
+            guard !existing.isCompleted else { continue }
+            guard ShoppingListQuantity.normalizedName(existing.name) == nameKey else { continue }
+            guard case .merged(let quantity) = ShoppingListQuantity.combine(existing.quantity, runningQuantity) else {
+                continue
+            }
+            runningQuantity = quantity
+            if targetIndex == nil {
+                targetIndex = index
+            } else {
+                indicesToRemove.append(index)
+            }
+        }
+
+        if let targetIndex {
+            list.items[targetIndex].quantity = runningQuantity
+            for index in indicesToRemove.reversed() {
+                list.items.remove(at: index)
+            }
+        } else {
+            list.items.append(item)
+        }
     }
     
     func toggleItemCompletion(item: ShoppingListItem) {

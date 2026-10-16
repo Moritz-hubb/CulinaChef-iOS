@@ -90,6 +90,103 @@ final class ShoppingListManagerTests: XCTestCase {
         XCTAssertEqual(manager.shoppingList.items.count, 1)
         XCTAssertNil(manager.shoppingList.items[0].quantity)
     }
+
+    func testSameIngredientStacksMassIntoKilograms() {
+        manager.addItem(name: "Zucker", quantity: "500g", category: .other)
+        manager.addItem(name: "zucker", quantity: "500 g", category: .spices)
+
+        XCTAssertEqual(manager.shoppingList.items.count, 1)
+        XCTAssertEqual(manager.shoppingList.items[0].name, "Zucker")
+        XCTAssertEqual(manager.shoppingList.items[0].quantity, "1kg")
+        XCTAssertEqual(manager.shoppingList.items[0].category, .other)
+    }
+
+    func testSameIngredientStacksGramsAndMixedUnits() {
+        manager.addItem(name: "Mehl", quantity: "200g", category: .grains)
+        manager.addItem(name: "Mehl", quantity: "300g", category: .grains)
+        XCTAssertEqual(manager.shoppingList.items[0].quantity, "500g")
+
+        manager.addItem(name: "Mehl", quantity: "1kg", category: .grains)
+        XCTAssertEqual(manager.shoppingList.items.count, 1)
+        let quantity = manager.shoppingList.items[0].quantity ?? ""
+        XCTAssertTrue(quantity == "1.5kg" || quantity == "1,5kg", quantity)
+    }
+
+    func testSameIngredientStacksVolumeIntoLiters() {
+        manager.addItem(name: "Milch", quantity: "500ml", category: .dairy)
+        manager.addItem(name: "Milch", quantity: "0,5 l", category: .dairy)
+
+        XCTAssertEqual(manager.shoppingList.items.count, 1)
+        XCTAssertEqual(manager.shoppingList.items[0].quantity, "1l")
+    }
+
+    func testSameCountableUnitStacks() {
+        manager.addItem(name: "Eier", quantity: "2 Stück", category: .other)
+        manager.addItem(name: "Eier", quantity: "4 Stk", category: .other)
+
+        XCTAssertEqual(manager.shoppingList.items.count, 1)
+        XCTAssertEqual(manager.shoppingList.items[0].quantity, "6 Stück")
+    }
+
+    func testBatchOfEqualItemsStacksWithExisting() {
+        manager.addItem(name: "Zucker", quantity: "250g", category: .other)
+        manager.addItems([
+            ShoppingListItem(name: "Zucker", quantity: "250g", category: .other),
+            ShoppingListItem(name: "Zucker", quantity: "500g", category: .other)
+        ])
+
+        XCTAssertEqual(manager.shoppingList.items.count, 1)
+        XCTAssertEqual(manager.shoppingList.items[0].quantity, "1kg")
+    }
+
+    func testDifferentNamesAndIncompatibleUnitsStaySeparate() {
+        manager.addItem(name: "Zucker", quantity: "500g", category: .other)
+        manager.addItem(name: "Salz", quantity: "500g", category: .spices)
+        manager.addItem(name: "Zucker", quantity: "2 EL", category: .other)
+
+        XCTAssertEqual(manager.shoppingList.items.count, 3)
+        XCTAssertEqual(manager.shoppingList.items.map(\.quantity), ["500g", "500g", "2 EL"])
+    }
+
+    func testQuantityAndMissingQuantityStaySeparate() {
+        manager.addItem(name: "Salz", quantity: nil, category: .spices)
+        manager.addItem(name: "Salz", quantity: "1 TL", category: .spices)
+
+        XCTAssertEqual(manager.shoppingList.items.count, 2)
+    }
+
+    func testItemsWithoutQuantityCollapseToOne() {
+        manager.addItem(name: "Salz", quantity: nil, category: .spices)
+        manager.addItem(name: " Salz ", quantity: "  ", category: .other)
+
+        XCTAssertEqual(manager.shoppingList.items.count, 1)
+        XCTAssertNil(manager.shoppingList.items[0].quantity)
+    }
+
+    func testAddingAgainFoldsExistingDuplicateRows() {
+        manager.shoppingList = ShoppingList(items: [
+            ShoppingListItem(name: "Zucker", quantity: "500g", category: .other),
+            ShoppingListItem(name: "Zucker", quantity: "500g", category: .other)
+        ])
+
+        manager.addItem(name: "Zucker", quantity: "500g", category: .other)
+
+        XCTAssertEqual(manager.shoppingList.items.count, 1)
+        let quantity = manager.shoppingList.items[0].quantity ?? ""
+        XCTAssertTrue(quantity == "1.5kg" || quantity == "1,5kg", quantity)
+    }
+
+    func testCompletedItemDoesNotAbsorbNewQuantity() {
+        manager.addItem(name: "Zucker", quantity: "500g", category: .other)
+        manager.toggleItemCompletion(item: manager.shoppingList.items[0])
+        manager.addItem(name: "Zucker", quantity: "500g", category: .other)
+
+        XCTAssertEqual(manager.shoppingList.items.count, 2)
+        XCTAssertEqual(manager.shoppingList.items[0].quantity, "500g")
+        XCTAssertTrue(manager.shoppingList.items[0].isCompleted)
+        XCTAssertEqual(manager.shoppingList.items[1].quantity, "500g")
+        XCTAssertFalse(manager.shoppingList.items[1].isCompleted)
+    }
     
     func testCategoriesVersionUpdatesWhenItemsAdded() {
         let initialVersion = manager.categoriesVersion

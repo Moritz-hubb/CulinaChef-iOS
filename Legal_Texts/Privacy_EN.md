@@ -153,7 +153,7 @@ The following service providers may process data outside the European Union:
 
 | Provider | Purpose | Location | Legal Basis |
 |----------|---------|----------|-------------|
-| **Supabase Pte. Ltd.** | Database and authentication | Singapore | Art. 6 (1)(b) GDPR |
+| **Supabase Pte. Ltd.** | Database and authentication | Ireland (EU) | Art. 6 (1)(b) GDPR |
 | **OpenAI Ireland Ltd.** | AI-based recipe generation | USA | Art. 49 (1)(a) GDPR |
 | **Apple Inc.** | In-app purchases and subscriptions | USA | Art. 6 (1)(b) GDPR |
 | **Functional Software, Inc. (Sentry)** | Crash reports without screenshots | USA | Art. 6 (1)(f) GDPR |
@@ -162,7 +162,7 @@ The following service providers may process data outside the European Union:
 | **Railway Corporation** | Operation of the API | USA | Art. 6 (1)(b) GDPR |
 | **Vercel Inc.** | Operation of this website | USA | Art. 6 (1)(f) GDPR |
 
-A data processing agreement is in place with Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc., and Functional Software, Inc. Where these recipients process data outside the EU, the agreements include the European Commission Standard Contractual Clauses. For Functional Software, Inc. the transfer uses the EU-US Data Privacy Framework and, where that does not apply, the Standard Contractual Clauses. OpenAI is additionally covered by consent under Art. 49 (1)(a) GDPR. Apple processes purchases as its own controller.
+The database for the account and recipes is hosted by Supabase in Ireland (EU). The contracting party is Supabase Pte. Ltd., based in Singapore. A data processing agreement is in place with Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc., and Functional Software, Inc. Allergy and intolerance details sent to OpenAI are covered by explicit consent under Art. 9 (2)(a) GDPR. Where these recipients process data outside the EU, the agreements include the European Commission Standard Contractual Clauses. For Functional Software, Inc. the transfer uses the EU-US Data Privacy Framework and, where that does not apply, the Standard Contractual Clauses. OpenAI is additionally covered by consent under Art. 49 (1)(a) GDPR. Apple processes purchases as its own controller.
 
 **Security:** All data transmissions are encrypted via HTTPS/TLS.
 

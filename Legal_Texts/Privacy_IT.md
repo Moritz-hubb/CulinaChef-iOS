@@ -153,7 +153,7 @@ I seguenti fornitori possono elaborare dati al di fuori dell'Unione Europea:
 
 | Fornitore | Scopo | Ubicazione | Base Legale |
 |-----------|-------|------------|-------------|
-| **Supabase Pte. Ltd.** | Database e autenticazione | Singapore | Art. 6 Abs. 1 lit. b GDPR |
+| **Supabase Pte. Ltd.** | Database e autenticazione | Irlanda (UE) | Art. 6 Abs. 1 lit. b GDPR |
 | **OpenAI Ireland Ltd.** | Generazione ricette con IA | USA | Art. 49 Abs. 1 lit. a GDPR |
 | **Apple Inc.** | Acquisti in-app e abbonamenti | USA | Art. 6 (1)(b) GDPR |
 | **Functional Software, Inc. (Sentry)** | Report di arresto senza screenshot | USA | Art. 6 (1)(f) GDPR |
@@ -162,7 +162,7 @@ I seguenti fornitori possono elaborare dati al di fuori dell'Unione Europea:
 | **Railway Corporation** | Esercizio dell'API | USA | Art. 6 (1)(b) GDPR |
 | **Vercel Inc.** | Esercizio di questo sito | USA | Art. 6 (1)(f) GDPR |
 
-È in vigore un contratto di incarico al trattamento con Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. e Functional Software, Inc. Se questi destinatari trattano dati al di fuori dell'UE, i contratti contengono le clausole contrattuali tipo della Commissione europea. Per Functional Software, Inc. il trasferimento si basa sull'EU-US Data Privacy Framework e, se non si applica, sulle clausole contrattuali tipo. Per OpenAI si aggiunge il consenso dell'art. 49 (1)(a) GDPR. Apple tratta gli acquisti come titolare autonomo.
+Il database di account e ricette è ospitato da Supabase in Irlanda (UE). La controparte contrattuale è Supabase Pte. Ltd., con sede a Singapore. È in vigore un contratto di incarico al trattamento con Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. e Functional Software, Inc. I dati su allergie e intolleranze inviati a OpenAI si basano su un consenso esplicito ai sensi dell'art. 9 (2)(a) GDPR. Se questi destinatari trattano dati al di fuori dell'UE, i contratti contengono le clausole contrattuali tipo della Commissione europea. Per Functional Software, Inc. il trasferimento si basa sull'EU-US Data Privacy Framework e, se non si applica, sulle clausole contrattuali tipo. Per OpenAI si aggiunge il consenso dell'art. 49 (1)(a) GDPR. Apple tratta gli acquisti come titolare autonomo.
 
 **Tutti i trasferimenti di dati sono crittografati via HTTPS/TLS.**
 

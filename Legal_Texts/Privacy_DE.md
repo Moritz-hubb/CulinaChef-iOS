@@ -152,7 +152,7 @@ Folgende Empfänger können Daten außerhalb der EU verarbeiten:
 
 | Anbieter | Zweck | Standort | Rechtsgrundlage |
 |----------|-------|----------|-----------------|
-| **Supabase Pte. Ltd.** | Datenbank und Authentifizierung | Singapur | Art. 6 Abs. 1 lit. b DSGVO |
+| **Supabase Pte. Ltd.** | Datenbank und Authentifizierung | Irland (EU) | Art. 6 Abs. 1 lit. b DSGVO |
 | **OpenAI Ireland Ltd.** | KI-gestützte Rezeptgenerierung | USA | Art. 49 Abs. 1 lit. a DSGVO |
 | **Apple Inc.** | In-App-Käufe und Abonnements | USA | Art. 6 Abs. 1 lit. b DSGVO |
 | **Functional Software, Inc. (Sentry)** | Absturzberichte ohne Screenshot | USA | Art. 6 Abs. 1 lit. f DSGVO |
@@ -161,7 +161,7 @@ Folgende Empfänger können Daten außerhalb der EU verarbeiten:
 | **Railway Corporation** | Betrieb der API | USA | Art. 6 Abs. 1 lit. b DSGVO |
 | **Vercel Inc.** | Betrieb dieser Website | USA | Art. 6 Abs. 1 lit. f DSGVO |
 
-Mit Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. und Functional Software, Inc. besteht jeweils ein Auftragsverarbeitungsvertrag. Soweit diese Empfänger Daten außerhalb der EU verarbeiten, enthalten die Verträge die Standardvertragsklauseln der EU-Kommission. Bei Functional Software, Inc. erfolgt die Übermittlung über das EU-US Data Privacy Framework und, soweit dieses nicht greift, über die Standardvertragsklauseln. Für OpenAI besteht zusätzlich die Einwilligung nach Art. 49 Abs. 1 lit. a DSGVO. Apple verarbeitet Käufe als eigener Verantwortlicher.
+Die Datenbank für Konto und Rezepte steht bei Supabase in Irland (EU). Vertragspartner ist Supabase Pte. Ltd. mit Sitz in Singapur. Mit Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. und Functional Software, Inc. besteht jeweils ein Auftragsverarbeitungsvertrag. Für Allergie- und Unverträglichkeitsangaben, die an OpenAI gesendet werden, holen wir eine ausdrückliche Einwilligung nach Art. 9 Abs. 2 lit. a DSGVO ein. Soweit diese Empfänger Daten außerhalb der EU verarbeiten, enthalten die Verträge die Standardvertragsklauseln der EU-Kommission. Bei Functional Software, Inc. erfolgt die Übermittlung über das EU-US Data Privacy Framework und, soweit dieses nicht greift, über die Standardvertragsklauseln. Für OpenAI besteht zusätzlich die Einwilligung nach Art. 49 Abs. 1 lit. a DSGVO. Apple verarbeitet Käufe als eigener Verantwortlicher.
 
 **Alle Datenübertragungen erfolgen verschlüsselt via HTTPS/TLS.**
 

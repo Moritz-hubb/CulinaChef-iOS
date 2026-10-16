@@ -67,9 +67,9 @@ struct OpenAIConsentDialog: View {
                             Text(isGerman ? "Rechtsgrundlage" : "Legal Basis")
                                 .font(.footnote.bold())
                             
-                            Text(isGerman ? 
-                                "Ihre Einwilligung gemäß Art. 49 Abs. 1 lit. a DSGVO für die Datenübermittlung in ein Drittland (USA)." :
-                                "Your consent according to Art. 49 para. 1 lit. a GDPR for data transfer to a third country (USA).")
+                            Text(isGerman ?
+                                "Ihre Einwilligung gemäß Art. 49 Abs. 1 lit. a DSGVO für die Datenübermittlung in ein Drittland (USA). Allergie- und Unverträglichkeitsangaben können Gesundheitsdaten sein. Mit „Zustimmen und fortfahren“ willigen Sie ausdrücklich nach Art. 9 Abs. 2 lit. a DSGVO ein, dass diese Angaben zur Anpassung von Rezepten und Menüs an OpenAI Ireland Ltd. gesendet werden und dort in den USA verarbeitet werden können." :
+                                "Your consent according to Art. 49 para. 1 lit. a GDPR for data transfer to a third country (USA). Allergy and intolerance details can be health data. By tapping Accept and Continue you explicitly consent under Art. 9 (2)(a) GDPR to those details being sent to OpenAI Ireland Ltd. to adapt recipes and menus, including processing in the USA.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }

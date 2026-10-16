@@ -153,7 +153,7 @@ Los siguientes proveedores pueden procesar datos fuera de la Unión Europea:
 
 | Proveedor | Propósito | Ubicación | Base Legal |
 |-----------|-----------|-----------|------------|
-| **Supabase Pte. Ltd.** | Base de datos y autenticación | Singapur | Art. 6 Abs. 1 lit. b RGPD |
+| **Supabase Pte. Ltd.** | Base de datos y autenticación | Irlanda (UE) | Art. 6 Abs. 1 lit. b RGPD |
 | **OpenAI Ireland Ltd.** | Generación de recetas con IA | USA | Art. 49 Abs. 1 lit. a RGPD |
 | **Apple Inc.** | Compras in-app y suscripciones | USA | Art. 6 (1)(b) RGPD |
 | **Functional Software, Inc. (Sentry)** | Informes de fallos sin captura de pantalla | USA | Art. 6 (1)(f) RGPD |
@@ -162,7 +162,7 @@ Los siguientes proveedores pueden procesar datos fuera de la Unión Europea:
 | **Railway Corporation** | Funcionamiento de la API | USA | Art. 6 (1)(b) RGPD |
 | **Vercel Inc.** | Funcionamiento de este sitio | USA | Art. 6 (1)(f) RGPD |
 
-Hay un contrato de encargo del tratamiento con Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. y Functional Software, Inc. Si estos destinatarios tratan datos fuera de la UE, los contratos contienen las cláusulas contractuales tipo de la Comisión Europea. Para Functional Software, Inc. la transferencia se basa en el EU-US Data Privacy Framework y, si no se aplica, en las cláusulas contractuales tipo. Para OpenAI se añade el consentimiento del art. 49 (1)(a) del RGPD. Apple tramita las compras como responsable propio.
+La base de datos de la cuenta y las recetas está en Supabase en Irlanda (UE). La parte contratante es Supabase Pte. Ltd., con sede en Singapur. Hay un contrato de encargo del tratamiento con Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. y Functional Software, Inc. Los datos de alergias e intolerancias enviados a OpenAI se cubren con un consentimiento explícito según el art. 9 (2)(a) del RGPD. Si estos destinatarios tratan datos fuera de la UE, los contratos contienen las cláusulas contractuales tipo de la Comisión Europea. Para Functional Software, Inc. la transferencia se basa en el EU-US Data Privacy Framework y, si no se aplica, en las cláusulas contractuales tipo. Para OpenAI se añade el consentimiento del art. 49 (1)(a) del RGPD. Apple tramita las compras como responsable propio.
 
 **Todas las transferencias de datos se realizan cifradas vía HTTPS/TLS.**
 

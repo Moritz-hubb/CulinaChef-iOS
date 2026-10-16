@@ -26,7 +26,7 @@ Protecting your personal data is important to us. We process personal data exclu
 - **Data minimization:** Only the data necessary for operation are collected.
 - **Transparency:** We clearly communicate how your data are used.
 - **Security:** TLS encryption and secure data storage.
-- **No advertising:** No tracking or profiling.
+- **No ads inside the app:** No banners and no ad-network trackers. Apple Search Ads can measure which App Store campaign led to an install. An advertising identifier (IDFA) is not read.
 
 ---
 
@@ -38,7 +38,7 @@ Protecting your personal data is important to us. We process personal data exclu
 
 - Username (3–32 characters)
 - E-mail address
-- Password (minimum 6 characters, bcrypt encryption)
+- Password, hashed by the sign-in service, not stored in plain text
 - Optional: Sign in with Apple
 
 **Purpose:** Account creation and authentication  
@@ -109,22 +109,22 @@ Processed by Apple:
 
 We use **Sentry** by Functional Software, Inc. to improve app stability.
 
-**Data transmitted during crashes or errors:**
+**Data transmitted during crashes or errors in the released app:**
 
-- Device information (model, iOS version)
+- Device model and iOS version
 - App version and build number
-- Stack traces (technical error logs)
-- Error timestamps
-- Screenshots at the time of the error (optional)
-- User actions before the error (breadcrumbs)
-- **No personal data** (names, e-mails, etc.)
+- Technical stack trace
+- Time of the error
+- Recent actions before the error, including requested addresses without query parameters
+- No screenshots and no view hierarchy
+- Name and email are not stored as the Sentry user. Device model and text inside an error message can still be personal data.
 
 **Third-party provider:** Functional Software, Inc. (Sentry)
 
 - **Recipient:** Functional Software, Inc., USA
-- **Legal basis:** Art. 6 (1)(f) GDPR – Legitimate interest
+- **Legal basis:** Art. 6 (1)(f) GDPR (legitimate interest in a stable app)
 - **Storage period:** 30 days at Sentry
-- **Data transfer:** EU/USA, GDPR-compliant
+- **Data transfer:** to Functional Software, Inc. in the USA. A data processing agreement is in place. The transfer uses the EU-US Data Privacy Framework and, where that does not apply, the Standard Contractual Clauses in that agreement.
 
 **Purpose:** Detection and resolution of technical errors to improve app stability.
 
@@ -153,10 +153,16 @@ The following service providers may process data outside the European Union:
 
 | Provider | Purpose | Location | Legal Basis |
 |----------|---------|----------|-------------|
-| **Supabase Inc.** | Database and authentication | EU / USA | Art. 6 (1)(b) GDPR |
-| **OpenAI L.L.C.** | AI-based recipe generation | USA | Art. 49 (1)(a) GDPR |
-| **Apple Inc.** | In-app purchases and subscriptions | USA | EU Adequacy Decision |
-| **Functional Software, Inc. (Sentry)** | Error tracking and crash reporting | USA / EU | Art. 6 (1)(f) GDPR |
+| **Supabase Pte. Ltd.** | Database and authentication | Singapore | Art. 6 (1)(b) GDPR |
+| **OpenAI Ireland Ltd.** | AI-based recipe generation | USA | Art. 49 (1)(a) GDPR |
+| **Apple Inc.** | In-app purchases and subscriptions | USA | Art. 6 (1)(b) GDPR |
+| **Functional Software, Inc. (Sentry)** | Crash reports without screenshots | USA | Art. 6 (1)(f) GDPR |
+| **RevenueCat, Inc.** | Subscription status and purchase restoration | USA | Art. 6 (1)(b) GDPR |
+| **Nest22, Inc. (Superwall)** | Display of the purchase page | USA | Art. 6 (1)(b) GDPR |
+| **Railway Corporation** | Operation of the API | USA | Art. 6 (1)(b) GDPR |
+| **Vercel Inc.** | Operation of this website | USA | Art. 6 (1)(f) GDPR |
+
+A data processing agreement is in place with Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc., and Functional Software, Inc. Where these recipients process data outside the EU, the agreements include the European Commission Standard Contractual Clauses. For Functional Software, Inc. the transfer uses the EU-US Data Privacy Framework and, where that does not apply, the Standard Contractual Clauses. OpenAI is additionally covered by consent under Art. 49 (1)(a) GDPR. Apple processes purchases as its own controller.
 
 **Security:** All data transmissions are encrypted via HTTPS/TLS.
 
@@ -167,11 +173,11 @@ The following service providers may process data outside the European Union:
 We implement the following security measures to protect your data:
 
 - **Encryption:** TLS/HTTPS for all data transfers
-- **Password protection:** bcrypt hashing with salt
+- **Password protection:** The password is stored hashed, not in plain text
 - **Access control:** Row Level Security (RLS) within the database
 - **Token safety:** Secure storage in iOS Keychain
 - **Deletion record:** When an account is deleted, only a hash of the user id is stored, for three years
-- **Data minimization:** No tracking, advertising, or profiling
+- **Data minimization:** No ad-network trackers and no profiling inside the app. Apple Search Ads can attribute an App Store install to a campaign.
 - **Backup strategy:** Daily database backups, kept for 7 days. Backups are for restoring the service after an outage. They are not used to bring back a deleted account.
 
 ---
@@ -202,7 +208,7 @@ We will process your request without undue delay.
 | Recipes, menus, favorites, ratings, photos | Until you delete the account in the app | Immediately, with the account |
 | Allergies, diet, taste, dislikes, notes | Until you delete the account in the app | Immediately, with the account |
 | Chat messages | Only in memory for the current session | When you close the app. There is no chat copy on the server. |
-| Crash reports (Sentry) | 30 days | Deleted by Sentry. No email and no user id. |
+| Crash reports (Sentry) | 30 days | Released app: no screenshot. Email and user id are not stored as the Sentry user. Device model and short error text can be included. |
 | Database backups | 7 days | The backup expires. A deleted account is not restored from it. |
 | Deletion record | 3 years | Only a hash of the user id, the time, and that you requested deletion. No name, email, or recipes. Then deleted automatically. |
 

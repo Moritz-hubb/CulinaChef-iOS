@@ -26,7 +26,7 @@ La protección de sus datos personales es una prioridad para nosotros. Procesamo
 - **Minimización:** Solo se recogen datos necesarios
 - **Transparencia:** Comunicación clara sobre el uso de datos
 - **Seguridad:** Cifrado TLS y almacenamiento seguro
-- **Sin publicidad:** No hay seguimiento ni perfilado
+- **Sin publicidad en la app:** ni banners ni rastreadores de redes publicitarias. Apple Search Ads puede medir qué campaña del App Store llevó a una instalación. No se lee el identificador publicitario (IDFA).
 
 ---
 
@@ -38,7 +38,7 @@ La protección de sus datos personales es una prioridad para nosotros. Procesamo
 
 - Nombre de usuario (3–32 caracteres)
 - Correo electrónico
-- Contraseña (mín. 6 caracteres, bcrypt)
+- Contraseña con hash del servicio de acceso, no en texto plano
 - Opcional: Sign in with Apple
 
 **Propósito:** Creación y autenticación de cuenta  
@@ -115,16 +115,16 @@ Usamos **Sentry** de Functional Software, Inc. para mejorar la estabilidad de la
 - Versión de la app y número de build
 - Stack traces (registros técnicos de errores)
 - Marca de tiempo del error
-- Capturas de pantalla en el momento del error (opcional)
-- Acciones del usuario antes del error (breadcrumbs)
-- **NINGÚN dato personal** (nombres, correos, etc.)
+- Acciones recientes antes del error, incluidas las direcciones solicitadas sin parámetros
+- Sin capturas de pantalla y sin jerarquía de vistas
+- El nombre y el correo no se guardan como usuario de Sentry. El modelo del dispositivo y el texto de un mensaje de error pueden ser datos personales.
 
 **Proveedor:** Functional Software, Inc. (Sentry)
 
 - **Destinatario:** Functional Software, Inc., USA
-- **Base legal:** Art. 6 Abs. 1 lit. f RGPD (interés legítimo)
+- **Base legal:** art. 6 (1)(f) RGPD (interés legítimo en una app estable)
 - **Duración:** 30 días en Sentry
-- **Transferencia de datos:** UE/USA, conforme al RGPD
+- **Transferencia:** a Functional Software, Inc. en EE. UU. Hay un contrato de encargo del tratamiento. La transferencia se basa en el EU-US Data Privacy Framework y, si no se aplica, en las cláusulas contractuales tipo que contiene.
 
 **Propósito:** Detección y resolución de errores técnicos para mejorar la estabilidad de la app.
 
@@ -153,10 +153,16 @@ Los siguientes proveedores pueden procesar datos fuera de la Unión Europea:
 
 | Proveedor | Propósito | Ubicación | Base Legal |
 |-----------|-----------|-----------|------------|
-| **Supabase Inc.** | Base de datos y autenticación | UE/USA | Art. 6 Abs. 1 lit. b RGPD |
-| **OpenAI L.L.C.** | Generación de recetas con IA | USA | Art. 49 Abs. 1 lit. a RGPD |
-| **Apple Inc.** | Compras in-app y suscripciones | USA | Decisión de adecuación de la UE |
-| **Functional Software, Inc. (Sentry)** | Seguimiento de errores y crash reporting | USA/UE | Art. 6 Abs. 1 lit. f RGPD |
+| **Supabase Pte. Ltd.** | Base de datos y autenticación | Singapur | Art. 6 Abs. 1 lit. b RGPD |
+| **OpenAI Ireland Ltd.** | Generación de recetas con IA | USA | Art. 49 Abs. 1 lit. a RGPD |
+| **Apple Inc.** | Compras in-app y suscripciones | USA | Art. 6 (1)(b) RGPD |
+| **Functional Software, Inc. (Sentry)** | Informes de fallos sin captura de pantalla | USA | Art. 6 (1)(f) RGPD |
+| **RevenueCat, Inc.** | Estado de la suscripción y restauración de compras | USA | Art. 6 (1)(b) RGPD |
+| **Nest22, Inc. (Superwall)** | Visualización de la página de compra | USA | Art. 6 (1)(b) RGPD |
+| **Railway Corporation** | Funcionamiento de la API | USA | Art. 6 (1)(b) RGPD |
+| **Vercel Inc.** | Funcionamiento de este sitio | USA | Art. 6 (1)(f) RGPD |
+
+Hay un contrato de encargo del tratamiento con Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. y Functional Software, Inc. Si estos destinatarios tratan datos fuera de la UE, los contratos contienen las cláusulas contractuales tipo de la Comisión Europea. Para Functional Software, Inc. la transferencia se basa en el EU-US Data Privacy Framework y, si no se aplica, en las cláusulas contractuales tipo. Para OpenAI se añade el consentimiento del art. 49 (1)(a) del RGPD. Apple tramita las compras como responsable propio.
 
 **Todas las transferencias de datos se realizan cifradas vía HTTPS/TLS.**
 
@@ -167,11 +173,11 @@ Los siguientes proveedores pueden procesar datos fuera de la Unión Europea:
 Para proteger sus datos, implementamos las siguientes medidas de seguridad:
 
 - **Cifrado:** TLS/HTTPS para todas las transferencias de datos
-- **Protección de contraseñas:** Hash bcrypt con salt
+- **Protección de contraseñas:** la contraseña se guarda con hash, no en texto plano
 - **Control de acceso:** Row Level Security (RLS) en la base de datos
 - **Seguridad de tokens:** Almacenamiento seguro en iOS Keychain
 - **Registro de eliminación:** Al eliminar una cuenta solo se guarda un hash del id de usuario, durante tres años
-- **Minimización de datos:** Sin seguimiento, publicidad o perfilado
+- **Minimización de datos:** ni rastreadores de redes publicitarias ni perfilado en la app. Apple Search Ads puede atribuir una instalación del App Store a una campaña.
 - **Estrategia de respaldo:** Copias diarias de la base de datos, conservadas 7 días. Sirven para restaurar el servicio tras una caída y no para recuperar una cuenta eliminada.
 
 ---
@@ -202,7 +208,7 @@ Procesaremos su solicitud sin demora indebida.
 | Recetas, menús, favoritos, valoraciones, fotos | Hasta que elimine la cuenta en la app | Inmediatamente, con la cuenta |
 | Alergias, dieta, sabor, aversiones, notas | Hasta que elimine la cuenta en la app | Inmediatamente, con la cuenta |
 | Mensajes de chat | Solo en memoria durante la sesión | Al cerrar la app. No hay copia del chat en el servidor. |
-| Informes de fallos (Sentry) | 30 días | Eliminados por Sentry. Sin correo ni id de usuario. |
+| Informes de fallos (Sentry) | 30 días | App publicada: sin captura de pantalla. El correo y el id de usuario no se guardan como usuario de Sentry. El modelo del dispositivo y un texto breve de error pueden incluirse. |
 | Copias de la base de datos | 7 días | La copia caduca. Una cuenta eliminada no se restaura desde ella. |
 | Registro de eliminación | 3 años | Solo un hash del id de usuario, la hora y que usted pidió la eliminación. Sin nombre, correo ni recetas. Después se borra solo. |
 

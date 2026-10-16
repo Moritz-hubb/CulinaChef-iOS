@@ -26,7 +26,7 @@ La protezione dei dati personali è una priorità per noi. Trattiamo i dati pers
 - **Minimizzazione:** Raccogliamo solo i dati necessari
 - **Trasparenza:** Comunicazione chiara sull'uso dei dati
 - **Sicurezza:** Crittografia TLS e archiviazione sicura
-- **Nessuna pubblicità:** Niente tracciamento o profilazione
+- **Nessuna pubblicità nell'app:** nessun banner e nessun tracker di reti pubblicitarie. Apple Search Ads può misurare quale campagna dell'App Store ha portato a un'installazione. L'identificatore pubblicitario (IDFA) non viene letto.
 
 ---
 
@@ -38,7 +38,7 @@ La protezione dei dati personali è una priorità per noi. Trattiamo i dati pers
 
 - Nome utente (3–32 caratteri)
 - Indirizzo e-mail
-- Password (min. 6 caratteri, bcrypt)
+- Password con hash dal servizio di accesso, non in chiaro
 - Opzionale: Sign in with Apple
 
 **Scopo:** Creazione e autenticazione account  
@@ -115,16 +115,16 @@ Usiamo **Sentry** di Functional Software, Inc. per migliorare la stabilità dell
 - Versione app e numero di build
 - Stack trace (log tecnici degli errori)
 - Timestamp dell'errore
-- Screenshot al momento dell'errore (opzionale)
-- Azioni utente prima dell'errore (breadcrumbs)
-- **NESSUN dato personale** (nomi, e-mail, ecc.)
+- Azioni recenti prima dell'errore, inclusi gli indirizzi chiamati senza parametri
+- Nessuno screenshot e nessuna gerarchia delle viste
+- Nome ed e-mail non sono salvati come utente Sentry. Il modello del dispositivo e il testo di un messaggio di errore possono comunque essere dati personali.
 
 **Fornitore terzo:** Functional Software, Inc. (Sentry)
 
 - **Destinatario:** Functional Software, Inc., USA
-- **Base legale:** Art. 6 Abs. 1 lit. f GDPR (interesse legittimo)
+- **Base legale:** art. 6 (1)(f) GDPR (interesse legittimo a un'app stabile)
 - **Durata conservazione:** 30 giorni presso Sentry
-- **Trasferimento dati:** UE/USA, conforme al GDPR
+- **Trasferimento:** a Functional Software, Inc. negli USA. È in vigore un contratto di incarico al trattamento. Il trasferimento si basa sull'EU-US Data Privacy Framework e, se non si applica, sulle clausole contrattuali tipo in esso contenute.
 
 **Scopo:** Rilevamento e risoluzione di errori tecnici per migliorare la stabilità dell'app.
 
@@ -153,10 +153,16 @@ I seguenti fornitori possono elaborare dati al di fuori dell'Unione Europea:
 
 | Fornitore | Scopo | Ubicazione | Base Legale |
 |-----------|-------|------------|-------------|
-| **Supabase Inc.** | Database e autenticazione | UE/USA | Art. 6 Abs. 1 lit. b GDPR |
-| **OpenAI L.L.C.** | Generazione ricette con IA | USA | Art. 49 Abs. 1 lit. a GDPR |
-| **Apple Inc.** | Acquisti in-app e abbonamenti | USA | Decisione di adeguatezza dell'UE |
-| **Functional Software, Inc. (Sentry)** | Monitoraggio errori e crash reporting | USA/UE | Art. 6 Abs. 1 lit. f GDPR |
+| **Supabase Pte. Ltd.** | Database e autenticazione | Singapore | Art. 6 Abs. 1 lit. b GDPR |
+| **OpenAI Ireland Ltd.** | Generazione ricette con IA | USA | Art. 49 Abs. 1 lit. a GDPR |
+| **Apple Inc.** | Acquisti in-app e abbonamenti | USA | Art. 6 (1)(b) GDPR |
+| **Functional Software, Inc. (Sentry)** | Report di arresto senza screenshot | USA | Art. 6 (1)(f) GDPR |
+| **RevenueCat, Inc.** | Stato dell'abbonamento e ripristino degli acquisti | USA | Art. 6 (1)(b) GDPR |
+| **Nest22, Inc. (Superwall)** | Visualizzazione della pagina di acquisto | USA | Art. 6 (1)(b) GDPR |
+| **Railway Corporation** | Esercizio dell'API | USA | Art. 6 (1)(b) GDPR |
+| **Vercel Inc.** | Esercizio di questo sito | USA | Art. 6 (1)(f) GDPR |
+
+È in vigore un contratto di incarico al trattamento con Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. e Functional Software, Inc. Se questi destinatari trattano dati al di fuori dell'UE, i contratti contengono le clausole contrattuali tipo della Commissione europea. Per Functional Software, Inc. il trasferimento si basa sull'EU-US Data Privacy Framework e, se non si applica, sulle clausole contrattuali tipo. Per OpenAI si aggiunge il consenso dell'art. 49 (1)(a) GDPR. Apple tratta gli acquisti come titolare autonomo.
 
 **Tutti i trasferimenti di dati sono crittografati via HTTPS/TLS.**
 
@@ -167,11 +173,11 @@ I seguenti fornitori possono elaborare dati al di fuori dell'Unione Europea:
 Per proteggere i vostri dati, implementiamo le seguenti misure di sicurezza:
 
 - **Crittografia:** TLS/HTTPS per tutti i trasferimenti di dati
-- **Protezione password:** Hash bcrypt con salt
+- **Protezione password:** la password è salvata come hash, non in chiaro
 - **Controllo accessi:** Row Level Security (RLS) nel database
 - **Sicurezza token:** Archiviazione sicura in iOS Keychain
 - **Prova di cancellazione:** Quando un account viene eliminato, viene conservato solo un hash dell'id utente, per tre anni
-- **Minimizzazione dati:** Nessun tracciamento, pubblicità o profilazione
+- **Minimizzazione dati:** nessun tracker di reti pubblicitarie e nessuna profilazione nell'app. Apple Search Ads può attribuire un'installazione a una campagna.
 - **Strategia backup:** Backup giornalieri del database, conservati 7 giorni. Servono a ripristinare il servizio dopo un guasto, non a recuperare un account eliminato.
 
 ---
@@ -202,7 +208,7 @@ Elaboreremo la vostra richiesta senza ritardo ingiustificato.
 | Ricette, menu, preferiti, valutazioni, foto | Fino all'eliminazione dell'account nell'app | Subito, insieme all'account |
 | Allergie, dieta, gusti, avversioni, note | Fino all'eliminazione dell'account nell'app | Subito, insieme all'account |
 | Messaggi chat | Solo in memoria durante la sessione | Alla chiusura dell'app. Nessuna copia della chat sul server. |
-| Report di arresto (Sentry) | 30 giorni | Eliminati da Sentry. Senza email e senza id utente. |
+| Report di arresto (Sentry) | 30 giorni | App pubblicata: nessuno screenshot. Email e id utente non sono salvati come utente Sentry. Il modello del dispositivo e un breve testo di errore possono essere inclusi. |
 | Backup del database | 7 giorni | Il backup scade. Un account eliminato non viene ripristinato da lì. |
 | Prova di cancellazione | 3 anni | Solo un hash dell'id utente, l'ora e il fatto che avete chiesto la cancellazione. Nessun nome, email o ricetta. Poi cancellazione automatica. |
 

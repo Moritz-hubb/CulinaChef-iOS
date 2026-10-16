@@ -25,7 +25,7 @@ Der Schutz Ihrer personenbezogenen Daten ist uns ein wichtiges Anliegen. Wir ver
 - **Datenminimierung:** Nur notwendige Daten werden erfasst
 - **Transparenz:** Klare Kommunikation über Datennutzung
 - **Sicherheit:** TLS-Verschlüsselung und sichere Speicherung
-- **Keine Werbung:** Kein Tracking oder Profilbildung
+- **Keine Werbung in der App:** Keine Banner und keine Tracker von Werbenetzwerken. Apple Search Ads kann im App Store messen, welche Kampagne zu einer Installation geführt hat. Eine Werbe-ID (IDFA) wird nicht ausgelesen.
 
 ---
 
@@ -37,7 +37,7 @@ Der Schutz Ihrer personenbezogenen Daten ist uns ein wichtiges Anliegen. Wir ver
 
 - Benutzername (3–32 Zeichen)
 - E-Mail-Adresse
-- Passwort (mind. 6 Zeichen, bcrypt)
+- Passwort, gehasht durch den Anmeldedienst, nicht im Klartext
 - Optional: Sign in with Apple
 
 **Zweck:** Kontoerstellung und Authentifizierung  
@@ -108,22 +108,22 @@ Verarbeitet durch Apple:
 
 Zur Verbesserung der App-Stabilität nutzen wir **Sentry** von Functional Software, Inc.
 
-**Übermittelte Daten bei Crashes oder Fehlern:**
+**Übermittelte Daten bei Abstürzen oder Fehlern in der veröffentlichten App:**
 
-- Geräteinformationen (Modell, iOS-Version)
+- Gerätemodell und iOS-Version
 - App-Version und Build-Nummer
-- Stack Traces (technische Fehlerprotokolle)
-- Zeitstempel des Fehlers
-- Screenshots zum Zeitpunkt des Fehlers (optional)
-- User-Aktionen vor dem Fehler (Breadcrumbs)
-- KEINE personenbezogenen Daten (Namen, E-Mails, etc.)
+- Technischer Fehlerverlauf (Stack Trace)
+- Zeitpunkt des Fehlers
+- Letzte Aktionen vor dem Fehler, einschließlich aufgerufener Adressen ohne Abfrageparameter
+- Keine Screenshots und keine Ansicht der Oberfläche
+- Name und E-Mail werden nicht als Sentry-Nutzer gespeichert. Gerätemodell und Text in einer Fehlermeldung können trotzdem personenbezogen sein.
 
 **Drittanbieter: Functional Software, Inc. (Sentry)**
 
 - **Empfänger:** Functional Software, Inc., USA
-- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse)
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer stabilen App)
 - **Speicherdauer:** 30 Tage bei Sentry
-- **Datenübertragung:** EU/USA, DSGVO-konform
+- **Datenübertragung:** an Functional Software, Inc. in den USA. Es besteht ein Auftragsverarbeitungsvertrag. Die Übermittlung erfolgt über das EU-US Data Privacy Framework und, soweit dieses nicht greift, über die darin enthaltenen Standardvertragsklauseln.
 
 **Zweck:** Erkennung und Behebung von technischen Fehlern zur Verbesserung der App-Stabilität.
 
@@ -148,14 +148,20 @@ Weitere Informationen: [Sentry Privacy Policy](https://sentry.io/privacy/)
 
 ## 4. Datenübermittlung in Drittländer
 
-Folgende Drittanbieter verarbeiten Daten außerhalb der EU:
+Folgende Empfänger können Daten außerhalb der EU verarbeiten:
 
 | Anbieter | Zweck | Standort | Rechtsgrundlage |
 |----------|-------|----------|-----------------|
-| **Supabase Inc.** | Datenbank und Authentifizierung | EU/USA | Art. 6 Abs. 1 lit. b DSGVO |
-| **OpenAI L.L.C.** | KI-gestützte Rezeptgenerierung | USA | Art. 49 Abs. 1 lit. a DSGVO |
-| **Apple Inc.** | In-App-Käufe und Abonnements | USA | Angemessenheitsbeschluss der EU |
-| **Functional Software, Inc. (Sentry)** | Fehlererfassung und Crash Reporting | USA/EU | Art. 6 Abs. 1 lit. f DSGVO |
+| **Supabase Pte. Ltd.** | Datenbank und Authentifizierung | Singapur | Art. 6 Abs. 1 lit. b DSGVO |
+| **OpenAI Ireland Ltd.** | KI-gestützte Rezeptgenerierung | USA | Art. 49 Abs. 1 lit. a DSGVO |
+| **Apple Inc.** | In-App-Käufe und Abonnements | USA | Art. 6 Abs. 1 lit. b DSGVO |
+| **Functional Software, Inc. (Sentry)** | Absturzberichte ohne Screenshot | USA | Art. 6 Abs. 1 lit. f DSGVO |
+| **RevenueCat, Inc.** | Abo-Status und Wiederherstellung von Käufen | USA | Art. 6 Abs. 1 lit. b DSGVO |
+| **Nest22, Inc. (Superwall)** | Darstellung der Kaufseite | USA | Art. 6 Abs. 1 lit. b DSGVO |
+| **Railway Corporation** | Betrieb der API | USA | Art. 6 Abs. 1 lit. b DSGVO |
+| **Vercel Inc.** | Betrieb dieser Website | USA | Art. 6 Abs. 1 lit. f DSGVO |
+
+Mit Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. und Functional Software, Inc. besteht jeweils ein Auftragsverarbeitungsvertrag. Soweit diese Empfänger Daten außerhalb der EU verarbeiten, enthalten die Verträge die Standardvertragsklauseln der EU-Kommission. Bei Functional Software, Inc. erfolgt die Übermittlung über das EU-US Data Privacy Framework und, soweit dieses nicht greift, über die Standardvertragsklauseln. Für OpenAI besteht zusätzlich die Einwilligung nach Art. 49 Abs. 1 lit. a DSGVO. Apple verarbeitet Käufe als eigener Verantwortlicher.
 
 **Alle Datenübertragungen erfolgen verschlüsselt via HTTPS/TLS.**
 
@@ -166,11 +172,11 @@ Folgende Drittanbieter verarbeiten Daten außerhalb der EU:
 Zum Schutz Ihrer Daten setzen wir folgende Sicherheitsmaßnahmen ein:
 
 - **Verschlüsselung:** TLS/HTTPS für alle Datenübertragungen
-- **Passwort-Schutz:** bcrypt-Hashing mit Salt
+- **Passwort-Schutz:** Das Passwort wird gehasht gespeichert, nicht im Klartext
 - **Zugriffsschutz:** Row Level Security (RLS) in Datenbank
 - **Token-Sicherheit:** Sichere Speicherung in iOS Keychain
 - **Löschnachweis:** Beim Löschen wird nur ein Hash der Nutzer-ID gespeichert, drei Jahre lang
-- **Datensparsamkeit:** Kein Tracking, keine Werbung, kein Profiling
+- **Datensparsamkeit:** Keine Werbenetzwerk-Tracker und keine Profilbildung in der App. Apple Search Ads kann im App Store eine Installation einer Kampagne zuordnen.
 - **Backup-Strategie:** Tägliche Datenbank-Sicherungen, Aufbewahrung 7 Tage. Sicherungen dienen der Wiederherstellung nach einem Ausfall und werden nicht genutzt, um ein gelöschtes Konto zurückzuholen.
 
 ---
@@ -202,7 +208,7 @@ Wir werden Ihre Anfrage unverzüglich bearbeiten.
 | Rezepte, Menüs, Favoriten, Bewertungen, Fotos | Bis Sie das Konto in der App löschen | Sofort mit dem Konto |
 | Allergien, Ernährungsweise, Geschmack, Abneigungen, Notizen | Bis Sie das Konto in der App löschen | Sofort mit dem Konto |
 | Chat-Nachrichten | Nur im Arbeitsspeicher der laufenden Sitzung | Beim Schließen der App. Keine Chat-Kopie auf dem Server. |
-| Absturzberichte (Sentry) | 30 Tage | Automatisch bei Sentry, ohne E-Mail und ohne Nutzer-ID |
+| Absturzberichte (Sentry) | 30 Tage | In der veröffentlichten App ohne Screenshot. E-Mail und Nutzer-ID werden nicht als Sentry-Nutzer gespeichert. Gerätemodell und kurzer Fehlertext können enthalten sein. |
 | Datenbank-Sicherungen | 7 Tage | Sicherung läuft ab. Ein gelöschtes Konto wird daraus nicht wiederhergestellt. |
 | Löschnachweis | 3 Jahre | Nur ein Hash der Nutzer-ID, der Zeitpunkt und dass die Löschung von Ihnen ausging. Kein Name, keine E-Mail, keine Rezepte. Danach automatische Löschung. |
 

@@ -26,7 +26,7 @@ La protection de vos données personnelles est une priorité pour nous. Nous tra
 - **Minimisation des données:** Seules les données nécessaires sont collectées
 - **Transparence:** Communication claire sur l'utilisation des données
 - **Sécurité:** Cryptage TLS et stockage sécurisé
-- **Pas de publicité:** Pas de suivi ni de profilage
+- **Pas de publicité dans l'app :** pas de bannières ni de traceurs de régies publicitaires. Apple Search Ads peut mesurer quelle campagne de l'App Store a mené à une installation. L'identifiant publicitaire (IDFA) n'est pas lu.
 
 ---
 
@@ -38,7 +38,7 @@ La protection de vos données personnelles est une priorité pour nous. Nous tra
 
 - Nom d'utilisateur (3–32 caractères)
 - Adresse e-mail
-- Mot de passe (min. 6 caractères, bcrypt)
+- Mot de passe haché par le service de connexion, pas en clair
 - Optionnel: Sign in with Apple
 
 **Objectif:** Création et authentification du compte  
@@ -115,16 +115,16 @@ Nous utilisons **Sentry** de Functional Software, Inc. pour améliorer la stabil
 - Version de l'app et numéro de build
 - Stack traces (journaux techniques d'erreurs)
 - Horodatage de l'erreur
-- Capture d'écran au moment de l'erreur (optionnelle)
-- Actions utilisateur avant l'erreur (breadcrumbs)
-- **AUCUNE donnée personnelle** (noms, e-mails, etc.)
+- Actions récentes avant l'erreur, y compris les adresses appelées sans paramètres
+- Pas de capture d'écran et pas de hiérarchie de vues
+- Le nom et l'e-mail ne sont pas enregistrés comme utilisateur Sentry. Le modèle d'appareil et le texte d'un message d'erreur peuvent néanmoins être des données personnelles.
 
-**Drittanbieter:** Functional Software, Inc. (Sentry)
+**Tiers :** Functional Software, Inc. (Sentry)
 
-- **Empfänger:** Functional Software, Inc., USA
-- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f RGPD (intérêt légitime)
-- **Durée de conservation:** 30 jours chez Sentry
-- **Transfert de données:** UE/USA, conforme au RGPD
+- **Destinataire :** Functional Software, Inc., USA
+- **Base légale :** art. 6 (1)(f) RGPD (intérêt légitime à une app stable)
+- **Durée de conservation :** 30 jours chez Sentry
+- **Transfert :** vers Functional Software, Inc. aux États-Unis. Un contrat de sous-traitance est en place. Le transfert repose sur le EU-US Data Privacy Framework et, s'il ne s'applique pas, sur les clauses contractuelles types qu'il contient.
 
 **Objectif:** Détection et résolution d'erreurs techniques pour améliorer la stabilité de l'app.
 
@@ -153,10 +153,16 @@ Les prestataires suivants peuvent traiter des données en dehors de l'Union euro
 
 | Prestataire | Objectif | Localisation | Base Légale |
 |-------------|-----------|--------------|-------------|
-| **Supabase Inc.** | Base de données et authentification | UE/USA | Art. 6 Abs. 1 lit. b RGPD |
-| **OpenAI L.L.C.** | Génération de recettes avec IA | USA | Art. 49 Abs. 1 lit. a RGPD |
-| **Apple Inc.** | Achats in-app et abonnements | USA | Décision d'adéquation de l'UE |
-| **Functional Software, Inc. (Sentry)** | Suivi des erreurs et crash reporting | USA/UE | Art. 6 Abs. 1 lit. f RGPD |
+| **Supabase Pte. Ltd.** | Base de données et authentification | Singapour | Art. 6 Abs. 1 lit. b RGPD |
+| **OpenAI Ireland Ltd.** | Génération de recettes avec IA | USA | Art. 49 Abs. 1 lit. a RGPD |
+| **Apple Inc.** | Achats in-app et abonnements | USA | Art. 6 (1)(b) RGPD |
+| **Functional Software, Inc. (Sentry)** | Rapports de plantage sans capture d'écran | USA | Art. 6 (1)(f) RGPD |
+| **RevenueCat, Inc.** | Statut de l'abonnement et restauration des achats | USA | Art. 6 (1)(b) RGPD |
+| **Nest22, Inc. (Superwall)** | Affichage de la page d'achat | USA | Art. 6 (1)(b) RGPD |
+| **Railway Corporation** | Exploitation de l'API | USA | Art. 6 (1)(b) RGPD |
+| **Vercel Inc.** | Exploitation de ce site | USA | Art. 6 (1)(f) RGPD |
+
+Un contrat de sous-traitance est en place avec Supabase Pte. Ltd., OpenAI Ireland Ltd., RevenueCat, Inc., Nest22, Inc. (Superwall), Railway Corporation, Vercel Inc. et Functional Software, Inc. Lorsque ces destinataires traitent des données hors de l'UE, les contrats contiennent les clauses contractuelles types de la Commission européenne. Pour Functional Software, Inc., le transfert repose sur le EU-US Data Privacy Framework et, s'il ne s'applique pas, sur les clauses contractuelles types. Pour OpenAI, le consentement de l'art. 49 (1)(a) du RGPD s'ajoute. Apple traite les achats en tant que responsable distinct.
 
 **Toutes les transmissions de données sont chiffrées via HTTPS/TLS.**
 
@@ -167,11 +173,11 @@ Les prestataires suivants peuvent traiter des données en dehors de l'Union euro
 Pour protéger vos données, nous mettons en œuvre les mesures de sécurité suivantes:
 
 - **Cryptage:** TLS/HTTPS pour toutes les transmissions de données
-- **Protection des mots de passe:** Hachage bcrypt avec sel
+- **Protection des mots de passe :** le mot de passe est stocké sous forme de hash, pas en clair
 - **Contrôle d'accès:** Row Level Security (RLS) dans la base de données
 - **Sécurité des tokens:** Stockage sécurisé dans iOS Keychain
 - **Preuve de suppression:** Lors de la suppression d'un compte, seul un hash de l'identifiant est conservé, pendant trois ans
-- **Minimisation des données:** Pas de suivi, de publicité ou de profilage
+- **Minimisation des données :** pas de traceurs de régies publicitaires et pas de profilage dans l'app. Apple Search Ads peut attribuer une installation à une campagne.
 - **Stratégie de sauvegarde:** Sauvegardes quotidiennes de la base, conservées 7 jours. Elles servent à rétablir le service après une panne, pas à restaurer un compte supprimé.
 
 ---
@@ -202,7 +208,7 @@ Nous traiterons votre demande sans retard injustifié.
 | Recettes, menus, favoris, évaluations, photos | Jusqu'à suppression du compte dans l'app | Immédiatement, avec le compte |
 | Allergies, régime, goûts, aversions, notes | Jusqu'à suppression du compte dans l'app | Immédiatement, avec le compte |
 | Messages de chat | Uniquement en mémoire pendant la session | À la fermeture de l'app. Aucune copie du chat sur le serveur. |
-| Rapports de plantage (Sentry) | 30 jours | Supprimés par Sentry. Sans e-mail ni identifiant utilisateur. |
+| Rapports de plantage (Sentry) | 30 jours | App publiée : pas de capture d'écran. L'e-mail et l'identifiant ne sont pas enregistrés comme utilisateur Sentry. Le modèle d'appareil et un court texte d'erreur peuvent être inclus. |
 | Sauvegardes de la base | 7 jours | La sauvegarde expire. Un compte supprimé n'est pas restauré depuis celle-ci. |
 | Preuve de suppression | 3 ans | Seulement un hash de l'identifiant, l'heure, et le fait que vous avez demandé la suppression. Pas de nom, d'e-mail ni de recettes. Puis suppression automatique. |
 

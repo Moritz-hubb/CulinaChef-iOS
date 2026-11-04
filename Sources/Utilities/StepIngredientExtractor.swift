@@ -1,5 +1,21 @@
 import Foundation
 
+/// Invisible AI marker: the next step can be done during this step's waiting time.
+enum ParallelNextStepMarker {
+    static let token = "⟦parallel_next⟧"
+
+    static func allowsNextStep(in text: String) -> Bool {
+        text.contains(token)
+    }
+
+    static func stripping(from text: String) -> String {
+        text
+            .replacingOccurrences(of: token, with: "")
+            .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 /// One ingredient used in a cooking step (name + optional quantity for the current portion count).
 struct StepIngredientDisplay: Identifiable, Hashable {
     let name: String
@@ -13,16 +29,100 @@ struct StepIngredientDisplay: Identifiable, Hashable {
 enum StepIngredientExtractor {
     private static let marker = "⟦ingredient_qty:⟧"
 
-    /// Units commonly used for ingredient amounts (DE/EN).
-    private static let knownUnits: Set<String> = [
-        "g", "kg", "mg", "ml", "l", "dl", "cl",
-        "tl", "el", "esslöffel", "teelöffel", "essloeffel", "teeloeffel",
-        "tasse", "tassen", "becher", "stück", "stueck", "st", "st.",
-        "prise", "prisen", "bund", "dose", "dosen", "paket", "packung",
-        "glas", "gläser", "glaeser",
-        "cup", "cups", "tbsp", "tsp", "oz", "lb", "pound", "pounds",
-        "ounce", "ounces", "piece", "pieces", "pinch", "bunch", "can", "cans", "package"
+    /// Surface forms. Matching uses `normalize`, so diacritics do not need duplicates.
+    private static let unitLiterals: [String] = [
+        "esslöffel", "teelöffel", "essloeffel", "teeloeffel", "messerspitze",
+        "kilogramm", "milliliter", "kilogram", "tablespoon", "tablespoons", "teaspoon", "teaspoons",
+        "packung", "package", "packages", "ounce", "ounces", "pound", "pounds",
+        "stück", "stueck", "stücke", "pieces", "piece", "tassen", "tasse", "becher",
+        "prisen", "prise", "dosen", "dose", "gläser", "glaeser", "glas", "bund",
+        "zehen", "zehe", "cloves", "clove", "scheiben", "scheibe", "slices", "slice",
+        "handvoll", "spritzer", "zweige", "zweig", "knollen", "knolle",
+        "liter", "litre", "liters", "tbsp", "tsp", "cups", "cup", "pinch", "pinches",
+        "bunch", "cans", "can", "pkt", "stk", "pkg",
+        "kg", "mg", "ml", "dl", "cl", "el", "tl", "oz", "lb", "st", "g", "l"
     ]
+
+    private static let knownUnits: Set<String> = Set(unitLiterals.map(normalize))
+
+    private static let adjectiveLiterals: [String] = [
+        "große", "großer", "großes", "grosser", "grosse", "grosses",
+        "kleine", "kleiner", "kleines", "frische", "frischer", "frisches", "frischen",
+        "feine", "feiner", "feines", "fein", "getrocknete", "getrockneter", "getrocknetes",
+        "gehackte", "gehackter", "gehacktes", "geriebene", "geriebener", "geriebenes",
+        "gemahlene", "gemahlener", "gemahlenes", "gestrichen", "gestrichene", "gestrichener", "gestrichenes",
+        "reife", "reifer", "reifes", "junge", "junger", "junges", "optional"
+    ]
+
+    private static let adjectives: Set<String> = Set(adjectiveLiterals.map(normalize))
+
+    private static let skipTokens: Set<String> = [
+        "der", "die", "das", "den", "dem", "des", "ein", "eine", "einer", "einem", "einen",
+        "vom", "von", "am", "beim", "zum", "zur", "im", "ins", "aufs",
+        "the", "a", "an"
+    ]
+
+    private static let stopTokens: Set<String> = [
+        "und", "oder", "mit", "ohne", "in", "auf", "für", "fur", "bis", "sowie", "dann", "danach",
+        "anschliessend", "anschließend", "hinzu", "hinzugeben", "dazugeben", "zugeben", "geben",
+        "add", "to", "into", "and", "with", "until", "then", "or",
+        "schneiden", "würfeln", "wurfeln", "hacken", "erhitzen", "anbraten", "braten",
+        "kochen", "backen", "rühren", "ruhren", "verrühren", "verruhren", "mischen", "vermischen",
+        "unterrühren", "unterruhren", "verquirlen", "auspressen", "waschen", "schälen", "schalen",
+        "hinzufügen", "hinzufugen", "bestreuen", "würzen", "wurzen", "abschmecken",
+        "servieren", "anrichten", "garen", "dünsten", "dunsten", "köcheln", "kocheln",
+        "gießen", "giessen", "ablöschen", "abloschen", "reduzieren", "kneten", "ausrollen",
+        "einfetten", "belegen", "füllen", "fullen", "verteilen", "marinieren", "ruhen", "warten",
+        "lassen", "stellen", "legen", "wenden", "grillen", "dazugeben"
+    ]
+
+    private static let prepFragments: [String] = [
+        "schneid", "wurf", "hack", "brat", "koch", "back", "ruhr", "misch", "geb", "wasch",
+        "schal", "heiz", "dunst", "wurz", "streu", "giess", "pul", "knet", "form", "roll",
+        "wend", "grill", "dampf", "schmor", "losch", "reduz", "montier", "stell", "full",
+        "reib", "seih", "mix", "blend", "chop", "dice", "fry", "bake", "boil", "stir",
+        "pour", "heat", "season", "slice", "peel", "whisk", "fold", "simmer", "roast",
+        "saute", "saut", "purier", "kochel", "abschmeck", "marin", "quell", "druck"
+    ]
+
+    private static let platingFragments: [String] = [
+        "servier", "anricht", "garnier", "auftisch", "geniess", "serve", "plating", "garnish",
+        "enjoy", "warten", "ruhen", "warte"
+    ]
+
+    /// Remainder after an ingredient stem that still means that ingredient ("Zitronensaft", "Lachsfilet").
+    private static let compoundSuffixes: Set<String> = [
+        "filet", "wurfel", "scheibe", "scheiben", "stuck", "stucke", "pulver", "saft", "schale",
+        "blatt", "blatter", "grun", "zehe", "zehen", "stange", "stangen", "streifen", "spalten",
+        "spalte", "ringe", "ring", "brust", "schenkel", "keule", "lende", "hack"
+    ]
+
+    private static let oilBases: Set<String> = [
+        "oliven", "sonnenblumen", "raps", "sesam", "erdnuss", "walnuss", "kuerbis", "kurbis",
+        "truffel", "chili", "leindotter", "distel", "trauben", "brat"
+    ]
+
+    private static let prepTails: Set<String> = [
+        "gehackt", "gewuerfelt", "gewurfelt", "gerieben", "gemahlen", "geschnitten",
+        "in scheiben", "in streifen", "in wurfeln", "nach geschmack", "n. b.", "n.b.", "nb",
+        "optional", "frisch", "fein"
+    ]
+
+    private static let numberPattern = #"[½¼¾⅓⅔]|\d+\s*[/\-–]\s*\d+(?:[.,]\d+)?|\d+[.,]\d+|\d+"#
+
+    private static let unitPattern: String = {
+        let parts = unitLiterals
+            .sorted { $0.count > $1.count }
+            .map { NSRegularExpression.escapedPattern(for: $0) }
+        return "(?<![\\p{L}])(?:" + parts.joined(separator: "|") + ")(?![\\p{L}])"
+    }()
+
+    private static let adjectivePattern: String = {
+        adjectiveLiterals
+            .sorted { $0.count > $1.count }
+            .map { NSRegularExpression.escapedPattern(for: $0) }
+            .joined(separator: "|")
+    }()
 
     // MARK: - Public API
 
@@ -48,31 +148,24 @@ enum StepIngredientExtractor {
             let qty = parseIngredientQuantity(cleaned).map { scaleQuantity($0, servings: servings, baseServings: baseServings) }
             return (name, qty)
         }.filter { !$0.name.isEmpty }
-        .sorted { $0.name.count > $1.name.count }
 
-        // 1) Explicit amounts marked in the step text
+        let plain = plainStepText(scaled)
+        let platingOnly = isOnlyPlatingOrWaiting(plain)
+
         for hit in extractMarkedQuantities(from: scaled) {
-            let resolvedName = resolveName(afterMarkerText: hit.nameHint, catalog: catalog.map(\.name))
-                ?? hit.nameHint.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !resolvedName.isEmpty else { continue }
-            let key = normalize(resolvedName)
+            let hint = hit.nameHint.trimmingCharacters(in: .whitespacesAndNewlines)
+            let resolved = resolveName(hint, catalog: catalog.map(\.name))
+            let name = resolved ?? (platingOnly ? "" : parseIngredientName(hint))
+            guard !name.isEmpty else { continue }
+            let key = normalize(name)
             guard !claimedNames.contains(key) else { continue }
             claimedNames.insert(key)
-            results.append(StepIngredientDisplay(name: resolvedName, quantity: hit.quantity))
+            results.append(StepIngredientDisplay(name: name, quantity: hit.quantity))
         }
 
-        // 2) Recipe ingredients mentioned by name but without a marked amount — only when
-        // the cook still has to handle them (not serving/plating recaps of finished food).
-        guard !isNonActionableStep(scaled) else { return results }
-
-        let plain = scaled
-            .replacingOccurrences(of: marker, with: "")
-            .replacingOccurrences(of: #"⟦label:.*?⟧"#, with: "", options: .regularExpression)
-
-        for item in catalog {
+        for item in matchingCatalog(catalog, in: plain) {
             let key = normalize(item.name)
             guard !claimedNames.contains(key) else { continue }
-            guard containsWord(item.name, in: plain) else { continue }
             claimedNames.insert(key)
             results.append(StepIngredientDisplay(name: item.name, quantity: item.quantity))
         }
@@ -117,95 +210,215 @@ enum StepIngredientExtractor {
         let nameHint: String
     }
 
-    /// Finds `200 g⟦ingredient_qty:⟧ Mehl …` (and old `200⟦ingredient_qty:⟧ g Mehl`) after scaling.
+    /// Finds marked amounts: `200 g⟦ingredient_qty:⟧ Mehl`, `2⟦ingredient_qty:⟧ Eier`, `2 Eier⟦ingredient_qty:⟧`.
+    /// A word is treated as the unit only when it is a known unit. Otherwise it is the ingredient name.
     private static func extractMarkedQuantities(from text: String) -> [MarkedHit] {
-        var working = text
-
-        // Normalize old marker placement: number ⟦marker⟧ unit → number unit ⟦marker⟧
-        let normalizePattern = #"(?i)(\d+(?:\/\d+|[\.,]\d+)?)\s*⟦ingredient_qty:⟧\s*(\p{L}+)"#
-        if let re = try? NSRegularExpression(pattern: normalizePattern) {
-            let ns = working as NSString
-            let matches = re.matches(in: working, range: NSRange(location: 0, length: ns.length)).reversed()
-            for m in matches {
-                guard let numR = Range(m.range(at: 1), in: working),
-                      let unitR = Range(m.range(at: 2), in: working),
-                      let fullR = Range(m.range, in: working) else { continue }
-                let replacement = "\(working[numR]) \(working[unitR])\(marker)"
-                working.replaceSubrange(fullR, with: replacement)
-            }
-        }
-
-        let pattern = #"(?i)(\d+(?:\/\d+|[\.,]\d+)?)\s*(\p{L}+)\s*⟦ingredient_qty:⟧\s*"#
+        let working = normalizeKnownUnitMarkerPlacement(in: text)
+        let pattern = "(?i)(\(numberPattern))\\s*(\\p{L}+)?\\s*\(NSRegularExpression.escapedPattern(for: marker))"
         guard let re = try? NSRegularExpression(pattern: pattern) else { return [] }
         let ns = working as NSString
         let matches = re.matches(in: working, range: NSRange(location: 0, length: ns.length))
 
         var hits: [MarkedHit] = []
-        for m in matches {
-            guard let numR = Range(m.range(at: 1), in: working),
-                  let unitR = Range(m.range(at: 2), in: working) else { continue }
+        for match in matches {
+            guard let numR = Range(match.range(at: 1), in: working) else { continue }
             let num = String(working[numR])
-            let unit = String(working[unitR])
-            let qty = "\(num) \(unit)".trimmingCharacters(in: .whitespaces)
-
-            let afterIdx = working.index(working.startIndex, offsetBy: m.range.upperBound)
+            let word: String? = {
+                guard match.range(at: 2).location != NSNotFound, match.range(at: 2).length > 0,
+                      let wordR = Range(match.range(at: 2), in: working) else { return nil }
+                return String(working[wordR])
+            }()
+            let afterIdx = working.index(working.startIndex, offsetBy: match.range.upperBound)
             let after = String(working[afterIdx...])
-            let hint = firstNameTokens(from: after)
-            hits.append(MarkedHit(quantity: qty, nameHint: hint))
+
+            if let word, knownUnits.contains(normalize(word)) {
+                hits.append(MarkedHit(quantity: "\(num) \(word)", nameHint: nameTokens(from: after)))
+            } else if let word {
+                hits.append(MarkedHit(quantity: num, nameHint: nameTokens(from: word + " " + after)))
+            } else {
+                hits.append(MarkedHit(quantity: num, nameHint: nameTokens(from: after)))
+            }
         }
         return hits
     }
 
-    private static func firstNameTokens(from text: String) -> String {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "" }
+    /// Old marker placement `200⟦ingredient_qty:⟧ g` becomes `200 g⟦ingredient_qty:⟧` only when the word is a real unit.
+    private static func normalizeKnownUnitMarkerPlacement(in text: String) -> String {
+        let pattern = "(?i)(\(numberPattern))\\s*\(NSRegularExpression.escapedPattern(for: marker))\\s*(\\p{L}+)"
+        guard let re = try? NSRegularExpression(pattern: pattern) else { return text }
+        var working = text
+        let ns = working as NSString
+        let matches = re.matches(in: working, range: NSRange(location: 0, length: ns.length)).reversed()
+        for match in matches {
+            guard let numR = Range(match.range(at: 1), in: working),
+                  let wordR = Range(match.range(at: 2), in: working),
+                  let fullR = Range(match.range, in: working) else { continue }
+            let word = String(working[wordR])
+            guard knownUnits.contains(normalize(word)) else { continue }
+            working.replaceSubrange(fullR, with: "\(working[numR]) \(word)\(marker)")
+        }
+        return working
+    }
 
-        // Stop words / verbs that typically follow the ingredient name in DE/EN recipes
-        let stop: Set<String> = [
-            "hinzu", "hinzugeben", "dazugeben", "zugeben", "und", "mit", "in", "auf", "für", "fur",
-            "bis", "oder", "sowie", "zum", "zur", "im", "am", "vom", "der", "die", "das", "den", "dem",
-            "add", "to", "into", "and", "with", "until", "then", "or", "the", "a", "an"
-        ]
-
+    private static func nameTokens(from text: String) -> String {
+        let parts = text.split { !$0.isLetter && $0 != "-" }
         var tokens: [String] = []
-        let parts = trimmed.split(whereSeparator: { $0.isWhitespace || ",.;:!?\n".contains($0) })
-        for part in parts.prefix(4) {
-            let t = String(part)
-            let lower = t.lowercased()
-            if stop.contains(lower) { break }
-            if t.rangeOfCharacter(from: .decimalDigits) != nil { break }
-            if t.contains(marker) { break }
-            // Skip bare units accidentally captured as "name"
-            if knownUnits.contains(lower) { continue }
-            tokens.append(t)
-            // Single solid compound (Mehl, Olivenöl) is usually enough
-            if tokens.count >= 2 { break }
+        for part in parts {
+            let token = String(part)
+            let key = normalize(token)
+            if key.isEmpty { continue }
+            if skipTokens.contains(key) || adjectives.contains(key) || knownUnits.contains(key) { continue }
+            if stopTokens.contains(key) { break }
+            tokens.append(token)
+            if tokens.count >= 3 { break }
         }
         return tokens.joined(separator: " ")
     }
 
-    private static func resolveName(afterMarkerText hint: String, catalog: [String]) -> String? {
-        let hintNorm = normalize(hint)
-        guard !hintNorm.isEmpty else { return nil }
-        // Prefer catalog names that start with / equal the hint, longest first
-        if let exact = catalog.first(where: { normalize($0) == hintNorm }) {
-            return exact
+    private static func resolveName(_ hint: String, catalog: [String]) -> String? {
+        let hintWords = words(in: hint)
+        guard !hintWords.isEmpty else { return nil }
+        var best: (name: String, score: Int)?
+        for name in catalog {
+            let tokens = significantTokens(name)
+            guard !tokens.isEmpty else { continue }
+            var score = 0
+            for token in tokens {
+                let tokenKey = normalize(token)
+                let matched = hintWords.contains { word in
+                    matchesToken(word, token: token, loose: true)
+                }
+                guard matched else { continue }
+                let exact = hintWords.contains { normalize($0) == tokenKey }
+                score += exact ? 2 : 1
+            }
+            // Prefer a catalog entry whose head noun is actually in the hint.
+            let head = tokens.last!
+            let headHit = hintWords.contains(where: { matchesToken($0, token: head, loose: true) })
+            guard headHit, score > 0 else { continue }
+            if best == nil || score > best!.score || (score == best!.score && name.count > best!.name.count) {
+                best = (name, score)
+            }
         }
-        if let prefix = catalog.first(where: { normalize($0).hasPrefix(hintNorm) || hintNorm.hasPrefix(normalize($0)) }) {
-            return prefix
-        }
-        return hint.isEmpty ? nil : hint
+        return best?.name
     }
 
-    /// Serving / plating / waiting: names like "Dip" or "Kartoffelpuffer" are recaps, not a shopping checklist.
-    private static func isNonActionableStep(_ text: String) -> Bool {
-        let t = normalize(text)
-        let hints = [
-            "servier", "anricht", "garnier", "anrichten", "auftischen", "genieß", "geniess",
-            "teller", "platte", "anbieten",
-            "serve", "serving", "plated", "plating", "garnish", "enjoy", "plate up"
-        ]
-        return hints.contains { t.contains($0) }
+    /// Serving / plating / waiting with no prep verb. Finished dishes marked there are not ingredients.
+    /// Real recipe ingredients named in the same sentence are still listed by the catalog pass.
+    private static func isOnlyPlatingOrWaiting(_ text: String) -> Bool {
+        let tokens = words(in: text).map(normalize)
+        if tokens.contains(where: { word in prepFragments.contains(where: { word.contains($0) }) }) {
+            return false
+        }
+        return tokens.contains(where: { word in platingFragments.contains(where: { word.contains($0) }) })
+    }
+
+    // MARK: - Catalog matching
+
+    private static func matchingCatalog(
+        _ catalog: [(name: String, quantity: String?)],
+        in text: String
+    ) -> [(name: String, quantity: String?)] {
+        let hay = words(in: text)
+        struct Candidate {
+            let item: (name: String, quantity: String?)
+            let tokens: [String]
+            let head: String
+            let full: Bool
+        }
+        var matched: [Candidate] = []
+        for item in catalog {
+            let tokens = significantTokens(item.name)
+            guard !tokens.isEmpty else { continue }
+            let joiner = isJoiner(item.name)
+            let heads = joiner ? tokens : [tokens.last!]
+            let mentioned = heads.contains { head in
+                hay.contains(where: { matchesToken($0, token: head, loose: false) })
+            }
+            guard mentioned else { continue }
+            let full = tokens.allSatisfy { token in
+                hay.contains(where: { matchesToken($0, token: token, loose: false) })
+            }
+            let headKey = joiner ? "join:\(normalize(item.name))" : normalize(tokens.last!)
+            matched.append(Candidate(item: item, tokens: tokens, head: headKey, full: full))
+        }
+
+        var kept: [Candidate] = []
+        for group in Dictionary(grouping: matched, by: \.head).values {
+            let fullOnes = group.filter(\.full)
+            if !fullOnes.isEmpty {
+                kept.append(contentsOf: fullOnes)
+            } else if let minCount = group.map({ $0.tokens.count }).min() {
+                kept.append(contentsOf: group.filter { $0.tokens.count == minCount })
+            }
+        }
+
+        let fullSets = kept.filter(\.full).map { Set($0.tokens.map(normalize)) }
+        let keptItems = kept.filter { candidate in
+            let mine = Set(candidate.tokens.map(normalize))
+            let dominated = fullSets.contains { other in other.count > mine.count && mine.isSubset(of: other) }
+            return !dominated
+        }.map(\.item)
+        let order = Dictionary(catalog.enumerated().map { ($0.element.name, $0.offset) }, uniquingKeysWith: { first, _ in first })
+        return keptItems.sorted { (order[$0.name] ?? 0) < (order[$1.name] ?? 0) }
+    }
+
+    private static func isJoiner(_ name: String) -> Bool {
+        let n = normalize(name)
+        return n.contains(" und ") || n.contains(" oder ") || n.contains(" & ")
+    }
+
+    private static func matchesToken(_ word: String, token: String, loose: Bool) -> Bool {
+        let w = normalize(word)
+        let t = normalize(token)
+        guard w.count >= 2, t.count >= 2 else { return false }
+        if w == t { return true }
+        if samePlural(w, t) { return true }
+        if isCompound(w, of: t) { return true }
+        if loose, oilMatch(w, stem: t) { return true }
+        return false
+    }
+
+    private static func samePlural(_ a: String, _ b: String) -> Bool {
+        if a == "ei" && (b == "eier" || b == "eiern") { return true }
+        if b == "ei" && (a == "eier" || a == "eiern") { return true }
+        guard a.count >= 4, b.count >= 4 else { return false }
+        return a + "n" == b || b + "n" == a
+    }
+
+    private static func isCompound(_ word: String, of token: String) -> Bool {
+        guard token.count >= 4, word.count > token.count, word.hasPrefix(token) else { return false }
+        var rest = String(word.dropFirst(token.count))
+        if rest.hasPrefix("en") { rest.removeFirst(2) }
+        else if rest.hasPrefix("er") { rest.removeFirst(2) }
+        else if rest.hasPrefix("n") || rest.hasPrefix("s") { rest.removeFirst(1) }
+        return compoundSuffixes.contains(rest)
+    }
+
+    private static func oilMatch(_ word: String, stem: String) -> Bool {
+        guard stem == "ol", word.hasSuffix("ol"), word.count > stem.count else { return false }
+        return oilBases.contains(String(word.dropLast(2)))
+    }
+
+    private static func significantTokens(_ name: String) -> [String] {
+        words(in: name).filter { word in
+            let key = normalize(word)
+            return key.count >= 2 && !skipTokens.contains(key) && !knownUnits.contains(key) && !adjectives.contains(key) && !stopTokens.contains(key)
+        }
+    }
+
+    private static func words(in text: String) -> [String] {
+        guard let re = try? NSRegularExpression(pattern: #"\p{L}+"#) else { return [] }
+        let ns = text as NSString
+        return re.matches(in: text, range: NSRange(location: 0, length: ns.length)).compactMap { match in
+            Range(match.range, in: text).map { String(text[$0]) }
+        }
+    }
+
+    private static func plainStepText(_ text: String) -> String {
+        ParallelNextStepMarker.stripping(from: text)
+            .replacingOccurrences(of: marker, with: "")
+            .replacingOccurrences(of: #"⟦label:.*?⟧"#, with: "", options: .regularExpression)
     }
 
     // MARK: - Matching helpers
@@ -216,46 +429,32 @@ enum StepIngredientExtractor {
             .lowercased()
     }
 
-    private static func containsWord(_ name: String, in text: String) -> Bool {
-        let n = normalize(name)
-        let t = normalize(text)
-        guard n.count >= 2 else { return false }
-        // Prefer word-boundary-ish match; also allow substring for German compounds
-        if let re = try? NSRegularExpression(pattern: "\\b\(NSRegularExpression.escapedPattern(for: n))\\b") {
-            let range = NSRange(location: 0, length: t.utf16.count)
-            if re.firstMatch(in: t, range: range) != nil { return true }
-        }
-        return t.contains(n)
-    }
-
     // MARK: - Parse / scale (aligned with RecipeDetailView)
 
     static func parseIngredientName(_ ingredient: String) -> String {
         var cleaned = ingredient.replacingOccurrences(of: marker, with: "")
-        let pattern = #"^[\d\/.,\s-]+(?:g|kg|ml|l|tl|el|teelöffel|esslöffel|tasse|tassen|stück|prise|prisen)?\s*"#
-        if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
-            let range = NSRange(location: 0, length: cleaned.utf16.count)
-            cleaned = regex.stringByReplacingMatches(in: cleaned, options: [], range: range, withTemplate: "")
+        cleaned = cleaned.replacingOccurrences(of: #"\([^)]*\)"#, with: " ", options: .regularExpression)
+        cleaned = cleaned.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
+        for _ in 0..<3 {
+            let next = stripLeadingQuantity(from: cleaned)
+            if next == cleaned { break }
+            cleaned = next
         }
-        return cleaned.trimmingCharacters(in: .whitespaces)
+        cleaned = stripVonQuantity(from: cleaned)
+        cleaned = stripGluedSingleLetterUnit(from: cleaned)
+        cleaned = stripTrailingGluedUnit(from: cleaned)
+        cleaned = stripLeadingAdjectives(from: cleaned)
+        cleaned = stripPrepTails(from: cleaned)
+        return collapseSpaces(cleaned)
     }
 
     static func parseIngredientQuantity(_ ingredient: String) -> String? {
         let trimmed = ingredient.replacingOccurrences(of: marker, with: "").trimmingCharacters(in: .whitespaces)
-        let patterns = [
-            #"^([\d\/.,\s-]+\s*(?:g|kg|mg|ml|l|dl|cl|tl|el|esslöffel|teelöffel|essloeffel|teeloeffel|tasse|tassen|becher|stück|stueck|st\.|prise|prisen|bund|dose|dosen|paket|packung|glas|gläser))"#,
-            #"^([\d\/.,\s-]+\s*(?:cup|cups|tbsp|tsp|oz|lb|pound|pounds|ounce|ounces|piece|pieces|pinch|bunch|can|cans|package))"#,
-            #"^([\d\/.,]+)\s+"#
-        ]
-        for pattern in patterns {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
-               let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)),
-               let range = Range(match.range(at: 1), in: trimmed) {
-                let qty = String(trimmed[range]).trimmingCharacters(in: .whitespaces)
-                if !qty.isEmpty { return qty }
-            }
+        guard let parts = leadingQuantityParts(in: trimmed) else { return nil }
+        if let unit = parts.unit, !unit.isEmpty {
+            return "\(parts.number) \(unit)"
         }
-        return nil
+        return parts.number
     }
 
     static func scaleQuantity(_ quantity: String, servings: Int, baseServings: Int = 4) -> String {
@@ -294,43 +493,62 @@ enum StepIngredientExtractor {
         }
     }
 
-    /// Scales marked (and detectable) ingredient amounts inside instruction text.
+    /// Scales marked ingredient amounts inside instruction text.
     static func scaleIngredientQuantities(in text: String, baseServings: Int, currentServings: Int) -> String {
         guard baseServings > 0, baseServings != currentServings else { return text }
         let scale = Double(currentServings) / Double(baseServings)
-        var result = text
+        var result = normalizeKnownUnitMarkerPlacement(in: text)
 
-        let normalizePattern = #"(?i)(\d+(?:\/\d+|[\.,]\d+)?)\s*⟦ingredient_qty:⟧\s*(\p{L}+)"#
-        if let normalizeRegex = try? NSRegularExpression(pattern: normalizePattern) {
-            let ns = result as NSString
-            for m in normalizeRegex.matches(in: result, range: NSRange(location: 0, length: ns.length)).reversed() {
-                guard let numR = Range(m.range(at: 1), in: result),
-                      let unitR = Range(m.range(at: 2), in: result),
-                      let fullR = Range(m.range, in: result) else { continue }
-                result.replaceSubrange(fullR, with: "\(result[numR]) \(result[unitR])\(marker)")
+        let pattern = "(?i)(\(numberPattern))\\s*(\\p{L}+)?\\s*\(NSRegularExpression.escapedPattern(for: marker))"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return result }
+        let ns = result as NSString
+        for match in regex.matches(in: result, range: NSRange(location: 0, length: ns.length)).reversed() {
+            guard let numR = Range(match.range(at: 1), in: result),
+                  let fullR = Range(match.range, in: result) else { continue }
+            let numStr = String(result[numR])
+            let scaled = scaleNumberToken(numStr, by: scale)
+            let word: String? = {
+                guard match.range(at: 2).location != NSNotFound, match.range(at: 2).length > 0,
+                      let wordR = Range(match.range(at: 2), in: result) else { return nil }
+                return String(result[wordR])
+            }()
+            if let word {
+                result.replaceSubrange(fullR, with: "\(scaled) \(word)\(marker)")
+            } else {
+                result.replaceSubrange(fullR, with: "\(scaled)\(marker)")
             }
         }
-
-        let labeledPattern = #"(?i)(\b\d+\/\d+|\b\d+[\.,]\d+|\b\d+)\s*(\p{L}+)\s*⟦ingredient_qty:⟧"#
-        if let labeledRegex = try? NSRegularExpression(pattern: labeledPattern) {
-            let ns = result as NSString
-            for m in labeledRegex.matches(in: result, range: NSRange(location: 0, length: ns.length)).reversed() {
-                guard let numR = Range(m.range(at: 1), in: result),
-                      let unitR = Range(m.range(at: 2), in: result),
-                      let fullR = Range(m.range, in: result) else { continue }
-                let numStr = String(result[numR])
-                let unitStr = String(result[unitR])
-                guard let value = parseNumber(numStr) else { continue }
-                let scaled = formatScaledQuantity(value * scale, original: numStr)
-                result.replaceSubrange(fullR, with: "\(scaled) \(unitStr)\(marker)")
-            }
-        }
-
         return result
     }
 
+    private static func scaleNumberToken(_ token: String, by scale: Double) -> String {
+        let trimmed = token.trimmingCharacters(in: .whitespaces)
+        if trimmed.count == 1, let ch = trimmed.first, let value = fractionChars[ch] {
+            return formatScaledQuantity(value * scale, original: trimmed)
+        }
+        if trimmed.contains("/"), !trimmed.contains("-"), !trimmed.contains("–") {
+            let parts = trimmed.replacingOccurrences(of: " ", with: "").split(separator: "/")
+            if parts.count == 2, let n = Double(parts[0]), let d = Double(parts[1]), d != 0 {
+                return formatScaledQuantity(n / d * scale, original: trimmed)
+            }
+        }
+        let rangeParts = trimmed.split(whereSeparator: { $0 == "-" || $0 == "–" })
+        if rangeParts.count == 2, let a = parseNumber(String(rangeParts[0])), let b = parseNumber(String(rangeParts[1])) {
+            let sep = trimmed.contains("–") ? "–" : "-"
+            return formatScaledQuantity(a * scale, original: String(rangeParts[0])) + sep + formatScaledQuantity(b * scale, original: String(rangeParts[1]))
+        }
+        if let value = parseNumber(trimmed) {
+            return formatScaledQuantity(value * scale, original: trimmed)
+        }
+        return token
+    }
+
+    private static let fractionChars: [Character: Double] = [
+        "½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1.0 / 3.0, "⅔": 2.0 / 3.0
+    ]
+
     private static func parseNumber(_ numStr: String) -> Double? {
-        let s = numStr.replacingOccurrences(of: ",", with: ".")
+        let s = numStr.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
         if s.contains("/") {
             let parts = s.split(separator: "/")
             if parts.count == 2, let n = Double(parts[0]), let d = Double(parts[1]), d != 0 {
@@ -349,5 +567,97 @@ enum StepIngredientExtractor {
             return String(format: "%.0f", value)
         }
         return value < 10 ? String(format: "%.1f", value) : String(format: "%.0f", value)
+    }
+
+    // MARK: - Quantity stripping
+
+    private struct QuantityParts {
+        let number: String
+        let unit: String?
+        let consumed: String
+    }
+
+    private static func leadingQuantityParts(in text: String) -> QuantityParts? {
+        let pattern = "(?i)^\\s*(?:(?:ca\\.?|circa|etwa|approx\\.?|ungefähr|ungefaehr)\\s+)?(\(numberPattern))(?:\\s+(?:\(adjectivePattern))){0,3}(?:\\s*(\(unitPattern)))?"
+        guard let re = try? NSRegularExpression(pattern: pattern),
+              let match = re.firstMatch(in: text, range: NSRange(location: 0, length: (text as NSString).length)),
+              match.range.length > 0,
+              let numR = Range(match.range(at: 1), in: text),
+              let fullR = Range(match.range, in: text) else { return nil }
+        let unit: String? = {
+            guard match.range(at: 2).location != NSNotFound, match.range(at: 2).length > 0,
+                  let unitR = Range(match.range(at: 2), in: text) else { return nil }
+            return String(text[unitR])
+        }()
+        return QuantityParts(number: String(text[numR]), unit: unit, consumed: String(text[fullR]))
+    }
+
+    private static func stripLeadingQuantity(from text: String) -> String {
+        guard let parts = leadingQuantityParts(in: text) else { return text }
+        var rest = text
+        if let range = rest.range(of: parts.consumed) {
+            rest.removeSubrange(range)
+        }
+        return rest
+    }
+
+    /// `Knoblauchzehen` keeps the food and drops the glued counting word.
+    private static func stripTrailingGluedUnit(from text: String) -> String {
+        var parts = text.split(separator: " ").map(String.init)
+        guard let last = parts.last else { return text }
+        let lastKey = normalize(last)
+        let units = unitLiterals.map(normalize).filter { $0.count >= 4 }.sorted { $0.count > $1.count }
+        for unit in units {
+            guard lastKey.count >= unit.count + 4, lastKey.hasSuffix(unit) else { continue }
+            let trimmed = String(last.dropLast(unit.count))
+            guard normalize(trimmed).count >= 4 else { continue }
+            parts[parts.count - 1] = trimmed
+            break
+        }
+        return parts.joined(separator: " ")
+    }
+
+    /// `200gMehl` leaves a glued `g`/`l` after the number is removed. `Gurke` and `Lachs` do not.
+    private static func stripGluedSingleLetterUnit(from text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard let re = try? NSRegularExpression(pattern: #"^[gGlL](?=[A-ZÄÖÜ])"#) else { return text }
+        let range = NSRange(location: 0, length: (trimmed as NSString).length)
+        return re.stringByReplacingMatches(in: trimmed, range: range, withTemplate: "")
+    }
+
+    private static func stripVonQuantity(from text: String) -> String {
+        let pattern = "(?i)\\bvon\\s+(?:\(numberPattern))(?:\\s+(?:\(adjectivePattern))){0,3}(?:\\s*(?:\(unitPattern)))?"
+        guard let re = try? NSRegularExpression(pattern: pattern) else { return text }
+        let range = NSRange(location: 0, length: (text as NSString).length)
+        return re.stringByReplacingMatches(in: text, range: range, withTemplate: "von")
+    }
+
+    private static func stripLeadingAdjectives(from text: String) -> String {
+        var parts = text.split(separator: " ").map(String.init)
+        while parts.count > 1 {
+            let key = normalize(parts[0].trimmingCharacters(in: .punctuationCharacters))
+            if adjectives.contains(key) {
+                parts.removeFirst()
+            } else {
+                break
+            }
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private static func stripPrepTails(from text: String) -> String {
+        let segments = text.split(separator: ",", omittingEmptySubsequences: false).map { String($0) }
+        guard segments.count > 1 else { return text }
+        let kept = segments.filter { segment in
+            !prepTails.contains(normalize(segment))
+        }
+        let chosen = kept.isEmpty ? [segments[0]] : kept
+        return chosen.joined(separator: " ")
+    }
+
+    private static func collapseSpaces(_ text: String) -> String {
+        text.replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ",.;:-"))
     }
 }

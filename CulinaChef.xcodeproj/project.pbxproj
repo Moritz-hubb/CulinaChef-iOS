@@ -97,6 +97,7 @@
 		A5606507852FC4E19C2DAE5E /* String+Validation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F8960B0FF5281ECE12C22E /* String+Validation.swift */; };
 		A87DEB86EF1AB56F87377362 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD97221B4FA2497E34222673 /* RecipeDetailView.swift */; };
 		A91D4F30DEDD2D6BEEDF4A4E /* IngredientCategorizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07C973DC869BD01232CA01EA /* IngredientCategorizerTests.swift */; };
+		E4A1C0DE11A44B0A9F001002 /* StepIngredientExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4A1C0DE11A44B0A9F001001 /* StepIngredientExtractorTests.swift */; };
 		A9D92401FFC32D9E4049A6D2 /* MenuManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B1DFC7CBBC6F57AD4C82BD7 /* MenuManager.swift */; };
 		AB57EF1DAA7B8A613F8A2029 /* AppleSearchAdsAttributionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61FB17FD02336DFA256FB207 /* AppleSearchAdsAttributionTests.swift */; };
 		ABF9438D01967639E9300DA0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EAE72EEFB2F938867B00A5D1 /* LaunchScreen.storyboard */; };
@@ -181,6 +182,7 @@
 		0451F1C92A23B33ACA310B10 /* SubscriptionFlowIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionFlowIntegrationTests.swift; sourceTree = "<group>"; };
 		05B20B80B2F15E59F18F6667 /* UserPreferencesClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesClientTests.swift; sourceTree = "<group>"; };
 		07C973DC869BD01232CA01EA /* IngredientCategorizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientCategorizerTests.swift; sourceTree = "<group>"; };
+		E4A1C0DE11A44B0A9F001001 /* StepIngredientExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepIngredientExtractorTests.swift; sourceTree = "<group>"; };
 		0D90D4F59064989AF68E0CCD /* RecipeResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeResultView.swift; sourceTree = "<group>"; };
 		0E40B94362D780F677CD5609 /* ringtone-031-437514.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "ringtone-031-437514.mp3"; sourceTree = "<group>"; };
 		0F3487977213951EF85063B8 /* RecipesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesView.swift; sourceTree = "<group>"; };
@@ -347,6 +349,7 @@
 				42169ED425055D7B0C7DCC4A /* BackendClientTests.swift */,
 				82D0612E824B062CEB03DABA /* DietaryPreferencesTests.swift */,
 				07C973DC869BD01232CA01EA /* IngredientCategorizerTests.swift */,
+				E4A1C0DE11A44B0A9F001001 /* StepIngredientExtractorTests.swift */,
 				174E397B5850F0459C63D384 /* KeychainManagerTests.swift */,
 				7675AB2EAF24B0AEC5A02AED /* LocalizationManagerTests.swift */,
 				F244DF3B0811115ED9671F5D /* LoggerTests.swift */,
@@ -921,6 +924,7 @@
 				5FCBB858C3B0036C902DD553 /* BackendClientTests.swift in Sources */,
 				B6EFA00C28A397E42791675A /* DietaryPreferencesTests.swift in Sources */,
 				A91D4F30DEDD2D6BEEDF4A4E /* IngredientCategorizerTests.swift in Sources */,
+				E4A1C0DE11A44B0A9F001002 /* StepIngredientExtractorTests.swift in Sources */,
 				FFF8F29956D8F6369821BC24 /* KeychainManagerTests.swift in Sources */,
 				E9A27A948CF2AE019F73144D /* LocalizationManagerTests.swift in Sources */,
 				D068F57B74DEFAE2D1F89D51 /* LoggerTests.swift in Sources */,

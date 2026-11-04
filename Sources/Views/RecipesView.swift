@@ -358,6 +358,7 @@ private struct RenameMenuSheet: View {
 // MARK: - Personal Recipes View
 struct PersonalRecipesView: View {
     @EnvironmentObject var app: AppState
+    @Environment(\.scenePhase) private var scenePhase
     @State private var recipes: [Recipe] = []
     @State private var loading = true
     @State private var error: String?
@@ -679,7 +680,7 @@ struct PersonalRecipesView: View {
                                                     onAssign: { assigningRecipe = recipe }
                                                 )
                                                 .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                                .onTapGesture { navigationRecipeId = recipe.id }
+                                                .onTapGesture { openRecipe(recipe) }
                                                 .contextMenu {
                                                     Button(role: .destructive) {
                                                         toDelete = recipe
@@ -698,7 +699,7 @@ struct PersonalRecipesView: View {
                                             onAssign: { assigningRecipe = recipe }
                                         )
                                         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                        .onTapGesture { navigationRecipeId = recipe.id }
+                                        .onTapGesture { openRecipe(recipe) }
                                         .contextMenu {
                                             Button(role: .destructive) {
                                                 toDelete = recipe
@@ -708,27 +709,6 @@ struct PersonalRecipesView: View {
                                             }
                                         }
                                     }
-                                }
-                            }
-                            if let recipeId = navigationRecipeId {
-                                let allRecipes: [Recipe] = {
-                                    if let menuId = selectedMenu?.id {
-                                        return groupedByCourse(menuId: menuId).flatMap { $0.recipes }
-                                    } else {
-                                        return visibleRecipes
-                                    }
-                                }()
-                                if let recipe = allRecipes.first(where: { $0.id == recipeId }) {
-                                    NavigationLink(
-                                        destination: RecipeDetailView(recipe: recipe),
-                                        isActive: Binding(
-                                            get: { navigationRecipeId == recipeId },
-                                            set: { if !$0 { navigationRecipeId = nil } }
-                                        )
-                                    ) {
-                                        EmptyView()
-                                    }
-                                    .hidden()
                                 }
                             }
                         }
@@ -741,6 +721,8 @@ struct PersonalRecipesView: View {
     @ViewBuilder
     private var mainContentWithModifiers: some View {
         VStack(spacing: 0) {
+            recipeNavigationLink
+                .hidden()
             HStack(spacing: 22) {
                 bookSectionTab(0, L.mealplan_bookRecipes.localized)
                 bookSectionTab(1, L.mealplan_bookPlans.localized)
@@ -767,6 +749,11 @@ struct PersonalRecipesView: View {
             .transaction { $0.animation = nil }
         }
             .navigationBarHidden(true)
+            .onAppear {
+                if navigationRecipeId == nil, let saved = app.preservedOpenRecipe {
+                    navigationRecipeId = saved.id
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .culinaDeletedRecipeIds)) { note in
                 guard let ids = note.object as? [String], !ids.isEmpty else { return }
                 let set = Set(ids)
@@ -832,10 +819,54 @@ struct PersonalRecipesView: View {
         .sheet(isPresented: $showSocialImport) {
             SocialRecipeImportView(onFinished: { recipe in
                 if !recipes.contains(where: { $0.id == recipe.id }) { recipes.insert(recipe, at: 0) }
-                navigationRecipeId = recipe.id
+                openRecipe(recipe)
             })
             .environmentObject(app)
         }
+    }
+
+    private var navigationRecipe: Recipe? {
+        guard let recipeId = navigationRecipeId else { return nil }
+        if let saved = app.preservedOpenRecipe, saved.id == recipeId {
+            return saved
+        }
+        return recipes.first { $0.id == recipeId }
+    }
+
+    @ViewBuilder
+    private var recipeNavigationLink: some View {
+        if let recipe = navigationRecipe {
+            NavigationLink(
+                destination: RecipeDetailView(recipe: recipe),
+                isActive: Binding(
+                    get: { navigationRecipeId == recipe.id },
+                    set: { isActive in
+                        guard !isActive else { return }
+                        if app.cookingSessionLocked || scenePhase != .active {
+                            if navigationRecipeId == nil {
+                                navigationRecipeId = recipe.id
+                            }
+                            return
+                        }
+                        navigationRecipeId = nil
+                        app.clearCookingSession()
+                    }
+                )
+            ) {
+                EmptyView()
+            }
+            .hidden()
+        }
+    }
+
+    private func openRecipe(_ recipe: Recipe) {
+        if app.preservedRecipeId != recipe.id {
+            app.preservedRecipePage = 0
+            app.preservedServings = 4
+        }
+        app.preservedOpenRecipe = recipe
+        app.preservedRecipeId = recipe.id
+        navigationRecipeId = recipe.id
     }
     
     func confirmDeleteSelectedMenu() async {

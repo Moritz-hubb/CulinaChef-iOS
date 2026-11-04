@@ -12,6 +12,7 @@ struct RecipeResultView: View {
     }
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @State private var nutritionMode: NutritionMode = .perServing
     @State private var showAISheet = false
     @State private var currentPage: Int = 0
@@ -47,12 +48,48 @@ LinearGradient(colors: [Color(red: 0.96, green: 0.78, blue: 0.68), Color(red: 0.
             }
             .navigationTitle(plan.title)
             .onAppear {
-                let base = plan.servings ?? 4
-                servings = max(1, base)
+                let hadSession = app.preservedGeneratedKey == generatedCookingKey && app.preservedGeneratedServings > 0
+                restoreGeneratedCookingPositionIfNeeded()
+                if !hadSession {
+                    let initialServings = max(1, plan.servings ?? 4)
+                    servings = initialServings
+                    app.preservedGeneratedKey = generatedCookingKey
+                    app.preservedGeneratedPage = currentPage
+                    app.preservedGeneratedServings = initialServings
+                }
             }
             .onDisappear {
-                // Stop all timers when recipe view is closed
+                guard scenePhase == .active, !app.cookingSessionLocked else { return }
                 timerCenter.stopAllTimers()
+                if app.preservedGeneratedKey == generatedCookingKey {
+                    app.clearGeneratedCookingSession()
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    restoreGeneratedCookingPositionIfNeeded()
+                    DispatchQueue.main.async {
+                        restoreGeneratedCookingPositionIfNeeded()
+                    }
+                } else {
+                    captureGeneratedCookingPosition()
+                }
+            }
+            .onChange(of: currentPage) { _, newPage in
+                guard app.preservedGeneratedKey == generatedCookingKey else { return }
+                if shouldHoldGeneratedCookingPosition, newPage == 0, app.preservedGeneratedPage > 0 {
+                    currentPage = app.preservedGeneratedPage
+                    return
+                }
+                app.preservedGeneratedPage = newPage
+            }
+            .onChange(of: servings) { _, newValue in
+                guard app.preservedGeneratedKey == generatedCookingKey else { return }
+                if shouldHoldGeneratedCookingPosition, app.preservedGeneratedServings > 0, newValue != app.preservedGeneratedServings {
+                    servings = app.preservedGeneratedServings
+                    return
+                }
+                app.preservedGeneratedServings = max(1, newValue)
             }
 .toolbar {
 ToolbarItem(placement: .navigationBarTrailing) {
@@ -60,9 +97,11 @@ ToolbarItem(placement: .navigationBarTrailing) {
                         showAISheet = true
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "wand.and.stars")
-                                .imageScale(.medium)
-                                .fontWeight(.semibold)
+                            Image("tab-culina-chat")
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 16, height: 16)
                             Text("Culina")
                                 .fontWeight(.bold)
                         }
@@ -313,21 +352,26 @@ Text(ing.name).font(.body).foregroundStyle(.white)
                 currentServings: servings,
                 baseServings: plan.servings
             )
+            let showParallelNext = ParallelNextStepMarker.allowsNextStep(in: step.description) && !isLastStep
+            let stepBody = ParallelNextStepMarker.stripping(
+                from: scaleInstruction(step.description, baseServings: plan.servings, currentServings: servings)
+                    .replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
+            )
             VStack(alignment: .leading, spacing: 16) {
                 Text(step.title).font(.title3.bold()).foregroundStyle(.white)
                 if let d = step.duration_minutes { LabeledRow(L.label_cookingTime.localized.replacingOccurrences(of: ":", with: ""), String(d) + " min") }
-                Text(scaleInstruction(step.description, baseServings: plan.servings, currentServings: servings).replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")).foregroundStyle(.white)
+                Text(stepBody).foregroundStyle(.white)
                 StepIngredientsBlock(items: stepIngredients)
 
-                if let cookMins = parseCookMinutes(from: step.description) {
+                if let cookMins = parseCookMinutes(from: stepBody) {
                     SharedTimerControl(minutes: cookMins, label: step.title, center: timerCenter)
-                    // Nur Hinweis zeigen, wenn Timer >= 5 Min UND es weitere Schritte gibt
-                    if cookMins >= 5 && !isLastStep {
-                        Text(L.recipe_in_der_zwischenzeit_führe_b7f6.localized)
-                            .font(.subheadline)
-                            .italic()
-                            .foregroundStyle(.white.opacity(0.9))
-                    }
+                }
+                // Hinweis nur, wenn die KI diesen Schritt mit ⟦parallel_next⟧ markiert hat
+                if showParallelNext {
+                    Text(L.recipe_in_der_zwischenzeit_führe_b7f6.localized)
+                        .font(.subheadline)
+                        .italic()
+                        .foregroundStyle(.white.opacity(0.9))
                 }
                 
                 if isLastStep {
@@ -405,6 +449,43 @@ Text(ing.name).font(.body).foregroundStyle(.white)
             return [fmt, unit].filter { !$0.isEmpty }.joined(separator: " ")
         }
         return unit
+    }
+
+    private var generatedCookingKey: String {
+        "\(plan.title)|\(plan.steps.count)|\(plan.servings ?? 0)"
+    }
+
+    private var shouldHoldGeneratedCookingPosition: Bool {
+        app.cookingSessionLocked || scenePhase != .active
+    }
+
+    private func captureGeneratedCookingPosition() {
+        let pageWasReset = shouldHoldGeneratedCookingPosition && currentPage == 0 && app.preservedGeneratedPage > 0
+        if !pageWasReset {
+            app.preservedGeneratedPage = currentPage
+        }
+        let servingsWereReset = shouldHoldGeneratedCookingPosition
+            && app.preservedGeneratedServings > 0
+            && servings != app.preservedGeneratedServings
+        if !servingsWereReset {
+            app.preservedGeneratedServings = max(1, servings)
+        }
+        app.preservedGeneratedKey = generatedCookingKey
+    }
+
+    private func restoreGeneratedCookingPositionIfNeeded() {
+        guard app.preservedGeneratedKey == generatedCookingKey, app.preservedGeneratedServings > 0 else {
+            if servings == 1 {
+                servings = max(1, plan.servings ?? 4)
+            }
+            return
+        }
+        if currentPage != app.preservedGeneratedPage {
+            currentPage = app.preservedGeneratedPage
+        }
+        if servings != app.preservedGeneratedServings {
+            servings = app.preservedGeneratedServings
+        }
     }
 }
 

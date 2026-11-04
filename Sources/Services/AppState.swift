@@ -84,9 +84,19 @@ final class AppState: ObservableObject {
     @Published var pendingSocialImportExtra: String?
     @Published var showSocialImportFromShare: Bool = false
     
-    // Recipe state preservation (for app backgrounding)
+    // Kochzustand überlebt den App-Wechsel, solange der Prozess lebt.
+    // Ein vollständiges Beenden löscht den Speicher und setzt damit zurück.
     @Published var preservedRecipeId: String? = nil
     @Published var preservedRecipePage: Int = 0
+    @Published var preservedServings: Int = 4
+    @Published var preservedOpenRecipe: Recipe? = nil
+    @Published var preservedGeneratedKey: String? = nil
+    @Published var preservedGeneratedPage: Int = 0
+    @Published var preservedGeneratedServings: Int = 0
+    /// True während Standby und kurz nach der Rückkehr, damit ein SwiftUI-Reset
+    /// Schritt, Portionen und das offene Rezept nicht verwirft.
+    var cookingSessionLocked = false
+    private var cookingUnlockTask: Task<Void, Never>?
     
     // Cached recipes for instant display in recipe book tab
     @Published var cachedRecipes: [Recipe] = []
@@ -1315,9 +1325,6 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     #if canImport(UIKit)
     @objc private func onDidBecomeActive() {
         startSubscriptionPolling()
-        if !showPasswordReset {
-            restoreRecipeStateIfNeeded()
-        }
         Task { await refreshSessionIfNeeded(silent: true) }
     }
 
@@ -1328,65 +1335,36 @@ Dein Ziel ist es, dem Nutzer IMMER zu helfen, niemals abzulehnen.
     #endif
     
     // MARK: - Recipe State Preservation
-    /// Stellt den Rezeptzustand wieder her, wenn die App zurückkommt
-    private func restoreRecipeStateIfNeeded() {
-        guard let recipeId = preservedRecipeId else { return }
-        
-        // Kleine Verzögerung, damit die UI bereit ist
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-            
-            // Lade das Rezept und navigiere dorthin
-            guard let token = accessToken else {
-                // Reset preserved state if not authenticated
-                preservedRecipeId = nil
-                preservedRecipePage = 0
-                return
-            }
-            
-            do {
-                let recipe = try await fetchRecipeForStateRestore(id: recipeId, token: token)
-                deepLinkRecipe = recipe
-                // Die preservedRecipePage wird in RecipeDetailView verwendet
-            } catch {
-                Logger.error("Failed to restore recipe state", error: error, category: .data)
-                // Reset on error
-                preservedRecipeId = nil
-                preservedRecipePage = 0
-            }
+
+    func lockCookingSessionForBackground() {
+        cookingUnlockTask?.cancel()
+        cookingSessionLocked = true
+    }
+
+    /// Bleibt kurz gesperrt, weil das Seiten-TabView den Schritt erst nach der Rückkehr auf 0 setzt.
+    func scheduleCookingSessionUnlock() {
+        cookingUnlockTask?.cancel()
+        cookingSessionLocked = true
+        cookingUnlockTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            guard !Task.isCancelled else { return }
+            cookingSessionLocked = false
         }
     }
-    
-    private func fetchRecipeForStateRestore(id: String, token: String) async throws -> Recipe {
-        try PostgRESTFilter.requireEqValue(id)
-        var url = Config.supabaseURL
-        url.append(path: "/rest/v1/recipes")
-        url.append(queryItems: [
-            URLQueryItem(name: "id", value: "eq.\(id)"),
-            URLQueryItem(name: "select", value: "*")
-        ])
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        let (data, response) = try await SecureURLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
-        
-        let recipes = try JSONDecoder().decode([Recipe].self, from: data)
-        guard let recipe = recipes.first else {
-            throw URLError(.fileDoesNotExist)
-        }
-        
-        return recipe
+
+    func clearCookingSession() {
+        preservedRecipeId = nil
+        preservedRecipePage = 0
+        preservedServings = 4
+        preservedOpenRecipe = nil
     }
-    
+
+    func clearGeneratedCookingSession() {
+        preservedGeneratedKey = nil
+        preservedGeneratedPage = 0
+        preservedGeneratedServings = 0
+    }
+
     /// Lädt Ernährungspräferenzen aus Supabase (falls eingeloggt) oder fällt auf UserDefaults zurück.
     ///
     /// - Throws: Fehler aus `UserPreferencesClient`, wenn der Request selbst fehlschlägt.

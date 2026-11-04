@@ -69,6 +69,11 @@ private struct RootViewModifiers: ViewModifier {
     }
     
     private func handleScenePhaseChange(oldPhase: ScenePhase, newPhase: ScenePhase) {
+        if newPhase == .active {
+            app.scheduleCookingSessionUnlock()
+        } else {
+            app.lockCookingSessionForBackground()
+        }
         if oldPhase == .background && newPhase == .active && !hasTrackedLaunch {
             AppStoreReviewManager.incrementLaunchCount()
             hasTrackedLaunch = true
@@ -282,11 +287,14 @@ struct RootView: View {
 
 struct MainTabView: View {
     @EnvironmentObject var app: AppState
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @State private var showDeepLinkRecipe = false
     @State private var deepLinkRecipeToShow: Recipe? = nil
     @State private var animationTrigger: UUID = UUID()
     @State private var previousTab: Int = 0
+    @State private var tabBeforeBackground: Int = 0
+    @State private var foregroundRestoreUntil: Date = .distantPast
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -403,6 +411,7 @@ LinearGradient(
             .environmentObject(app)
         }
         .onAppear {
+            tabBeforeBackground = app.selectedTab
             previousTab = app.selectedTab
             if let pending = SocialImportPendingStore.consume(),
                SocialImportURL.isAllowed(pending) {
@@ -417,8 +426,30 @@ LinearGradient(
                 app.showSocialImportFromShare = true
             }
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                foregroundRestoreUntil = Date().addingTimeInterval(0.8)
+                if app.selectedTab != tabBeforeBackground {
+                    app.selectedTab = tabBeforeBackground
+                }
+            } else {
+                tabBeforeBackground = app.selectedTab
+            }
+        }
         .onChange(of: app.selectedTab) { oldValue, newValue in
-            // Trigger rebuild when tab changes
+            // Das seitenweise TabView setzt die Auswahl beim App-Wechsel auf den ersten Tab.
+            // Das würde über die View-ID das offene Rezept verwerfen.
+            if Date() < foregroundRestoreUntil && newValue != tabBeforeBackground {
+                DispatchQueue.main.async {
+                    if app.selectedTab != tabBeforeBackground {
+                        app.selectedTab = tabBeforeBackground
+                    }
+                }
+                return
+            }
+            if Date() < foregroundRestoreUntil {
+                return
+            }
             if oldValue != newValue {
                 previousTab = oldValue
                 animationTrigger = UUID()

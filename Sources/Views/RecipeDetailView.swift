@@ -6,6 +6,7 @@ import UIKit
 struct RecipeDetailView: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     let recipe: Recipe
     @State private var fullRecipe: Recipe? // Full recipe data loaded from API
     @State private var isLoadingFullRecipe = false
@@ -132,8 +133,11 @@ struct RecipeDetailView: View {
                     
                     // KI: ein Button — Sheet mit Chat / Überarbeiten (Segment)
                     Button(action: { showAISheet = true }) {
-                        Image(systemName: "wand.and.stars")
-                            .font(.system(size: 18, weight: .semibold))
+                        Image("tab-culina-chat")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
                             .foregroundStyle(.white)
                             .frame(width: 36, height: 36)
                             .background(.ultraThinMaterial, in: Circle())
@@ -191,18 +195,11 @@ struct RecipeDetailView: View {
         }
         .onAppear { 
             uploadedImageUrl = displayRecipe.image_url
-            
-            // Stelle gespeicherten Seitenzustand wieder her
-            if app.preservedRecipeId == recipe.id && app.preservedRecipePage > 0 {
-                currentPage = app.preservedRecipePage
-                // Reset preserved state after restore
-                app.preservedRecipeId = nil
-                app.preservedRecipePage = 0
+            let hadSession = app.preservedRecipeId == recipe.id
+            restoreCookingPositionIfNeeded()
+            if !hadSession {
+                captureCookingPosition()
             }
-            
-            // Speichere aktuellen Zustand für State Preservation
-            app.preservedRecipeId = recipe.id
-            app.preservedRecipePage = currentPage
             
             // Load full recipe data if this is a preview (missing ingredients, instructions, or nutrition)
             if recipe.isPreview && fullRecipe == nil && !isLoadingFullRecipe {
@@ -212,26 +209,36 @@ struct RecipeDetailView: View {
             }
         }
         .onDisappear {
-            // Stop all timers when recipe view is closed
+            // Timer und Kochzustand bleiben erhalten, solange die App nur im Standby ist.
+            guard scenePhase == .active, !app.cookingSessionLocked else { return }
             timerCenter.stopAllTimers()
-            
-            // Lösche preserved state wenn View geschlossen wird (nicht nur App-Wechsel)
-            // Nur löschen wenn es nicht durch App-Wechsel passiert
-            if app.preservedRecipeId == recipe.id {
-                // Prüfe ob App im Hintergrund ist - wenn nicht, dann wurde View manuell geschlossen
-                #if canImport(UIKit)
-                if UIApplication.shared.applicationState == .active {
-                    app.preservedRecipeId = nil
-                    app.preservedRecipePage = 0
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                restoreCookingPositionIfNeeded()
+                DispatchQueue.main.async {
+                    restoreCookingPositionIfNeeded()
                 }
-                #endif
+            } else {
+                captureCookingPosition()
             }
         }
         .onChange(of: currentPage) { _, newPage in
-            // Aktualisiere preserved page wenn sich die Seite ändert
-            if app.preservedRecipeId == recipe.id {
-                app.preservedRecipePage = newPage
+            guard app.preservedRecipeId == recipe.id else { return }
+            // PageTabView setzt die Auswahl beim Zurückkehren auf die erste Seite.
+            if shouldHoldCookingPosition, newPage == 0, app.preservedRecipePage > 0 {
+                currentPage = app.preservedRecipePage
+                return
             }
+            app.preservedRecipePage = newPage
+        }
+        .onChange(of: servings) { _, newValue in
+            guard app.preservedRecipeId == recipe.id else { return }
+            if shouldHoldCookingPosition, app.preservedServings > 0, newValue != app.preservedServings {
+                servings = app.preservedServings
+                return
+            }
+            app.preservedServings = max(1, newValue)
         }
         .sheet(isPresented: $showServingSelector) {
             ServingSelectorSheet(
@@ -258,6 +265,32 @@ struct RecipeDetailView: View {
         }
     }
     
+    private var shouldHoldCookingPosition: Bool {
+        app.cookingSessionLocked || scenePhase != .active
+    }
+
+    private func captureCookingPosition() {
+        app.preservedRecipeId = recipe.id
+        let pageWasReset = shouldHoldCookingPosition && currentPage == 0 && app.preservedRecipePage > 0
+        if !pageWasReset {
+            app.preservedRecipePage = currentPage
+        }
+        let servingsWereReset = shouldHoldCookingPosition && app.preservedServings > 0 && servings != app.preservedServings
+        if !servingsWereReset {
+            app.preservedServings = max(1, servings)
+        }
+    }
+
+    private func restoreCookingPositionIfNeeded() {
+        guard app.preservedRecipeId == recipe.id else { return }
+        if currentPage != app.preservedRecipePage {
+            currentPage = app.preservedRecipePage
+        }
+        if app.preservedServings > 0, servings != app.preservedServings {
+            servings = app.preservedServings
+        }
+    }
+
     private var overviewPage: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -673,8 +706,11 @@ struct RecipeDetailView: View {
         return ScrollView {
             let split = splitInstruction(instruction)
             let scaledText = scaleInstruction(split.body, baseServings: 4, currentServings: servings)
+            let showParallelNext = ParallelNextStepMarker.allowsNextStep(in: scaledText) && !isLastStep
             // Remove invisible labels before displaying
-            let bodyText = scaledText.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
+            let bodyText = ParallelNextStepMarker.stripping(
+                from: scaledText.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
+            )
             let labelText = split.label
             let stepIngredients = StepIngredientExtractor.ingredients(
                 in: split.body,
@@ -700,13 +736,13 @@ struct RecipeDetailView: View {
                 if let cookMins = parseCookMinutes(from: bodyText) {
                     let label = labelText ?? timerLabel(for: bodyText, index: index)
                     SharedTimerControl(minutes: cookMins, label: label, center: timerCenter)
-                    // Nur Hinweis zeigen, wenn Timer >= 5 Min UND es weitere Schritte gibt
-                    if cookMins >= 5 && !isLastStep {
-                        Text(L.recipe_in_der_zwischenzeit_führe.localized)
-                            .font(.subheadline)
-                            .italic()
-                            .foregroundStyle(.white.opacity(0.9))
-                    }
+                }
+                // Hinweis nur, wenn die KI diesen Schritt mit ⟦parallel_next⟧ markiert hat
+                if showParallelNext {
+                    Text(L.recipe_in_der_zwischenzeit_führe.localized)
+                        .font(.subheadline)
+                        .italic()
+                        .foregroundStyle(.white.opacity(0.9))
                 }
                 
                 if isLastStep {
@@ -1259,7 +1295,9 @@ struct RecipeDetailView: View {
         md += "## Zubereitung\n\n"
         for (index, instruction) in (displayRecipe.instructions ?? []).enumerated() {
             let split = splitInstruction(instruction)
-            let cleanText = split.body.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
+            let cleanText = ParallelNextStepMarker.stripping(
+                from: split.body.replacingOccurrences(of: "⟦ingredient_qty:⟧", with: "")
+            )
             md += "**Schritt \(index + 1)**\n\n"
             md += "\(cleanText)\n\n"
         }

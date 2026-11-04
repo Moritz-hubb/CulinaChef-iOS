@@ -82,11 +82,12 @@ struct PrivacyPolicyView: View {
                         
                         PrivacySection(localized("1. Verantwortlicher", "1. Responsable", "1. Data Controller"), icon: "person.badge.shield.checkmark") {
                             VStack(alignment: .leading, spacing: 4) {
-                                ContactInfo(label: localized("Unternehmen", "Entreprise", "Company"), value: "CulinaAI")
-                                ContactInfo(label: localized("Vertreten durch", "Représentée par", "Represented by"), value: "Moritz Serrin")
+                                ContactInfo(label: localized("Geschäftsbezeichnung", "Nom commercial", "Business name", spanish: "Nombre comercial", italian: "Nome commerciale"), value: "AppMango")
+                                ContactInfo(label: localized("Rechtsform", "Forme juridique", "Legal form", spanish: "Forma jurídica", italian: "Forma giuridica"), value: localized("Einzelunternehmen", "Entreprise individuelle", "Sole proprietorship", spanish: "Empresa individual", italian: "Ditta individuale"))
+                                ContactInfo(label: localized("Inhaber", "Propriétaire", "Owner", spanish: "Titular", italian: "Titolare"), value: "Moritz Serrin")
                                 ContactInfo(label: localized("Adresse", "Adresse", "Address"), value: "Sonnenblumenweg 8, 21244 Buchholz, " + localized("Deutschland", "Allemagne", "Germany"))
                                 ContactInfo(label: "E-Mail", value: "kontakt@culinaai.com")
-                                ContactInfo(label: localized("Datenschutz", "Protection des données", "Data Protection"), value: "support@culinaai.com")
+                                ContactInfo(label: localized("Datenschutz", "Protection des données", "Data Protection"), value: "datenschutz@culinaai.com")
                             }
                             .padding(12)
                             .background(.white.opacity(0.1))

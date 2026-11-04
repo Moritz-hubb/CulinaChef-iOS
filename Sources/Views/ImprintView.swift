@@ -78,8 +78,9 @@ struct ImprintView: View {
                         // Anbieter Section
                         ImprintSection(localized("Anbieter", "Fournisseur", "Proveedor", "Fornitore", "Provider"), icon: "building.2") {
                             VStack(alignment: .leading, spacing: 4) {
-                                ContactInfo(label: localized("Unternehmen:", "Entreprise:", "Empresa:", "Azienda:", "Company:"), value: "CulinaAI")
-                                ContactInfo(label: localized("Vertreten durch:", "Représentée par:", "Representado por:", "Rappresentato da:", "Represented by:"), value: "Moritz Serrin")
+                                ContactInfo(label: localized("Geschäftsbezeichnung:", "Nom commercial :", "Nombre comercial:", "Nome commerciale:", "Business name:"), value: "AppMango")
+                                ContactInfo(label: localized("Rechtsform:", "Forme juridique :", "Forma jurídica:", "Forma giuridica:", "Legal form:"), value: localized("Einzelunternehmen", "Entreprise individuelle", "Empresa individual", "Ditta individuale", "Sole proprietorship"))
+                                ContactInfo(label: localized("Inhaber:", "Propriétaire :", "Titular:", "Titolare:", "Owner:"), value: "Moritz Serrin")
                                 ContactInfo(label: localized("Adresse:", "Adresse:", "Dirección:", "Indirizzo:", "Address:"), value: "Sonnenblumenweg 8\n21244 Buchholz\n" + localized("Deutschland", "Allemagne", "Alemania", "Germania", "Germany"))
                             }
                             .padding(12)
@@ -92,16 +93,6 @@ struct ImprintView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 ContactInfo(label: "E-Mail:", value: "kontakt@culinaai.com")
                                 ContactInfo(label: localized("Website:", "Site web:", "Sitio web:", "Sito web:", "Website:"), value: "www.culinaai.com")
-                            }
-                            .padding(12)
-                            .background(.white.opacity(0.1))
-                            .cornerRadius(10)
-                        }
-                        
-                        // Vertretungsberechtigt Section
-                        ImprintSection(localized("Vertretungsberechtigt", "Représentant autorisé", "Representante autorizado", "Rappresentante autorizzato", "Authorized Representative"), icon: "person.badge.shield.checkmark") {
-                            VStack(alignment: .leading, spacing: 4) {
-                                ContactInfo(label: localized("Name:", "Nom:", "Nombre:", "Nome:", "Name:"), value: "Moritz Serrin")
                             }
                             .padding(12)
                             .background(.white.opacity(0.1))
@@ -185,7 +176,7 @@ struct ImprintView: View {
                         
                         // Footer
                         VStack(spacing: 8) {
-                            Text(localized("Stand: 04. November 2025 | Version 1.0", "Date: 04 novembre 2025 | Version 1.0", "Fecha: 04 de noviembre de 2025 | Versión 1.0", "Data: 04 novembre 2025 | Versione 1.0", "Date: November 4, 2025 | Version 1.0"))
+                            Text(localized("Stand: 4. November 2026 | Version 1.1", "Date : 4 novembre 2026 | Version 1.1", "Fecha: 4 de noviembre de 2026 | Versión 1.1", "Data: 4 novembre 2026 | Versione 1.1", "Date: November 4, 2026 | Version 1.1"))
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.6))
                         }

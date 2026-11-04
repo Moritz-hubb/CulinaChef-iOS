@@ -96,8 +96,9 @@ struct TermsOfServiceView: View {
                         ))
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            ContactInfo(label: localized("Unternehmen", "Entreprise", "Company"), value: "CulinaAI")
-                            ContactInfo(label: localized("Vertreten durch", "Représentée par", "Represented by"), value: "Moritz Serrin")
+                            ContactInfo(label: localized("Geschäftsbezeichnung", "Nom commercial", "Business name"), value: "AppMango")
+                            ContactInfo(label: localized("Rechtsform", "Forme juridique", "Legal form"), value: localized("Einzelunternehmen", "Entreprise individuelle", "Sole proprietorship"))
+                            ContactInfo(label: localized("Inhaber", "Propriétaire", "Owner"), value: "Moritz Serrin")
                             ContactInfo(label: localized("Adresse", "Adresse", "Address"), value: "Sonnenblumenweg 8, 21244 Buchholz, " + localized("Deutschland", "Allemagne", "Germany"))
                             ContactInfo(label: "E-Mail", value: "kontakt@culinaai.com")
                             ContactInfo(label: "Support", value: "support@culinaai.com")
@@ -419,7 +420,7 @@ struct TermsOfServiceView: View {
                         
                         VStack(alignment: .leading, spacing: 6) {
                             SummaryRow(label: isGerman ? "App-Name" : "App Name", value: "CulinaAI")
-                            SummaryRow(label: isGerman ? "Anbieter" : "Provider", value: "CulinaAI – Moritz Serrin")
+                            SummaryRow(label: isGerman ? "Anbieter" : "Provider", value: isGerman ? "AppMango, Inhaber Moritz Serrin" : "AppMango, owner Moritz Serrin")
                             SummaryRow(label: isGerman ? "Preis" : "Price", value: SubscriptionLegal.summaryPriceLine(language: isGerman ? "de" : "en", prices: storePricing.prices))
                             SummaryRow(label: isGerman ? "Kündigung" : "Cancellation", value: isGerman ? "Jederzeit über Apple-Einstellungen" : "Anytime via Apple settings")
                             SummaryRow(label: isGerman ? "Datenschutz" : "Privacy", value: isGerman ? "Keine Werbung, kein Tracking" : "No ads, no tracking")

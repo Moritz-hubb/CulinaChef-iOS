@@ -13,6 +13,8 @@ struct SettingsView: View {
     @State private var showImprint = false
     @State private var showError = false
     @State private var isExportingData = false
+    @State private var isSigningOut = false
+    @State private var isManagingSubscription = false
     @State private var errorMessage: String?
     @State private var hasConsent: Bool = OpenAIConsentManager.hasConsent
     @State private var isDeletingAccount = false
@@ -99,13 +101,20 @@ struct SettingsView: View {
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
 
                 Button {
+                    guard !isExportingData else { return }
+                    isExportingData = true
                     Task { await exportMyData() }
                 } label: {
-                    settingsRow(icon: "square.and.arrow.up", text: "settings.exportMyData".localized)
+                    settingsRow(
+                        icon: "square.and.arrow.up",
+                        text: "settings.exportMyData".localized,
+                        isLoading: isExportingData
+                    )
                 }
-                .disabled(isExportingData)
+                .allowsHitTesting(!isExportingData)
                 .accessibilityLabel("settings.exportMyData".localized)
-                .accessibilityHint("settings.exportMyDataBody".localized)
+                .accessibilityHint(isExportingData ? L.loading.localized : "settings.exportMyDataBody".localized)
+                .accessibilityAddTraits(isExportingData ? .updatesFrequently : AccessibilityTraits())
 
                 Text("settings.exportMyDataBody".localized)
                     .font(.caption)
@@ -116,8 +125,6 @@ struct SettingsView: View {
     }
 
     private func exportMyData() async {
-        guard !isExportingData else { return }
-        isExportingData = true
         defer { isExportingData = false }
         do {
             try await exportCurrentAccountData(app: app)
@@ -186,17 +193,31 @@ struct SettingsView: View {
                 }
                 .accessibilityLabel(L.nav_subscription.localized)
                 .accessibilityHint(L.a11y_openSubscription.localized)
-                Button(action: { Task { await app.signOut() } }) {
-                    Text(L.signOut.localized)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(LinearGradient(colors: [.red, .pink], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
-                        .shadow(color: .pink.opacity(0.35), radius: 10, x: 0, y: 6)
+                Button {
+                    guard !isSigningOut else { return }
+                    isSigningOut = true
+                    Task {
+                        await app.signOut()
+                        isSigningOut = false
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if isSigningOut {
+                            ProgressView().tint(.white)
+                        }
+                        Text(L.signOut.localized)
+                            .font(.headline)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(LinearGradient(colors: [.red, .pink], startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+                    .shadow(color: .pink.opacity(0.35), radius: 10, x: 0, y: 6)
                 }
+                .allowsHitTesting(!isSigningOut)
                 .accessibilityLabel(L.signOut.localized)
-                .accessibilityHint(L.a11y_signOut.localized)
+                .accessibilityHint(isSigningOut ? L.loading.localized : L.a11y_signOut.localized)
+                .accessibilityAddTraits(isSigningOut ? .updatesFrequently : AccessibilityTraits())
                 Button(role: .destructive, action: { showDeleteConfirm = true }) {
                     HStack {
                         Image(systemName: "trash")
@@ -211,19 +232,25 @@ struct SettingsView: View {
                     .background(Color.red.opacity(0.15), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
                 }
-                .disabled(isDeletingAccount)
+                .allowsHitTesting(!isDeletingAccount)
                 .accessibilityLabel(L.deleteAccount.localized)
                 .accessibilityHint(L.a11y_deleteAccount.localized)
             }
         }
     }
     
-    private func settingsRow(icon: String, text: String) -> some View {
+    private func settingsRow(icon: String, text: String, isLoading: Bool = false) -> some View {
         HStack {
             Image(systemName: icon)
             Text(text).font(.subheadline)
             Spacer()
-            Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.6))
+            if isLoading {
+                ProgressView()
+                    .tint(.white)
+                    .accessibilityLabel(L.loading.localized)
+            } else {
+                Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.6))
+            }
         }
         .foregroundStyle(.white)
         .padding(12)
@@ -286,11 +313,17 @@ struct SettingsView: View {
         }
         .confirmationDialog(L.deleteAccountConfirm.localized, isPresented: $showDeleteConfirm, titleVisibility: .visible) {
             Button(L.manageSubscription.localized) {
-                Task { await app.openManageSubscriptions() }
+                guard !isManagingSubscription else { return }
+                isManagingSubscription = true
+                Task {
+                    await app.openManageSubscriptions()
+                    isManagingSubscription = false
+                }
             }
             Button(L.deleteNow.localized, role: .destructive) {
+                guard !isDeletingAccount else { return }
+                isDeletingAccount = true
                 Task {
-                    isDeletingAccount = true
                     defer { isDeletingAccount = false }
                     do {
                         try await app.deleteAccountAndData()
@@ -309,6 +342,15 @@ struct SettingsView: View {
             Button(L.button_ok.localized, role: .cancel) { }
         } message: {
             Text(errorMessage ?? L.errorGeneric.localized)
+        }
+        .overlay {
+            if isManagingSubscription {
+                ProgressView()
+                    .tint(.white)
+                    .padding(18)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .accessibilityLabel(L.loading.localized)
+            }
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -752,8 +794,6 @@ private struct ProfileSettingsSheet: View {
 
     @State private var loading = false
     @State private var error: String?
-    @State private var recipesCount = 0
-    @State private var ratingsCount = 0
     @State private var allergies: String = ""
     @State private var dietTypes: String = ""
     
@@ -763,10 +803,7 @@ private struct ProfileSettingsSheet: View {
     @State private var confirmPassword = ""
     @State private var passwordError: String?
     @State private var passwordSuccess = false
-    
-    private var isGerman: Bool {
-        localizationManager.currentLanguage == "de"
-    }
+    @State private var isChangingPassword = false
 
     var body: some View {
         ZStack {
@@ -865,40 +902,27 @@ private struct ProfileSettingsSheet: View {
                                     }
                                     
                                     Button {
+                                        guard !isChangingPassword else { return }
+                                        isChangingPassword = true
                                         Task { await changePassword() }
                                     } label: {
-                                        Text(L.settings_passwort_ändern_aea8.localized)
-                                            .font(.subheadline.weight(.semibold))
-                                            .foregroundStyle(.white)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 10)
-                                            .background(Color(red: 0.95, green: 0.5, blue: 0.3), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        HStack(spacing: 8) {
+                                            if isChangingPassword {
+                                                ProgressView().tint(.white)
+                                            }
+                                            Text(L.settings_passwort_ändern_aea8.localized)
+                                                .font(.subheadline.weight(.semibold))
+                                        }
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(Color(red: 0.95, green: 0.5, blue: 0.3), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                                     }
-                                    .disabled(currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty)
+                                    .allowsHitTesting(!isChangingPassword && !currentPassword.isEmpty && !newPassword.isEmpty && !confirmPassword.isEmpty)
                                     .opacity(currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty ? 0.5 : 1)
+                                    .accessibilityAddTraits(isChangingPassword ? .updatesFrequently : AccessibilityTraits())
                                 }
                                 .padding(.top, 8)
-                            }
-                        }
-                        .padding(18)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
-                        
-                        // Activity Section
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Image(systemName: "chart.bar.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                Text(L.settings_aktivität.localized)
-                                    .font(.title3.weight(.semibold))
-                                    .foregroundStyle(.white)
-                            }
-                            .padding(.bottom, 4)
-                            
-                            HStack(spacing: 20) {
-                                StatCard(icon: "book.fill", label: L.settings_recipesCount.localized, value: "\(recipesCount)")
-                                StatCard(icon: "star.fill", label: L.settings_ratingsCount.localized, value: "\(ratingsCount)")
                             }
                         }
                         .padding(18)
@@ -923,69 +947,12 @@ private struct ProfileSettingsSheet: View {
                         .padding(18)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
-                        
-                        // Export Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "arrow.down.doc.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
-                                Text(L.settings_dataExport.localized)
-                                    .font(.title3.weight(.semibold))
-                                    .foregroundStyle(.white)
-                            }
-                            .padding(.bottom, 4)
-                            
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(L.settings_exportBody.localized)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.8))
-                                
-                                Button {
-                                    Task { await exportRecipes() }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "arrow.down.circle.fill")
-                                        Text("settings.exportMyData".localized)
-                                            .font(.subheadline.weight(.semibold))
-                                        Spacer()
-                                    }
-                                    .foregroundStyle(.white)
-                                    .padding()
-                                    .background(Color.blue, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                }
-                                .accessibilityLabel(L.settings_exportButton.localized)
-                                
-                                Divider().background(.white.opacity(0.2)).padding(.vertical, 4)
-                                
-                                Text(L.settings_exportQuestions.localized)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.7))
-                                
-                                Link(destination: URL(string: "mailto:datenschutz@culinaai.com?subject=Datenexport%20Anfrage")!) {
-                                    HStack {
-                                        Image(systemName: "envelope.fill")
-                                        Text("datenschutz@culinaai.com")
-                                            .font(.caption.weight(.medium))
-                                        Spacer()
-                                        Image(systemName: "arrow.up.right")
-                                            .font(.caption2)
-                                    }
-                                    .foregroundStyle(.blue)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                }
-                            }
-                        }
-                        .padding(18)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
                     }
                 }
             }
             .padding(16)
         }
+        .id(localizationManager.currentLanguage)
         .task { await load() }
     }
 
@@ -1002,10 +969,6 @@ private struct ProfileSettingsSheet: View {
            let dietsSet = try? JSONDecoder().decode(Set<String>.self, from: dietsData) {
             dietTypes = Array(dietsSet).sorted().joined(separator: ", ")
         }
-
-        // Load counts (backend endpoints pending)
-        recipesCount = 0
-        ratingsCount = 0
     }
     
     private func changePassword() async {
@@ -1015,16 +978,17 @@ private struct ProfileSettingsSheet: View {
         // Validate passwords match
         guard newPassword == confirmPassword else {
             passwordError = L.settings_passwordsDoNotMatch.localized
+            isChangingPassword = false
             return
         }
         
         guard newPassword.isStrongPassword else {
             passwordError = L.validation_passwordWeak.localized
+            isChangingPassword = false
             return
         }
         
-        loading = true
-        defer { loading = false }
+        defer { isChangingPassword = false }
         
         do {
             try await app.changePassword(currentPassword: currentPassword, newPassword: newPassword)
@@ -1043,16 +1007,6 @@ private struct ProfileSettingsSheet: View {
             
         } catch {
             passwordError = L.settings_wrongPassword.localized
-        }
-    }
-    
-    private func exportRecipes() async {
-        loading = true
-        defer { loading = false }
-        do {
-            try await exportCurrentAccountData(app: app)
-        } catch {
-            self.error = L.errorExportFailed.localized
         }
     }
 }
@@ -1117,6 +1071,7 @@ private struct SubscriptionSettingsSheet: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @ObservedObject private var storePricing = SubscriptionStorePricing.shared
     @State private var isRestoringPurchases = false
+    @State private var isOpeningManageSubscriptions = false
     @State private var restoreAlert: RestorePurchasesAlert?
     @State private var showTerms = false
     @State private var showPrivacy = false
@@ -1191,24 +1146,36 @@ private struct SubscriptionSettingsSheet: View {
                     
                     if app.isSubscribed {
                         Button {
-                            Task { await app.openManageSubscriptions() }
+                            guard !isOpeningManageSubscriptions else { return }
+                            isOpeningManageSubscriptions = true
+                            Task {
+                                await app.openManageSubscriptions()
+                                isOpeningManageSubscriptions = false
+                            }
                         } label: {
-                            Text(L.subscriptionCancelSubscription.localized)
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.85, green: 0.35, blue: 0.28), Color(red: 0.75, green: 0.25, blue: 0.22)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                )
-                                .shadow(color: Color.red.opacity(0.25), radius: 12, x: 0, y: 6)
+                            HStack(spacing: 8) {
+                                if isOpeningManageSubscriptions {
+                                    ProgressView().tint(.white)
+                                }
+                                Text(L.subscriptionCancelSubscription.localized)
+                                    .font(.headline)
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(red: 0.85, green: 0.35, blue: 0.28), Color(red: 0.75, green: 0.25, blue: 0.22)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            )
+                            .shadow(color: Color.red.opacity(0.25), radius: 12, x: 0, y: 6)
                         }
+                        .allowsHitTesting(!isOpeningManageSubscriptions)
                         .accessibilityLabel(L.subscriptionCancelSubscription.localized)
+                        .accessibilityAddTraits(isOpeningManageSubscriptions ? .updatesFrequently : AccessibilityTraits())
                     } else {
                         Button {
                             Monetization.shared.presentSubscriptionPaywall(moment: .userRequested)
@@ -1234,6 +1201,8 @@ private struct SubscriptionSettingsSheet: View {
                     
                     if shouldShowRestorePurchases {
                         Button {
+                            guard !isRestoringPurchases else { return }
+                            isRestoringPurchases = true
                             Task { await restorePurchasesTapped() }
                         } label: {
                             HStack(spacing: 8) {
@@ -1253,9 +1222,9 @@ private struct SubscriptionSettingsSheet: View {
                                     .stroke(Color.white.opacity(0.25), lineWidth: 1)
                             )
                         }
-                        .disabled(isRestoringPurchases)
+                        .allowsHitTesting(!isRestoringPurchases)
                         .accessibilityLabel(L.subscriptionRestorePurchases.localized)
-                        .accessibilityHint(L.a11y_restorePurchasesHint.localized)
+                        .accessibilityHint(isRestoringPurchases ? L.loading.localized : L.a11y_restorePurchasesHint.localized)
                     }
                     
                     Text(SubscriptionLegal.paywallFooter(
@@ -1324,8 +1293,6 @@ private struct SubscriptionSettingsSheet: View {
     }
     
     private func restorePurchasesTapped() async {
-        guard !isRestoringPurchases else { return }
-        isRestoringPurchases = true
         defer { isRestoringPurchases = false }
         do {
             try await app.restorePurchases()
@@ -1351,29 +1318,6 @@ private struct DataRow: View {
                 .foregroundStyle(.white)
             Spacer()
         }
-    }
-}
-
-private struct StatCard: View {
-    let icon: String
-    let label: String
-    let value: String
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(Color(red: 0.95, green: 0.5, blue: 0.3))
-            Text(value)
-                .font(.title3.weight(.bold))
-                .foregroundStyle(.white)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.7))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
